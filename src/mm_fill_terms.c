@@ -7382,7 +7382,7 @@ grad_vector_fv_fill ( double ***base, double (*grad_phiv)[DIM][DIM][DIM], int do
 /*******************************************************************************/
 
 int 
-load_fv(void)
+load_fv()
 
      /*******************************************************************************
       * load_fv() -- load up values of all relevant field variables at the
@@ -8489,6 +8489,17 @@ load_fv(void)
 	    }
 	}
     }
+
+  if (vn_glob[ei->mn]->G_lumped) {
+
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+	for (i = 0; i < dofs; i++) {
+	  fv->G[p][q] += mass_lumped_prop->G[p][q][i] * bf[VELOCITY1]->phi[i];
+	}
+      }
+    }
+  }
   
   /*
    * Species Unknown Variable
@@ -32117,3 +32128,88 @@ assemble_poynting(double time,	/* present time value */
 
   return(status);
 } /* end of assemble_poynting */
+
+
+typedef struct {
+
+  double G[DIM][DIM][MDE];
+
+} Mass_Lumped_Properties
+
+Mass_Lumped_Properties mlp;
+Mass_Lumped_Properties mass_lumped_prop = &mlp;
+
+void
+load_mass_lumped_properties(int ielem_type, double dt)
+
+    /*********************************************************************
+     *
+     * load_mass_lumped_properties
+     *
+     *   This routine calculates the mass lumped quantities at node
+     *   points
+     *
+     *  Input
+     * -------
+     *
+     *  Output
+     * -------
+     *
+     *
+     *
+     *********************************************************************/
+{
+  int   eqn, idof, lnn, i_lvdesc, lvd, err, w, w1;
+  double p_liq, p_liq_old, xi[3];
+  double p_gas, p_gas_old, p_porosity, p_porosity_old, p_T, p_T_old;
+  int *lvdesc_to_lnn, *lvdesc_to_idof;
+  const int i_pl = 0, i_pg = 1, i_pe=3;
+
+  int i, j;
+  
+  eqn = POR_LIQ_PRES;
+  i_lvdesc = ei->Lvdesc_First_Var_Type[eqn];
+  lvdesc_to_lnn =  ei->Lvdesc_to_Lnn[i_lvdesc];
+  lvdesc_to_idof = ei->Lvdesc_to_lvdof[i_lvdesc];
+
+  ip_total = elem_info(NQUAD, ielem_type);
+
+  int ip;
+  for (ip = 0; ip < ip_total; ip++) {
+    /*
+     * Find the correct local element coordinates, xi[], at the 
+     * the current local node number, ip.
+     */
+    find_nodal_stu(ip, ei->ielem_type, xi, xi+1, xi+2);
+
+    /*
+     * Load up basis function information for each basis function
+     * type needed by the current material at the current
+     * location, xi[], in the element. This is done in terms
+     * of local element coordinates.
+     */ 
+    err = load_basis_functions(xi, bfd);
+    err = beer_belly();
+    err = load_fv();
+
+    /*
+     * Note: we do not need derivatives of the field variables to
+     *       calculate the capacitance terms in this routine. 
+     *       Therefore, we will skip these calculations. Also, we
+     *       do not need 
+     */
+    if (pd->e[R_MESH1]) {
+      err = load_bf_grad();
+      EH( err, "load_bf_grad");
+    }
+
+    err = load_fv_grads();
+    EH( err, "load_fv_grads");
+
+    for (i = 0; i < VIM; i++) {
+      for (j = 0; j < VIM; j++) {
+	mass_lumped_prop->G[i][j][ip] = fv->grad_v[i][j];
+      }
+    }
+  }
+}
