@@ -67,6 +67,9 @@ extern FSUB_TYPE dsyev_(char *JOBZ, char *UPLO, int *N, double *A, int *LDA,
 			double *W, double *WORK, int *LWORK, int *INFO, 
 			int len_jobz, int len_uplo); 
 
+Mass_Lumped_Properties mlp_global;
+Mass_Lumped_Properties mass_lumped_prop = &mlp_global;
+
 /*********** R O U T I N E S   I N   T H I S   F I L E ***********************
 *
 *						-All routines in this
@@ -32130,17 +32133,10 @@ assemble_poynting(double time,	/* present time value */
 } /* end of assemble_poynting */
 
 
-typedef struct {
 
-  double G[DIM][DIM][MDE];
-
-} Mass_Lumped_Properties
-
-Mass_Lumped_Properties mlp;
-Mass_Lumped_Properties mass_lumped_prop = &mlp;
 
 void
-load_mass_lumped_properties(int ielem_type, double dt)
+load_mass_lumped_properties(int ielem_type)
 
     /*********************************************************************
      *

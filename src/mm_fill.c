@@ -967,6 +967,10 @@ matrix_fill(
       load_nodal_porous_properties(theta, delta_t);
     }
   }
+
+  if (vn_glob[mn]->G_lumped) {
+    load_mass_lumped_properties(ielem_type);
+  }
   
   if (pde[R_PRESSURE])
     {
