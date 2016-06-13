@@ -2547,6 +2547,29 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       ECHO(es,echo_file);
 
+
+      strcpy(search_string,"Gradient Mass Lumping");
+
+      model_read = look_for_mat_prop(imp, search_string,
+		      	             &(ConstitutiveEquation),
+			             &(vn_glob[mn]->g_lumped), NO_USER, NULL,
+				     model_name, SCALAR_INPUT, &NO_SPECIES,es);
+      if(model_read == -1) {
+	if (!strcasecmp(model_name, "yes") || 
+	    !strcasecmp(model_name, "true")) {
+	  vn_glob[mn]->g_lumped = TRUE;
+	} else if (!strcasecmp(model_name, "no") ||
+	       !strcasecmp(model_name, "false")) {
+	  vn_glob[mn]->g_lumped = FALSE;
+	} else {
+	  EH(-1,"Gradient Mass Lumping must be set to TRUE, YES, FALSE, or NO!");
+	  vn_glob[mn]->g_lumped= FALSE;
+	}
+      }
+      SPF(es,"\t(%s = %s)", search_string, vn_glob[mn]->g_lumped);
+      ECHO(es,echo_file);
+
+
       /* allocate space */
 
       strcpy(search_string, "Polymer Viscosity");
