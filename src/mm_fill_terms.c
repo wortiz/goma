@@ -8494,16 +8494,16 @@ load_fv()
     }
 
   if (vn_glob[ei->mn]->G_lumped) {
-
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
 	dofs = ei->dof[VELOCITY1];
 	for (i = 0; i < dofs; i++) {
-	  fv->G[p][q] += mass_lumped_prop->G[p][q][i] * bf[VELOCITY1]->phi[i];
+	  fv->G[p][q] += mass_lumped_prop->G[p][q][i];
 	}
       }
     }
   }
+
   
   /*
    * Species Unknown Variable
@@ -32162,7 +32162,9 @@ load_mass_lumped_properties(int ielem_type)
   ip_total = elem_info(NQUAD, ielem_type);
 
   for (ip = 0; ip < ip_total; ip++) {
+    fv->wt = Gq_weight (ip, ielem_type); /* find quadrature weights for */
     /*
+
      * Find the correct local element coordinates, xi[], at the 
      * the current local node number, ip.
      */
@@ -32194,7 +32196,7 @@ load_mass_lumped_properties(int ielem_type)
 
     for (i = 0; i < VIM; i++) {
       for (j = 0; j < VIM; j++) {
-	mass_lumped_prop->G[i][j][ip] = fv->grad_v[i][j];
+	mass_lumped_prop->G[i][j][ip] = fv->grad_v[i][j] * fv->wt * bf[VELOCITY1]->detJ;
       }
     }
   }
