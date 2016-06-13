@@ -8497,6 +8497,7 @@ load_fv()
 
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
+	dofs = ei->dof[VELOCITY1];
 	for (i = 0; i < dofs; i++) {
 	  fv->G[p][q] += mass_lumped_prop->G[p][q][i] * bf[VELOCITY1]->phi[i];
 	}
@@ -32131,9 +32132,6 @@ assemble_poynting(double time,	/* present time value */
 
   return(status);
 } /* end of assemble_poynting */
-
-
-
 
 void
 load_mass_lumped_properties(int ielem_type)
