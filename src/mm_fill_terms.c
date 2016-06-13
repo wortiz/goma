@@ -32156,6 +32156,9 @@ load_mass_lumped_properties(int ielem_type)
   int err;
   double xi[3];
   int i, j;
+
+  int a, b, p, q;
+  int var;
   int ip;
   int ip_total;
 
@@ -32186,17 +32189,41 @@ load_mass_lumped_properties(int ielem_type)
      *       Therefore, we will skip these calculations. Also, we
      *       do not need 
      */
+    err = load_bf_grad();
+    EH( err, "load_bf_grad");
+
     if (pd->e[R_MESH1]) {
-      err = load_bf_grad();
-      EH( err, "load_bf_grad");
+      err = load_bf_mesh_derivs();
+      EH( err, "load_bf_mesh_derivs");
     }
 
     err = load_fv_grads();
     EH( err, "load_fv_grads");
 
-    for (i = 0; i < VIM; i++) {
-      for (j = 0; j < VIM; j++) {
-	mass_lumped_prop->G[i][j][ip] = fv->grad_v[i][j] * fv->wt * bf[VELOCITY1]->detJ;
+    /*
+     *  double G_wrt_u[DIM][DIM][DIM][MDE];
+     *  double G_wrt_mesh[DIM][DIM][DIM][MDE];
+     */
+
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+
+	mass_lumped_prop->G[p][q][ip] = fv->grad_v[p][q] * fv->wt * bf[VELOCITY1]->detJ;
+
+	for (a = 0; a < VIM; a++) {
+	  var = VELOCITY1 + a;
+	  for (i = 0; i < ei->dof[var]; i++) {
+	    mass_lumped_prop->G_wrt_u[p][q][a][i] = bf[var]->grad_phi[i][a] * delta(a, q) * fv->wt * bf[var]->detJ;
+	  }
+
+	  var = MESH_DISPLACEMENT1 + 1;
+	  for (i = 0; i < ei->dof[var]; i++) {
+	    mass_lumped_prop->G_wrt_mesh[p][q][a][i] = fv->d_grad_v_dmesh[p][q] [a][i] * fv->wt * bf[var]->detJ;
+	  }
+
+	}
+
+	
       }
     }
   }
