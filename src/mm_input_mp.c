@@ -2565,7 +2565,7 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 	  EH(-1,"Gradient Mass Lumping must be set to TRUE, YES, FALSE, or NO!");
 	}
       }
-      SPF(es,"\t(%s = %s)", search_string, vn_glob[mn]->G_lumped);
+      SPF(es,"\t(%s = %d)", search_string, vn_glob[mn]->G_lumped);
       ECHO(es,echo_file);
 
 
