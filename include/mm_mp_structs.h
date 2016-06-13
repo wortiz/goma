@@ -975,7 +975,7 @@ struct Viscoelastic_Nonmodal
   dbl *shift;
   int len_shift;		/*  time constant temperature shift */
 
-  int g_lumped;                 /* flag for mass lumping the G */
+  int G_lumped;                 /* flag for mass lumping the G */
 };
 
 

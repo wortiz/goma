@@ -68,7 +68,7 @@ extern FSUB_TYPE dsyev_(char *JOBZ, char *UPLO, int *N, double *A, int *LDA,
 			int len_jobz, int len_uplo); 
 
 Mass_Lumped_Properties mlp_global;
-Mass_Lumped_Properties mass_lumped_prop = &mlp_global;
+Mass_Lumped_Properties *mass_lumped_prop = &mlp_global;
 
 /*********** R O U T I N E S   I N   T H I S   F I L E ***********************
 *
@@ -32155,22 +32155,14 @@ load_mass_lumped_properties(int ielem_type)
      *
      *********************************************************************/
 {
-  int   eqn, idof, lnn, i_lvdesc, lvd, err, w, w1;
-  double p_liq, p_liq_old, xi[3];
-  double p_gas, p_gas_old, p_porosity, p_porosity_old, p_T, p_T_old;
-  int *lvdesc_to_lnn, *lvdesc_to_idof;
-  const int i_pl = 0, i_pg = 1, i_pe=3;
-
+  int err;
+  double xi[3];
   int i, j;
-  
-  eqn = POR_LIQ_PRES;
-  i_lvdesc = ei->Lvdesc_First_Var_Type[eqn];
-  lvdesc_to_lnn =  ei->Lvdesc_to_Lnn[i_lvdesc];
-  lvdesc_to_idof = ei->Lvdesc_to_lvdof[i_lvdesc];
+  int ip;
+  int ip_total;
 
   ip_total = elem_info(NQUAD, ielem_type);
 
-  int ip;
   for (ip = 0; ip < ip_total; ip++) {
     /*
      * Find the correct local element coordinates, xi[], at the 
