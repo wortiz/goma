@@ -8499,7 +8499,9 @@ load_fv()
 	fv->G[p][q] = 0.0;
 	dofs = ei->dof[VELOCITY1];
 	for (i = 0; i < dofs; i++) {
-	  fv->G[p][q] += mass_lumped_prop->G[p][q][i];
+	  int I;
+	  I = Proc_Elem_Connect[ei->iconnect_ptr + i];
+	  fv->G[p][q] += mass_lumped_prop->Gnodal[p][q][I] * bf[VELOCITY1]->phi[i];
 	}
       }
     }
@@ -32135,7 +32137,7 @@ assemble_poynting(double time,	/* present time value */
 } /* end of assemble_poynting */
 
 void
-load_mass_lumped_properties(int ielem_type)
+load_mass_lumped_properties(int ielem, double *x, double *x_old, double *xdot, double *xdot_old, double *resid_vector, Exo_DB *exo)
 
     /*********************************************************************
      *
@@ -32162,11 +32164,21 @@ load_mass_lumped_properties(int ielem_type)
   int var;
   int ip;
   int ip_total;
+  int I;
 
-  ip_total = elem_info(NQUAD, ielem_type);
+  err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 
+			 resid_vector, 0);
+  EH(err, "load_elem_dofptr");
 
+  err = bf_mp_init(pd);
+
+  ip_total = elem_info(NQUAD, ei->ielem_type);
+  
   for (ip = 0; ip < ip_total; ip++) {
-    fv->wt = Gq_weight (ip, ielem_type); /* find quadrature weights for */
+
+    I = Proc_Elem_Connect[ei->iconnect_ptr + ip];
+    
+    fv->wt = Gq_weight (ip, ei->ielem_type); /* find quadrature weights for */
     /*
 
      * Find the correct local element coordinates, xi[], at the 
@@ -32209,22 +32221,9 @@ load_mass_lumped_properties(int ielem_type)
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
 
-	mass_lumped_prop->G[p][q][ip] = fv->grad_v[p][q] * fv->wt * bf[VELOCITY1]->detJ;
+	mass_lumped_prop->Gnodal[p][q][I] += fv->grad_v[p][q] * bf[VELOCITY1]->phi[ip] * fv->wt * bf[VELOCITY1]->detJ;
+	mass_lumped_prop->Gnodal_mass[p][q][I] += 1.0 * bf[VELOCITY1]->phi[ip] * fv->wt * bf[VELOCITY1]->detJ;
 
-	for (a = 0; a < VIM; a++) {
-	  var = VELOCITY1 + a;
-	  for (j = 0; j < ei->dof[var]; j++) {
-	    mass_lumped_prop->G_wrt_u[p][q][a][j] = bf[var]->grad_phi[j][a] * delta(a, q) * fv->wt * bf[var]->detJ;
-	  }
-
-	  var = MESH_DISPLACEMENT1 + 1;
-	  for (j = 0; j < ei->dof[var]; j++) {
-	    mass_lumped_prop->G_wrt_mesh[p][q][a][j] = fv->d_grad_v_dmesh[p][q] [a][j] * fv->wt * bf[var]->detJ;
-	  }
-
-	}
-
-	
       }
     }
   }

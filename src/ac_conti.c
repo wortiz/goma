@@ -323,6 +323,21 @@ continue_problem (Comm_Ex *cx,	/* array of communications structures */
       ams[i] = alloc_struct_1(struct Aztec_Linear_Solver_System, 1);
     }
 
+  if (vn_glob[0]->G_lumped) {
+    int i, j;
+    mass_lumped_prop->Gnodal = malloc(sizeof(double **) * DIM);
+    mass_lumped_prop->Gnodal_mass = malloc(sizeof(double **) * DIM);
+
+    for (i = 0; i < DIM; i++) {
+      mass_lumped_prop->Gnodal[i] = malloc(sizeof(double *) * DIM);
+      mass_lumped_prop->Gnodal_mass[i] = malloc(sizeof(double *) * DIM);
+      for (j = 0; j < DIM; j++) {
+	mass_lumped_prop->Gnodal[i][j] = calloc(dpi->num_universe_nodes, sizeof(double));
+	mass_lumped_prop->Gnodal_mass[i][j] = calloc(dpi->num_universe_nodes, sizeof(double));
+      }
+    }
+  }
+  
 #ifdef MPI
   AZ_set_proc_config( ams[0]->proc_config, MPI_COMM_WORLD );
 #ifndef COUPLED_FILL

@@ -2549,12 +2549,11 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
 
       strcpy(search_string,"Gradient Mass Lumping");
-
-      model_read = look_for_mat_prop(imp, search_string,
-		      	             &(ConstitutiveEquation),
-			             &(vn_glob[mn]->G_lumped), NO_USER, NULL,
-				     model_name, SCALAR_INPUT, &NO_SPECIES,es);
-      if(model_read == -1) {
+      if (look_forward_optional(imp, search_string, input, '=') == 1) {
+	if ( fscanf(imp,"%s", model_name) != 1 ) {
+	  EH(-1, "Need option for Gradient Mass Lumping");
+	}
+	
 	if (!strcasecmp(model_name, "yes") || 
 	    !strcasecmp(model_name, "true")) {
 	  vn_glob[mn]->G_lumped = TRUE;
@@ -2564,9 +2563,9 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 	} else {
 	  EH(-1,"Gradient Mass Lumping must be set to TRUE, YES, FALSE, or NO!");
 	}
+	SPF(es,"\t(%s = %d)", search_string, vn_glob[mn]->G_lumped);
+	ECHO(es,echo_file);
       }
-      SPF(es,"\t(%s = %d)", search_string, vn_glob[mn]->G_lumped);
-      ECHO(es,echo_file);
 
 
       /* allocate space */
