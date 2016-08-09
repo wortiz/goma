@@ -26,8 +26,8 @@ int translate_boundary_conditions(int num_bcs,
 
 	for (int i = 0; i < num_bcs; i++) {
 
-		if (BC_Types[i].desc->method != DIRICHLET) {
-			std::cerr << "Cannot use non-dirichlet boundary conditions with CUDA atm." << std::endl;
+		if (BC_Types[i].desc->method != DIRICHLET && BC_Types[i].desc->method != CUDA_PARABOLA) {
+			std::cerr << "Can only use dirichlet boundary conditions with CUDA atm." << std::endl;
 			return -1;
 		}
 
@@ -50,6 +50,10 @@ int translate_boundary_conditions(int num_bcs,
 		bcs[i].dirichlet_index = BC_Types[i].BC_ID;
 		bcs[i].type = CUDA_DIRICHLET;
 		bcs[i].value = BC_Types[i].BC_Data_Float[0];
+
+		if (BC_Types[i].desc->method == CUDA_PARABOLA) {
+			bcs[i].type = CUDA_PARABOLIC;
+		}
 	}
 
 	return 0;
@@ -90,21 +94,6 @@ extern "C" int cuda_setup_problem(const char * exo_input_file, int num_bcs,
 
 		status = translate_boundary_conditions(num_bcs, BC_Types, bcs);
 
-//		set_boundary_condition(&bcs[0], 4, 1, PARABOLIC, VELOCITY1);
-//		set_boundary_condition(&bcs[1], 4, 0, DIRICHLET, VELOCITY2);
-//		set_boundary_condition(&bcs[2], 5, 0, DIRICHLET, VELOCITY1);
-//		set_boundary_condition(&bcs[3], 5, 0, DIRICHLET, VELOCITY2);
-//		set_boundary_condition(&bcs[4], 6, 0, DIRICHLET, VELOCITY1);
-//		set_boundary_condition(&bcs[5], 6, 0, DIRICHLET, VELOCITY2);
-//		set_boundary_condition(&bcs[6], 3, 0, DIRICHLET, VELOCITY1);
-//		set_boundary_condition(&bcs[7], 3, 0, DIRICHLET, VELOCITY2);
-//
-//		set_boundary_condition(&bcs[8], 1, 0, DIRICHLET, VELOCITY1);
-//		set_boundary_condition(&bcs[9], 1, 0, DIRICHLET, VELOCITY2);
-//
-//		set_boundary_condition(&bcs[10], 2, 0, DIRICHLET, VELOCITY2);
-//		set_boundary_condition(&bcs[11], 2, 0, DIRICHLET, PRESSURE);
-
 		if (status == 0) {
 			cudaDeviceSynchronize();
 
@@ -120,7 +109,11 @@ extern "C" int cuda_setup_problem(const char * exo_input_file, int num_bcs,
 
 	*cuda_input_data = new cuda_data(num_bcs, mesh, elements, comm, bcs);
 
-	std::cout << "Num_BCS = " << (*cuda_input_data)->num_bcs << std::endl;
+	if (comm.MyPID() == 0) {
+		std::cout << "Num_BCS = " << (*cuda_input_data)->num_bcs << std::endl;
+		std::cout << "Elems = " << mesh->num_elem << std::endl;
+		std::cout << "Nodes = " << mesh->num_nodes << std::endl << std::endl;
+	}
 
 	return 0;
 }

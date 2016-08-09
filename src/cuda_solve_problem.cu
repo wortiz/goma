@@ -189,7 +189,7 @@ void write_results(const char * exo_input_file, const char * exo_output_file,
 		for (int e = 0; e < CUDA_NUM_EQNS; e++) {
 			for (int j = 0; j < CUDA_MDE; j++) {
 				int gnn = elements[i].gnn[j] - 1;
-				if (e == PRESSURE && j > 3) {
+				if (e == CUDA_PRESSURE && j > 3) {
 					int ileft = j - 4;
 					int iright = j - 3;
 					int gnnl = elements[i].gnn[ileft] - 1;

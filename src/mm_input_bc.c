@@ -714,6 +714,7 @@ rd_bc_specs(FILE *ifp,
         case SHELL_OPEN_PRESS_BC:
         case SHELL_OPEN_PRESS_2_BC:
         case SH_GAMMA1_BC:
+        case U_CUDA_PARABOLA_BC:
 	
 	    if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
 	      sprintf(err_msg, "%s: Expected 1 flt for %s.",
@@ -3760,6 +3761,7 @@ BC_consistency( struct Boundary_Condition *BC_Type)
         {
         case   DIRICHLET:
         case   SPECIAL:
+        case   CUDA_PARABOLA:
 	  break;
 	case   LS_SPECIAL:
 	  

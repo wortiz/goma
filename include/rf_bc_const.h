@@ -214,6 +214,7 @@
 #define WEAK_SHARP_INT    17
 #define STRONG_SHARP_INT  18
 #define LS_SPECIAL        19
+#define CUDA_PARABOLA    20
 
 /* define some other catagories */
 #define VECTOR  3
@@ -382,6 +383,7 @@
 #define UVARY_BC 3
 #define U_PARABOLA_BC 35
 #define UUSER_BC 4
+#define U_CUDA_PARABOLA_BC 9111234
 
 #define PU_BC     5
 
