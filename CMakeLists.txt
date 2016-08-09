@@ -37,6 +37,9 @@ cmake_policy(VERSION 2.8)
 ### Party like it's 1977. This is in here for the two fortran files inside Goma.
 enable_language(Fortran)
 
+find_package(CUDA QUIET REQUIRED)
+find_package(OpenMP REQUIRED)
+
 ### This tells goma where to compile to, and the prefix of every variable
 set(PROJECT_NAME goma)
 include(${CMAKE_SOURCE_DIR}/cmake/CMakeScripts.cmake)
@@ -245,13 +248,17 @@ set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${${PROJECT_NAME}_USER_FLAGS} ${${PROJECT_N
 set(CMAKE_Fortran_FLAGS  "${CMAKE_Fortran_FLAGS} ${${PROJECT_NAME}_USER_FLAGS} ${${PROJECT_NAME}_USER_F_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${${PROJECT_NAME}_LD_FLAGS} ${${PROJECT_NAME}_USER_FLAGS} ${${PROJECT_NAME}_USER_LD_FLAGS}")
 
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_C_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS}")
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} ${CMAKE_Fortran_FLAGS}")
+
 
 
 ### Imports all nessisary headers.
@@ -273,21 +280,25 @@ file(GLOB SOURCE_FILES
   "src/*.F"
   "src/*.C"
   "src/brkfix/*.c"
+  "src/*.cu"
+  "include/*.cuh"
   "include/*.h"
   "include/brkfix/*.h")
 
+cuda_add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
-if(${CMAKE_BUILD_TYPE} MATCHES DEBUG)
-  add_executable("${PROJECT_NAME}d" ${SOURCE_FILES})
-else()
-  add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-endif()
+target_link_libraries(${PROJECT_NAME}
+  ${${PROJECT_NAME}_SPARSE_LIB}
+  ${Trilinos_LIBRARIES}
+  ${Trilinos_TPL_LIBRARIES}
+  ${${PROJECT_NAME}_ARPACK_LIB}
+  ${${PROJECT_NAME}_MPI_LIB}
+  ${Trilinos_EXTRA_LD_FLAGS}
+  ${${PROJECT_NAME}_SEACAS_LIB}
+  ${${PROJECT_NAME}_ENDING_LIBS}
+  ${CUDA_cusparse_LIBRARY}
+  ${CUDA_cusolver_LIBRARY})
 
-if(${CMAKE_BUILD_TYPE} MATCHES DEBUG)
-  target_link_libraries("${PROJECT_NAME}d" ${${PROJECT_NAME}_SPARSE_LIB} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} ${${PROJECT_NAME}_ARPACK_LIB} ${${PROJECT_NAME}_MPI_LIB} ${Trilinos_EXTRA_LD_FLAGS} ${${PROJECT_NAME}_SEACAS_LIB} ${${PROJECT_NAME}_ENDING_LIBS})
-else()
-  target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_SPARSE_LIB} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} ${${PROJECT_NAME}_ARPACK_LIB} ${${PROJECT_NAME}_MPI_LIB} ${Trilinos_EXTRA_LD_FLAGS} ${${PROJECT_NAME}_SEACAS_LIB} ${${PROJECT_NAME}_ENDING_LIBS})
-endif()
 
 ### Install goma to $CMAKE_INSTALL_PREFIX/bin (by default /usr/local/bin). This can only be specified with -DCMAKE_INSTALL_PREFIX="LOCATION"
 if(${CMAKE_BUILD_TYPE} MATCHES DEBUG)

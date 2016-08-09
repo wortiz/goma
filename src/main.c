@@ -74,6 +74,8 @@ extern void handle_ieee(void );
 
 #include "brk_utils.h"
 
+#include "cuda_interface.h"
+
 #define _MAIN_C
 #include "goma.h"
 
@@ -136,6 +138,8 @@ MPI_Request *Request = NULL;
 MPI_Status *Status = NULL;
 MPI_Aint type_extent;
 int Num_Requests = 6;
+
+#define CUDA 1
 
 /*
  * Data structures for transporting input data to other processors...
@@ -496,6 +500,16 @@ main(int argc, char **argv)
 
 
 #endif          /* End of ifdef PARALLEL */
+
+#ifdef CUDA
+
+  cuda_data *cuda_input_data;
+
+  error = cuda_setup_problem(ExoFile, Num_BC, BC_Types, &cuda_input_data);
+  EH(error, "cuda_setup problem");
+  cuda_solve_problem(ExoFile, ExoFileOut, cuda_input_data);
+
+#else
 
 
   /*
@@ -944,7 +958,7 @@ main(int argc, char **argv)
   WH(unlerr, "Unlink problem with front scratch file");
     }
 
-
+#endif
 #ifdef PARALLEL
   total_time = ( MPI_Wtime() - time_start )/ 60. ;
   DPRINTF(stderr, "\nProc 0 runtime: %10.2f Minutes.\n\n",total_time);
@@ -959,6 +973,9 @@ main(int argc, char **argv)
   fflush(stderr);
   log_msg("GOMA ends normally.");
   return (0);
+
+
+
 }
 /***********************************************************************/
 /***********************************************************************/
