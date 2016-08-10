@@ -976,6 +976,8 @@ struct Viscoelastic_Nonmodal
   int shiftModel;
   dbl *shift;
   int len_shift;		/*  time constant temperature shift */
+
+  int G_lumped;                 /* flag for mass lumping the G */
 };
 
 

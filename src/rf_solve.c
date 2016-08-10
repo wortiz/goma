@@ -774,6 +774,20 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 
   dcopy1( nAC, x_AC, &(gv[5]) );
 
+  if (vn_glob[0]->G_lumped) {
+    int i, j;
+    mass_lumped_prop->Gnodal = malloc(sizeof(double **) * DIM);
+    mass_lumped_prop->Gnodal_mass = malloc(sizeof(double **) * DIM);
+
+    for (i = 0; i < DIM; i++) {
+      mass_lumped_prop->Gnodal[i] = malloc(sizeof(double *) * DIM);
+      mass_lumped_prop->Gnodal_mass[i] = malloc(sizeof(double *) * DIM);
+      for (j = 0; j < DIM; j++) {
+	mass_lumped_prop->Gnodal[i][j] = calloc(dpi->num_universe_nodes, sizeof(double));
+	mass_lumped_prop->Gnodal_mass[i][j] = calloc(dpi->num_universe_nodes, sizeof(double));
+      }
+    }
+  }
 
   /***************************************************************************
    *            STEADY STATE SOLUTION PROCEDURE

@@ -182,6 +182,28 @@ int matrix_fill_full(struct Aztec_Linear_Solver_System *ams,
 
   e_start = exo->eb_ptr[0];
   e_end   = exo->eb_ptr[exo->num_elem_blocks];
+
+  if (vn_glob[0]->G_lumped) {
+    int i, j, node;
+    for (i = 0; i < DIM; i++) {
+      for (j = 0; j < DIM; j++) {
+	memset(mass_lumped_prop->Gnodal[i][j], 0.0, dpi->num_universe_nodes*sizeof(double));
+	memset(mass_lumped_prop->Gnodal_mass[i][j], 0.0, dpi->num_universe_nodes*sizeof(double));
+      }
+    }
+    for (ielem = e_start, ebn = 0; ielem < e_end && !neg_elem_volume && !neg_lub_height && !zero_detJ; ielem++) {
+      load_mass_lumped_properties(ielem, x, x_old, xdot, xdot_old, resid_vector, exo);
+    }
+
+    for (i = 0; i < DIM; i++) {
+      for (j = 0; j < DIM; j++) {
+	for (node = 0; node < dpi->num_universe_nodes; node++) {
+	  mass_lumped_prop->Gnodal[i][j][node] /= mass_lumped_prop->Gnodal_mass[i][j][node];
+	}
+      }       
+    }
+  }
+
   for (ielem = e_start, ebn = 0; ielem < e_end && !neg_elem_volume && !neg_lub_height && !zero_detJ; ielem++) {
 
     /*First we must calculate the material-referenced element

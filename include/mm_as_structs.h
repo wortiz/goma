@@ -1941,6 +1941,19 @@ struct Rotation_Vectors
 };
 typedef struct Rotation_Vectors ROTATION_VECTORS_STRUCT;
 
+
+typedef struct {
+
+  double G[DIM][DIM][MDE];
+  double G_wrt_u[DIM][DIM][DIM][MDE];
+  double G_wrt_mesh[DIM][DIM][DIM][MDE];
+
+  double ***Gnodal;
+  double ***Gnodal_mass;
+
+} Mass_Lumped_Properties;
+extern Mass_Lumped_Properties *mass_lumped_prop;
+
 /**********************************************************************************/
 /**********************************************************************************/
 /**********************************************************************************/

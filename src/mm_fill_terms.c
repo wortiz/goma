@@ -67,6 +67,9 @@ extern FSUB_TYPE dsyev_(char *JOBZ, char *UPLO, int *N, double *A, int *LDA,
 			double *W, double *WORK, int *LWORK, int *INFO, 
 			int len_jobz, int len_uplo); 
 
+Mass_Lumped_Properties mlp_global;
+Mass_Lumped_Properties *mass_lumped_prop = &mlp_global;
+
 /*********** R O U T I N E S   I N   T H I S   F I L E ***********************
 *
 *						-All routines in this
@@ -7382,7 +7385,7 @@ grad_vector_fv_fill ( double ***base, double (*grad_phiv)[DIM][DIM][DIM], int do
 /*******************************************************************************/
 
 int 
-load_fv(void)
+load_fv()
 
      /*******************************************************************************
       * load_fv() -- load up values of all relevant field variables at the
@@ -8489,6 +8492,21 @@ load_fv(void)
 	    }
 	}
     }
+
+  if (vn_glob[ei->mn]->G_lumped) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+	fv->G[p][q] = 0.0;
+	dofs = ei->dof[VELOCITY1];
+	for (i = 0; i < dofs; i++) {
+	  int I;
+	  I = Proc_Elem_Connect[ei->iconnect_ptr + i];
+	  fv->G[p][q] += mass_lumped_prop->Gnodal[p][q][I] * bf[VELOCITY1]->phi[i];
+	}
+      }
+    }
+  }
+
   
   /*
    * Species Unknown Variable
@@ -32160,3 +32178,96 @@ assemble_poynting(double time,	/* present time value */
 
   return(status);
 } /* end of assemble_poynting */
+
+void
+load_mass_lumped_properties(int ielem, double *x, double *x_old, double *xdot, double *xdot_old, double *resid_vector, Exo_DB *exo)
+
+    /*********************************************************************
+     *
+     * load_mass_lumped_properties
+     *
+     *   This routine calculates the mass lumped quantities at node
+     *   points
+     *
+     *  Input
+     * -------
+     *
+     *  Output
+     * -------
+     *
+     *
+     *
+     *********************************************************************/
+{
+  int err;
+  double xi[3];
+  int j;
+
+  int a, p, q;
+  int var;
+  int ip;
+  int ip_total;
+  int I;
+
+  err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old, 
+			 resid_vector, 0);
+  EH(err, "load_elem_dofptr");
+
+  err = bf_mp_init(pd);
+
+  ip_total = elem_info(NQUAD, ei->ielem_type);
+  
+  for (ip = 0; ip < ip_total; ip++) {
+
+    I = Proc_Elem_Connect[ei->iconnect_ptr + ip];
+    
+    fv->wt = Gq_weight (ip, ei->ielem_type); /* find quadrature weights for */
+    /*
+
+     * Find the correct local element coordinates, xi[], at the 
+     * the current local node number, ip.
+     */
+    find_nodal_stu(ip, ei->ielem_type, xi, xi+1, xi+2);
+
+    /*
+     * Load up basis function information for each basis function
+     * type needed by the current material at the current
+     * location, xi[], in the element. This is done in terms
+     * of local element coordinates.
+     */ 
+    err = load_basis_functions(xi, bfd);
+    err = beer_belly();
+    err = load_fv();
+
+    /*
+     * Note: we do not need derivatives of the field variables to
+     *       calculate the capacitance terms in this routine. 
+     *       Therefore, we will skip these calculations. Also, we
+     *       do not need 
+     */
+    err = load_bf_grad();
+    EH( err, "load_bf_grad");
+
+    if (pd->e[R_MESH1]) {
+      err = load_bf_mesh_derivs();
+      EH( err, "load_bf_mesh_derivs");
+    }
+
+    err = load_fv_grads();
+    EH( err, "load_fv_grads");
+
+    /*
+     *  double G_wrt_u[DIM][DIM][DIM][MDE];
+     *  double G_wrt_mesh[DIM][DIM][DIM][MDE];
+     */
+
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+
+	mass_lumped_prop->Gnodal[p][q][I] += fv->grad_v[p][q] * bf[VELOCITY1]->phi[ip] * fv->wt * bf[VELOCITY1]->detJ;
+	mass_lumped_prop->Gnodal_mass[p][q][I] += 1.0 * bf[VELOCITY1]->phi[ip] * fv->wt * bf[VELOCITY1]->detJ;
+
+      }
+    }
+  }
+}
