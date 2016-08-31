@@ -1,0 +1,182 @@
+
+exo_read_mesh.h,703
+#define EXO_READ_MESH_H_9,107
+  int num_nodes;12,150
+  int num_elem;13,167
+  int num_elements;14,183
+  int dim;15,203
+  int **connect;connect16,214
+  double **coord;coord17,231
+  int num_mat;18,249
+  int *mat_ids;mat_ids19,264
+  int *num_elem_in_mat;num_elem_in_mat20,280
+  int *num_nodes_per_elem;num_nodes_per_elem21,304
+  int num_dirichlet;22,331
+  int *dirichlet_ids;dirichlet_ids23,352
+  int *nodes_per_dirichlet;nodes_per_dirichlet24,374
+  int *dirichlet_node_index;dirichlet_node_index25,402
+  int *dirichlet_node_list;dirichlet_node_list26,431
+  int dirichlet_node_list_len;27,459
+  int **node_elem;node_elem28,490
+  int max_elem_per_node;29,509
+} mesh_data;31,535
+
+ns_constants.h,453
+#define NS_CONSTANTS_H_9,102
+enum element_type 11,127
+  BILINEAR_QUAD,12,147
+  BIQUAD_QUAD13,164
+enum shape 16,182
+  QUADRILATERAL17,195
+enum equation 20,215
+  VELOCITY1 21,231
+  VELOCITY2,22,248
+  AUX_VELOCITY1,23,261
+  AUX_VELOCITY2,24,278
+  PRESSURE,25,295
+  AUX_PRESSURE,26,307
+  NUM_EQNS27,323
+enum boundary_condition_type 31,339
+  DIRICHLET,32,370
+  PARABOLIC33,383
+#define MDE 36,399
+#define DIM 38,414
+#define MAX_BCS 41,460
+
+ns_macros.h,48
+#define NS_MACROS_H_9,99
+#define delta(11,121
+
+ns_structs.h,1686
+#define NS_STRUCTS_H_9,101
+  double wt;16,223
+  double x[x17,256
+  double h[h23,544
+  double h3;25,583
+  double v[v26,625
+  double xi[xi27,658
+  double P;28,676
+  double grad_P[grad_P33,741
+  double div_v;39,829
+  double grad_v[grad_v40,875
+} field_variables;41,949
+  double v[v44,986
+  double P[P45,1008
+} element_stiffness_pointers;46,1025
+  int interpolation;50,1134
+  int element_shape;51,1176
+  int shape;52,1226
+  int num_dof;53,1270
+  double phi[phi58,1437
+  double dphidxi[dphidxi59,1468
+  double J[J64,1593
+  double detJ;69,1727
+  double B[B70,1742
+  double d_det_J_dm[d_det_J_dm71,1787
+  double dJ[dJ72,1818
+  double dB[dB73,1882
+  double d_phi[d_phi98,2612
+  double grad_phi[grad_phi99,2677
+  double grad_phi_e[grad_phi_e101,2748
+} basis_function;103,2855
+  double v[v106,2891
+  double P[P107,2915
+} stress_dependence;108,2936
+  double J[J111,2975
+  double R[R112,3017
+} local_element_contributions;113,3044
+  int dirichlet_index;116,3093
+  double value;117,3116
+  boundary_condition_type type;118,3132
+  equation eqn;119,3164
+} boundary_condition;120,3180
+#define MAX_BFS 122,3203
+  int id;125,3239
+  boundary_condition bcs[bcs126,3249
+  int num_bcs;127,3284
+  int gnn[gnn128,3299
+  int eqn_index[eqn_index129,3315
+  int eqn_dof[eqn_dof130,3342
+} element;131,3367
+  int *rowptr;rowptr135,3397
+  int *colind;colind136,3412
+  double *val;val137,3427
+  int m;138,3442
+  int nnz;139,3451
+} CrsMatrix;140,3462
+  CrsMatrix *A;A144,3496
+  double *x;x145,3512
+  double *delta_x;delta_x146,3525
+  double *b;b147,3544
+  int **solution_index;solution_index149,3560
+} matrix_data;150,3584
+
+exo_read_mesh.c,66
+mesh_data* exo_read_mesh(24,387
+void exo_write_results(221,6279
+
+solve_problem.h,31
+#define SOLVE_PROBLEM_H_9,106
+
+solve_nonlinear.cu,1266
+__device__ double atomicAdd_double(27,425
+__host__ __device__ int in_list(45,1014
+__host__ __device__ int index_solution(63,1348
+__host__ __device__ void row_sum_scale(67,1485
+__host__ __device__ void load_fv(88,1988
+__host__ __device__ void load_fv_grad(115,2642
+__host__ __device__ void set_dirichlet(151,3512
+__device__ void load_lec_gpu(184,4315
+__host__ __device__ void load_lec(209,5131
+__device__ void zero_lec(235,5915
+__host__ __device__ double find_gauss_weight(252,6249
+__host__ __device__ void find_gauss_points(285,6962
+__host__ __device__ double shape_function(316,7795
+__host__ __device__ double shape_function_derivative(390,9494
+__host__ __device__ void jacobian_inverse_and_mapping(518,12039
+__host__ __device__ void load_basis_functions(577,13632
+__host__ __device__ void load_basis_functions_grad(588,13987
+__host__ __device__ int assemble_momentum_light(658,16247
+__host__ __device__ int assemble_continuity_light(937,22822
+__host__ __device__ void fluid_stress_light(1055,25246
+__device__ void setup_basis_functions(1131,27100
+__global__ void matrix_fill_kernel(1138,27168
+void matrix_fill_gpu(1222,29390
+void solve_umfpack(1254,30406
+void zero_vec(1284,31134
+double l2_norm(1291,31227
+int solve_nonlinear(1302,31448
+
+ns_cuda.cu,74
+int main(23,458
+int setup_elements(142,5038
+int setup_problem(215,7139
+
+util.cu,113
+void *cudaCallocWrap(cudaCallocWrap7,99
+void *cudaMallocWrap(cudaMallocWrap16,284
+void copy_file_cpp(24,384
+
+boundary_conditions.cu,36
+void set_boundary_condition(11,125
+
+solve_problem.cu,175
+static int in_list(25,344
+int eqn_num_dof[eqn_num_dof35,515
+void matrix_setup(37,546
+void set_dirichlet(130,3228
+void write_results(171,4395
+int solve_problem(215,5515
+
+boundary_conditions.cuh,39
+#define BOUNDARY_CONDITIONS_CUH_9,122
+
+solve_nonlinear.cuh,35
+#define SOLVE_NONLINEAR_CUH_9,114
+
+trilinos_solve.cpp,137
+typedef int global_ordinal_type;29,687
+createCrsMatrix 35,894
+example 141,3925
+copyCrsMatrix 273,9582
+void trilinos_solve(345,11852
