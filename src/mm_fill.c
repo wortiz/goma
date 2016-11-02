@@ -1501,6 +1501,18 @@ matrix_fill(
 	  if (err) return -1;
 #endif
 	}
+      else if(vn->evssModel==CONF    ||
+	      vn->evssModel==CONF_G  ||
+	      vn->evssModel==CONF_EVSS)
+	{
+	  err = assemble_stress_conf(theta, delta_t, pg_data.hsquared,
+				       pg_data.hhv, pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);
+	  err = segregate_stress_update( x_update );
+	  EH(err, "assemble_stress_conf");
+#ifdef CHECK_FINITE
+	  CHECKFINITE("assemble_stress_conf");
+#endif
+	}
       
       if (pde[R_SHEAR_RATE])
 	{

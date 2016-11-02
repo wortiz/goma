@@ -703,7 +703,26 @@ evaluate_flux(
             			   {
 			             for ( ve_mode=0; ve_mode<vn->modes; ve_mode++)
                 		       {
-                  			ves[a][b] += fv->S[ve_mode][a][b];
+					 if(vn->evssModel==CONF    ||
+					    vn->evssModel==CONF_G  ||
+					    vn->evssModel==CONF_EVSS)
+					   {
+					     // Polymer viscosity
+					     dbl mup = 0.0;
+					     mup = viscosity(ve[ve_mode]->gn, gamma, NULL);
+					     // Polymer time constant
+					     dbl lambda = 0.0;
+					     if(ve[ve_mode]->time_constModel == CONSTANT)
+					       {
+						 lambda = ve[ve_mode]->time_const;
+					       }
+					     ves[a][b] += mup/lambda*(fv->S[ve_mode][a][b]-(double)delta(a,b));
+
+					   }
+					 else
+					   {
+					     ves[a][b] += fv->S[ve_mode][a][b];
+					   }
                 			}
             			   }
         		      }

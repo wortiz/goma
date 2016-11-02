@@ -67,6 +67,9 @@
 #define EVSS_G          1  /* Rajagopalan's formulation */
 #define EVSS_F          2  /* Fortin's formulation */
 #define EVSS_L          3  /* Level set solid-fluid formulation */
+#define CONF            4  // Conformation tensor
+#define CONF_G          5  // Conformation tensor with velocity gradient projection
+#define CONF_EVSS       6  // Conformation tensor with DEVSS-G formulation
 
 /* Discontinuous Galerkin viscoelastic jacobian options */
 #define EXPLICIT_DG     1
