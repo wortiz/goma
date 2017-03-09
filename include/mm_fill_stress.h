@@ -198,8 +198,14 @@ PROTO((dbl [DIM][DIM],		/* s - total stress */
        dbl [MAX_MODES][DIM][DIM][MDE], /* d_mun_dS - derivative of mun wrt S*/ 
        dbl [DIM][DIM][MDE]));	/* d_mun_dG - derivative of mun wrt G */
 
-EXTERN void log_conf_jac_analytic
-PROTO((dbl [DIM][DIM],              //s -stress 
+EXTERN void log_conf_analytic_2D
+PROTO((dbl [DIM][DIM],              //s -stress
+       dbl [DIM][DIM]));            //exp_s
+
+
+EXTERN void log_conf_analytic_2D_with_jac
+PROTO((dbl [DIM][DIM],              //s -stress
+       dbl [DIM][DIM],              //exp_s
        dbl [DIM][DIM][DIM][DIM]));  //d_exp_s_ds - derivative of exp(s) wrt s
 
 EXTERN void log_conf_jac_FD

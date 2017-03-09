@@ -57,7 +57,7 @@
 #define SCALED_RESIDUAL_TOLERANCE_CUTOFF (1.0e-8) /* don't report scaled error if values
 						    * are this small */
 
-EXTERN void numerical_jacobian	/* mm_numjac.c                               */
+EXTERN void numerical_jacobian_check	/* mm_numjac.c                               */
 PROTO((struct Aztec_Linear_Solver_System *, /* ams                           */
        double [],		/* x - soln vector for current processor     */
        double [],		/* resid_vector -for current processor       */

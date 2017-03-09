@@ -70,6 +70,7 @@
 #define CONF            4  // Conformation tensor
 #define CONF_G          5  // Conformation tensor with velocity gradient projection
 #define CONF_EVSS       6  // Conformation tensor with DEVSS-G formulation
+#define LOG_CONF        7
 
 /* Discontinuous Galerkin viscoelastic jacobian options */
 #define EXPLICIT_DG     1

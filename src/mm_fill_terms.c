@@ -54,6 +54,7 @@
 #include "mm_mp.h"
 #include "mm_mp_structs.h"
 #include "mm_fill_terms.h"
+#include "mm_fill_stress.h"
 
 
 #include "goma.h"
@@ -2769,7 +2770,8 @@ assemble_momentum(dbl time,       /* current time */
    */
   if(vn->evssModel==CONF    ||
      vn->evssModel==CONF_G  ||
-     vn->evssModel==CONF_EVSS)
+     vn->evssModel==CONF_EVSS ||
+     vn->evssModel==LOG_CONF)
     {
       fluid_stress_conf(Pi, d_Pi);
     }
@@ -27965,6 +27967,9 @@ fluid_stress_conf( double Pi[DIM][DIM],
   dbl wlf_denom;
   dbl mu_over_mu_num = 0.0;
 
+  // conformation tensor
+  dbl exp_s[MAX_MODES][DIM][DIM];
+
   // Particle stress for suspension balance model
   dbl tau_p[DIM][DIM];
   dbl d_tau_p_dv[DIM][DIM][DIM][MDE];
@@ -27987,6 +27992,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
   int v_g[DIM][DIM];
   int mode;                             // Index for modal viscoelastic counter
   int conf;                             // Flag for Conformation tensor
+  int log_conf;                         // Flag for log confomration tensor
 
 
   // Flag for doing dilational viscosity contributions
@@ -28078,12 +28084,30 @@ fluid_stress_conf( double Pi[DIM][DIM],
      vn->evssModel==CONF_G  ||
      vn->evssModel==CONF_EVSS)
     {
-      conf = 1;
+      conf = CONF;
+    }
+  else if (vn->evssModel == LOG_CONF)
+    {
+      conf = LOG_CONF;
     }
   else
     {
       conf = 0;
     }
+    
+  if (conf == CONF) {
+    for (mode=0; mode<vn->modes; mode++) {
+      for (a = 0; a < VIM; a++) {
+	for (b = 0; b < VIM; b++) {
+	  exp_s[mode][a][b] = fv->S[mode][a][b];
+	}
+      }
+    }
+  } else if (conf == LOG_CONF) {
+    for (mode = 0; mode < vn->modes; mode++) {
+      log_conf_analytic_2D(fv->S[mode], exp_s[mode]);
+    }
+  }
 
   // Load shear rate tensor
   for(a=0; a<VIM; a++)
@@ -28165,7 +28189,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 		  // PolymerStress contribution
 		  if(conf)
 		    {
-		      Pi[a][b] += mup/lambda*(fv->S[mode][a][b]-(double)delta(a,b));
+		      Pi[a][b] += mup/lambda*(exp_s[mode][a][b]-(double)delta(a,b));
 		    }
 		  else
 		    {
@@ -28206,7 +28230,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 			    }
 			  if(conf)
 			    {
-			      d_Pi->T[p][q][j] += d_mup->T[j]/lambda*(fv->S[mode][p][q]-(double)delta(p,q));
+			      d_Pi->T[p][q][j] += d_mup->T[j]/lambda*(exp_s[mode][p][q]-(double)delta(p,q));
 			    }			  
 			}		      
 		    }
@@ -28245,7 +28269,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 			    }
 			  if(conf)
 			    {
-			      d_Pi->nn[p][q][j] += d_mup->nn[j]/lambda*(fv->S[mode][p][q]-(double)delta(p,q));
+			      d_Pi->nn[p][q][j] += d_mup->nn[j]/lambda*(exp_s[mode][p][q]-(double)delta(p,q));
 			    }			  
 			}		      
 		    }
@@ -28284,7 +28308,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 			    }
 			  if(conf)
 			    {
-			      d_Pi->F[p][q][j] += d_mup->F[j]/lambda*(fv->S[mode][p][q]-(double)delta(p,q));
+			      d_Pi->F[p][q][j] += d_mup->F[j]/lambda*(exp_s[mode][p][q]-(double)delta(p,q));
 			    }			  
 			}		      
 		    }
@@ -28326,7 +28350,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 				}
 			      if(conf)
 				{
-				  d_Pi->pf[p][q][a][j] += d_mup->pf[a][j]/lambda*(fv->S[mode][p][q]-(double)delta(p,q));
+				  d_Pi->pf[p][q][a][j] += d_mup->pf[a][j]/lambda*(exp_s[mode][p][q]-(double)delta(p,q));
 				}			  
 			    }		      
 			}
@@ -28380,7 +28404,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 				}
 			      if(conf)
 				{
-				  d_Pi->v[p][q][b][j] += d_mup->v[b][j]/lambda*(fv->S[mode][p][q]-(double)delta(p,q));
+				  d_Pi->v[p][q][b][j] += d_mup->v[b][j]/lambda*(exp_s[mode][p][q]-(double)delta(p,q));
 				}			  
 			    }		      
 			}
@@ -28453,7 +28477,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 				}
 			      if(conf)
 				{
-				  d_Pi->X[p][q][b][j] += d_mup->X[b][j]/lambda*(fv->S[mode][p][q]-(double)delta(p,q));
+				  d_Pi->X[p][q][b][j] += d_mup->X[b][j]/lambda*(exp_s[mode][p][q]-(double)delta(p,q));
 				}			  
 			    }		      
 			}
@@ -28579,7 +28603,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 				}
 			      if(conf)
 				{
-				  d_Pi->C[p][q][w][j] += d_mup->C[w][j]/lambda*(fv->S[mode][p][q]-(double)delta(p,q));
+				  d_Pi->C[p][q][w][j] += d_mup->C[w][j]/lambda*(exp_s[mode][p][q]-(double)delta(p,q));
 				}			  
 			    }		      
 			}
@@ -28618,7 +28642,7 @@ fluid_stress_conf( double Pi[DIM][DIM],
 			    }
 			  if(conf)
 			    {
-			      d_Pi->P[p][q][j] += d_mup->P[j]/lambda*(fv->S[mode][p][q]-(double)delta(p,q));
+			      d_Pi->P[p][q][j] += d_mup->P[j]/lambda*(exp_s[mode][p][q]-(double)delta(p,q));
 			    }			  
 			}		      
 		    }
@@ -28626,8 +28650,6 @@ fluid_stress_conf( double Pi[DIM][DIM],
 	    }
 	}
     }
-
-
 
 }// fluid_stress_conf
 

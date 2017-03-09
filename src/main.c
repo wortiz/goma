@@ -17,6 +17,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef FP_EXCEPTIONS
+#include <fenv.h>
+#endif
+
 #include "std.h"
 
 
@@ -210,10 +214,13 @@ main(int argc, char **argv)
   int           nclc = 0;		/* number of command line commands */
 
 /********************** BEGIN EXECUTION ***************************************/
+
+#ifdef FP_EXCEPTIONS
+  feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+#endif
   
 /* assume number of commands is less than or equal to the number of 
  * arguments in the command line minus 1 (1st is program name) */
-
   /*
   *  Get the name of the executable, yo
   */

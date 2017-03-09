@@ -1656,7 +1656,6 @@ struct Field_Variables
    * but must be augmented for other coordinate systems ... we really need a
    * grad_phi_e_e!
    */
-
   dbl grad_S[MAX_MODES][DIM][DIM][DIM];	/* Gradient of polymer stress tensor( or most of it!) */
   dbl div_S[MAX_MODES][DIM];	        /* Divergence of polymer stress tensor */
   dbl grad_G[DIM][DIM][DIM];	/* Gradient of velocity tensor ( or most of it!) */
