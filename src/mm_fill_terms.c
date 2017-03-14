@@ -28094,7 +28094,8 @@ fluid_stress_conf( double Pi[DIM][DIM],
     {
       conf = 0;
     }
-    
+
+
   if (conf == CONF) {
     for (mode=0; mode<vn->modes; mode++) {
       for (a = 0; a < VIM; a++) {
@@ -28105,7 +28106,8 @@ fluid_stress_conf( double Pi[DIM][DIM],
     }
   } else if (conf == LOG_CONF) {
     for (mode = 0; mode < vn->modes; mode++) {
-      log_conf_analytic_2D(fv->S[mode], exp_s[mode]);
+      compute_exp_s(fv->S[mode], exp_s[mode]);
+      //log_conf_analytic_2D(fv->S[mode], exp_s[mode]);
     }
   }
 

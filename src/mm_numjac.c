@@ -138,14 +138,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   int i, j, k, l, m, ii, nn, kount, nnonzero, index;
   int zeroCA;
   int *ija = ams->bindx;
-  double *aj_diag, *aj_off_diag, *scale;
-  double *resid_vector_1, *x_1, resid_scale;
-  double resid_min, resid_max, resid_error;
-  /* double resid_scaled_error; */
-  double dx, delta_min, delta_max;
-  double delta_aj_percentage, roundoff, confidence, resid_diff;
+  double *resid_vector_1, *x_1;
+  double dx;
   int *irow, *jcolumn, *nelem;
-
   int num_elems, num_dofs;
   int my_elem_num, my_node_num, elem_num, node_num;
   int elem_already_listed;
@@ -154,12 +149,11 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   NODE_INFO_STRUCT *node;
   NODAL_VARS_STRUCT *nvs;
   VARIABLE_DESCRIPTION_STRUCT *vd;
-  int I, var_i, var_j, ibc, bc_input_id, eqn;
-  struct elem_side_bc_struct *elem_side_bc;
+  int var_i, var_j;
   double x_scale[MAX_VARIABLE_TYPES];
   int count[MAX_VARIABLE_TYPES];
-  int Inter_Mask_save[MAX_VARIABLE_TYPES][MAX_VARIABLE_TYPES];
-  double *aj, *aj_1;
+
+  char errstring[256];
 
   if(strcmp(Matrix_Format, "msr"))
     EH(-1, "Cannot compute numerical jacobian values for non-MSR formats.");
@@ -172,37 +166,16 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   irow = (int *) array_alloc(1, nnonzero, sizeof(int));
   jcolumn = (int *) array_alloc(1, nnonzero, sizeof(int));
   nelem = (int *) array_alloc(1, nnonzero, sizeof(int));
-  aj_diag =  (double *) array_alloc(1, NumUnknowns, sizeof(double));
-  aj_off_diag =  (double *) array_alloc(1, nnonzero, sizeof(double));
   resid_vector_1 =  (double *) array_alloc(1, NumUnknowns, sizeof(double));
   x_1 =  (double *) array_alloc(1, NumUnknowns, sizeof(double));
-  scale =  (double *) array_alloc(1, NumUnknowns, sizeof(double));
   output_list = (int *)array_alloc(1, NumUnknowns, sizeof(int));
   dof_list = (int *)array_alloc(1, NumUnknowns, sizeof(int));
   elem_list = (int *)array_alloc(1, ELEM_LIST_SIZE, sizeof(int));
-  aj =  (double *) array_alloc(1, NumUnknowns, sizeof(double));
-  aj_1 =  (double *) array_alloc(1, NumUnknowns, sizeof(double));
-
-  if (aj_off_diag == NULL || scale == NULL) EH(-1, "No room for storage for computing numerical jacobian");
   
   /* Cannot do this with Front */
   if (Linear_Solver == FRONT) EH(-1,"Cannot use frontal solver with numjac. Use umf or lu");
 
   /* Initialization */
-  memset(aj_off_diag, 0, nnonzero*sizeof(dbl));
-  memset(aj_diag, 0, NumUnknowns*sizeof(dbl));
-
-  /* save Inter_Mask away, turn on all entries so that we can make sure
-   * that Inter_Mask is being turned on for all entries being used
-   */
-  for(j =0; j < MAX_VARIABLE_TYPES; j++)
-    {
-      for(i = 0; i < MAX_VARIABLE_TYPES; i++)
-        {
-          Inter_Mask_save[j][i] = Inter_Mask[j][i];
-          Inter_Mask[j][i] = 1;
-        }
-    }
 
   /* There are a couple of places in checking the Jacobian numerically
    * that you really need to know the scale of the unknowns in the problem.
@@ -281,6 +254,12 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
       /*
        * Perturb one variable at a time
        */
+
+      /* Only for stress terms */
+      if (idv[j][0] < POLYMER_STRESS11 || idv[j][0] > POLYMER_STRESS33) continue;
+
+      //      sprintf(errstring, "Computing J[:,%d] with respect to %s\n", j, Var_Name[idv[j][0]].name1);
+      //      printf(errstring);
        
      if ( ls != NULL && ls->Ignore_F_deps && idv[j][0] == FILL ) continue;
 
@@ -456,10 +435,17 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
         {
 	  
           i = dof_list[ii];
+	  var_i = idv[i][0];
+          var_j = idv[j][0];
+          if (Inter_Mask[var_i][var_j]) {
 
-	  int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i+1], ams->bindx);
-	  EH(ja, "index not found");
-	  ams->val[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx);
+	    int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i+1], ams->bindx);
+	    if (ja == -1) {
+	      sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j, idv[i][0], idv[j][0]);
+	      EH(ja, errstring);
+	    }
+	    ams->val[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx);
+	  }
 
         }
 
@@ -476,17 +462,11 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   safe_free( (void *) irow) ;
   safe_free( (void *) jcolumn) ;
   safe_free( (void *) nelem) ;
-  safe_free( (void *) aj_diag) ;
-  safe_free( (void *) aj_off_diag) ;
   safe_free( (void *) resid_vector_1) ;
   safe_free( (void *) x_1) ;
-  safe_free( (void *) scale) ;
   safe_free( (void *) output_list);
   safe_free( (void *) dof_list);
   safe_free( (void *) elem_list);
-  safe_free( (void *) aj) ;
-  safe_free( (void *) aj_1) ;
-  
 }
 
 /*

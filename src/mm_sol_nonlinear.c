@@ -774,11 +774,11 @@ int solve_nonlinear_problem(struct Aztec_Linear_Solver_System *ams,
 	  if (Num_ROT > 0) calculate_all_rotation_vectors(exo, x);
 	  	  else if ( Use_2D_Rotation_Vectors == TRUE ) calculate_2D_rotation_vectors(exo,x);
 
-	  numerical_jacobian_check(ams, x, resid_vector, delta_t, theta, 
-				   x_old, x_older, xdot, xdot_old,x_update,
-				   num_total_nodes, First_Elem_Side_BC_Array, 
-				   Debug_Flag, time_value, exo, dpi,
-				   &h_elem_avg, &U_norm);
+	  numerical_jacobian(ams, x, resid_vector, delta_t, theta, 
+			     x_old, x_older, xdot, xdot_old,x_update,
+			     num_total_nodes, First_Elem_Side_BC_Array, 
+			     Debug_Flag, time_value, exo, dpi,
+			     &h_elem_avg, &U_norm);
 
 	  DPRINTF(stderr,"%s: numerical Jacobian done....\n", yo);
 	  P0PRINTF("\n-done\n\n");
@@ -946,14 +946,12 @@ EH(-1,"version not compiled with frontal solver");
 				     &h_elem_avg, &U_norm, NULL);
 
 
-	      /*	      numerical_jacobian(ams, x, resid_vector, delta_t, theta, 
+	      numerical_jacobian_compute(ams, x, resid_vector, delta_t, theta, 
 				 x_old, x_older, xdot, xdot_old,x_update,
 				 num_total_nodes, First_Elem_Side_BC_Array, 
 				 Debug_Flag, time_value, exo, dpi,
 				 &h_elem_avg, &U_norm);
 
-	      */
-	      
 	      a_end = ut();
 	      if (err == -1) {
                 return_value = -1;
