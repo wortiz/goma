@@ -3597,10 +3597,6 @@ assemble_stress_log_conf(dbl tt,
 
       //Predetermine advective terms
       trace = 0.0;
-      for(a=0; a<VIM; a++)
-	{
-	  trace += exp_s[a][a];
-	}
       
       for(a=0; a<VIM; a++)
 	{
@@ -3623,29 +3619,6 @@ assemble_stress_log_conf(dbl tt,
 		}
 	    }
 	}
-
-      /*
-      for (i = 0; i < VIM; i++) {
-	for (j = 0; j < VIM; j++) {
-	  v_dot_del_exp_s[i][j] = 0.0;
-	  x_dot_del_exp_s[i][j] = 0.0;
-	}
-      }
-
-      for(q=0; q<dim; q++) {
-	for(i=0; i<VIM; i++) {
-	  for(j=0; j<VIM; j++) {
-	    for (a = 0; a < VIM; a++) {
-	      for (b = 0; b < VIM; b++) {
-		v_dot_del_exp_s[i][j] +=  d_exp_s_ds[i][j][a][b]*v[q]*grad_s[q][a][b];
-		x_dot_del_exp_s[i][j] +=  d_exp_s_ds[i][j][a][b]*x_dot[q]*grad_s[q][a][b];
-	      }
-	    }
-	  }
-	}
-      }
-      */
-      
 
       //Exponential term for PTT
       Z = exp(eps*trace - (double) dim);
