@@ -3526,7 +3526,7 @@ assemble_stress_log_conf(dbl tt,
       if(VIM==2)
 	{	  
 	  //Compute d/ds(e^s)
-	  log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
+	  //log_conf_analytic_2D_with_jac(s, exp_s, d_exp_s_ds);
 	  compute_d_exp_s_ds(s, exp_s, d_exp_s_ds);
 	  
 	}
@@ -3602,7 +3602,7 @@ assemble_stress_log_conf(dbl tt,
 	  trace += exp_s[a][a];
 	}
       
-      /*for(a=0; a<VIM; a++)
+      for(a=0; a<VIM; a++)
 	{
 	  trace += exp_s[a][a];
 	  for(b=0; b<VIM; b++)
@@ -3622,8 +3622,9 @@ assemble_stress_log_conf(dbl tt,
 		    }
 		}
 	    }
-	} */
+	}
 
+      /*
       for (i = 0; i < VIM; i++) {
 	for (j = 0; j < VIM; j++) {
 	  v_dot_del_exp_s[i][j] = 0.0;
@@ -3634,14 +3635,16 @@ assemble_stress_log_conf(dbl tt,
       for(q=0; q<dim; q++) {
 	for(i=0; i<VIM; i++) {
 	  for(j=0; j<VIM; j++) {
-	    v_dot_del_exp_s[i][j] +=  (d_exp_s_ds[i][j][0][0]*v[q]*grad_s[q][i][j] +
-				       d_exp_s_ds[i][j][0][1]*v[q]*grad_s[q][i][j] + d_exp_s_ds[i][j][1][1]*v[q]*grad_s[q][i][j]);
-	    x_dot_del_exp_s[i][j] +=  (d_exp_s_ds[i][j][0][0]*x_dot[q]*grad_s[q][i][j] +
-				       d_exp_s_ds[i][j][0][1]*x_dot[q]*grad_s[q][i][j] + d_exp_s_ds[i][j][1][1]*x_dot[q]*grad_s[q][i][j]);
+	    for (a = 0; a < VIM; a++) {
+	      for (b = 0; b < VIM; b++) {
+		v_dot_del_exp_s[i][j] +=  d_exp_s_ds[i][j][a][b]*v[q]*grad_s[q][a][b];
+		x_dot_del_exp_s[i][j] +=  d_exp_s_ds[i][j][a][b]*x_dot[q]*grad_s[q][a][b];
+	      }
+	    }
 	  }
 	}
       }
-
+      */
       
 
       //Exponential term for PTT

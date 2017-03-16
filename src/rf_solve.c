@@ -119,6 +119,142 @@ PROTO(( int,
 		double *,
 		int ));
 
+// C = A X B
+void slow_square_dgemm(int transpose_b, int N, double A[N][N], double B[N][N], double C[N][N]) {
+  if (transpose_b) {
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < N; j++) {
+	double tmp = 0;
+	for (int k = 0; k < N; k++) {
+	  tmp += A[i][k] * B[j][k];
+	}
+	C[i][j] = tmp;
+      }
+    }
+  } else {
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < N; j++) {
+	double tmp = 0;
+	for (int k = 0; k < N; k++) {
+	  tmp += A[i][k] * B[k][j];
+	}
+	C[i][j] = tmp;
+      }
+    }
+  }
+}
+
+void
+initial_guess_conf_to_log_conf(double *x, int num_total_nodes)
+{
+  // assume there is only 1 mode atm
+  int idx;
+
+  double s[VIM][VIM];
+  double log_s[VIM][VIM];
+  int s_idx[3];
+  int M = VIM;
+  int N = VIM;
+  int LDA = N;
+  int LDU = M;
+  int LDVT = N;
+
+  int INFO;
+  int LWORK = 20;
+  double WORK[LWORK];
+  double A[VIM*VIM];
+
+  for (int node = 0; node < num_total_nodes; node++) {
+    memset(WORK, 0, sizeof(double)*LWORK);
+    memset(A, 0.0, sizeof(double)*VIM*VIM);
+
+    int idx = 0;
+    for (int v = POLYMER_STRESS11; v <= POLYMER_STRESS22; v++) {
+      s_idx[idx] = Index_Solution(node, v, 0, 0, -2);
+      idx++;
+    }
+
+    // skip node if stress variables not found
+    if (s_idx[0] == -1 || s_idx[1] == -1 || s_idx[2] == -1) continue;
+
+    // get conformation tensor from initial guess
+    s[0][0] = x[s_idx[0]];
+    s[0][1] = x[s_idx[1]];
+    s[1][0] = x[s_idx[1]];
+    s[1][1] = x[s_idx[2]];
+    
+    // convert to column major
+    for (int i = 0; i < VIM; i++) {
+      for (int j = 0; j < VIM; j++) {
+	A[i*VIM + j] = s[j][i];
+      }
+    }
+
+    double W[VIM];
+
+    // eig solver
+    dsyev_("V", "U", &N, A, &LDA, W, WORK, &LWORK, &INFO, 1, 1);
+
+    double U[VIM][VIM];
+
+    // transpose (revert to row major)
+    for (int i = 0; i < VIM; i++) {
+      for (int j = 0; j < VIM; j++) {
+	U[i][j] = A[j*VIM + i];
+      }
+    }
+
+    // exponentiate diagonal
+    double D[VIM][VIM];
+    for (int i = 0; i < VIM; i++) {
+      for (int j = 0; j < VIM; j++) {
+	if (i == j) {
+	  D[i][j] = log(W[i]);
+	} else {
+	  D[i][j] = 0;
+	}
+      }
+    }
+
+    /* matrix multiplication, the slow way */
+    slow_square_dgemm(0, VIM, U, D, log_s);
+  
+    // multiply by transpose
+    slow_square_dgemm(1, VIM, log_s, U, D);
+
+    for (int i = 0; i < VIM; i++) {
+      for (int j = 0; j < VIM; j++) {
+	log_s[i][j] = D[i][j];
+      }
+    }
+
+    x[s_idx[0]] = log_s[0][0];
+    x[s_idx[1]] = log_s[0][1];
+    x[s_idx[2]] = log_s[1][1];
+
+    printf("Node %d:\n", node);
+
+    printf("C = [\n");
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+	printf("%g ", s[i][j]);
+      }
+      printf("\n");
+    }
+    printf("]\n");
+
+    printf("log(C) = [\n");
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+	printf("%g ", log_s[i][j]);
+      }
+      printf("\n");
+    }
+    printf("]\n");
+    
+  }
+}
+
 void
 solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 	      Dpi *dpi,		 /* distributed processing information       */
@@ -744,6 +880,9 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 	}
     }
 
+
+  //  initial_guess_conf_to_log_conf(x, num_total_nodes);
+  
   /* Load external fields from import vectors xnv_in & xev_in */
 #ifdef LIBRARY_MODE
   /* First check if porosity updates are necessary */
