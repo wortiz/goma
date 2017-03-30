@@ -3287,9 +3287,9 @@ assemble_stress_log_conf(dbl tt,
   int R_s[MAX_MODES][DIM][DIM]; 
   int v_s[MAX_MODES][DIM][DIM]; 
   int v_g[DIM][DIM]; 
-  dbl s[DIM][DIM], exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];        
+  dbl s[DIM][DIM], exp_s[DIM][DIM], d_exp_s_ds[DIM][DIM][DIM][DIM];
   dbl s_dot[DIM][DIM], exp_s_dot[DIM][DIM];    
-  dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM];
+  dbl grad_s[DIM][DIM][DIM], grad_exp_s[DIM][DIM][DIM], grad_exp_s_app[DIM][DIM][DIM];;
   dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
   int use_G=0;
   dbl g[DIM][DIM];       
@@ -3599,26 +3599,37 @@ assemble_stress_log_conf(dbl tt,
       trace = 0.0;
       
       for(a=0; a<VIM; a++)
-	{
-	  trace += exp_s[a][a];
-	  for(b=0; b<VIM; b++)
-	    {
-	      v_dot_del_exp_s[a][b] = 0.0;
-	      x_dot_del_exp_s[a][b] = 0.0;
-	      for(i=0; i<VIM; i++)
-		{
-		  for(j=0; j<VIM; j++)
-		    {
-		      for(q=0; q<dim; q++)
-			{
-			  grad_exp_s[q][a][b]   +=  d_exp_s_ds[a][b][i][j]*grad_s[q][i][j];
-			  v_dot_del_exp_s[a][b] +=  d_exp_s_ds[a][b][i][j]*v[q]*grad_s[q][i][j];
-			  x_dot_del_exp_s[a][b] +=  d_exp_s_ds[a][b][i][j]*x_dot[q]*grad_s[q][i][j];
-			}
-		    }
-		}
-	    }
-	}
+      	{
+      	  trace += exp_s[a][a];
+      	  for(b=0; b<VIM; b++)
+      	    {
+      	      for(i=0; i<VIM; i++)
+      		{
+      		  for(j=0; j<VIM; j++)
+      		    {
+      		      for(q=0; q<dim; q++)
+      			{
+      			  grad_exp_s_app[q][a][b]   +=  d_exp_s_ds[a][b][i][j]*grad_s[q][i][j];
+      			}
+      		    }
+      		}
+      	    }
+      	}
+      
+      for(a=0; a<VIM; a++)
+      	{
+      	  for(b=0; b<VIM; b++)
+      	    {
+      	      v_dot_del_exp_s[a][b] = 0.0;
+      	      x_dot_del_exp_s[a][b] = 0.0;
+      	      for(q=0; q<dim; q++)
+      		{
+      		  v_dot_del_exp_s[a][b] +=  v[q]*grad_exp_s[q][a][b];
+      		  x_dot_del_exp_s[a][b] +=  x_dot[q]*grad_exp_s[q][a][b];
+      		}
+      	    }
+      	}
+
 
       //Exponential term for PTT
       Z = exp(eps*trace - (double) dim);
@@ -6980,7 +6991,7 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 
   for (int i = 0; i < VIM; i++) {
     for (int j = 0; j < VIM; j++) {
-      double ds = fabs(s[i][j]) * 1e-4 + 1e-6;
+      double ds = 1e-6;
 
       // perturb s
       s_p[i][j] += ds;
@@ -6994,6 +7005,8 @@ compute_d_exp_s_ds(dbl s[DIM][DIM],                   //s - stress
 	  d_exp_s_ds[p][q][i][j] = (exp_s_p[p][q] - exp_s[p][q]) / ds;
 	}
       }
+
+      s_p[i][j] = s[i][j];
     }
   }
 }
