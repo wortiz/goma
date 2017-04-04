@@ -3677,6 +3677,7 @@ assemble_stress_log_conf(dbl tt,
 				}
 			    } 
 
+			  advection = 0;
 			  if(pd->e[eqn] & T_ADVECTION)
  			    {  
 			      advection += v_dot_del_exp_s[a][b] - x_dot_del_exp_s[a][b];
