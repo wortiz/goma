@@ -152,6 +152,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   int var_i, var_j;
   double x_scale[MAX_VARIABLE_TYPES];
   int count[MAX_VARIABLE_TYPES];
+  double *nj;
 
   char errstring[256];
 
@@ -171,6 +172,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
   output_list = (int *)array_alloc(1, NumUnknowns, sizeof(int));
   dof_list = (int *)array_alloc(1, NumUnknowns, sizeof(int));
   elem_list = (int *)array_alloc(1, ELEM_LIST_SIZE, sizeof(int));
+
+  nj = calloc(sizeof(double), ams->nnz+1);
+  memcpy(nj, ams->val, ams->nnz*(sizeof(double)));
   
   /* Cannot do this with Front */
   if (Linear_Solver == FRONT) EH(-1,"Cannot use frontal solver with numjac. Use umf or lu");
@@ -444,7 +448,7 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
 	      sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j, idv[i][0], idv[j][0]);
 	      EH(ja, errstring);
 	    }
-	    ams->val[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx);
+	    nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx);
 	  }
 
         }
@@ -458,6 +462,9 @@ numerical_jacobian_compute(struct Aztec_Linear_Solver_System *ams,
       x_1[j] = x[j];
     }                          /* End of for (j=0; j<NumUnknowns; j++) */  
 
+  memcpy(ams->val, nj, ams->nnz);
+
+  free(nj);
   /* free arrays to hold jacobian and vector values */
   safe_free( (void *) irow) ;
   safe_free( (void *) jcolumn) ;

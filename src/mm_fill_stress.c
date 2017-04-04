@@ -3688,10 +3688,10 @@ assemble_stress_log_conf(dbl tt,
 			  source = 0.0;
 			  if(pd->e[eqn] & T_SOURCE)
 			    {
-			      source +=  Z*exp_s[a][b]/lambda;
+			      source +=  exp_s[a][b]/lambda;
 			      if(a==b)
 				{
-				  source -= Z/lambda;
+				  source -= 1/lambda;
 				}
 
 			      if(alpha!=0.0)
