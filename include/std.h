@@ -368,9 +368,11 @@ typedef int MPI_Aint;
 
 #ifdef PARALLEL
 #  define DPRINTF if ( ProcID == 0 ) fprintf
+#  define DFPUTS if ( ProcID == 0 ) fputs 
 #  define P0PRINTF if (ProcID == 0) printf
 #else
 #  define DPRINTF fprintf
+#  define DFPUTS fputs
 #  define P0PRINTF printf
 #endif
 

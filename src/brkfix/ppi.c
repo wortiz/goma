@@ -66,7 +66,7 @@ brk_pre_process(char *fn)
   if ( ( infile = fopen( fn, "r" ) ) == NULL )
     {
       sprintf( buffer, "Error opening input file: %s\n", fn );
-      fprintf(stdout, buffer );
+      fputs(buffer, stdout);
       fflush( stdout );
       exit(1);
     }
@@ -85,7 +85,7 @@ brk_pre_process(char *fn)
     {
       sprintf( buffer,
                "Error opening temporary input file: %s\n", nfn );
-      fprintf(stdout,buffer);
+      fputs(buffer, stdout);
       fflush( stdout );
       exit(1);
     }
@@ -142,7 +142,7 @@ brk_pre_process(char *fn)
         }
         str1[0] = buffer[0];
         if( strcmp( str1,"\n" ) != 0 ) {     /* save the line to temp file */
-          fprintf( temp_file, buffer );
+          fputs(buffer, temp_file);
           for( k=0; k< 80; ++k ) buffer[k] = '\0';
         }
       }   /* end blank line check  and  comment line check */
