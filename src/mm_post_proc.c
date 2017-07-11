@@ -136,6 +136,9 @@ int DARCY_VELOCITY_LIQ = -1;    /* Darcy velocity vectors for flow in a
 				 * saturated or unsaturated medium */
 int DENSITY = -1;	       	/* density function at vertex and midside 
 				 * nodes, e.g. for particle settling etc. */
+
+int POLYMER_VISCOSITY = -1;
+int POLYMER_TIME_CONST = -1;
 int DIELECTROPHORETIC_FIELD = -1;
                                 /* Dielectrophoretic force vectors. */
 int DIELECTROPHORETIC_FIELD_NORM = -1;
@@ -781,7 +784,32 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     local_lumped[DENSITY] = 1.;
   }
 
+  if (POLYMER_VISCOSITY != -1 && pd->e[R_STRESS11] ) {
+    mode = 0;
+    double mup = viscosity(ve[mode]->gn, gamma, NULL);
+    local_post[POLYMER_VISCOSITY] = mup;
+    local_lumped[POLYMER_VISCOSITY] = 1.;
+  }
 
+  if (POLYMER_TIME_CONST != -1 && pd->e[R_STRESS11] ) {
+    mode = 0;
+    double lambda;
+    if (ve[mode]->time_constModel == CONSTANT) {
+      lambda = ve[mode]->time_const;
+    } else if (ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW) {
+      lambda = mup/ve[mode]->time_const;
+    } else if (ls != NULL && ve[mode]->time_constModel == VE_LEVEL_SET) {
+      double pos_lambda = ve[mode]->pos_ls.time_const;
+      double neg_lambda = ve[mode]->time_const;
+      double width     = ls->Length_Scale;
+      err = level_set_property(neg_lambda, pos_lambda, width, &lambda, NULL);
+      EH(err, "level_set_property() failed for polymer time constant.");
+    }
+    local_post[POLYMER_TIME_CONST] = lambda;
+    local_lumped[POLYMER_TIME_CONST] = 1.;
+  }
+
+  
   if (MEAN_SHEAR != -1 && pd->e[R_MOMENTUM1] ){
     for (a = 0; a < dim; a++) {       
       for (b = 0; b < dim; b++) {
@@ -6286,6 +6314,9 @@ rd_post_process_specs(FILE *ifp,
   iread = look_for_post_proc(ifp, "Error ZZ heat flux", &ERROR_ZZ_Q);
   iread = look_for_post_proc(ifp, "Error ZZ pressure", &ERROR_ZZ_P);
   iread = look_for_post_proc(ifp, "User-Defined Post Processing", &USER_POST);
+  iread = look_for_post_proc(ifp, "Polymer Viscosity", &DENSITY);
+  iread = look_for_post_proc(ifp, "Polymer Viscosity", &POLYMER_VISCOSITY);
+  iread = look_for_post_proc(ifp, "Polymer Time Constant", &POLYMER_TIME_CONST);
 
   /*
    * Initialize for surety before communication to other processors.
@@ -9240,6 +9271,41 @@ index_post, index_post_export);
     {
       USER_POST = -1;
     }
+
+  if (POLYMER_VISCOSITY != -1 && Num_Var_In_Type[R_STRESS11])
+    {
+      set_nv_tkud(rd, index, 0, 0, -2, "MUP","[1]", "Polymer Viscosity", FALSE);
+      index++;
+      if (POLYMER_VISCOSITY == 2)
+	{
+	  Export_XP_ID[index_post_export] = index_post;
+	  index_post_export++;
+	}
+      POLYMER_VISCOSITY = index_post;
+      index_post++;
+    }
+  else
+    {
+      POLYMER_VISCOSITY = -1;
+    }
+
+  if (POLYMER_TIME_CONST != -1 && Num_Var_In_Type[R_STRESS11])
+    {
+      set_nv_tkud(rd, index, 0, 0, -2, "LAMBDA","[1]", "Polymer Time Constant", FALSE);
+      index++;
+      if (POLYMER_TIME_CONST == 2)
+	{
+	  Export_XP_ID[index_post_export] = index_post;
+	  index_post_export++;
+	}
+      POLYMER_TIME_CONST = index_post;
+      index_post++;
+    }
+  else
+    {
+      POLYMER_TIME_CONST = -1;
+    }
+
 
   if (ACOUSTIC_PRESSURE != -1  && 
       (Num_Var_In_Type[R_ACOUS_PREAL] && Num_Var_In_Type[R_ACOUS_PIMAG]) )
