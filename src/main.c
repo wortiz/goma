@@ -217,7 +217,7 @@ main(int argc, char **argv)
  * arguments in the command line minus 1 (1st is program name) */
 
 #ifdef FP_EXCEPT
-  feenableexcept ((FE_OVERFLOW | FE_UNDERFLOW | FE_DIVBYZERO | FE_INVALID));
+  feenableexcept ((FE_OVERFLOW | FE_DIVBYZERO | FE_INVALID));
 #endif
   /*
   *  Get the name of the executable, yo

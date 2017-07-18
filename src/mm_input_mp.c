@@ -2692,7 +2692,7 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
 	  ECHO(es,echo_file);
 
-	  strcpy(search_string, "Second Level Set Mobility Parameter");
+	  strcpy(search_string, "Positive Level Set Mobility Parameter");
 
 	  model_read = look_for_modal_prop(imp, search_string,
 					   vn_glob[mn]->modes,
@@ -2702,7 +2702,7 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
 	  if( model_read == 1 ) {
 
-	    if( ls == NULL ) EH(-1, "Second Level Set Mobility Parameter requires activation of Level Set Tracking.\n");
+	    if( ls == NULL ) EH(-1, "Positive Level Set Mobility Parameter requires activation of Level Set Tracking.\n");
 
 	    for(mm=0;mm<vn_glob[mn]->modes;mm++)
 	      {
@@ -2824,8 +2824,7 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 		ve_glob[mn][mm]->epsModel = VE_LEVEL_SET;
 	      }
 
-
-	    ECHO(es,echo_file);
+	    ECHO(es,echo_file); 
 	  } else if ( model_read == -2 ) {
 	    SPF(err_msg,"Only CONSTANT %s mode model supported.", search_string);
 	    fprintf(stderr, "%s\n", err_msg);
