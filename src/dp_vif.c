@@ -2440,7 +2440,6 @@ noahs_ark()
   ddd_add_member(n, &FIRST_INVAR_STRAIN, 1, MPI_INT);
   ddd_add_member(n, &SEC_INVAR_STRAIN, 1, MPI_INT);
   ddd_add_member(n, &THIRD_INVAR_STRAIN, 1, MPI_INT);
-
   ddd_add_member(n, &CAPILLARY_PRESSURE, 1, MPI_INT);
   ddd_add_member(n, &CONC_CONT, 1, MPI_INT);
   ddd_add_member(n, &CONDUCTION_VECTORS, 1, MPI_INT);
@@ -2462,6 +2461,9 @@ noahs_ark()
   ddd_add_member(n, &DENSITY, 1, MPI_INT);
   ddd_add_member(n, &POLYMER_VISCOSITY, 1, MPI_INT);
   ddd_add_member(n, &POLYMER_TIME_CONST, 1, MPI_INT);
+  ddd_add_member(n, &MOBILITY_PARAMETER, 1, MPI_INT);
+  ddd_add_member(n, &PTT_XI, 1, MPI_INT);
+  ddd_add_member(n, &PTT_EPSILON, 1, MPI_INT);
   ddd_add_member(n, &NS_RESIDUALS, 1, MPI_INT);
   ddd_add_member(n, &MM_RESIDUALS, 1, MPI_INT);
   ddd_add_member(n, &FLUXLINES, 1, MPI_INT);

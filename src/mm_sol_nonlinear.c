@@ -2270,7 +2270,7 @@ EH(-1,"version not compiled with frontal solver");
 	   glob_var_vals[0] = (double) *converged;
 	   glob_var_vals[1] = (double) inewton;
 	   glob_var_vals[2] = (double) Max_Newton_Steps;
-	   if (Norm_new > 0.0 ) {
+	   if (Norm_new > 0.0 && Norm_old != 1) {
 	     glob_var_vals[3] = (double) (log10(Norm_new)/log10(Norm_old));
 	   } else {
 	     glob_var_vals[3] = 0.;

@@ -425,6 +425,9 @@ extern int DENSITY;		/* density function at vertex and midside
 				 * nodes, e.g. for particle settling etc. */
 extern int POLYMER_VISCOSITY;
 extern int POLYMER_TIME_CONST;
+extern int MOBILITY_PARAMETER;
+extern int PTT_XI;
+extern int PTT_EPSILON;
 extern int DIELECTROPHORETIC_FIELD;
                                 /* Dielectrophoretic force vectors. */
 extern int DIELECTROPHORETIC_FIELD_NORM;

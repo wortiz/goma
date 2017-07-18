@@ -73,7 +73,9 @@ extern void handle_ieee(void );
 #include "dp_types.h"
 
 #include "brk_utils.h"
-
+#ifdef FP_EXCEPT
+#include <fenv.h>
+#endif
 #define _MAIN_C
 #include "goma.h"
 
@@ -214,6 +216,9 @@ main(int argc, char **argv)
 /* assume number of commands is less than or equal to the number of 
  * arguments in the command line minus 1 (1st is program name) */
 
+#ifdef FP_EXCEPT
+  feenableexcept ((FE_OVERFLOW | FE_UNDERFLOW | FE_DIVBYZERO | FE_INVALID));
+#endif
   /*
   *  Get the name of the executable, yo
   */

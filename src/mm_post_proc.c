@@ -139,6 +139,9 @@ int DENSITY = -1;	       	/* density function at vertex and midside
 
 int POLYMER_VISCOSITY = -1;
 int POLYMER_TIME_CONST = -1;
+int PTT_XI = -1;
+int PTT_EPSILON = -1;
+int MOBILITY_PARAMETER = -1;
 int DIELECTROPHORETIC_FIELD = -1;
                                 /* Dielectrophoretic force vectors. */
 int DIELECTROPHORETIC_FIELD_NORM = -1;
@@ -809,6 +812,59 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     local_lumped[POLYMER_TIME_CONST] = 1.;
   }
 
+  if (PTT_XI != -1 && pd->e[R_STRESS11] ) {
+    mode = 0;
+    double xi;
+    if (ve[mode]->xiModel == CONSTANT) {
+      xi = ve[mode]->xi;
+    } else if (ve[mode]->xiModel == CARREAU || ve[mode]->xiModel == POWER_LAW) {
+      xi = mup/ve[mode]->xi;
+    } else if (ls != NULL && ve[mode]->xiModel == VE_LEVEL_SET) {
+      double pos_xi = ve[mode]->pos_ls.xi;
+      double neg_xi = ve[mode]->xi;
+      double width     = ls->Length_Scale;
+      err = level_set_property(neg_xi, pos_xi, width, &xi, NULL);
+      EH(err, "level_set_property() failed for polymer time constant.");
+    }
+    local_post[PTT_XI] = xi;
+    local_lumped[PTT_XI] = 1.;
+  }
+
+  if (PTT_EPSILON != -1 && pd->e[R_STRESS11] ) {
+    mode = 0;
+    double eps;
+    if (ve[mode]->epsModel == CONSTANT) {
+      eps = ve[mode]->eps;
+    } else if (ve[mode]->epsModel == CARREAU || ve[mode]->epsModel == POWER_LAW) {
+      eps = mup/ve[mode]->eps;
+    } else if (ls != NULL && ve[mode]->epsModel == VE_LEVEL_SET) {
+      double pos_eps = ve[mode]->pos_ls.eps;
+      double neg_eps = ve[mode]->eps;
+      double width     = ls->Length_Scale;
+      err = level_set_property(neg_eps, pos_eps, width, &eps, NULL);
+      EH(err, "level_set_property() failed for polymer time constant.");
+    }
+    local_post[PTT_EPSILON] = eps;
+    local_lumped[PTT_EPSILON] = 1.;
+  }
+
+  if (MOBILITY_PARAMETER != -1 && pd->e[R_STRESS11] ) {
+    mode = 0;
+    double alpha;
+    if (ve[mode]->alphaModel == CONSTANT) {
+      alpha = ve[mode]->alpha;
+    } else if (ve[mode]->alphaModel == CARREAU || ve[mode]->alphaModel == POWER_LAW) {
+      alpha = mup/ve[mode]->alpha;
+    } else if (ls != NULL && ve[mode]->alphaModel == VE_LEVEL_SET) {
+      double pos_alpha = ve[mode]->pos_ls.alpha;
+      double neg_alpha = ve[mode]->alpha;
+      double width     = ls->Length_Scale;
+      err = level_set_property(neg_alpha, pos_alpha, width, &alpha, NULL);
+      EH(err, "level_set_property() failed for polymer time constant.");
+    }
+    local_post[MOBILITY_PARAMETER] = alpha;
+    local_lumped[MOBILITY_PARAMETER] = 1.;
+  }
   
   if (MEAN_SHEAR != -1 && pd->e[R_MOMENTUM1] ){
     for (a = 0; a < dim; a++) {       
@@ -6317,6 +6373,9 @@ rd_post_process_specs(FILE *ifp,
   iread = look_for_post_proc(ifp, "Polymer Viscosity", &DENSITY);
   iread = look_for_post_proc(ifp, "Polymer Viscosity", &POLYMER_VISCOSITY);
   iread = look_for_post_proc(ifp, "Polymer Time Constant", &POLYMER_TIME_CONST);
+  iread = look_for_post_proc(ifp, "Mobility Parameter", &MOBILITY_PARAMETER);
+  iread = look_for_post_proc(ifp, "PTT Xi parameter", &PTT_XI);
+  iread = look_for_post_proc(ifp, "PTT Epsilon parameter", &PTT_EPSILON);
 
   /*
    * Initialize for surety before communication to other processors.
@@ -9306,7 +9365,57 @@ index_post, index_post_export);
       POLYMER_TIME_CONST = -1;
     }
 
+  if (MOBILITY_PARAMETER != -1 && Num_Var_In_Type[R_STRESS11])
+    {
+      set_nv_tkud(rd, index, 0, 0, -2, "ALPHA","[1]", "Mobility Parameter", FALSE);
+      index++;
+      if (MOBILITY_PARAMETER == 2)
+	{
+	  Export_XP_ID[index_post_export] = index_post;
+	  index_post_export++;
+	}
+      MOBILITY_PARAMETER = index_post;
+      index_post++;
+    }
+  else
+    {
+      MOBILITY_PARAMETER = -1;
+    }
 
+  if (PTT_XI != -1 && Num_Var_In_Type[R_STRESS11])
+    {
+      set_nv_tkud(rd, index, 0, 0, -2, "XI","[1]", "PTT Xi parameter", FALSE);
+      index++;
+      if (PTT_XI == 2)
+	{
+	  Export_XP_ID[index_post_export] = index_post;
+	  index_post_export++;
+	}
+      PTT_XI = index_post;
+      index_post++;
+    }
+  else
+    {
+      PTT_XI = -1;
+    }
+
+  if (PTT_EPSILON != -1 && Num_Var_In_Type[R_STRESS11])
+    {
+      set_nv_tkud(rd, index, 0, 0, -2, "EPSILON","[1]", "PTT Epsilon parameter", FALSE);
+      index++;
+      if (PTT_EPSILON == 2)
+	{
+	  Export_XP_ID[index_post_export] = index_post;
+	  index_post_export++;
+	}
+      PTT_EPSILON = index_post;
+      index_post++;
+    }
+  else
+    {
+      PTT_EPSILON = -1;
+    }
+  
   if (ACOUSTIC_PRESSURE != -1  && 
       (Num_Var_In_Type[R_ACOUS_PREAL] && Num_Var_In_Type[R_ACOUS_PIMAG]) )
     {

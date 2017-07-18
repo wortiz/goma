@@ -104,7 +104,7 @@ ARCHIVE_NAMES=("arpack96.tar.gz" \
 "sparse.tar.gz" 
 "superlu_dist_5.0.0.tar.gz" \
 "y12m-1.0.tar.gz" \
-"trilinos-12.6.4-Source.tar.bz2" \
+"trilinos-12.10.1-Source.tar.gz" \
 "scalapack-2.0.2.tgz" \
 "MUMPS_5.0.1.tar.gz" \
 "SuiteSparse-4.4.4.tar.gz" \
@@ -122,7 +122,7 @@ ARCHIVE_MD5SUMS=("fffaa970198b285676f4156cebc8626e" \
 "1566d914d1035ac17b73fe9bc0eed02a" \
 "2b53baf1b0ddbd9fcf724992577f0670" \
 "eed01310baca61f22fb8a88a837d2ae3" \
-"b4edf20a997caa1ca88340f6e3dab514" \
+"4f190a02e007077e0b5097301cda32c2" \
 "2f75e600a2ba155ed9ce974a1c4b536f" \
 "b477573fdcc87babe861f62316833db0" \
 "e0af74476935c9ff6d971df8bb6b82fc" \
@@ -132,7 +132,7 @@ ARCHIVE_URLS=("http://www.caam.rice.edu/software/ARPACK/SRC/arpack96.tar.gz" \
 "http://www.caam.rice.edu/software/ARPACK/SRC/patch.tar.gz" \
 "http://github.com/xianyi/OpenBLAS/archive/v0.2.18.tar.gz" \
 "http://www.cmake.org/files/v2.8/cmake-2.8.12.2.tar.gz" \
-"http://www.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8.15/src/hdf5-1.8.15.tar.gz" \
+"https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.15/src/hdf5-1.8.15.tar.gz" \
 "http://www.netlib.org/lapack/lapack-3.2.1.tgz" \
 "ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-4.3.3.1.tar.gz" \
 "http://www.open-mpi.org/software/ompi/v1.6/downloads/openmpi-1.6.4.tar.gz" \
@@ -140,7 +140,7 @@ ARCHIVE_URLS=("http://www.caam.rice.edu/software/ARPACK/SRC/arpack96.tar.gz" \
 "http://downloads.sourceforge.net/project/sparse/sparse/sparse1.4b/sparse1.4b.tar.gz" \
 "http://crd-legacy.lbl.gov/~xiaoye/SuperLU/superlu_dist_5.0.0.tar.gz" \
 "http://sisyphus.ru/cgi-bin/srpm.pl/Branch5/y12m/getsource/0" \
-"https://trilinos.org/oldsite/download/files/trilinos-12.6.4-Source.tar.bz2" \
+"http://trilinos.csbsju.edu/download/files/trilinos-12.10.1-Source.tar.gz" \
 "http://www.netlib.org/scalapack/scalapack-2.0.2.tgz" \
 "http://graal.ens-lyon.fr/MUMPS/MUMPS_5.0.1.tar.gz" \
 "http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-4.4.4.tar.gz" \
@@ -158,7 +158,7 @@ ARCHIVE_DIR_NAMES=("ARPACK" \
 "sparse" \
 "SuperLU_DIST_2.3" \
 "y12m-1.0" \
-"trilinos-12.2.1-Source" \
+"trilinos-12.10.1-Source" \
 "scalapack-2.0.2" \
 "MUMPS_4.10.0" \
 "SuiteSparse" \
@@ -752,9 +752,9 @@ fi
 
 #continue_check
 #make trilinos
-rm -rf $GOMA_LIB/trilinos-12.6.4-Temp
-mkdir $GOMA_LIB/trilinos-12.6.4-Temp
-cd $GOMA_LIB/trilinos-12.6.4-Temp
+rm -rf $GOMA_LIB/trilinos-12.10.1-Temp
+mkdir $GOMA_LIB/trilinos-12.10.1-Temp
+cd $GOMA_LIB/trilinos-12.10.1-Temp
 
 rm -f CMakeCache.txt
 
@@ -771,7 +771,7 @@ export PATH=$GOMA_LIB/cmake-2.8.12.2/bin:$PATH
 
 MPI_LIBS="-LMPI_BASE_DIR/lib -lmpi_f90 -lmpi_f77 -lmpi"
 # Install directory
-TRILINOS_INSTALL=$GOMA_LIB/trilinos-12.6.4-Built
+TRILINOS_INSTALL=$GOMA_LIB/trilinos-12.10.1-Built
 #continue_check
 
 
@@ -856,7 +856,7 @@ cmake \
 -D Amesos_ENABLE_UMFPACK:BOOL=ON \
 -D Amesos_ENABLE_MUMPS:BOOL=ON \
 $EXTRA_ARGS \
-$GOMA_LIB/trilinos-12.6.4-Source
+$GOMA_LIB/trilinos-12.10.1-Source
 
 
 

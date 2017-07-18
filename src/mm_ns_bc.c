@@ -6669,7 +6669,7 @@ flow_n_dot_T_nobc(double func[DIM],
 			  var = v_g[b][c];
 			  for ( j=0; j<ei->dof[var]; j++)
 			    {
-			      d_func[p][var][j] += fv->snormal[q]*d_Pi->g[p][q][b][c][j];
+			      d_func[p][var][j] -= fv->snormal[q]*d_Pi->g[p][q][b][c][j];
 			    }
 			}
 		    }

@@ -1688,7 +1688,7 @@ assemble_stress_fortin(dbl tt,	/* parameter to vary time integration from
 
       if (ve[mode]->xiModel == CONSTANT) {
 	xi = ve[mode]->xi;
-      } else if (ls != NULL && ve[mode]->time_constModel == VE_LEVEL_SET) {
+      } else if (ls != NULL && ve[mode]->xiModel == VE_LEVEL_SET) {
 	double pos_xi = ve[mode]->pos_ls.xi;
 	double neg_xi = ve[mode]->xi;
 	double width     = ls->Length_Scale;
@@ -1702,9 +1702,9 @@ assemble_stress_fortin(dbl tt,	/* parameter to vary time integration from
       ucwt = 1.0 - xi / 2.0 ;
       lcwt = xi / 2.0 ;
       
-      if (ve[mode]->xiModel == CONSTANT) {
+      if (ve[mode]->epsModel == CONSTANT) {
 	eps = ve[mode]->eps;
-      } else if (ls != NULL && ve[mode]->time_constModel == VE_LEVEL_SET) {
+      } else if (ls != NULL && ve[mode]->epsModel == VE_LEVEL_SET) {
 	double pos_eps = ve[mode]->pos_ls.eps;
 	double neg_eps = ve[mode]->eps;
 	double width     = ls->Length_Scale;
