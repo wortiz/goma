@@ -1714,7 +1714,11 @@ assemble_stress_fortin(dbl tt,	/* parameter to vary time integration from
 	EH(-1, "Unknown PTT Epsilon parameter model");
       }
 
-      Z = exp( eps*lambda*trace/mup ); dZ_dtrace = Z*eps*lambda/mup ;
+      if (lambda == 0) {
+	Z = 1.0; dZ_dtrace = 0;
+      } else {
+	Z = exp( eps*lambda*trace/mup ); dZ_dtrace = Z*eps*lambda/mup ;
+      }
 
       /* get tensor dot products for future use */
       

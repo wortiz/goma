@@ -797,6 +797,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
   if (POLYMER_TIME_CONST != -1 && pd->e[R_STRESS11] ) {
     mode = 0;
     double lambda;
+    double mup = viscosity(ve[mode]->gn, gamma, NULL);
     if (ve[mode]->time_constModel == CONSTANT) {
       lambda = ve[mode]->time_const;
     } else if (ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW) {
@@ -815,6 +816,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
   if (PTT_XI != -1 && pd->e[R_STRESS11] ) {
     mode = 0;
     double xi;
+    double mup = viscosity(ve[mode]->gn, gamma, NULL);
     if (ve[mode]->xiModel == CONSTANT) {
       xi = ve[mode]->xi;
     } else if (ve[mode]->xiModel == CARREAU || ve[mode]->xiModel == POWER_LAW) {
@@ -833,6 +835,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
   if (PTT_EPSILON != -1 && pd->e[R_STRESS11] ) {
     mode = 0;
     double eps;
+    double mup = viscosity(ve[mode]->gn, gamma, NULL);
     if (ve[mode]->epsModel == CONSTANT) {
       eps = ve[mode]->eps;
     } else if (ve[mode]->epsModel == CARREAU || ve[mode]->epsModel == POWER_LAW) {
@@ -851,6 +854,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
   if (MOBILITY_PARAMETER != -1 && pd->e[R_STRESS11] ) {
     mode = 0;
     double alpha;
+    double mup = viscosity(ve[mode]->gn, gamma, NULL);
     if (ve[mode]->alphaModel == CONSTANT) {
       alpha = ve[mode]->alpha;
     } else if (ve[mode]->alphaModel == CARREAU || ve[mode]->alphaModel == POWER_LAW) {
