@@ -1453,6 +1453,11 @@ EH(-1,"version not compiled with frontal solver");
       case AMESOS:
 
         if( strcmp( Matrix_Format,"msr" ) == 0 ) {
+	  /* for (i = 0; i < NumUnknowns; i++)  */
+	  /*   { */
+	  /*     delta_x[i] = idv[i][0]; */
+	  /*   } */
+
           amesos_solve_msr( Amesos_Package, ams, delta_x, resid_vector, 1 );
         } else if ( strcmp( Matrix_Format,"epetra" ) == 0 ) {
           amesos_solve_epetra(Amesos_Package, ams, delta_x, resid_vector);

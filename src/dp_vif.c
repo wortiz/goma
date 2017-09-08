@@ -2460,6 +2460,7 @@ noahs_ark()
   ddd_add_member(n, &PP_VolumeFractionGas, 1, MPI_INT);
   ddd_add_member(n, &DENSITY, 1, MPI_INT);
   ddd_add_member(n, &POLYMER_VISCOSITY, 1, MPI_INT);
+  ddd_add_member(n, &HEAVYSIDE, 1, MPI_INT);
   ddd_add_member(n, &POLYMER_TIME_CONST, 1, MPI_INT);
   ddd_add_member(n, &MOBILITY_PARAMETER, 1, MPI_INT);
   ddd_add_member(n, &PTT_XI, 1, MPI_INT);

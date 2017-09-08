@@ -138,6 +138,7 @@ int DENSITY = -1;	       	/* density function at vertex and midside
 				 * nodes, e.g. for particle settling etc. */
 
 int POLYMER_VISCOSITY = -1;
+int HEAVYSIDE = -1;
 int POLYMER_TIME_CONST = -1;
 int PTT_XI = -1;
 int PTT_EPSILON = -1;
@@ -792,6 +793,12 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
     double mup = viscosity(ve[mode]->gn, gamma, NULL);
     local_post[POLYMER_VISCOSITY] = mup;
     local_lumped[POLYMER_VISCOSITY] = 1.;
+  }
+
+  if (HEAVYSIDE != -1 && pd->e[R_FILL] ) {
+    load_lsi(ls->Length_Scale);
+    local_post[HEAVYSIDE] = lsi->H;
+    local_lumped[HEAVYSIDE] = 1.;
   }
 
   if (POLYMER_TIME_CONST != -1 && pd->e[R_STRESS11] ) {
@@ -6376,6 +6383,7 @@ rd_post_process_specs(FILE *ifp,
   iread = look_for_post_proc(ifp, "User-Defined Post Processing", &USER_POST);
   iread = look_for_post_proc(ifp, "Polymer Viscosity", &DENSITY);
   iread = look_for_post_proc(ifp, "Polymer Viscosity", &POLYMER_VISCOSITY);
+  iread = look_for_post_proc(ifp, "Heavyside", &HEAVYSIDE);
   iread = look_for_post_proc(ifp, "Polymer Time Constant", &POLYMER_TIME_CONST);
   iread = look_for_post_proc(ifp, "Mobility Parameter", &MOBILITY_PARAMETER);
   iread = look_for_post_proc(ifp, "PTT Xi parameter", &PTT_XI);
@@ -9350,6 +9358,23 @@ index_post, index_post_export);
   else
     {
       POLYMER_VISCOSITY = -1;
+    }
+
+  if (HEAVYSIDE != -1 && Num_Var_In_Type[R_FILL])
+    {
+      set_nv_tkud(rd, index, 0, 0, -2, "H","[1]", "Heavyside", FALSE);
+      index++;
+      if (HEAVYSIDE == 2)
+	{
+	  Export_XP_ID[index_post_export] = index_post;
+	  index_post_export++;
+	}
+      HEAVYSIDE = index_post;
+      index_post++;
+    }
+  else
+    {
+      HEAVYSIDE = -1;
     }
 
   if (POLYMER_TIME_CONST != -1 && Num_Var_In_Type[R_STRESS11])

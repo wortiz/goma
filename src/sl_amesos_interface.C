@@ -50,6 +50,10 @@
 #include "Epetra_Vector.h"
 #include "Epetra_CrsMatrix.h"
 #include "Epetra_LinearProblem.h"
+
+#include "EpetraExt_RowMatrixOut.h"
+#include "EpetraExt_VectorOut.h"
+
 #include "Amesos.h"
 #include "Amesos_ConfigDefs.h"
 
@@ -119,6 +123,10 @@ amesos_solve_msr( char *choice,
   Problem.SetRHS(&b);
   Problem.CheckInput();
 
+  // EpetraExt::RowMatrixToMatrixMarketFile("Mat.mtx", *A);
+  //   EpetraExt::VectorToMatrixMarketFile("id.mtx", x);
+  // EpetraExt::VectorToMatrixMarketFile("b.mtx", b);
+  // exit(0);
   /* Create Amesos base package */
   if (FirstRun) {
     A_Base = A_Factory.Create( Pkg_Name.c_str(), Problem );
