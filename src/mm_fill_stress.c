@@ -2469,7 +2469,7 @@ assemble_stress_fortin(dbl tt,	/* parameter to vary time integration from
 			   * J_S_F
 			   */
 			  var = FILL;
-			  if ( pd->v[var] )
+			  if ( pd->v[var] && 0)
 			    {
 			      pvar = upd->vp[var];
 			      for ( j=0; j<ei->dof[var]; j++)
