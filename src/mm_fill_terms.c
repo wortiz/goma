@@ -6520,13 +6520,13 @@ assemble_pstar(dbl time_value,   /* current time */
 	  mass = 0;
 	  for (a = 0; a < wim; a++)
 	    {
-	      mass -= (fv->grad_P_star[a] - fv_old->grad_P_star[a]) * bf[eqn]->grad_phi[i][a];
+	      mass += (fv->grad_P_star[a] - fv_old->grad_P_star[a]) * bf[eqn]->grad_phi[i][a];
 	    }
 
 	  double tmp = 0;
 	  for (a = 0; a < wim; a++)
 	    {
-	      tmp -= (1/dt) * (fv->div_v_star  * bf[eqn]->phi[i]);
+	      tmp += (1/dt) * (fv->div_v_star  * bf[eqn]->phi[i]);
 	    }
 
 	  mass += tmp;
@@ -6559,7 +6559,7 @@ assemble_pstar(dbl time_value,   /* current time */
                   mass = 0;
                   for (a = 0; a < wim; a++)
                     {
-                      mass -= bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
+                      mass += bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
                     }
 
                   mass *= -d_area;
