@@ -1371,6 +1371,21 @@ load_variable (double *x_var,        /* variable value */
       var = VELOCITY3;
       *d_x_var = 1.;
       break;
+    case USTAR:
+      *x_var = fv->v_star[0];
+      var = USTAR;
+      *d_x_var = 1.;
+      break;
+    case VSTAR:
+      *x_var = fv->v_star[1];
+      var = VSTAR;
+      *d_x_var = 1.;
+      break;
+    case WSTAR:
+      *x_var = fv->v_star[2];
+      var = WSTAR;
+      *d_x_var = 1.;
+      break;
     case PVELOCITY1:
       *x_var = fv->pv[0];
       var = PVELOCITY1;
@@ -1662,6 +1677,11 @@ load_variable (double *x_var,        /* variable value */
     case PRESSURE:
       *x_var = fv->P;
       var = PRESSURE;
+      *d_x_var = 1.;
+      break;
+    case PSTAR:
+      *x_var = fv->P;
+      var = PSTAR;
       *d_x_var = 1.;
       break;
     case SHEAR_RATE:

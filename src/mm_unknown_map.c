@@ -1485,9 +1485,29 @@ set_interaction_masks(Exo_DB *exo)
     {
       switch(e)
 	{
+	case R_USTAR:
+	case R_VSTAR:
+	case R_WSTAR:
+	  v = USTAR;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VSTAR;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = WSTAR;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	case R_PSTAR:
+	  v = PSTAR;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY1;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY2;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY3;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
 	case R_MOMENTUM1:
 	case R_MOMENTUM2:
 	case R_MOMENTUM3:
+	  v = PSTAR;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
 	  v = VELOCITY1;
 	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
 	  v = VELOCITY2;

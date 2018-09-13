@@ -1651,6 +1651,38 @@ load_elem_dofptr(const int ielem,
     }
   }
 
+  eqn = USTAR;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->v_star[0], esp_old->v_star[0],
+                                    esp_dot->v_star[0]);
+  }
+
+  eqn   = VSTAR;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->v_star[1], esp_old->v_star[1],
+                                    esp_dot->v_star[1]);
+  }
+
+  if (*p0 != 0.) {
+      EH(-1, "Hey, this zero is not zero!");
+  }
+
+  eqn = WSTAR;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->v_star[2], esp_old->v_star[2],
+                                    esp_dot->v_star[2]);
+  }
+  else if((pd_glob[0] ->CoordinateSystem == CYLINDRICAL) &&
+          upd->ep[pg->imtrx][USTAR] >= 0) {
+    dofs = ei[pg->imtrx]->dof[USTAR];
+    for (i = 0; i < dofs; i++) {
+      esp->v_star[2][i]       = p0;
+      esp_old->v_star[2][i]   = p0;
+      esp_dot->v_star[2][i]   = p0;
+    }
+  }
+
+
 
   eqn = R_EXT_VELOCITY;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
@@ -1719,6 +1751,10 @@ load_elem_dofptr(const int ielem,
     load_varType_Interpolation_ptrs(eqn, esp->P, esp_old->P, esp_dot->P);
   }
 
+  eqn = PSTAR;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->P_star, esp_old->P_star, esp_dot->P_star);
+  }
 
   eqn = R_LAGR_MULT1;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
@@ -2494,6 +2530,37 @@ load_elem_dofptr_all(const int ielem,
       }
     }
 
+    eqn = R_USTAR;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v_star[0], esp_old->v_star[0],
+                                      esp_dot->v_star[0]);
+    }
+
+    eqn   = R_VSTAR;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v_star[1], esp_old->v_star[1],
+                                      esp_dot->v_star[1]);
+    }
+
+    if (*p0 != 0.) {
+      EH(-1, "Hey, this zero is not zero!");
+    }
+
+    eqn = R_WSTAR;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->v_star[2], esp_old->v_star[2],
+                                      esp_dot->v_star[2]);
+    }
+    else if((pd_glob[0] ->CoordinateSystem == CYLINDRICAL) &&
+            upd->ep[imtrx][R_USTAR] >= 0) {
+      dofs = ei[imtrx]->dof[R_USTAR];
+      for (i = 0; i < dofs; i++) {
+        esp->v_star[2][i]       = p0;
+        esp_old->v_star[2][i]   = p0;
+        esp_dot->v_star[2][i]   = p0;
+      }
+    }
+
 
     eqn = R_EXT_VELOCITY;
     if (upd->ep[imtrx][eqn] >= 0) {
@@ -2560,6 +2627,12 @@ load_elem_dofptr_all(const int ielem,
     eqn = R_PRESSURE;
     if (upd->ep[imtrx][eqn] >= 0) {
       load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->P, esp_old->P, esp_dot->P);
+    }
+
+
+    eqn = R_PSTAR;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->P_star, esp_old->P_star, esp_dot->P_star);
     }
 
     eqn = R_LAGR_MULT1;

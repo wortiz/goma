@@ -1687,10 +1687,10 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	      
 	case PSPG_BC:
 	  /* MMH: LSA LSA LSA Stopped here.  ALMOST done with bc_integ.c LSA LSA LSA */
-	  if (!PSPG) {
-	    EH(-1,
-	       "You don't have PSPG turned on and you trying to apply a PSPG boundary condition");
-	  }
+	 // if (!PSPG) {
+	   // EH(-1,
+	   //    "You don't have PSPG turned on and you trying to apply a PSPG boundary condition");
+	 // }
 	  PSPG_consistency_bc(func, d_func,  x_dot, time_value, delta_t,
 			      theta, h_elem_avg, h, mu_avg, U_norm);
 	  break;

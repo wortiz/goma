@@ -4548,6 +4548,132 @@ assemble_momentum(dbl time,       /* current time */
   return(status);
 }
 
+int
+assemble_momentum_segregated(dbl time,       /* current time */
+		  dbl tt,	  /* parameter to vary time integration from
+				     explicit (tt = 1) to implicit (tt = 0) */
+		  dbl dt,	  /* current time step size */
+		  dbl h_elem_avg, /* average global element size for PSPG*/
+		  const PG_DATA *pg_data,
+		  double xi[DIM],    /* Local stu coordinates */
+		  const Exo_DB *exo)
+{
+#ifdef DEBUG_MOMENTUM_JAC
+  int adx;
+#endif
+  //! wim is the length of the velocity vector
+  int wim = VIM;
+  int i, j, a, b;
+  int ledof, eqn, var, ii, peqn, pvar;
+  int *pdv = pd->v[pg->imtrx];
+
+  int status = 0;
+  struct Basis_Functions *bfm;
+
+  double *R;
+  double *J;
+
+  eqn = R_MOMENTUM1;
+  double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+
+
+  /*
+   * Residuals_________________________________________________________________
+   */
+
+  if (af->Assemble_Residual)
+    {
+      /*
+       * Assemble each component "a" of the momentum equation...
+       */
+      for ( a=0; a<wim; a++)
+        {
+          eqn  = R_MOMENTUM1 + a;
+          peqn = upd->ep[pg->imtrx][eqn];
+          bfm  = bf[eqn];
+
+          R = lec->R[peqn];
+
+	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+	    ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+	    if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+	      /*
+	       *  Here is where we figure out whether the row is to placed in
+	       *  the normal spot (e.g., ii = i), or whether a boundary condition
+	       *  require that the volumetric contribution be stuck in another
+	       *  ldof pertaining to the same variable type.
+	       */
+	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+	      double resid = fv->v[a] - fv->v_star[a] + dt * fv->grad_P_star[a];
+	      resid *= -bf[eqn]->phi[i] * d_area;
+
+
+
+              /*lec->R[peqn][ii] += mass + advection + porous + diffusion + source;*/
+              R[ii] += resid;
+
+#ifdef DEBUG_MOMENTUM_RES
+	      printf("R_m[%d][%d] += %10f %10f %10f %10f %10f\n",
+		     a,i,mass,advection,porous,diffusion,source);
+#endif /* DEBUG_MOMENTUM_RES */
+
+	    }  /*end if (active_dofs) */
+	  } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+	}
+    }
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian)
+    {
+      for (a = 0; a < wim; a++)
+        {
+          eqn  = R_MOMENTUM1 + a;
+          peqn = upd->ep[pg->imtrx][eqn];
+          bfm  = bf[eqn];
+
+	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+	    ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+	    ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+	    if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+	      /*
+	       *  Here is where we figure out whether the row is to placed in
+	       *  the normal spot (e.g., ii = i), or whether a boundary condition
+	       *  require that the volumetric contribution be stuck in another
+	       *  ldof pertaining to the same variable type.
+	       */
+	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+	      for ( b=0; b<wim; b++)
+		{
+		  var = VELOCITY1+b;
+		  if ( pdv[var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+
+		      J = lec->J[peqn][pvar][ii];
+
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+
+			  double resid = bf[var]->phi[j];
+			  resid *= -delta(a,b) * bf[eqn]->phi[i] * d_area;
+
+			  J[j] += resid;
+			}
+		    }
+		}
+	      }
+	    }
+	}
+    }
+  return(status);
+}
+
 /* assemble_continuity -- assemble Residual &| Jacobian for continuity eqns
  *
  * in:
@@ -6023,6 +6149,539 @@ assemble_continuity(dbl time_value,   /* current time */
   return(status);
 }
 
+int
+assemble_ustar(dbl time_value,   /* current time */
+		    dbl tt,	/* parameter to vary time integration from
+				   explicit (tt = 1) to implicit (tt = 0)    */
+		    dbl dt,	/* current time step size                    */
+		    const PG_DATA *pg_data )
+{
+#ifdef DEBUG_MOMENTUM_JAC
+  int adx;
+#endif
+  //! wim is the length of the velocity vector
+  int wim = VIM;
+  int i, j, a, b;
+  int ledof, eqn, var, ii, peqn, pvar;
+  int *pdv = pd->v[pg->imtrx];
+
+  int status = 0;
+  struct Basis_Functions *bfm;
+
+  double *R;
+  double *J;
+
+  eqn = USTAR;
+  double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+
+
+
+  /*
+   * Residuals_________________________________________________________________
+   */
+
+  if (af->Assemble_Residual)
+    {
+      /*
+       * Assemble each component "a" of the momentum equation...
+       */
+      for ( a=0; a<wim; a++)
+        {
+          eqn  = USTAR + a;
+          peqn = upd->ep[pg->imtrx][eqn];
+          bfm  = bf[eqn];
+
+          R = lec->R[peqn];
+
+	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+	    ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+	    if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+	      /*
+	       *  Here is where we figure out whether the row is to placed in
+	       *  the normal spot (e.g., ii = i), or whether a boundary condition
+	       *  require that the volumetric contribution be stuck in another
+	       *  ldof pertaining to the same variable type.
+	       */
+	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+	      double resid = (fv->v_star[a] - fv_old->v[a])/dt;
+	      resid *= -bf[eqn]->phi[i] * d_area;
+
+	      double adv = 0;
+	      for (int p = 0; p < VIM; p++)
+		{
+		  adv += fv_old->v[p] * fv->grad_v_star[p][a];
+		}
+
+	      //adv += 0.5 * fv->div_v * fv->v[a];
+
+	      adv *= 0* -bf[eqn]->phi[i] * d_area;
+
+              double pres = fv_old->grad_P_star[a] * bf[eqn]->phi[i];
+              pres *= -d_area;
+
+              double diff = 0;
+              for (int p = 0; p < VIM; p++)
+                {
+                  for (int q = 0; q < VIM; q++)
+                    {
+                      diff += 11.3 * (fv->grad_v_star[p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+                    }
+                }
+
+              diff *= -d_area;
+
+              R[ii] += resid + adv + pres + diff;
+#ifdef DEBUG_MOMENTUM_RES
+	      printf("R_m[%d][%d] += %10f %10f %10f %10f %10f\n",
+		     a,i,mass,advection,porous,diffusion,source);
+#endif /* DEBUG_MOMENTUM_RES */
+
+	    }  /*end if (active_dofs) */
+	  } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+	}
+    }
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian)
+    {
+      for (a = 0; a < wim; a++)
+        {
+          eqn  = USTAR + a;
+          peqn = upd->ep[pg->imtrx][eqn];
+          bfm  = bf[eqn];
+
+	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+	    ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+	    ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+	    if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+	      /*
+	       *  Here is where we figure out whether the row is to placed in
+	       *  the normal spot (e.g., ii = i), or whether a boundary condition
+	       *  require that the volumetric contribution be stuck in another
+	       *  ldof pertaining to the same variable type.
+	       */
+	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+	      for ( b=0; b<wim; b++)
+		{
+		  var = USTAR+b;
+		  if ( pdv[var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+
+		      J = lec->J[peqn][pvar][ii];
+
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  double resid = bf[var]->phi[j]/dt;
+			  resid *= -delta(a,b) * bf[eqn]->phi[i] * d_area;
+
+			  double adv = 0;// bf[var]->phi[j] * fv->grad_v[b][a];
+			  for (int p = 0; p < VIM; p++)
+			    {
+			      adv += fv_old->v[p] * bf[var]->grad_phi_e[j][b][p][a];
+			    }
+			  double div_phi_j_e_b = 0.;
+			  for ( int p=0; p<VIM; p++)
+			    {
+			      div_phi_j_e_b += bf[var]->grad_phi_e[j][b] [p][p];
+			    }
+
+			  //adv += 0.5 * (div_phi_j_e_b * fv->v[a] +  fv->div_v * bf[var]->phi[j]);
+
+			  adv *= 0*-bf[eqn]->phi[i] * d_area;
+
+			  double diff = 0;
+			  for (int p = 0; p < VIM; p++)
+			    {
+			      for (int q = 0; q < VIM; q++)
+				{
+				  diff += 11.3 * (bf[VELOCITY1+q]->grad_phi_e[j][b][p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+				}
+			    }
+
+			  diff *= -d_area;
+			  J[j] += resid + adv + diff;
+			}
+		    }
+		}
+	      }
+	    }
+	}
+    }
+  return(status);
+}
+
+int
+assemble_pstar(dbl time_value,   /* current time */
+		    dbl tt,	/* parameter to vary time integration from
+				   explicit (tt = 1) to implicit (tt = 0)    */
+		    dbl dt,	/* current time step size                    */
+		    const PG_DATA *pg_data )
+{
+  int dim, wim;
+  int p, q, a, b;
+
+  int eqn, var;
+  int peqn, pvar;
+  int w;
+
+  int i, j;
+  int status, err;
+
+  dbl time = 0.0; /*  RSL 6/6/02  */
+
+  dbl *v = fv->v;			/* Velocity field. */
+  dbl div_v = fv->div_v;		/* Divergence of v. */
+
+  dbl epsilon = 0.0, derivative, sum;		/*  RSL 7/24/00  */
+  dbl sum1, sum2;			/*  RSL 8/15/00  */
+  dbl sum_a, sum_b;                     /*  RSL 9/28/01  */
+  int jj;				/*  RSL 7/25/00  */
+
+  dbl advection;
+  dbl source;
+  dbl pressure_stabilization;
+
+  dbl volsolvent=0;		/* volume fraction of solvent                */
+  dbl initial_volsolvent=0;	/* initial solvent volume fraction
+                                 * (in stress-free state) input as source
+                                 * constant from input file                  */
+
+  dbl det_J;
+  dbl h3;
+  dbl wt;
+  dbl d_area;
+
+  dbl d_h3detJ_dmesh_bj;		/* for specific (b,j) mesh dof */
+
+  /*
+   * Galerkin weighting functions...
+   */
+
+  dbl phi_i;
+  dbl phi_j;
+  dbl div_phi_j_e_b;
+  dbl ( *grad_phi )[DIM];               /* weight-function for PSPG term */
+
+  dbl div_v_dmesh;			/* for specific (b,j) mesh dof */
+
+  /*
+   * Variables for Pressure Stabilization Petrov-Galerkin...
+   */
+  int meqn;
+  int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
+  int mode;
+
+  int *pdv = pd->v[pg->imtrx];
+
+  dbl pspg[DIM];
+  PSPG_DEPENDENCE_STRUCT d_pspg_struct;
+  PSPG_DEPENDENCE_STRUCT *d_pspg = &d_pspg_struct;
+
+  dbl mass, mass_a;
+  dbl source_a;
+  dbl sourceBase = 0.0;
+
+  dbl rho=0;
+  DENSITY_DEPENDENCE_STRUCT d_rho_struct;  /* density dependence */
+  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+
+  struct Species_Conservation_Terms s_terms;
+  dbl rhos=0, rhof=0;
+  dbl h_flux=0;
+  int w0=0;
+
+  /* For particle momentum model.
+   */
+  int species;			/* species number for particle phase,  */
+  dbl ompvf;			/* 1 - partical volume fraction */
+  int particle_momentum_on; 	/* boolean. */
+
+  /* Foaming model TAB */
+  double dFVS_dv[DIM][MDE];
+  double dFVS_dT[MDE];
+  double dFVS_dx[DIM][MDE];
+  double dFVS_dC[MAX_CONC][MDE];
+  double dFVS_dF[MDE];
+  double dFVS_drho[MDE];
+  double dFVS_dMOM[MAX_MOMENTS][MDE];
+
+  int transient_run = pd->TimeIntegration != STEADY;
+  int advection_on =0;
+  int source_on =0;
+  int ion_reactions_on=0, electrode_kinetics_on=0;
+  int lagrangian_mesh_motion=0, total_ale_on=0;
+  int hydromassflux_on=0, suspensionsource_on=0;
+  int foam_volume_source_on = 0;
+  int total_ale_and_velo_off = 0;
+
+  dbl advection_etm,  source_etm;
+
+  double *J;
+
+  status = 0;
+
+  /*
+   * Unpack variables from structures for local convenience...
+   */
+
+  eqn   = R_PSTAR;
+  peqn = upd->ep[pg->imtrx][eqn];
+
+  /*
+   * Bail out fast if there's nothing to do...
+   */
+
+  if ( ! pd->e[pg->imtrx][eqn] )
+    {
+      return(status);
+    }
+
+  dim   = pd->Num_Dim;
+  wim   = dim;
+  if(pd->CoordinateSystem == SWIRLING ||
+     pd->CoordinateSystem == PROJECTED_CARTESIAN)
+    wim = wim+1;
+
+  if (pd->gv[POLYMER_STRESS11])
+    {
+      err = stress_eqn_pointer(v_s);
+
+      v_g[0][0] = VELOCITY_GRADIENT11;
+      v_g[0][1] = VELOCITY_GRADIENT12;
+      v_g[1][0] = VELOCITY_GRADIENT21;
+      v_g[1][1] = VELOCITY_GRADIENT22;
+      v_g[0][2] = VELOCITY_GRADIENT13;
+      v_g[1][2] = VELOCITY_GRADIENT23;
+      v_g[2][0] = VELOCITY_GRADIENT31;
+      v_g[2][1] = VELOCITY_GRADIENT32;
+      v_g[2][2] = VELOCITY_GRADIENT33;
+    }
+
+
+  wt = fv->wt;
+  det_J = bf[eqn]->detJ;		/* Really, ought to be mesh eqn. */
+  h3 = fv->h3;			/* Differential volume element (scales). */
+
+  d_area = wt * det_J * h3;
+
+  grad_phi = bf[eqn]->grad_phi;
+
+  /*
+   * Get the deformation gradients and tensors if needed
+   */
+
+  lagrangian_mesh_motion = (cr->MeshMotion == LAGRANGIAN || cr->MeshMotion == DYNAMIC_LAGRANGIAN);
+  electrode_kinetics_on = (mp->SpeciesSourceModel[0]  == ELECTRODE_KINETICS);
+  ion_reactions_on = ( mp->SpeciesSourceModel[0]  == ION_REACTIONS );
+  total_ale_on = (cr->MeshMotion == TOTAL_ALE);
+  hydromassflux_on = (cr->MassFluxModel == HYDRODYNAMIC);
+  suspensionsource_on = (mp->MomentumSourceModel == SUSPENSION );
+
+
+
+  advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION ;
+  source_on = pd->e[pg->imtrx][eqn] & T_SOURCE ;
+
+
+  advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+  source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+
+
+  if (af->Assemble_Residual)
+    {
+      for ( i=0; i<ei[pg->imtrx]->dof[eqn]; i++)
+        {
+
+#if 1
+	  /* this is an optimization for xfem */
+
+	  if ( xfem != NULL )
+	    {
+	      int xfem_active, extended_dof, base_interp, base_dof;
+
+	      xfem_dof_state( i, pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape,
+			      &xfem_active, &extended_dof, &base_interp, &base_dof );
+
+	      if ( extended_dof && !xfem_active ) continue;
+	    }
+#endif
+
+	  phi_i      = bf[eqn]->phi[i];
+
+	  /*
+	   *  Mass Terms: drhodt terms (usually though problem dependent)
+	   */
+	  mass = 0;
+	  for (a = 0; a < wim; a++)
+	    {
+	      mass -= (fv->grad_P_star[a] - fv_old->grad_P_star[a]) * bf[eqn]->grad_phi[i][a];
+	    }
+
+	  double tmp = 0;
+	  for (a = 0; a < wim; a++)
+	    {
+	      tmp -= (1/dt) * (fv->div_v_star  * bf[eqn]->phi[i]);
+	    }
+
+	  mass += tmp;
+	  mass *= -d_area;
+
+	  /*
+	   *  Add up the individual contributions and sum them into the local element
+	   *  contribution for the total continuity equation for the ith local unknown
+	   */
+	  lec->R[peqn][i] += mass;
+	}
+    }
+
+  if (af->Assemble_Jacobian)
+    {
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++)
+        {
+
+	  var = PSTAR;
+	  if ( pdv[var] )
+	    {
+	      pvar = upd->vp[pg->imtrx][var];
+
+	      J = lec->J[peqn][pvar][i];
+
+              for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+                {
+
+                  phi_j = bf[var]->phi[j];
+                  mass = 0;
+                  for (a = 0; a < wim; a++)
+                    {
+                      mass -= bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
+                    }
+
+                  mass *= -d_area;
+
+                  J[j] += mass;
+                }
+            }
+      }
+    }
+
+  return(status);
+}
+
+int
+assemble_continuity_segregated(dbl time_value,   /* current time */
+		    dbl tt,	/* parameter to vary time integration from
+				   explicit (tt = 1) to implicit (tt = 0)    */
+		    dbl dt,	/* current time step size                    */
+		    const PG_DATA *pg_data )
+{
+  //! wim is the length of the velocity vector
+  int wim = VIM;
+  int i, j, a, b;
+  int ledof, eqn, var, ii, peqn, pvar;
+  int *pdv = pd->v[pg->imtrx];
+
+  int status = 0;
+  struct Basis_Functions *bfm;
+
+  double *R;
+  double *J;
+  eqn = R_PRESSURE;
+
+  double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+
+
+
+  /*
+   * Residuals_________________________________________________________________
+   */
+
+  if (af->Assemble_Residual)
+    {
+      /*
+       * Assemble each component "a" of the momentum equation...
+       */
+        peqn = upd->ep[pg->imtrx][eqn];
+        bfm  = bf[eqn];
+
+        R = lec->R[peqn];
+
+	double invdt = 1/dt;
+	for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+	  ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+	  if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+	    /*
+	     *  Here is where we figure out whether the row is to placed in
+	     *  the normal spot (e.g., ii = i), or whether a boundary condition
+	     *  require that the volumetric contribution be stuck in another
+	     *  ldof pertaining to the same variable type.
+	     */
+	    ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+	    double resid = fv->P - fv->P_star - fv_old->P;// + 0.1 * fv->div_v;
+	    resid *= -bf[eqn]->phi[i] * d_area;
+	    /*lec->R[peqn][ii] += mass + advection + porous + diffusion + source;*/
+	    R[ii] += resid;
+
+#ifdef DEBUG_MOMENTUM_RES
+	    printf("R_m[%d][%d] += %10f %10f %10f %10f %10f\n",
+		   a,i,mass,advection,porous,diffusion,source);
+#endif /* DEBUG_MOMENTUM_RES */
+
+	  }  /*end if (active_dofs) */
+	} /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+    }
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian)
+    {
+
+      eqn  = PRESSURE;
+      peqn = upd->ep[pg->imtrx][eqn];
+      bfm  = bf[eqn];
+
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+	ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+	if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+	  /*
+	   *  Here is where we figure out whether the row is to placed in
+	   *  the normal spot (e.g., ii = i), or whether a boundary condition
+	   *  require that the volumetric contribution be stuck in another
+	   *  ldof pertaining to the same variable type.
+	   */
+	  ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+	    var = PRESSURE;
+	    if ( pdv[var] )
+	      {
+		pvar = upd->vp[pg->imtrx][var];
+
+		J = lec->J[peqn][pvar][ii];
+
+		for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+		  {
+\
+		    double resid = bf[var]->phi[j]*bf[eqn]->phi[i];
+		    resid *= -d_area;
+		    J[j] += resid;
+		  }
+	      }
+
+	  }
+	}
+    }
+  return(status);
+}
 /******************************************************************************/
 /* assemble_volume 
  *
@@ -8345,6 +9004,14 @@ load_fv(void)
       stateVector[v] = fv->P + upd->Pressure_Datum;
     } 
 
+  if (pdgv[PSTAR])
+    {
+      v = PSTAR;
+      scalar_fv_fill(esp->P_star, esp_dot->P_star, esp_old->P_star, bf[v]->phi, ei[pd->mi[v]]->dof[v],
+                     &(fv->P_star), &(fv_dot->P_star), &(fv_old->P_star));
+      stateVector[v] = fv->P_star + upd->Pressure_Datum;
+    }
+
 
   /*
    *  Set the state vector pressure datum to include an additional
@@ -8582,6 +9249,28 @@ load_fv(void)
 	    }
 	}
       stateVector[VELOCITY1+p] = fv->v[p];
+    }
+
+  for ( p=0; p<velodim; p++)
+    {
+      v = USTAR + p;
+      if ( pdgv[v] )
+        {
+          dofs     = ei[pd->mi[v]]->dof[v];
+          fv->v_star[p]     = 0.;
+          fv_old->v_star[p] = 0.;
+          fv_dot->v_star[p] = 0.;
+          for ( i=0; i<dofs; i++)
+            {
+              fv->v_star[p] += *esp->v_star[p][i] * bf[v]->phi[i];
+              if ( pd->TimeIntegration != STEADY )
+                {
+                  fv_old->v_star[p] += *esp_old->v_star[p][i] * bf[v]->phi[i];
+                  fv_dot->v_star[p] += *esp_dot->v_star[p][i] * bf[v]->phi[i];
+                }
+            }
+        }
+      stateVector[USTAR+p] = fv->v_star[p];
     }
 
 
@@ -9537,6 +10226,25 @@ load_fv_grads(void)
   }
   
   
+  if ( pd->gv[PSTAR] )
+  {
+          v = PSTAR;
+      dofs  = ei[pd->mi[v]]->dof[v];
+      for ( p=0; p<VIM; p++)
+          {
+                  fv->grad_P_star[p] = 0.0;
+                  fv_old->grad_P_star[p] = 0.0;
+
+                  for ( i=0; i<dofs; i++)
+                  {
+                          fv->grad_P_star[p] += *esp->P_star[i] * bf[v]->grad_phi[i] [p];
+                          fv_old->grad_P_star[p] += *esp_old->P_star[i] * bf[v]->grad_phi[i] [p];
+
+                  }
+          }
+  } else  if (zero_unused_grads &&  upd->vp[pg->imtrx][PSTAR] == -1 )   {
+      for (p=0; p<VIM; p++) fv->grad_P_star[p] = 0.0;
+  }
   /*
    * grad(d)
    */
@@ -9716,6 +10424,44 @@ load_fv_grads(void)
 	      fv_old->grad_v[p][q] = 0.0;
 	    }
 	}
+    }
+
+  if (pd->gv[USTAR])
+    {
+      v = USTAR;
+      dofs  = ei[pd->mi[v]]->dof[v];
+
+#ifdef DO_NO_UNROLL
+      for (p = 0; p < VIM; p++)
+        {
+          for (q = 0; q < VIM; q++)
+            {
+              fv->grad_v[p][q] = 0.0;
+              for (r = 0; r < wim; r++)
+                {
+                  for (i = 0; i < dofs; i++)
+                    {
+                      fv->grad_v[p][q] += (*esp->v[r][i]) * bf[v]->grad_phi_e[i][r] [p][q];
+
+		      //if(segregated)
+		      fv_old->grad_v[p][q] += *esp_old->v[r][i]*bf[v]->grad_phi_e[i][r][p][q];
+		    }
+		}
+	    }
+	}
+#else
+      grad_vector_fv_fill(esp->v_star, bf[v]->grad_phi_e, dofs, fv->grad_v_star);
+#endif
+    }
+  else if (zero_unused_grads && upd->vp[pg->imtrx][USTAR] == -1)
+    {
+      for (p = 0; p < VIM; p++)
+        {
+          for (q = 0; q < VIM; q++)
+            {
+              fv->grad_v_star[p][q] = 0.0;
+            }
+        }
     }
 
 
@@ -9982,6 +10728,19 @@ load_fv_grads(void)
       fv_old->div_v = 0.0;
     }
   
+  if (pd->gv[USTAR])
+    {
+      fv->div_v_star = 0.0;
+
+      for(a=0; a<VIM; a++)
+        {
+          fv->div_v_star += fv->grad_v_star[a][a];
+        }
+    }
+  else if (zero_unused_grads && upd->vp[pg->imtrx][USTAR] == -1)
+    {
+      fv->div_v_star = 0.0;
+    }
   /*
    * div(pv)
    */
