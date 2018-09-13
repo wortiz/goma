@@ -442,6 +442,10 @@
 #define MOMENT2               185
 #define MOMENT3               186
 #define DENSITY_EQN           187
+#define PSTAR                 188
+#define USTAR                 189
+#define VSTAR                 190
+#define WSTAR                 191
 
 /*
  * define a variable to hold an external field which will be 
@@ -803,7 +807,11 @@
 #define R_MOMENT2               185
 #define R_MOMENT3               186
 #define R_DENSITY_EQN           187
-#define V_LAST		        188
+#define R_PSTAR                 188
+#define R_USTAR                 189
+#define R_VSTAR                 190
+#define R_WSTAR                 191
+#define V_LAST		        192
 
 
 /* MMH

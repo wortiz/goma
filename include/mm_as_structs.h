@@ -472,6 +472,7 @@ struct Element_Variable_Pointers
 					     for real solid and pseudo solid
 					     for annealing */
   dbl *P[MDE];					/* pressure */
+  dbl *P_star[MDE];					/* pressure */
   dbl *S[MAX_MODES][DIM][DIM][MDE];	        /* polymeric stress tensor, for each mode */
   dbl *G[DIM][DIM][MDE];	                /* velocity gradient tensor */
   dbl *F[MDE];					/* Fill */
@@ -1900,11 +1901,14 @@ struct Diet_Field_Variables
   dbl x[DIM];			/* Position in physical space. */
   dbl T;			/* Temperature. */
   dbl v[DIM];			/* Velocity. */
+  dbl v_star[DIM];
   dbl pv[DIM];			/* Particle velocity. */
   dbl d[DIM];			/* Mesh displacement. */
   dbl d_rs[DIM];		/* SOLID displacement. */
   dbl c[MAX_CONC];		/* Concentration(s). */
   dbl P;			/* Pressure. */
+  dbl P_star;
+  dbl grad_P_star[DIM];            /* Gradient of pressure. */
   dbl F;			/* Fill. */
   dbl V;                        /* Potential; added by KSC: 2/4/99 */
   dbl qs;                       /* Surface charge density (shell element) */

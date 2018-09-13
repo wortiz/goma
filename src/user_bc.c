@@ -1082,9 +1082,25 @@ fn_dot_T_user (func, d_func, u_bc, time)
   /*  double wavelength;		wavelength of pressure  */
 
 /* Comment this out FIRST!!!!! */
-   EH(-1,"No PRESSURE_USER model implemented"); 
+   //EH(-1,"No PRESSURE_USER model implemented");
 
 /* Add your function and sensitivities here */
+
+
+  for (int j = 0; j < ei[pg->imtrx]->dof[PRESSURE]; j++)
+     {
+       for (int a = 0; a < pd->Num_Dim; a++)
+         {
+            d_func[a][PRESSURE][j] = BIG_PENALTY * fv->snormal[a] * bf[PRESSURE]->grad_phi[j][a];
+         }
+     }
+
+
+
+  for (int a = 0; a < pd->Num_Dim; a++)
+     {
+       func[a] =  BIG_PENALTY * fv->snormal[a] * fv->grad_P[a];
+     }
 
 
   return;		/* Here's a good default behavior! */

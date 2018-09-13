@@ -1985,13 +1985,24 @@ matrix_fill(
 #endif
         }
 
-      if( pde[R_MOMENTUM1] )
+      if( pde[R_MOMENTUM1] || pde[R_MOMENTUM2])
 	{
-            err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
-            EH( err, "assemble_momentum");
+	  if (upd->SegregatedSolve)
+	    {
+	      err = assemble_momentum_segregated(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+	      EH( err, "assemble_momentum");
 #ifdef CHECK_FINITE
-	    CHECKFINITE("assemble_momentum");
+	      CHECKFINITE("assemble_momentum");
 #endif
+            }
+          else
+            {
+              err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+              EH( err, "assemble_momentum");
+#ifdef CHECK_FINITE
+              CHECKFINITE("assemble_momentum");
+#endif
+	    }
 	}
 
       if( pde[R_PMOMENTUM1] )
@@ -2070,13 +2081,60 @@ matrix_fill(
 
       if( pde[R_PRESSURE] )
 	{
-            err = assemble_continuity(time_value, theta, delta_t, &pg_data);
-            EH( err, "assemble_continuity");
-#ifdef CHECK_FINITE
-            CHECKFINITE("assemble_continuity");
-#endif
-            if( neg_elem_volume ) return;
+	  if (upd->SegregatedSolve)
+	    {
+	      err = assemble_continuity_segregated(time_value, theta, delta_t, &pg_data);
+	      EH( err, "assemble_continuity");
+  #ifdef CHECK_FINITE
+              CHECKFINITE("assemble_continuity");
+  #endif
+              if( neg_elem_volume ) return;
+            }
+          else
+            {
+              err = assemble_continuity(time_value, theta, delta_t, &pg_data);
+              EH( err, "assemble_continuity");
+  #ifdef CHECK_FINITE
+              CHECKFINITE("assemble_continuity");
+  #endif
+              if( neg_elem_volume ) return;
+            }
 	}
+
+      if( pde[R_PSTAR] )
+        {
+          if (upd->SegregatedSolve)
+            {
+              err = assemble_pstar(time_value, theta, delta_t, &pg_data);
+              EH( err, "assemble_continuity");
+  #ifdef CHECK_FINITE
+              CHECKFINITE("assemble_continuity");
+  #endif
+              if( neg_elem_volume ) return;
+            }
+          else
+            {
+              EH(-1, "Only implemented for Segregated Solve");
+            }
+        }
+
+
+      if( pde[R_USTAR] )
+        {
+          if (upd->SegregatedSolve)
+            {
+              err = assemble_ustar(time_value, theta, delta_t, &pg_data);
+              EH( err, "assemble_continuity");
+  #ifdef CHECK_FINITE
+              CHECKFINITE("assemble_continuity");
+  #endif
+              if( neg_elem_volume ) return;
+            }
+          else
+            {
+              EH(-1, "Only implemented for Segregated Solve");
+            }
+        }
       
       if(pde[R_VORT_DIR1]) /* Then R_VORT_DIR2 and R_VORT_DIR3 should be on*/
 	{

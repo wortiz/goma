@@ -8897,7 +8897,15 @@ rd_eq_specs(FILE *ifp,
     } else if (!strcasecmp(ts, "momentum2")) {
       ce = set_eqn(R_MOMENTUM2, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "momentum3")) {
-      ce = set_eqn(R_MOMENTUM3, mtrx_index0, pd_ptr);
+        ce = set_eqn(R_MOMENTUM3, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "ustar")) {
+        ce = set_eqn(USTAR, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "vstar")) {
+        ce = set_eqn(VSTAR, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "wstar")) {
+        ce = set_eqn(WSTAR, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "pstar")) {
+        ce = set_eqn(PSTAR, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "pmomentum1")) {
       ce = set_eqn(R_PMOMENTUM1, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "pmomentum2")) {
@@ -9523,6 +9531,14 @@ rd_eq_specs(FILE *ifp,
       cv = set_var(VELOCITY2, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "U3")) {
       cv = set_var(VELOCITY3, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "USTAR")) {
+        cv = set_var(USTAR, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "VSTAR")) {
+        cv = set_var(VSTAR, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "WSTAR")) {
+        cv = set_var(WSTAR, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "PSTAR")) {
+        cv = set_var(PSTAR, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "PU1")) {
       cv = set_var(PVELOCITY1, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "PU2")) {
@@ -10058,6 +10074,7 @@ rd_eq_specs(FILE *ifp,
        * Two terms.... 
        */
     case R_PRESSURE:
+      case PSTAR:
     case R_GRADIENT11:
     case R_GRADIENT12:
     case R_GRADIENT13:
@@ -10327,6 +10344,9 @@ rd_eq_specs(FILE *ifp,
     case R_MOMENTUM1:
     case R_MOMENTUM2:
     case R_MOMENTUM3:
+      case USTAR:
+      case VSTAR:
+      case WSTAR:
     case R_PMOMENTUM1:
     case R_PMOMENTUM2:
     case R_PMOMENTUM3:

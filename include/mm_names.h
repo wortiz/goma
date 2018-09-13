@@ -149,7 +149,7 @@ struct BC_descriptions  BC_Desc[] =
 
   { "P", "P_BC", DIRICHLET, P_BC, R_PRESSURE, SCALAR, NO_ROT, {0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
 
-  { "PSPG", "PSPG_BC", WEAK_INT_SURF, PSPG_BC, R_PRESSURE, SCALAR, NO_ROT, {1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0} , SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
+  { "PSPG", "PSPG_BC", WEAK_INT_SURF, PSPG_BC, R_PSTAR, SCALAR, NO_ROT, {1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0} , SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
   { "FILL_INLET", "FILL_INLET_BC", SPECIAL, FILL_INLET_BC, R_FILL, SCALAR, NO_ROT, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1} , SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
 #ifdef COUPLED_FILL
   { "FILL_CA", "FILL_CA_BC", WEAK_INT_SURF, FILL_CA_BC, R_MOMENTUM1, VECTOR, NO_ROT, {0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1} , SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
@@ -388,6 +388,10 @@ SINGLE_PHASE, DVI_SINGLE_PHASE_DB},
   { "U", "U_BC", DIRICHLET, U_BC, R_MOMENTUM1, SCALAR, NO_ROT, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
   { "V", "V_BC", DIRICHLET, V_BC, R_MOMENTUM2, SCALAR, NO_ROT, {0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
   { "W", "W_BC", DIRICHLET, W_BC, R_MOMENTUM3, SCALAR, NO_ROT, {0, 0, 1, 0, 0, 0, 0, 0, 0, 0}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
+{ "PSTAR", "W_BC", DIRICHLET, PSTAR_BC, R_PSTAR, SCALAR, NO_ROT, {0, 0, 1, 0, 0, 0, 0, 0, 0, 0}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
+{ "USTAR", "USTAR_BC", DIRICHLET, USTAR_BC, R_USTAR, SCALAR, NO_ROT, {0, 0, 1, 0, 0, 0, 0, 0, 0, 0}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
+{ "VSTAR", "VSTAR_BC", DIRICHLET, VSTAR_BC, R_VSTAR, SCALAR, NO_ROT, {0, 0, 1, 0, 0, 0, 0, 0, 0, 0}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
+{ "WSTAR", "WSTAR_BC", DIRICHLET, WSTAR_BC, R_WSTAR, SCALAR, NO_ROT, {0, 0, 1, 0, 0, 0, 0, 0, 0, 0}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
 
   { "EXT_V", "EXT_V_BC", DIRICHLET, EXT_V_BC, R_EXT_VELOCITY, SCALAR, NO_ROT, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0, 0, 1}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
   { "LM1", "LM1_BC", DIRICHLET, LM1_BC, R_LAGR_MULT1, SCALAR, NO_ROT, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, SINGLE_PHASE, DVI_SINGLE_PHASE_DB } ,
@@ -991,6 +995,10 @@ struct Equation_Names EQ_Name[] = {
     { "R_MOMENT2", "MOMENT2", R_MOMENT2},     /*   185  */
     { "R_MOMENT3", "MOMENT3", R_MOMENT3},     /*   186  */
     { "R_DENSITY_EQN", "DENSITY_EQN", R_DENSITY_EQN},     /*   187  */
+    { "R_PSTAR", "PSTAR", R_PSTAR},     /*   187  */
+    { "R_USTAR", "USTAR", R_USTAR},     /*   187  */
+    { "R_VSTAR", "VSTAR", R_VSTAR},     /*   187  */
+    { "R_WSTAR", "WSTAR", R_WSTAR},     /*   187  */
 
     /*
      *  Note -> these entries must remain until we get rid
@@ -1265,7 +1273,11 @@ struct Equation_Names Var_Name[] =  {
     { "MOMENT1", "MOM1", MOMENT1},                     /* 184 */
     { "MOMENT2", "MOM2", MOMENT2},                     /* 185 */
     { "MOMENT3", "MOM3", MOMENT3},                     /* 186 */
-    { "DENSITY_EQN", "RHO_EQN", DENSITY_EQN},                     /* 187 */
+  { "DENSITY_EQN", "RHO_EQN", DENSITY_EQN},                     /* 187 */
+  { "PSTAR", "PSTAR", PSTAR},                     /* 187 */
+  { "USTAR", "VSTARX", USTAR},                     /* 187 */
+  { "VSTAR", "VSTARY", VSTAR},                     /* 187 */
+  { "WSTAR", "VSTARZ", WSTAR},                     /* 187 */
 
     { "MESH_POSITION1", "X",  MESH_POSITION1 } ,
     { "MESH_POSITION2", "Y",  MESH_POSITION2 } ,	/* 189 */
@@ -1510,6 +1522,10 @@ struct Equation_Names Exo_Var_Names[] =
   { "Moment 2", "MOM2", MOMENT2 },
   { "Moment 3", "MOM3", MOMENT3 },
   { "Density equation", "RHO_EQN", DENSITY_EQN },
+  { "PSTAR", "PSTAR", PSTAR },
+  { "USTAR", "VSTARX", USTAR },
+  { "VSTAR", "VSTARY", VSTAR },
+  { "WSTAR", "VSTARZ", WSTAR },
 
 };
 
@@ -1779,6 +1795,11 @@ struct Equation_Names Var_Units[] =
   { "Moment 2", "[1]", MOMENT2},
   { "Moment 3", "[1]", MOMENT3},
   { "Density equation", "[1]", DENSITY_EQN},
+{ "PSTAR", "[1]", PSTAR},
+{ "USTAR", "[1]", USTAR},
+{ "VSTAR", "[1]", VSTAR},
+{ "WSTAR", "[1]", WSTAR},
+
 };
 
 int Num_Var_Units = sizeof(Var_Units) / sizeof(struct Equation_Names);  

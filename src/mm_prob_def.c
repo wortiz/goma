@@ -144,6 +144,7 @@ setup_pd()
 	     {
 	      ce = pd_glob[mn]->m[imtrx][i];
 	      if((ce == R_PRESSURE)   ||
+		 (ce == R_PSTAR) ||
 	         (ce == R_GRADIENT11) ||
 	         (ce == R_GRADIENT12) ||
 	         (ce == R_GRADIENT13) ||
@@ -436,6 +437,9 @@ setup_pd()
 		  (ce == R_PMOMENTUM1)||
 		  (ce == R_PMOMENTUM2)||
 		  (ce == R_PMOMENTUM3)||
+		      (ce == R_USTAR)||
+		      (ce == R_VSTAR)||
+		      (ce == R_WSTAR)||
 		  (ce == R_STRESS11)||
 		  (ce == R_STRESS12)||
 		  (ce == R_STRESS13)||

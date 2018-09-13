@@ -1377,7 +1377,7 @@ set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[ ],
     num_mom_rotate = calloc(upd->Total_Num_Matrices, sizeof(int));
   }
    
-  if (Num_ROT == 0) check_for_bc_conflicts2D(exo, dpi);
+  //if (Num_ROT == 0) check_for_bc_conflicts2D(exo, dpi);
   if (Num_ROT > 0)  check_for_bc_conflicts3D(exo, dpi);
 
   return;
