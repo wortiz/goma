@@ -1909,6 +1909,8 @@ struct Diet_Field_Variables
   dbl P;			/* Pressure. */
   dbl P_star;
   dbl grad_P_star[DIM];            /* Gradient of pressure. */
+  dbl div_v_star;
+  dbl grad_v_star[DIM][DIM];
   dbl F;			/* Fill. */
   dbl V;                        /* Potential; added by KSC: 2/4/99 */
   dbl qs;                       /* Surface charge density (shell element) */

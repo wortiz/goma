@@ -1,2 +1,7 @@
 include
 include/brkfix
+/opt/goma_script_libs/openmpi-2.1.1/include
+/opt/goma_script_libs/netcdf-4.4.1.1/include
+/opt/goma_script_libs/hdf5-1.8.20/include
+/opt/goma_script_libs/trilinos-12.12.1-Built/include
+/opt/goma_script_libs/SuiteSparse/include
