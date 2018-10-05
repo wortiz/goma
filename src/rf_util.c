@@ -747,6 +747,14 @@ time_step_control(const double delta_t,  const double delta_t_old,
     num_unknowns += ncp[PVELOCITY2];
     num_unknowns += ncp[PVELOCITY3];
 
+    Err_norm      += ecp[USTAR];
+    Err_norm      += ecp[VSTAR];
+    Err_norm      += ecp[WSTAR];
+    num_unknowns += ncp[USTAR];
+    num_unknowns += ncp[VSTAR];
+    num_unknowns += ncp[WSTAR];
+
+
   }
 
   if (use_var_norm[2]) {

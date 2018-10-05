@@ -1420,9 +1420,9 @@ dbl *te_out) /* te_out - return actual end time */
 	   * And its derivatives at the old time, time.
 	   */
 	  if (subcycle == 0) {
-	    if (upd->SegregatedSolve && pg->imtrx == 10) {
-	      predict_solution_u_star(numProcUnknowns[pg->imtrx], delta_t, delta_t_old,
-				      delta_t_older, theta, x, x_old, x_older, x_oldest);
+	    if (upd->SegregatedSolve) {
+	      //predict_solution_u_star(numProcUnknowns[pg->imtrx], delta_t, delta_t_old,
+		//		      delta_t_older, theta, x, x_old, x_older, x_oldest);
 	    } else {
 	     predict_solution(numProcUnknowns[pg->imtrx], delta_t, delta_t_old,
 			       delta_t_older, theta, x[pg->imtrx], x_old[pg->imtrx],
