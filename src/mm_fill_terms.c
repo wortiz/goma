@@ -4605,8 +4605,8 @@ assemble_momentum_segregated(dbl time,       /* current time */
 	       */
 	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-	      double resid = (fv->v[a] - fv->v_star[a]) + dt*(fv->grad_P_star[a]);
-	      resid *= bf[eqn]->phi[i] * d_area;
+	      double resid = fv->v[a] - fv->v_star[a] + dt * (fv->grad_P_star[a] - fv_old->grad_P_star[a]);
+	      resid *= -bf[eqn]->phi[i] * d_area;
 
 
 
@@ -4661,7 +4661,7 @@ assemble_momentum_segregated(dbl time,       /* current time */
 			{
 
 			  double resid = bf[var]->phi[j];
-			  resid *= delta(a,b) * bf[eqn]->phi[i] * d_area;
+			  resid *= -delta(a,b) * bf[eqn]->phi[i] * d_area;
 
 			  J[j] += resid;
 			}
@@ -6203,25 +6203,28 @@ assemble_ustar(dbl time_value,   /* current time */
 	       *  ldof pertaining to the same variable type.
 	       */
 	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
-	      double resid = (fv->v_star[a] - fv->v[a])/dt;
+	      double resid = (fv->v_star[a] - fv_old->v[a])/dt;
 	      resid *= -bf[eqn]->phi[i] * d_area;
 
 	      double adv = 0;
 	      for (int p = 0; p < VIM; p++)
 		{
-		  adv += fv_old->v_star[p] * fv->grad_v_star[p][a];
+		  adv += fv_old->v[p] * fv->grad_v_star[p][a];
 		}
-	      adv *= - bf[eqn]->phi[i] * d_area;
+
+	      //adv += 0.5 * fv->div_v * fv->v[a];
+
+	      adv *= 0* -bf[eqn]->phi[i] * d_area;
 
               double pres = fv_old->grad_P_star[a] * bf[eqn]->phi[i];
-              pres *= 0* d_area;
+              pres *= -d_area;
 
               double diff = 0;
               for (int p = 0; p < VIM; p++)
                 {
                   for (int q = 0; q < VIM; q++)
                     {
-                      diff += 1.0 * (fv->grad_v_star[p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+                      diff += 11.3 * (fv->grad_v_star[p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
                     }
                 }
 
@@ -6275,21 +6278,29 @@ assemble_ustar(dbl time_value,   /* current time */
 		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 			{
 			  double resid = bf[var]->phi[j]/dt;
-			  resid *= delta(a,b) * -bf[eqn]->phi[i] * d_area;
-			  double adv = 0;
-			  for (int p=0; p<wim; p++)
+			  resid *= -delta(a,b) * bf[eqn]->phi[i] * d_area;
+
+			  double adv = 0;// bf[var]->phi[j] * fv->grad_v[b][a];
+			  for (int p = 0; p < VIM; p++)
 			    {
-			      adv += fv->v_star[p] * bf[var]->grad_phi_e[j][b][p][a];
+			      adv += fv_old->v[p] * bf[var]->grad_phi_e[j][b][p][a];
+			    }
+			  double div_phi_j_e_b = 0.;
+			  for ( int p=0; p<VIM; p++)
+			    {
+			      div_phi_j_e_b += bf[var]->grad_phi_e[j][b] [p][p];
 			    }
 
-			  adv *= -bf[eqn]->phi[i] * d_area;
+			  //adv += 0.5 * (div_phi_j_e_b * fv->v[a] +  fv->div_v * bf[var]->phi[j]);
+
+			  adv *= 0*-bf[eqn]->phi[i] * d_area;
 
 			  double diff = 0;
 			  for (int p = 0; p < VIM; p++)
 			    {
 			      for (int q = 0; q < VIM; q++)
 				{
-				  diff += 1.0 * (bf[USTAR+q]->grad_phi_e[j][b][p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+				  diff += 11.3 * (bf[VELOCITY1+q]->grad_phi_e[j][b][p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
 				}
 			    }
 
@@ -6509,14 +6520,14 @@ assemble_pstar(dbl time_value,   /* current time */
 	  mass = 0;
 	  for (a = 0; a < wim; a++)
 	    {
-	      mass += (fv->grad_P_star[a]) * bf[eqn]->grad_phi[i][a];
+	      mass += (fv->grad_P_star[a] - fv_old->grad_P_star[a]) * bf[eqn]->grad_phi[i][a];
 	    }
 
 	  double tmp = 0;
 	  tmp += (1/dt) * (fv->div_v_star  * bf[eqn]->phi[i]);
 
 	  mass += tmp;
-	  mass *= d_area;
+	  mass *= -d_area;
 
 	  /*
 	   *  Add up the individual contributions and sum them into the local element
@@ -6548,7 +6559,7 @@ assemble_pstar(dbl time_value,   /* current time */
                       mass += bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
                     }
 
-                  mass *= d_area;
+                  mass *= -d_area;
 
                   J[j] += mass;
                 }
@@ -10437,20 +10448,6 @@ load_fv_grads(void)
 	}
 #else
       grad_vector_fv_fill(esp->v_star, bf[v]->grad_phi_e, dofs, fv->grad_v_star);
-      for (p = 0; p < VIM; p++)
-        {
-          for (q = 0; q < VIM; q++)
-            {
-              fv_old->grad_v_star[p][q] = 0.0;
-              for (r = 0; r < wim; r++)
-                {
-                  for (i = 0; i < dofs; i++)
-                    {
-                      fv_old->grad_v_star[p][q] += *esp_old->v_star[r][i]*bf[v]->grad_phi_e[i][r][p][q];
-                    }
-                }
-            }
-        }
 #endif
     }
   else if (zero_unused_grads && upd->vp[pg->imtrx][USTAR] == -1)
@@ -10731,12 +10728,10 @@ load_fv_grads(void)
   if (pd->gv[USTAR])
     {
       fv->div_v_star = 0.0;
-      fv_old->div_v_star = 0.0;
 
       for(a=0; a<VIM; a++)
         {
           fv->div_v_star += fv->grad_v_star[a][a];
-          fv_old->div_v_star += fv_old->grad_v_star[a][a];
         }
     }
   else if (zero_unused_grads && upd->vp[pg->imtrx][USTAR] == -1)
