@@ -6513,10 +6513,7 @@ assemble_pstar(dbl time_value,   /* current time */
 	    }
 
 	  double tmp = 0;
-	  for (a = 0; a < wim; a++)
-	    {
-	      tmp += (1/dt) * (fv->div_v_star  * bf[eqn]->phi[i]);
-	    }
+	  tmp += (1/dt) * (fv->div_v_star  * bf[eqn]->phi[i]);
 
 	  mass += tmp;
 	  mass *= d_area;
