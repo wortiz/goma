@@ -6214,7 +6214,7 @@ assemble_ustar(dbl time_value,   /* current time */
 
 	      //adv += 0.5 * fv->div_v * fv->v[a];
 
-	      adv *= 0* -bf[eqn]->phi[i] * d_area;
+	      adv *= -bf[eqn]->phi[i] * d_area;
 
               double pres = fv_old->grad_P_star[a] * bf[eqn]->phi[i];
               pres *= -d_area;
@@ -6224,7 +6224,7 @@ assemble_ustar(dbl time_value,   /* current time */
                 {
                   for (int q = 0; q < VIM; q++)
                     {
-                      diff += 11.3 * (fv->grad_v_star[p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+                      diff += 1 * (fv->grad_v_star[p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
                     }
                 }
 
@@ -6293,14 +6293,14 @@ assemble_ustar(dbl time_value,   /* current time */
 
 			  //adv += 0.5 * (div_phi_j_e_b * fv->v[a] +  fv->div_v * bf[var]->phi[j]);
 
-			  adv *= 0*-bf[eqn]->phi[i] * d_area;
+			  adv *= -bf[eqn]->phi[i] * d_area;
 
 			  double diff = 0;
 			  for (int p = 0; p < VIM; p++)
 			    {
 			      for (int q = 0; q < VIM; q++)
 				{
-				  diff += 11.3 * (bf[VELOCITY1+q]->grad_phi_e[j][b][p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+				  diff += 1 * (bf[VELOCITY1+q]->grad_phi_e[j][b][p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
 				}
 			    }
 
