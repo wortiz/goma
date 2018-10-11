@@ -4576,6 +4576,11 @@ assemble_momentum_segregated(dbl time,       /* current time */
   eqn = R_MOMENTUM1;
   double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
 
+  double rho;
+  DENSITY_DEPENDENCE_STRUCT d_rho_struct;
+  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+
+  rho = density(d_rho, time);
 
   /*
    * Residuals_________________________________________________________________
@@ -4605,7 +4610,7 @@ assemble_momentum_segregated(dbl time,       /* current time */
 	       */
 	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-	      double resid = fv->v[a] - fv->v_star[a] + dt * (fv->grad_P_star[a] - fv_old->grad_P_star[a]);
+	      double resid = fv->v[a] - fv->v_star[a] + dt * (fv->grad_P_star[a] - fv_old->grad_P_star[a])/rho;
 	      resid *= -bf[eqn]->phi[i] * d_area;
 
 
@@ -6529,6 +6534,8 @@ assemble_pstar(dbl time_value,   /* current time */
   source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
 
+  rho = density(d_rho, time_value);
+
   if (af->Assemble_Residual)
     {
       for ( i=0; i<ei[pg->imtrx]->dof[eqn]; i++)
@@ -6556,7 +6563,7 @@ assemble_pstar(dbl time_value,   /* current time */
 	  mass = 0;
 	  for (a = 0; a < wim; a++)
 	    {
-	      mass += (fv->grad_P_star[a] - fv_old->grad_P_star[a]) * bf[eqn]->grad_phi[i][a];
+	      mass += (fv->grad_P_star[a] - fv_old->grad_P_star[a])/rho * bf[eqn]->grad_phi[i][a];
 	    }
 
 	  double tmp = 0;
@@ -6592,7 +6599,7 @@ assemble_pstar(dbl time_value,   /* current time */
                   mass = 0;
                   for (a = 0; a < wim; a++)
                     {
-                      mass += bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
+                      mass += bf[var]->grad_phi[j][a]/rho * bf[eqn]->grad_phi[i][a];
                     }
 
                   mass *= -d_area;

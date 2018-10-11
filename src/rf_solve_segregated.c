@@ -1420,15 +1420,11 @@ dbl *te_out) /* te_out - return actual end time */
 	   * And its derivatives at the old time, time.
 	   */
 	  if (subcycle == 0) {
-	    if (upd->SegregatedSolve) {
-	      //predict_solution_u_star(numProcUnknowns[pg->imtrx], delta_t, delta_t_old,
-		//		      delta_t_older, theta, x, x_old, x_older, x_oldest);
-	    } else {
 	     predict_solution(numProcUnknowns[pg->imtrx], delta_t, delta_t_old,
 			       delta_t_older, theta, x[pg->imtrx], x_old[pg->imtrx],
 			       x_older[pg->imtrx], x_oldest[pg->imtrx], xdot[pg->imtrx],
 			       xdot_old[pg->imtrx], xdot_older[pg->imtrx]);
-	    }
+
 	  }
 
 	  if (ls != NULL && ls->Evolution == LS_EVOLVE_SLAVE)
@@ -1672,20 +1668,9 @@ dbl *te_out) /* te_out - return actual end time */
                                            x[pg->imtrx], x_pred[pg->imtrx], x_old[pg->imtrx], x_AC[pg->imtrx], x_AC_pred[pg->imtrx], eps,
                                            &success_dt, tran->use_var_norm);
           }
-
-          if (upd->SegregatedSolve && (pg->imtrx == 1 || pg->imtrx == 3)) {
-            success_dt = 1;
-          }
-	  
           num_success += success_dt ? 1 : 0;
-          if (upd->SegregatedSolve) {
-            if (pg->imtrx == 0) {
-              delta_t_new = mat_dt_new;
-            }
-          } else {
-            delta_t_new = MIN(mat_dt_new, delta_t_new);
-          }
 
+	  delta_t_new = MIN(mat_dt_new, delta_t_new);
 	  
         }
 
