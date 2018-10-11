@@ -6173,7 +6173,32 @@ assemble_ustar(dbl time_value,   /* current time */
 
   eqn = USTAR;
   double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+  double gamma[DIM][DIM];
 
+  double rho;
+  DENSITY_DEPENDENCE_STRUCT d_rho_struct;
+  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+
+  double mu;
+  VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;
+  VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
+
+  dbl f[DIM];				/* Body force. */
+  MOMENTUM_SOURCE_DEPENDENCE_STRUCT df_struct;  /* Body force dependence */
+  MOMENTUM_SOURCE_DEPENDENCE_STRUCT *df = &df_struct;
+
+  for (a = 0; a < VIM; a++)
+    {
+      for (b = 0; b < VIM; b++)
+        {
+          gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+        }
+    }
+
+  rho = density(d_rho, time_value);
+  mu = viscosity(gn, gamma, d_mu);
+
+  momentum_source_term(f, df, time_value);
 
 
   /*
@@ -6203,20 +6228,20 @@ assemble_ustar(dbl time_value,   /* current time */
 	       *  ldof pertaining to the same variable type.
 	       */
 	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
-	      double resid = (fv->v_star[a] - fv_old->v[a])/dt;
+	      double resid = rho * (fv->v_star[a] - fv->v[a])/dt;
 	      resid *= -bf[eqn]->phi[i] * d_area;
 
 	      double adv = 0;
 	      for (int p = 0; p < VIM; p++)
 		{
-		  adv += fv_old->v[p] * fv->grad_v_star[p][a];
+		  adv += rho * fv_old->v_star[p] * fv->grad_v_star[p][a];
 		}
 
 	      //adv += 0.5 * fv->div_v * fv->v[a];
 
 	      adv *= -bf[eqn]->phi[i] * d_area;
 
-              double pres = fv_old->grad_P_star[a] * bf[eqn]->phi[i];
+              double pres = fv->grad_P_star[a] * bf[eqn]->phi[i];
               pres *= -d_area;
 
               double diff = 0;
@@ -6224,13 +6249,17 @@ assemble_ustar(dbl time_value,   /* current time */
                 {
                   for (int q = 0; q < VIM; q++)
                     {
-                      diff += 1 * (fv->grad_v_star[p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+                      diff += mu * (fv->grad_v_star[p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
                     }
                 }
 
               diff *= -d_area;
 
-              R[ii] += resid + adv + pres + diff;
+              double source = 0;
+
+              source += f[a] * bf[eqn]->phi[i] * d_area;
+
+              R[ii] += resid + adv + pres + diff + source;
 #ifdef DEBUG_MOMENTUM_RES
 	      printf("R_m[%d][%d] += %10f %10f %10f %10f %10f\n",
 		     a,i,mass,advection,porous,diffusion,source);
@@ -6277,13 +6306,13 @@ assemble_ustar(dbl time_value,   /* current time */
 
 		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 			{
-			  double resid = bf[var]->phi[j]/dt;
+			  double resid = rho * bf[var]->phi[j]/dt;
 			  resid *= -delta(a,b) * bf[eqn]->phi[i] * d_area;
 
 			  double adv = 0;// bf[var]->phi[j] * fv->grad_v[b][a];
 			  for (int p = 0; p < VIM; p++)
 			    {
-			      adv += fv_old->v[p] * bf[var]->grad_phi_e[j][b][p][a];
+			      adv += rho * fv_old->v_star[p] * bf[var]->grad_phi_e[j][b][p][a];
 			    }
 			  double div_phi_j_e_b = 0.;
 			  for ( int p=0; p<VIM; p++)
@@ -6300,12 +6329,19 @@ assemble_ustar(dbl time_value,   /* current time */
 			    {
 			      for (int q = 0; q < VIM; q++)
 				{
-				  diff += 1 * (bf[VELOCITY1+q]->grad_phi_e[j][b][p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
+				  diff += mu * (bf[VELOCITY1+q]->grad_phi_e[j][b][p][q]) * bf[eqn]->grad_phi_e[i][a][p][q];
 				}
 			    }
 
 			  diff *= -d_area;
-			  J[j] += resid + adv + diff;
+
+
+			  double source = 0;
+
+			  source += df->v[a][b][j] * bf[eqn]->phi[i] * -d_area;
+
+
+			  J[j] += resid + adv + diff + source;
 			}
 		    }
 		}
@@ -17289,7 +17325,7 @@ momentum_source_term(dbl f[DIM],                   /* Body force. */
       for ( a=0; a<dim; a++)
 	{
 	  eqn   = R_MOMENTUM1+a;			
-	  if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+	  if ( (pd->e[pg->imtrx][eqn] & T_SOURCE) || (pd->e[pg->imtrx][USTAR + a] & T_SOURCE ))
 	    {
 	      f[a] = mp->momentum_source[a];
  	    }
@@ -21158,296 +21194,325 @@ return (1);
 int
 assemble_csf_tensor ( void )
 {
-	int i,j,a,b,p,q, ii, ledof;
-	int eqn, peqn, var, pvar;
-	int dim, wim;
-	
-	struct Basis_Functions *bfm;
-	dbl (* grad_phi_i_e_a ) [DIM] = NULL;
-	
-	double wt, det_J, h3, phi_j, d_area;
-	
-	double csf[DIM][DIM];
-	double d_csf_dF[DIM][DIM][MDE];
-	double d_csf_dX[DIM][DIM][DIM][MDE];
-	
-	double source, source_etm;
-	
-	eqn = R_MOMENTUM1;	
-	if ( ! pd->e[pg->imtrx][eqn] )
+  int i,j,a,b,p,q, ii, ledof;
+  int eqn, peqn, var, pvar;
+  int dim, wim;
+
+  struct Basis_Functions *bfm;
+  dbl (* grad_phi_i_e_a ) [DIM] = NULL;
+
+  double wt, det_J, h3, phi_j, d_area;
+
+  double csf[DIM][DIM];
+  double d_csf_dF[DIM][DIM][MDE];
+  double d_csf_dX[DIM][DIM][DIM][MDE];
+
+  double source, source_etm;
+
+  if (upd->SegregatedSolve)
     {
-		return(0);
+      eqn = USTAR;
     }
-	
-	wt = fv->wt;	
-	h3 = fv->h3;	
-	if ( ls->on_sharp_surf ) /* sharp interface */
+  else
     {
-		det_J = fv->sdet;
+      eqn = R_MOMENTUM1;
     }
-	else              /* diffuse interface */
+
+  if ( ! pd->e[pg->imtrx][eqn] )
     {
-		det_J = bf[eqn]->detJ;
+      return(0);
     }
-	
-	d_area = wt * det_J*h3;
-	
-	dim   = pd->Num_Dim;
-	wim   = dim;
-	if (pd->CoordinateSystem == SWIRLING ||
-		pd->CoordinateSystem == PROJECTED_CARTESIAN)
-		wim = wim+1;
-	
-	memset( csf,          0, sizeof(double)*DIM*DIM);
-	memset( d_csf_dF,     0, sizeof(double)*DIM*DIM*MDE);
-	memset( d_csf_dX,     0, sizeof(double)*DIM*DIM*DIM*MDE);
-	
-	continuous_surface_tension(mp->surface_tension, csf, d_csf_dF, d_csf_dX);
-	
+
+  wt = fv->wt;
+  h3 = fv->h3;
+  if ( ls->on_sharp_surf ) /* sharp interface */
+    {
+      det_J = fv->sdet;
+    }
+  else              /* diffuse interface */
+    {
+      det_J = bf[eqn]->detJ;
+    }
+
+  d_area = wt * det_J*h3;
+
+  dim   = pd->Num_Dim;
+  wim   = dim;
+  if (pd->CoordinateSystem == SWIRLING ||
+      pd->CoordinateSystem == PROJECTED_CARTESIAN)
+    wim = wim+1;
+
+  memset( csf,          0, sizeof(double)*DIM*DIM);
+  memset( d_csf_dF,     0, sizeof(double)*DIM*DIM*MDE);
+  memset( d_csf_dX,     0, sizeof(double)*DIM*DIM*DIM*MDE);
+
+  continuous_surface_tension(mp->surface_tension, csf, d_csf_dF, d_csf_dX);
+
 #ifdef COUPLED_FILL
-	/* finite difference calculation of path dependencies for
-		subelement integration
-		*/
-	if ( ls->CalcSurfDependencies )
+  /* finite difference calculation of path dependencies for
+                subelement integration
+                */
+  if ( ls->CalcSurfDependencies )
     {
-		for( a=0; a<wim; a++ )
-		{
-			eqn = R_MOMENTUM1 + a;
-			peqn = upd->ep[pg->imtrx][eqn];
-			bfm = bf[eqn];
-			
-			for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) 
-			{
-				
-				ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-				
-				if (ei[pg->imtrx]->active_interp_ledof[ledof]) 
-				{
-					
-					ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
-					
-					grad_phi_i_e_a = bfm->grad_phi_e[i][a];
-					
-					source = 0.;
-					
-					for ( p=0; p<VIM; p++)
-					{
-						for ( q=0; q<VIM; q++)
-						{
-							source += grad_phi_i_e_a[p][q] * csf[q][p]; 
-						}
-					}
-					
-					source *= -det_J * wt * h3;
-					source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
-					
-					/* J_m_F
-						*/
-					var = LS ;
-					pvar = upd->vp[pg->imtrx][var];
-					
-					for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-					  {
-					    phi_j = bf[var]->phi[j];
-					    lec->J[peqn][pvar][ii][j] += source * phi_j;
-					  }
+      for( a=0; a<wim; a++ )
+        {
+          if (upd->SegregatedSolve)
+            {
+              eqn = USTAR+a;
+            }
+          else
+            {
+              eqn = R_MOMENTUM1+a;
+            }
+          peqn = upd->ep[pg->imtrx][eqn];
+          bfm = bf[eqn];
+
+          for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++)
+            {
+
+              ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+
+              if (ei[pg->imtrx]->active_interp_ledof[ledof])
+                {
+
+                  ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+                  grad_phi_i_e_a = bfm->grad_phi_e[i][a];
+
+                  source = 0.;
+
+                  for ( p=0; p<VIM; p++)
+                    {
+                      for ( q=0; q<VIM; q++)
+                        {
+                          source += grad_phi_i_e_a[p][q] * csf[q][p];
+                        }
+                    }
+
+                  source *= -det_J * wt * h3;
+                  source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+
+                  /* J_m_F
+                                                */
+                  var = LS ;
+                  pvar = upd->vp[pg->imtrx][var];
+
+                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+                    {
+                      phi_j = bf[var]->phi[j];
+                      lec->J[peqn][pvar][ii][j] += source * phi_j;
+                    }
                 }
             }
         }
-		return(0);
+      return(0);
     }
 #endif
-	
-	/*
-	 * Residuals ____________________________________________________________________________
-	 */
-	
-	if ( af->Assemble_Residual ) 
+
+  /*
+         * Residuals ____________________________________________________________________________
+         */
+
+  if ( af->Assemble_Residual )
     {
-		
-		for( a=0; a<wim; a++ )
-		{
-			eqn = R_MOMENTUM1 + a;
-			peqn = upd->ep[pg->imtrx][eqn];
-			bfm = bf[eqn];
-			
-			for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) 
-			{
-				
-				ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-				
-				if (ei[pg->imtrx]->active_interp_ledof[ledof])
-				{
-					
-					ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
-					
-					grad_phi_i_e_a = bfm->grad_phi_e[i][a];
-					
-					source = 0.;
-					
+
+      for( a=0; a<wim; a++ )
+        {
+          if (upd->SegregatedSolve)
+            {
+              eqn = USTAR+a;
+            }
+          else
+            {
+              eqn = R_MOMENTUM1+a;
+            }
+          peqn = upd->ep[pg->imtrx][eqn];
+          bfm = bf[eqn];
+
+          for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++)
+            {
+
+              ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+
+              if (ei[pg->imtrx]->active_interp_ledof[ledof])
+                {
+
+                  ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+                  grad_phi_i_e_a = bfm->grad_phi_e[i][a];
+
+                  source = 0.;
+
 #ifdef DO_NO_UNROLL
-					
-					for ( p=0; p<VIM; p++)
-					{
-						for ( q=0; q<VIM; q++)
-						{
-							source += grad_phi_i_e_a[p][q] * csf[q][p]; 
-						}
-					}
-#else
-					source += grad_phi_i_e_a[0][0] * csf[0][0]; 
-					source += grad_phi_i_e_a[1][1] * csf[1][1]; 
-					source += grad_phi_i_e_a[0][1] * csf[1][0]; 
-					source += grad_phi_i_e_a[1][0] * csf[0][1]; 
-					if( VIM == 3)
-					{
-						source += grad_phi_i_e_a[2][2] * csf[2][2]; 
-						source += grad_phi_i_e_a[2][1] * csf[1][2]; 
-						source += grad_phi_i_e_a[2][0] * csf[0][2]; 
-						source += grad_phi_i_e_a[1][2] * csf[2][1]; 
-						source += grad_phi_i_e_a[0][2] * csf[2][0]; 
-					}
-#endif
-					
-					
-					
-					source *= -det_J * wt * h3;
-					source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
-					
-					lec->R[peqn][ii] += source;
-				}
+
+		  for ( p=0; p<VIM; p++)
+		    {
+		      for ( q=0; q<VIM; q++)
+			{
+			  source += grad_phi_i_e_a[p][q] * csf[q][p];
 			}
-		}
-    }
-	
-	
-	/*
-	 * Yacobian terms...
-	 */
-	
-	if( af->Assemble_Jacobian )
-    {
-		for( a=0; a<wim; a++ )
-		{
-			eqn = R_MOMENTUM1 + a;
-			peqn = upd->ep[pg->imtrx][eqn];
-			bfm = bf[eqn];
-			source_etm = pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
-			
-			for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) 
-			{
-				
-				ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-				
-				if (ei[pg->imtrx]->active_interp_ledof[ledof])
-				{
-					
-					ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
-					
-					grad_phi_i_e_a = bfm->grad_phi_e[i][a];
-					
-					
-					/* J_m_F
-						*/
-#ifdef COUPLED_FILL
-					var = LS ;
-					if( pd->v[pg->imtrx][var] )
-					{
-						pvar = upd->vp[pg->imtrx][var];
-						
-						for( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-						{
-							phi_j = bf[var]->phi[j];
-							
-							source = 0.;
-							
-#ifdef DO_NO_UNROLL 	
-							
-							for ( p=0; p<VIM; p++)
-							{
-								for ( q=0; q<VIM; q++)
-								{
-									source += grad_phi_i_e_a[p][q] * d_csf_dF[q][p][j]; 
-								}
-							}
-							
+		    }
 #else
-							source += grad_phi_i_e_a[0][0] * d_csf_dF[0][0][j];
-							source += grad_phi_i_e_a[0][1] * d_csf_dF[1][0][j];
-							source += grad_phi_i_e_a[1][0] * d_csf_dF[0][1][j];
-							source += grad_phi_i_e_a[1][1] * d_csf_dF[1][1][j];
-							
-							if( VIM == 3 )
-							{
-								source += grad_phi_i_e_a[2][0] * d_csf_dF[0][2][j];
-								source += grad_phi_i_e_a[2][1] * d_csf_dF[1][2][j];
-								source += grad_phi_i_e_a[2][2] * d_csf_dF[2][2][j];
-								source += grad_phi_i_e_a[0][2] * d_csf_dF[2][0][j];
-								source += grad_phi_i_e_a[1][2] * d_csf_dF[2][1][j];
-							}
-#endif							
-	
-							source *= -d_area;
-							source *= source_etm;
-							
-							lec->J[peqn][pvar][ii][j] += source;
-						}
-					}
+		  source += grad_phi_i_e_a[0][0] * csf[0][0];
+		  source += grad_phi_i_e_a[1][1] * csf[1][1];
+		  source += grad_phi_i_e_a[0][1] * csf[1][0];
+		  source += grad_phi_i_e_a[1][0] * csf[0][1];
+		  if( VIM == 3)
+		    {
+		      source += grad_phi_i_e_a[2][2] * csf[2][2];
+		      source += grad_phi_i_e_a[2][1] * csf[1][2];
+		      source += grad_phi_i_e_a[2][0] * csf[0][2];
+		      source += grad_phi_i_e_a[1][2] * csf[2][1];
+		      source += grad_phi_i_e_a[0][2] * csf[2][0];
+		    }
 #endif
-					var = MESH_DISPLACEMENT1;
-					if(pd->v[pg->imtrx][var])
-					{
-						for( b=0; b<VIM; b++)
-						{
-							var = MESH_DISPLACEMENT1 + b;
-							pvar = upd->vp[pg->imtrx][var];
-							
-							for( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-							{
-								phi_j = bf[var]->phi[j];
-								
-								source =0.;
-#ifdef DO_NO_UNROLL
-								for ( p=0; p<VIM; p++)
-								{
-									for ( q=0; q<VIM; q++)
-									{
-										source += grad_phi_i_e_a[p][q] * d_csf_dX[q][p][b][j]; 
-									}
-								} 
+
+
+
+		  source *= -det_J * wt * h3;
+		  source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+
+		  lec->R[peqn][ii] += source;
+		}
+	    }
+	}
+    }
+
+
+  /*
+         * Yacobian terms...
+         */
+
+  if( af->Assemble_Jacobian )
+    {
+      for( a=0; a<wim; a++ )
+        {
+          if (upd->SegregatedSolve)
+            {
+              eqn = USTAR+a;
+            }
+          else
+            {
+              eqn = R_MOMENTUM1+a;
+            }
+          peqn = upd->ep[pg->imtrx][eqn];
+          bfm = bf[eqn];
+          source_etm = pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+
+          for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++)
+            {
+
+              ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+
+              if (ei[pg->imtrx]->active_interp_ledof[ledof])
+                {
+
+                  ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+                  grad_phi_i_e_a = bfm->grad_phi_e[i][a];
+
+
+                  /* J_m_F
+                                                */
+#ifdef COUPLED_FILL
+		  var = LS ;
+		  if( pd->v[pg->imtrx][var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+
+		      for( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  phi_j = bf[var]->phi[j];
+
+			  source = 0.;
+
+#ifdef DO_NO_UNROLL 	
+
+			  for ( p=0; p<VIM; p++)
+			    {
+			      for ( q=0; q<VIM; q++)
+				{
+				  source += grad_phi_i_e_a[p][q] * d_csf_dF[q][p][j];
+				}
+			    }
+
 #else
-								
-								source += grad_phi_i_e_a[0][0] * d_csf_dX[0][0][b][j];
-								source += grad_phi_i_e_a[0][1] * d_csf_dX[1][0][b][j];
-								source += grad_phi_i_e_a[1][0] * d_csf_dX[0][1][b][j];
-								source += grad_phi_i_e_a[1][1] * d_csf_dX[1][1][b][j];
-								
-								if( VIM == 3 )
-								{
-									source += grad_phi_i_e_a[2][0] * d_csf_dX[0][2][b][j];
-									source += grad_phi_i_e_a[2][1] * d_csf_dX[1][2][b][j];
-									source += grad_phi_i_e_a[2][2] * d_csf_dX[2][2][b][j];
-									source += grad_phi_i_e_a[0][2] * d_csf_dX[2][0][b][j];
-									source += grad_phi_i_e_a[1][2] * d_csf_dX[2][1][b][j];
-								}
+			  source += grad_phi_i_e_a[0][0] * d_csf_dF[0][0][j];
+			  source += grad_phi_i_e_a[0][1] * d_csf_dF[1][0][j];
+			  source += grad_phi_i_e_a[1][0] * d_csf_dF[0][1][j];
+			  source += grad_phi_i_e_a[1][1] * d_csf_dF[1][1][j];
+
+			  if( VIM == 3 )
+			    {
+			      source += grad_phi_i_e_a[2][0] * d_csf_dF[0][2][j];
+			      source += grad_phi_i_e_a[2][1] * d_csf_dF[1][2][j];
+			      source += grad_phi_i_e_a[2][2] * d_csf_dF[2][2][j];
+			      source += grad_phi_i_e_a[0][2] * d_csf_dF[2][0][j];
+			      source += grad_phi_i_e_a[1][2] * d_csf_dF[2][1][j];
+			    }
+#endif							
+
+			  source *= -d_area;
+			  source *= source_etm;
+
+			  lec->J[peqn][pvar][ii][j] += source;
+			}
+		    }
+#endif
+		  var = MESH_DISPLACEMENT1;
+		  if(pd->v[pg->imtrx][var])
+		    {
+		      for( b=0; b<VIM; b++)
+			{
+			  var = MESH_DISPLACEMENT1 + b;
+			  pvar = upd->vp[pg->imtrx][var];
+
+			  for( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			    {
+			      phi_j = bf[var]->phi[j];
+
+			      source =0.;
+#ifdef DO_NO_UNROLL
+			      for ( p=0; p<VIM; p++)
+				{
+				  for ( q=0; q<VIM; q++)
+				    {
+				      source += grad_phi_i_e_a[p][q] * d_csf_dX[q][p][b][j];
+				    }
+				}
+#else
+
+			      source += grad_phi_i_e_a[0][0] * d_csf_dX[0][0][b][j];
+			      source += grad_phi_i_e_a[0][1] * d_csf_dX[1][0][b][j];
+			      source += grad_phi_i_e_a[1][0] * d_csf_dX[0][1][b][j];
+			      source += grad_phi_i_e_a[1][1] * d_csf_dX[1][1][b][j];
+
+			      if( VIM == 3 )
+				{
+				  source += grad_phi_i_e_a[2][0] * d_csf_dX[0][2][b][j];
+				  source += grad_phi_i_e_a[2][1] * d_csf_dX[1][2][b][j];
+				  source += grad_phi_i_e_a[2][2] * d_csf_dX[2][2][b][j];
+				  source += grad_phi_i_e_a[0][2] * d_csf_dX[2][0][b][j];
+				  source += grad_phi_i_e_a[1][2] * d_csf_dX[2][1][b][j];
+				}
 #endif								
 
-								source *= -d_area;
-								source *= source_etm;
-								
-								lec->J[peqn][pvar][ii][j] += source;
-							}
-						}
-					}
-								
-				}
+			      source *= -d_area;
+			      source *= source_etm;
+
+			      lec->J[peqn][pvar][ii][j] += source;
+			    }
 			}
+		    }
+
 		}
+	    }
+	}
     }
-	
-	
-	
-	return ( 1 );
+
+
+
+  return ( 1 );
 }
 
 
@@ -21463,8 +21528,14 @@ assemble_div_n_source ( )
   double wt, det_J, h3, phi_i, phi_j;
   double source, source1;
 
-
-  eqn = R_MOMENTUM1;
+  if (upd->SegregatedSolve)
+    {
+      eqn = USTAR;
+    }
+  else
+    {
+      eqn = R_MOMENTUM1;
+    }
   if (!pd->e[pg->imtrx][eqn])
     {
       return(-1);
@@ -21496,7 +21567,14 @@ assemble_div_n_source ( )
     {
       for (a = 0; a < wim; a++ )
 	{
-	  eqn = R_MOMENTUM1 + a;
+	  if (upd->SegregatedSolve)
+	    {
+	      eqn = USTAR+a;
+	    }
+	  else
+	    {
+	      eqn = R_MOMENTUM1+a;
+	    }
 	  peqn = upd->ep[pg->imtrx][eqn];
 	  bfm = bf[eqn];
 
@@ -21542,7 +21620,14 @@ assemble_div_n_source ( )
     {
       for( a=0; a<wim; a++ )
 	{
-	  eqn = R_MOMENTUM1 + a;
+	  if (upd->SegregatedSolve)
+	    {
+	      eqn = USTAR+a;
+	    }
+	  else
+	    {
+	      eqn = R_MOMENTUM1+a;
+	    }
 	  peqn = upd->ep[pg->imtrx][eqn];
 	  bfm = bf[eqn];
 
@@ -21580,7 +21665,14 @@ assemble_div_n_source ( )
     {
       for( a=0; a<wim; a++ )
 	{
-	  eqn = R_MOMENTUM1 + a;
+	  if (upd->SegregatedSolve)
+	    {
+	      eqn = USTAR+a;
+	    }
+	  else
+	    {
+	      eqn = R_MOMENTUM1+a;
+	    }
 	  peqn = upd->ep[pg->imtrx][eqn];
 	  bfm = bf[eqn];
 
