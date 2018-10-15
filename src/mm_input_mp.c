@@ -2288,8 +2288,12 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 	} 
       else if ( !strcmp(model_name, "SUPG") )
 	{
+	  int err;
 	  mat_ptr->Mwt_funcModel = SUPG;
-	  fscanf(imp, "%lg",&(mat_ptr->Mwt_func));
+	  err = fscanf(imp, "%lg",&(mat_ptr->Mwt_func));
+	  if (err != 1) {
+	    EH(-1, "Expected to read one double for Momentum Weight Function SUPG");
+	  }
 	  SPF(endofstring(es)," %.4g", mat_ptr->Mwt_func );
 	} 
       else  
@@ -3420,8 +3424,12 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 	} 
       else if ( !strcmp(model_name, "SUPG") )
 	{
+	  int err;
 	  mat_ptr->Ewt_funcModel = SUPG;
-	  fscanf(imp, "%lg",&(mat_ptr->Ewt_func));
+	  err = fscanf(imp, "%lg",&(mat_ptr->Ewt_func));
+	  if (err != 1) {
+	    EH(-1, "Expected to read one double for Energy Weight Function SUPG");
+	  }
 	  SPF(endofstring(es)," %.4g", mat_ptr->Ewt_func );
 	} 
       else  
@@ -5168,8 +5176,12 @@ ECHO("\n----Acoustic Properties\n", echo_file);
 	} 
       else if (!strcmp(model_name, "SUPG")) 
 	{
+	  int err;
 	  mat_ptr->Porous_wt_funcModel = SUPG;
-	  fscanf(imp, "%lg",&(mat_ptr->Porous_wt_func));
+	  err = fscanf(imp, "%lg",&(mat_ptr->Porous_wt_func));
+	  if (err != 1) {
+	    EH(-1, "Expected to read one double for Porous Weight Function SUPG");
+	  }
 	  SPF(endofstring(es)," %.4g", mat_ptr->Porous_wt_func);
 	} 
       else 
@@ -5843,8 +5855,12 @@ ECHO("\n----Acoustic Properties\n", echo_file);
     } 
   else if ( !strcmp(model_name, "SUPG") )
     {
+      int err;
       mat_ptr->Spwt_funcModel = SUPG;
-      fscanf(imp, "%lg",&(mat_ptr->Spwt_func));
+      err = fscanf(imp, "%lg",&(mat_ptr->Spwt_func));
+      if (err != 1) {
+	EH(-1, "Expected to read one double for Species Weight Function SUPG");
+      }
     } 
   else 
     {
