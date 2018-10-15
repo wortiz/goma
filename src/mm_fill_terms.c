@@ -6365,40 +6365,18 @@ assemble_pstar(dbl time_value,   /* current time */
 		    const PG_DATA *pg_data )
 {
   int dim, wim;
-  int p, q, a, b;
+  int a;
 
   int eqn, var;
   int peqn, pvar;
-  int w;
 
   int i, j;
-  int status, err;
-
-  dbl time = 0.0; /*  RSL 6/6/02  */
-
-  dbl *v = fv->v;			/* Velocity field. */
-  dbl div_v = fv->div_v;		/* Divergence of v. */
-
-  dbl epsilon = 0.0, derivative, sum;		/*  RSL 7/24/00  */
-  dbl sum1, sum2;			/*  RSL 8/15/00  */
-  dbl sum_a, sum_b;                     /*  RSL 9/28/01  */
-  int jj;				/*  RSL 7/25/00  */
-
-  dbl advection;
-  dbl source;
-  dbl pressure_stabilization;
-
-  dbl volsolvent=0;		/* volume fraction of solvent                */
-  dbl initial_volsolvent=0;	/* initial solvent volume fraction
-                                 * (in stress-free state) input as source
-                                 * constant from input file                  */
+  int status;
 
   dbl det_J;
   dbl h3;
   dbl wt;
   dbl d_area;
-
-  dbl d_h3detJ_dmesh_bj;		/* for specific (b,j) mesh dof */
 
   /*
    * Galerkin weighting functions...
@@ -6406,62 +6384,20 @@ assemble_pstar(dbl time_value,   /* current time */
 
   dbl phi_i;
   dbl phi_j;
-  dbl div_phi_j_e_b;
   dbl ( *grad_phi )[DIM];               /* weight-function for PSPG term */
-
-  dbl div_v_dmesh;			/* for specific (b,j) mesh dof */
 
   /*
    * Variables for Pressure Stabilization Petrov-Galerkin...
    */
-  int meqn;
-  int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
-  int mode;
 
   int *pdv = pd->v[pg->imtrx];
 
-  dbl pspg[DIM];
-  PSPG_DEPENDENCE_STRUCT d_pspg_struct;
-  PSPG_DEPENDENCE_STRUCT *d_pspg = &d_pspg_struct;
 
-  dbl mass, mass_a;
-  dbl source_a;
-  dbl sourceBase = 0.0;
+  dbl mass;
 
   dbl rho=0;
   DENSITY_DEPENDENCE_STRUCT d_rho_struct;  /* density dependence */
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
-
-  struct Species_Conservation_Terms s_terms;
-  dbl rhos=0, rhof=0;
-  dbl h_flux=0;
-  int w0=0;
-
-  /* For particle momentum model.
-   */
-  int species;			/* species number for particle phase,  */
-  dbl ompvf;			/* 1 - partical volume fraction */
-  int particle_momentum_on; 	/* boolean. */
-
-  /* Foaming model TAB */
-  double dFVS_dv[DIM][MDE];
-  double dFVS_dT[MDE];
-  double dFVS_dx[DIM][MDE];
-  double dFVS_dC[MAX_CONC][MDE];
-  double dFVS_dF[MDE];
-  double dFVS_drho[MDE];
-  double dFVS_dMOM[MAX_MOMENTS][MDE];
-
-  int transient_run = pd->TimeIntegration != STEADY;
-  int advection_on =0;
-  int source_on =0;
-  int ion_reactions_on=0, electrode_kinetics_on=0;
-  int lagrangian_mesh_motion=0, total_ale_on=0;
-  int hydromassflux_on=0, suspensionsource_on=0;
-  int foam_volume_source_on = 0;
-  int total_ale_and_velo_off = 0;
-
-  dbl advection_etm,  source_etm;
 
   double *J;
 
@@ -6489,22 +6425,6 @@ assemble_pstar(dbl time_value,   /* current time */
      pd->CoordinateSystem == PROJECTED_CARTESIAN)
     wim = wim+1;
 
-  if (pd->gv[POLYMER_STRESS11])
-    {
-      err = stress_eqn_pointer(v_s);
-
-      v_g[0][0] = VELOCITY_GRADIENT11;
-      v_g[0][1] = VELOCITY_GRADIENT12;
-      v_g[1][0] = VELOCITY_GRADIENT21;
-      v_g[1][1] = VELOCITY_GRADIENT22;
-      v_g[0][2] = VELOCITY_GRADIENT13;
-      v_g[1][2] = VELOCITY_GRADIENT23;
-      v_g[2][0] = VELOCITY_GRADIENT31;
-      v_g[2][1] = VELOCITY_GRADIENT32;
-      v_g[2][2] = VELOCITY_GRADIENT33;
-    }
-
-
   wt = fv->wt;
   det_J = bf[eqn]->detJ;		/* Really, ought to be mesh eqn. */
   h3 = fv->h3;			/* Differential volume element (scales). */
@@ -6516,23 +6436,6 @@ assemble_pstar(dbl time_value,   /* current time */
   /*
    * Get the deformation gradients and tensors if needed
    */
-
-  lagrangian_mesh_motion = (cr->MeshMotion == LAGRANGIAN || cr->MeshMotion == DYNAMIC_LAGRANGIAN);
-  electrode_kinetics_on = (mp->SpeciesSourceModel[0]  == ELECTRODE_KINETICS);
-  ion_reactions_on = ( mp->SpeciesSourceModel[0]  == ION_REACTIONS );
-  total_ale_on = (cr->MeshMotion == TOTAL_ALE);
-  hydromassflux_on = (cr->MassFluxModel == HYDRODYNAMIC);
-  suspensionsource_on = (mp->MomentumSourceModel == SUSPENSION );
-
-
-
-  advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION ;
-  source_on = pd->e[pg->imtrx][eqn] & T_SOURCE ;
-
-
-  advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-  source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-
 
   rho = density(d_rho, time_value);
 
@@ -17347,7 +17250,14 @@ momentum_source_term(dbl f[DIM],                   /* Body force. */
 	  double rho = density(d_rho, time);
 	  for ( a=0; a<dim; a++)
 	    {
-	      eqn   = R_MOMENTUM1+a;			
+	      if (upd->SegregatedSolve)
+		{
+		  eqn = USTAR +a;
+		}
+	      else
+		{
+		  eqn   = R_MOMENTUM1+a;
+		}
 	      if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
 		{
 		  f[a] = rho*mp->momentum_source[a];
@@ -17376,7 +17286,14 @@ momentum_source_term(dbl f[DIM],                   /* Body force. */
 	  double rho = density(d_rho, time);
 	  for ( a=0; a<dim; a++)
 	    {
-	      eqn   = R_MOMENTUM1+a;			
+	      if (upd->SegregatedSolve)
+		{
+		  eqn = USTAR +a;
+		}
+	      else
+		{
+		  eqn   = R_MOMENTUM1+a;
+		}
 	      if (pd->e[pg->imtrx][eqn] & T_SOURCE)
 		{
 		  f[a] = rho*mp->momentum_source[a];
