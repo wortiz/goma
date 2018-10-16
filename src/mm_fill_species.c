@@ -3562,6 +3562,12 @@ flory_huggins(double func[],
   double chi[MAX_CONC][MAX_CONC]; /* chi is the binary interaction parameter*/
   double mw_last=0, dmdv=0; /* Molecular weight of non-condensable and conversion factor */
 
+  for (i = 0; i < MAX_CONC; i++)
+    {
+      y_mass[i] = 0.0;
+      prod[i] = 0.0;
+    }
+
   if(af->Assemble_LSA_Mass_Matrix)
     return;
 
@@ -4427,7 +4433,7 @@ yflux_disc_rxn_bc(double func[],
        * J_s_V
        */
       var=VOLTAGE;
-      if (pd->v[var]){
+      if (pd->v[pg->imtrx][var]){
 	for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 	  j_id = j;
 	  phi_j = bf[var]->phi[j_id];
@@ -6292,6 +6298,11 @@ mass_flux_equil_mtc(dbl mass_flux[MAX_CONC],
        return;
      }
 
+     for (i = 0; i < MAX_CONC; i++)
+       {
+         prod[i] = 0.0;
+       }
+
 /***************************** EXECUTION BEGINS *******************************/
 
      for( j=0; j<pd->Num_Species_Eqn; j++  ) C[j] = fv->c[j];
@@ -6784,6 +6795,7 @@ act_coeff(dbl lngamma[MAX_CONC], dbl dlngamma_dC[MAX_CONC][MAX_CONC],
       memset(lngamma, 0,sizeof(double)*MAX_CONC);
       memset(dlngamma_dC, 0,sizeof(double)*MAX_CONC*MAX_CONC);
       memset(C, 0, sizeof(double)*MAX_CONC);
+      memset(prod, 0, sizeof(double)*MAX_CONC);
 
   if(mode==RAOULT)
     {

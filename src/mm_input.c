@@ -104,7 +104,6 @@ static Spfrtn sr;
  * How to blurt out what we found.
  */
 
-static const char oformat[MAX_CHAR_IN_INPUT] = "%s: %-40s = %s\n";
 static const char eoformat[MAX_CHAR_IN_INPUT] = "%s = %s";
 
 /*
@@ -728,7 +727,7 @@ rd_file_specs(FILE *ifp,
   int foundMappingFile;
   int foundBrkFile;
   
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
   
  
@@ -875,7 +874,7 @@ rd_genl_specs(FILE *ifp,
   char StringToSearch[]="Pixel"; /*used in strstr call below*/
 
   static const char yo[] = "rd_genl_specs";
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
   char ftype[MAX_CHAR_IN_INPUT];
 
@@ -1434,7 +1433,7 @@ void
 rd_timeint_specs(FILE *ifp,
 		 char *input )
 {
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
 
   int mn, iread, i;
@@ -1862,7 +1861,7 @@ void
 rd_levelset_specs(FILE *ifp,
 		  char *input )
 {
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
 
   int iread, i;
@@ -3295,7 +3294,7 @@ rd_track_specs(FILE *ifp,
   int id1, id2, id3, iflag, iCC, iTC;
   double range;
   double beg_angle = 0.0, end_angle = 0.0;
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
   
   yo = "rd_track_specs";
@@ -4735,7 +4734,7 @@ rd_hunt_specs(FILE *ifp,
   static const char yo[] = "rd_hunt_specs";
   double range, range_0;
   int iread;
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
 
   if ((Continuation != HUN_ZEROTH) && (Continuation != HUN_FIRST)
@@ -4993,7 +4992,7 @@ rd_ac_specs(FILE *ifp,
 	    char *input)
 {
   char err_msg[MAX_CHAR_IN_INPUT];
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
 
   int iAC;
@@ -5994,7 +5993,7 @@ rd_solver_specs(FILE *ifp,
 		char *input )
 {
   char *c;
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
 
   char def_form[MAX_CHAR_IN_INPUT]= " (%s = %s) %s";
@@ -7117,7 +7116,7 @@ rd_eigen_specs(FILE *ifp,
   int i;
   int iread;
   char copy_of_input[MAX_CHAR_IN_INPUT];
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
   /*  */
 
@@ -8035,12 +8034,12 @@ rd_matl_blk_specs(FILE *ifp,
   char MatFile[MAX_FNL];	/* Raw material database file. */
   char TmpMatFile[MAX_FNL];	/* Temporary copy of mat db after APREPRO. */
 
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_input_file = Echo_Input_File;
   char echo_mat_file[MAX_FNL]="\0";
 
   static char MatFileSuffix[] = ".mat";
-  static char System_Command[MAX_COMMAND_LINE_LENGTH];
+  static char System_Command[MAX_SYSTEM_COMMAND_LENGTH];
 
   /*
    * Identify section containing equation specification...
@@ -8392,7 +8391,7 @@ rd_eq_specs(FILE *ifp,
 
   char	tscs[MAX_CS_KEYWORD_LENGTH] = "\0";
 
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char *echo_file = Echo_Input_File;
 
   static char yo[] = "rd_eq_specs";
@@ -8739,7 +8738,11 @@ rd_eq_specs(FILE *ifp,
           EH( -1, "Expected to read 1 int for \"MATRIX\"  ");
          }
 
-       fscanf(ifp,"%d",&mtrx_index1);
+       err = fscanf(ifp,"%d",&mtrx_index1);
+       if (err != 1)
+         {
+           EH(-1, "Error reading matrix number");
+         }
        mtrx_index0 = mtrx_index1 - 1;
        
        SPF(echo_string,"MATRIX = %d", mtrx_index1); ECHO(echo_string,echo_file);
@@ -13626,7 +13629,7 @@ fopen_aprepro( const char *filename, const char *format )
   int err;
   FILE *file;
   char Tmpfilename[MAX_FNL];
-  static char System_Command[MAX_COMMAND_LINE_LENGTH];
+  static char System_Command[MAX_SYSTEM_COMMAND_LENGTH];
 
   if( run_aprepro == 1)
     {
@@ -14691,7 +14694,7 @@ scan_table_columns( int k,
 	int Num_Pnts = table->tablelength;
 	int err_stat = 0;
 	
-	err_msg = "";
+	err_msg[0] = '\0';
 	
 	if( table->columns == 2)
 	{

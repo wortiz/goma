@@ -3126,8 +3126,6 @@ fvelo_slip_bc(double func[MAX_PDIM],
   double d_betainv_dF[MDE];
   double sign;
   int tang_slip_only;
-  double *phi_j_vector;
-  double mass;
 #define PRESSURE_DEPENDENT_SLIP 0
 #if PRESSURE_DEPENDENT_SLIP
   double vslip_mag;
@@ -3655,12 +3653,10 @@ fvelo_slip_ls_heaviside(double func[MAX_PDIM],
 			const double tt,
 			const double dt)
 {
-  int j, var, jvar, p, q, b;
+  int j, var, jvar, p;
   double phi_j, vs[MAX_PDIM] ;
   double beta, betainv;
   double d_beta_dF[MDE];
-  double X_0[3], omega;
-
   /************************* EXECUTION BEGINS *******************************/
 
   if(af->Assemble_LSA_Mass_Matrix)
@@ -8525,8 +8521,10 @@ fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
 				drhs_num_ddpj = -dnnddpj;
 				drhs_den_ddpj = (v0-1)*dveloc0_ddpj + dnnddpj;
 				if(theta_max > theta_max_degrees*M_PIE/180.)
+				  {
 					drhs_den_ddpj *= (1.-1./shik_max_factor);
-				drhs_ddpj = (rhs_den*drhs_num_ddpj 
+				  }
+				drhs_ddpj = (rhs_den*drhs_num_ddpj
 					- rhs_num*drhs_den_ddpj)/SQUARE(rhs_den);
 	      			dv_ddpj = factor*0.5*sqrt(g*v0)*(1-0.5*rhs)
 						*drhs_ddpj/pow(1+rhs,1.5);

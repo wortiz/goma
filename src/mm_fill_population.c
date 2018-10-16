@@ -1845,7 +1845,6 @@ assemble_moments(double time,	/* present time value */
    * and some of their derivatives...
    */
 
-  dbl phi_i;
   dbl grad_phi_i[DIM];
 
   /*
@@ -1880,7 +1879,6 @@ assemble_moments(double time,	/* present time value */
   CONVECTION_VELOCITY_DEPENDENCE_STRUCT *d_vconv = &d_vconv_struct;
 
   dbl supg_tau;
-  dbl d_supg_tau_dv[DIM][MDE];
 
   double msource[MAX_MOMENTS];
   MOMENT_SOURCE_DEPENDENCE_STRUCT *d_msource;
@@ -1995,19 +1993,6 @@ assemble_moments(double time,	/* present time value */
 
       if (vnorm > 0) {
 	supg_tau = 0.5 * hk * eta / vnorm;
-
-	for (j = 0; j < ei[pd->mi[VELOCITY1]]->dof[VELOCITY1]; j++) {
-	  for (a = 0; a < VIM; a++) {
-	    //d_supg_tau_dv[a][j] =
-	  }
-	}
-      } else {
-	supg_tau = 0;
-	for (j = 0; j < ei[pd->mi[VELOCITY1]]->dof[VELOCITY1]; j++) {
-	  for (a = 0; a < VIM; a++) {
-	    d_supg_tau_dv[a][j] = 0.0;
-	  }
-	}
       }
     }
 
@@ -2043,8 +2028,6 @@ assemble_moments(double time,	/* present time value */
 		if ( extended_dof && !xfem_active ) continue;
 	      }
 #endif
-	    phi_i = bf[eqn]->phi[i];
-
 	    mass = 0.;
 	    if ( pd->TimeIntegration != STEADY )
 	      {
@@ -2124,8 +2107,6 @@ assemble_moments(double time,	/* present time value */
 		if ( extended_dof && !xfem_active ) continue;
 	      }
 #endif
-	    phi_i = bf[eqn]->phi[i];
-
 	    wt_func = bf[eqn]->phi[i];
 	    /* add Petrov-Galerkin terms as necessary */
 	    if(supg!=0.)

@@ -246,6 +246,18 @@ continue_problem (Comm_Ex *cx,	/* array of communications structures */
   error = load_global_var_info(rd, 3, "CONVRATE");
   error = load_global_var_info(rd, 4, "MESH_VOLUME");
 
+  if ( nAC > 0   )
+    {
+      char name[20];
+
+      for( i = 0 ; i < nAC ; i++ )
+	{
+	  sprintf(name, "AUGC_%d",i+1);
+	  error = load_global_var_info(rd, 5 + i, name);
+	}
+    }
+
+
   /* load nodal types, kinds, names */
   error = load_nodal_tkn(rd, 
                          &tnv, 

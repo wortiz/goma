@@ -60,6 +60,33 @@ PROTO((dbl,                     /* time_value */
        dbl ,			/* dt - current time step size               */
        const PG_DATA *));
 
+EXTERN int assemble_momentum_segregated(dbl time,       /* current time */
+		  dbl tt,	  /* parameter to vary time integration from
+				     explicit (tt = 1) to implicit (tt = 0) */
+		  dbl dt,	  /* current time step size */
+		  dbl h_elem_avg, /* average global element size for PSPG*/
+		  const PG_DATA *pg_data,
+		  double xi[DIM],    /* Local stu coordinates */
+		  const Exo_DB *exo);
+EXTERN int
+assemble_continuity_segregated(dbl time_value,   /* current time */
+		    dbl tt,	/* parameter to vary time integration from
+				   explicit (tt = 1) to implicit (tt = 0)    */
+		    dbl dt,	/* current time step size                    */
+		    const PG_DATA *pg_data );
+
+EXTERN int assemble_pstar(dbl time_value,   /* current time */
+		    dbl tt,	/* parameter to vary time integration from
+				   explicit (tt = 1) to implicit (tt = 0)    */
+		    dbl dt,	/* current time step size                    */
+		    const PG_DATA *pg_data );
+
+EXTERN int assemble_ustar(dbl time_value,   /* current time */
+		    dbl tt,	/* parameter to vary time integration from
+				   explicit (tt = 1) to implicit (tt = 0)    */
+		    dbl dt,	/* current time step size                    */
+		    const PG_DATA *pg_data );
+
 
 EXTERN int calc_pspg		/* mm_fill_terms.c                           */
 PROTO((    dbl [DIM],
@@ -301,6 +328,8 @@ PROTO (( double ,
 
 EXTERN int assemble_projection_stabilization 
 PROTO (( Exo_DB *, double ));
+
+EXTERN int assemble_projection_time_stabilization(Exo_DB *exo, double time, double tt, double dt);
 
 EXTERN int assemble_PPPS_generalized
 PROTO (( Exo_DB * ));

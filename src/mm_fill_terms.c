@@ -2252,6 +2252,7 @@ assemble_energy(double time,	/* present time value */
 	  var = FILL;
 	  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
 	    {
+	      pvar = upd->vp[pg->imtrx][var];
 	      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 		{
 		  phi_j = bf[var]->phi[j];
@@ -2300,7 +2301,7 @@ assemble_energy(double time,	/* present time value */
 		      source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 		    }
 		  
-		  lec->J[peqn][var][i][j] += advection + mass + diffusion + source;
+		  lec->J[peqn][pvar][i][j] += advection + mass + diffusion + source;
 		}
 	    }
 #endif /* COUPLED_FILL */
@@ -4568,8 +4569,6 @@ assemble_momentum_segregated(dbl time,       /* current time */
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
-  struct Basis_Functions *bfm;
-
   double *R;
   double *J;
 
@@ -4595,7 +4594,6 @@ assemble_momentum_segregated(dbl time,       /* current time */
         {
           eqn  = R_MOMENTUM1 + a;
           peqn = upd->ep[pg->imtrx][eqn];
-          bfm  = bf[eqn];
 
           R = lec->R[peqn];
 
@@ -4638,8 +4636,6 @@ assemble_momentum_segregated(dbl time,       /* current time */
         {
           eqn  = R_MOMENTUM1 + a;
           peqn = upd->ep[pg->imtrx][eqn];
-          bfm  = bf[eqn];
-
 	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
 	    ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
@@ -6171,7 +6167,6 @@ assemble_ustar(dbl time_value,   /* current time */
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
-  struct Basis_Functions *bfm;
 
   double *R;
   double *J;
@@ -6219,8 +6214,6 @@ assemble_ustar(dbl time_value,   /* current time */
         {
           eqn  = USTAR + a;
           peqn = upd->ep[pg->imtrx][eqn];
-          bfm  = bf[eqn];
-
           R = lec->R[peqn];
 
 	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
@@ -6285,7 +6278,6 @@ assemble_ustar(dbl time_value,   /* current time */
         {
           eqn  = USTAR + a;
           peqn = upd->ep[pg->imtrx][eqn];
-          bfm  = bf[eqn];
 
 	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
 	    ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
@@ -6382,10 +6374,6 @@ assemble_pstar(dbl time_value,   /* current time */
    * Galerkin weighting functions...
    */
 
-  dbl phi_i;
-  dbl phi_j;
-  dbl ( *grad_phi )[DIM];               /* weight-function for PSPG term */
-
   /*
    * Variables for Pressure Stabilization Petrov-Galerkin...
    */
@@ -6430,9 +6418,6 @@ assemble_pstar(dbl time_value,   /* current time */
   h3 = fv->h3;			/* Differential volume element (scales). */
 
   d_area = wt * det_J * h3;
-
-  grad_phi = bf[eqn]->grad_phi;
-
   /*
    * Get the deformation gradients and tensors if needed
    */
@@ -6457,8 +6442,6 @@ assemble_pstar(dbl time_value,   /* current time */
 	      if ( extended_dof && !xfem_active ) continue;
 	    }
 #endif
-
-	  phi_i      = bf[eqn]->phi[i];
 
 	  /*
 	   *  Mass Terms: drhodt terms (usually though problem dependent)
@@ -6497,8 +6480,6 @@ assemble_pstar(dbl time_value,   /* current time */
 
               for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
                 {
-
-                  phi_j = bf[var]->phi[j];
                   mass = 0;
                   for (a = 0; a < wim; a++)
                     {
@@ -6523,14 +6504,11 @@ assemble_continuity_segregated(dbl time_value,   /* current time */
 		    dbl dt,	/* current time step size                    */
 		    const PG_DATA *pg_data )
 {
-  //! wim is the length of the velocity vector
-  int wim = VIM;
-  int i, j, a, b;
+  int i, j;
   int ledof, eqn, var, ii, peqn, pvar;
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
-  struct Basis_Functions *bfm;
 
   double *R;
   double *J;
@@ -6550,11 +6528,8 @@ assemble_continuity_segregated(dbl time_value,   /* current time */
        * Assemble each component "a" of the momentum equation...
        */
         peqn = upd->ep[pg->imtrx][eqn];
-        bfm  = bf[eqn];
 
         R = lec->R[peqn];
-
-	double invdt = 1/dt;
 	for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
 	  ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
 	  if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
@@ -6589,7 +6564,6 @@ assemble_continuity_segregated(dbl time_value,   /* current time */
 
       eqn  = PRESSURE;
       peqn = upd->ep[pg->imtrx][eqn];
-      bfm  = bf[eqn];
 
       for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
         ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
@@ -15049,7 +15023,7 @@ density(DENSITY_DEPENDENCE_STRUCT *d_rho, double time)
 
       if (d_rho != NULL) {
 	var = TEMPERATURE;
-	if (pd->v[var] )
+	if (pd->v[pg->imtrx][var] )
 	  {
 	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 	      {
@@ -15058,7 +15032,7 @@ density(DENSITY_DEPENDENCE_STRUCT *d_rho, double time)
 	  }
 
 	var = MOMENT1;
-	if (pd->v[var] )
+	if (pd->v[pg->imtrx][var] )
 	  {
 	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 	      {
@@ -15068,7 +15042,7 @@ density(DENSITY_DEPENDENCE_STRUCT *d_rho, double time)
 	  }
 
 	var = MASS_FRACTION;
-	if (pd->v[var])
+	if (pd->v[pg->imtrx][var])
 	  {
 	    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
 	      {
@@ -18371,7 +18345,7 @@ quad_isomap_invert( const double x1,
 	dxi[1] = 0;
 	dxi[2] = 0;
 
- 	elem_nodes = pow(elem_order+1,dim);
+        elem_nodes = (int) round(pow(elem_order+1,dim));
  	switch (dim)
  		{
  		case 2:

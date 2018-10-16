@@ -8737,7 +8737,7 @@ load_MandE_flux(double porosity, double cap_pres, double saturation,
 		    {
 		      for ( w=0; w<MAX_PMV; w++)
 			{
-			  pmv->d_rel_mass_flux_dmesh[a][w] [b][j] = 0.;
+			  pmv->d_rel_mass_flux_dmesh[w][a] [b][j] = 0.;
 			}
 		    }
 		  for (a=0; a < WIM; a++)
@@ -9706,7 +9706,7 @@ load_mass_flux(double porosity, double cap_pres, double saturation,
 		    {
 		      for ( w=0; w<MAX_PMV; w++)
 			{
-			  pmv->d_rel_mass_flux_dmesh[a][w] [b][j] = 0.;
+			  pmv->d_rel_mass_flux_dmesh[w][a] [b][j] = 0.;
 			}
 		    }
 		  for (a=0; a < VIM; a++)

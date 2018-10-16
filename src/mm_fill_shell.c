@@ -1049,7 +1049,7 @@ assemble_shell_structure(double time_value,  /* Time */
 
 	  /* J_k_sh_x:  Side 1 sensitivity */
 	  var  = MESH_DISPLACEMENT1;
-	  if ( pd0->v[var] )
+	  if ( pd0->v[pg->imtrx][var] )
 	    {
 	      pvar = upd->vp[pg->imtrx][var];
 	      n_dof[pvar] = ei[pg->imtrx]->dof[var];
@@ -1059,7 +1059,7 @@ assemble_shell_structure(double time_value,  /* Time */
 		  d_det_J_dmeshbj = 0.5*(2.*d_sh_x_dxi*d_phi_dxi[j])/det_J_sh;
 		  /* Diffusion term */
 		  diffusion = 0.0;
-		  if (pd0->e[eqn])
+		  if (pd0->e[pg->imtrx][eqn])
 		    {
 		      diffusion = elc->bend_stiffness * d_phi_dxi[i] * d_sh_K_dxi * d_det_J_dmeshbj / det_J_sh / det_J_sh
 			-fv->sh_K * fv->sh_tens * phi_i * d_det_J_dmeshbj;
@@ -1073,7 +1073,7 @@ assemble_shell_structure(double time_value,  /* Time */
 
 	  /* J_k_sh_y:  Side 1 sensitivity */
 	  var  = MESH_DISPLACEMENT2;
-	  if ( pd0->v[var] )
+	  if ( pd0->v[pg->imtrx][var] )
 	    {
 	      pvar = upd->vp[pg->imtrx][var];
 	      n_dof[pvar] = ei[pg->imtrx]->dof[var];
@@ -1083,7 +1083,7 @@ assemble_shell_structure(double time_value,  /* Time */
 		  d_det_J_dmeshbj = 0.5*(2.*d_sh_y_dxi*d_phi_dxi[j])/det_J_sh;
 		  /* Diffusion term */
 		  diffusion = 0.0;
-		  if (pd0->e[eqn])
+		  if (pd0->e[pg->imtrx][eqn])
 		    {
 		      diffusion = elc->bend_stiffness * d_phi_dxi[i] * d_sh_K_dxi * d_det_J_dmeshbj / det_J_sh / det_J_sh
 			-fv->sh_K * fv->sh_tens * phi_i * d_det_J_dmeshbj;
@@ -7153,6 +7153,10 @@ assemble_shell_energy(double time,	/* present time value */
   /*   static char yo[] = "assemble_shell_energy";*/
   status = 0;
 
+  for (i = 0; i < DIM; i++)
+    {
+      gradII_Hside[i] = 0.0;
+    }
   /*
    * Bail out fast if there's nothing to do...
    */

@@ -56,6 +56,11 @@
 
 extern struct Boundary_Condition *inlet_BC[MAX_VARIABLE_TYPES+MAX_CONC];
 
+extern FSUB_TYPE dsyev_(char *JOBZ, char *UPLO, int *N, double *A, int *LDA,
+			double *W, double *WORK, int *LWORK, int *INFO,
+			int len_jobz, int len_uplo);
+
+
 /*  _______________________________________________________________________  */
 
 /* assemble_stress -- assemble terms (Residual &| Jacobian) for polymer stress eqns

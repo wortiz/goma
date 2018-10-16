@@ -1112,7 +1112,10 @@ time_step_control(const double delta_t,  const double delta_t_old,
   log_msg("                 %1d  e_S = %g", use_var_norm[5], e_S);
   log_msg("                 %1d  e_V = %g", use_var_norm[6], e_V);
   log_msg("                 %1d  e_sh_lub = %g", use_var_norm[9], e_sh_lub);
-  if (nAC > 0 ) log_msg("                 %1d  e_AC = %g", use_var_norm[9], e_AC);
+  if (nAC > 0 )
+    {
+      log_msg("                 %1d  e_AC = %g", use_var_norm[9], e_AC);
+    }
 
 
   /*

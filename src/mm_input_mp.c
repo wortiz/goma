@@ -261,7 +261,7 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
      *      this problem.
      **************************************************************************/
 { /*start*/
-  char err_msg[MAX_CHAR_IN_INPUT];
+  char err_msg[MAX_CHAR_ERR_MSG];
   int	i, j, var;
   int imtrx;
   static const char yo[] = "rd_mp_specs";
@@ -269,7 +269,7 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   
   int ConstitutiveEquation;
   int LameLambdaModel;
-  dbl a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12;
+  dbl a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11;
   dbl v0[DIM];
   int i0;
   /* dummy variable to hold modal data before it is put into the ve struct */
@@ -327,7 +327,7 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   
   char  model_name[MAX_CHAR_IN_INPUT];
   char  *s;		   /* used to tokenize optional input string. */
-  char echo_string[MAX_CHAR_IN_INPUT]="\0";
+  char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
   char search_string[MAX_CHAR_IN_INPUT];
   char *es = echo_string;
 
