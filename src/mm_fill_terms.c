@@ -18714,6 +18714,9 @@ double FoamVolumeSource(double time,
 	DENSITY_DEPENDENCE_STRUCT d_rho_struct;
 	DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
 
+	load_lsi(ls->Length_Scale);
+	load_lsi_derivs();
+
 	rho = density(d_rho, time);
 
 	wCO2Liq = -1;
@@ -18754,6 +18757,7 @@ double FoamVolumeSource(double time,
 	}
 
 
+
 	double nu = 0;
 
 	double nu_dot = 0;
@@ -18784,7 +18788,6 @@ double FoamVolumeSource(double time,
 
 	//double rho = rho_gas * volF + rho_liq * (1 - volF);
 	double rho_dot = rho_gas * volF_dot - rho_liq * volF_dot;
-
 	double grad_rho[DIM];
 	double d_grad_rho_dT[DIM][MDE];
 
@@ -18872,7 +18875,14 @@ double FoamVolumeSource(double time,
 	DENSITY_DEPENDENCE_STRUCT d_rho_struct;
 	DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
 
+	load_lsi(ls->Length_Scale);
+	load_lsi_derivs();
+
 	rho = density(d_rho, time);
+
+	double rho_gasphase = mp->mp2nd->density;
+	int minus_mask = mp->mp2nd->densitymask[0];
+	int plus_mask = mp->mp2nd->densitymask[1];
 
 	wCO2 = -1;
 	wH2O = -1;
@@ -19012,11 +19022,41 @@ double FoamVolumeSource(double time,
 	  }
 	}
 
+	double grad_rho_full[DIM];
+	double rho_dot_full = 0;
+
+	double rho_dot_minus = rho_dot * plus_mask;
+	double rho_dot_plus = rho_dot * minus_mask;
+
+	double volF = mp->volumeFractionGas;
+
+	double rho_foam = rho_gas * volF + rho_liq * (1 - volF);
+	double rho_minus = rho_foam*plus_mask + rho_gasphase * minus_mask;
+	double rho_plus = rho_foam*minus_mask + rho_gasphase * plus_mask;
+
+	rho_dot_full = rho_dot_minus - rho_dot_minus * lsi->H - lsi->H_dot * rho_minus +
+	    rho_dot_plus * lsi->H + rho_plus * lsi->H_dot;
+
+	if (plus_mask)
+	  {
+	    for (int p = 0; p < pd->Num_Dim; p++)
+	      {
+		grad_rho_full[p] = grad_rho[p]- grad_rho[p] * lsi->H + (lsi->grad_H[p] * (-rho_foam + rho_gasphase));
+	      }
+	  }
+	else
+	  {
+	    for (int p = 0; p < pd->Num_Dim; p++)
+	      {
+		grad_rho_full[p] = grad_rho[p] * lsi->H + (lsi->grad_H[p] * (rho_foam - rho_gasphase));
+	      }
+	  }
+
 	double inv_rho = 1/rho;
 
-	source = rho_dot;
+	source = rho_dot_full;
 	for (a = 0; a < dim; a++) {
-	  source += fv->v[a] * grad_rho[a];
+	  source += fv->v[a] * grad_rho_full[a];
 	}
 	source *= inv_rho;
 
@@ -19046,7 +19086,7 @@ double FoamVolumeSource(double time,
 		    var = VELOCITY1+a;
 		    for( j=0; pd->v[pg->imtrx][var] && j<ei[pg->imtrx]->dof[var]; j++)
 		      {
-			dFVS_dv[a][j] = inv_rho * (bf[var]->phi[j] * grad_rho[a]);
+			dFVS_dv[a][j] = inv_rho * (bf[var]->phi[j] * grad_rho_full[a]);
 		      }
 		  }
 	      }
@@ -19087,7 +19127,7 @@ double FoamVolumeSource(double time,
   
   if (ls != NULL && mp->mp2nd != NULL &&
       ( mp->DensityModel != LEVEL_SET) &&
-      ( mp->mp2nd->DensityModel == CONSTANT) )
+      ( mp->mp2nd->DensityModel == CONSTANT) && (mp->DensityModel != DENSITY_FOAM_PMDI_10))
     {
       double factor;
       

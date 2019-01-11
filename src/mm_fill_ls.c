@@ -7254,11 +7254,21 @@ load_lsi_derivs()
 	  lsi->d_H_dF[j] = phi_j * lsi->gfmaginv;
         }
     }
-    
+
+  lsi->H_dot = 0.0;
+  for (int p = 0; p < pd->Num_Dim; p++)
+    {
+      lsi->grad_H[p] = 0.0;
+    }
   /* If we're not in the mushy zone, all remaining derivs should be zero. */
   if ( ls->on_sharp_surf || ! lsi->near ) return(0);
   
   lsi->dH = 0.5 * (1.0/alpha) * (1. + cos(M_PIE * F / alpha));
+  lsi->H_dot = lsi->dH * fv_dot->F;
+  for (int p = 0; p < pd->Num_Dim; p++)
+    {
+      lsi->grad_H[p] = fv->grad_F[p] * lsi->dH;
+    }
 
   /*
    * Derivatives w.r.t. FILL for non-zero alpha

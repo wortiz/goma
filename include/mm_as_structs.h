@@ -2654,6 +2654,9 @@ struct Level_Set_Interface {
   double d_H_dF[MDE];
   double d_H_dmesh[DIM][MDE];
 
+  double H_dot;
+  double grad_H[DIM];
+
   /* Heaviside function as above, but evaluated using FEM basis functions */
   double Hn;
   double gradHn[DIM];
