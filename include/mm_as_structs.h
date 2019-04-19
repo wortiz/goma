@@ -539,6 +539,11 @@ struct Element_Variable_Pointers
   dbl *poynt[DIM][MDE];				/* Poynting Vector for light intensity */
   dbl *moment[MAX_MOMENTS][MDE];     	                /* moments */
   dbl *rho[MDE];
+  dbl *eikonal[MDE];
+  dbl *heaviside_sharp[MDE];
+  dbl *heaviside_smooth[MDE];
+  dbl *heaviside_projection[MDE];
+  dbl *F_prime[MDE];
 };
 
 /*___________________________________________________________________________*/
@@ -646,6 +651,11 @@ struct Element_Stiffness_Pointers
   dbl ***poynt;		      	 /* *v[DIM][MDE], velocity */
   dbl ***moment;	                 /* *moment[MAX_MOMENTS][MDE], moments */
   dbl **rho;
+  dbl **eikonal;
+  dbl **heaviside_sharp;
+  dbl **heaviside_smooth;
+  dbl **heaviside_projection;
+  dbl **F_prime;
 
 
   /*
@@ -1629,6 +1639,11 @@ struct Field_Variables
   dbl poynt[DIM];			/* Poynting Vector */
   dbl moment[MAX_MOMENTS];
   dbl rho;
+  dbl eikonal;
+  dbl heaviside_sharp;
+  dbl heaviside_smooth;
+  dbl heaviside_projection;
+  dbl F_prime;
 
   /*
    * Grads of scalars...
@@ -1640,6 +1655,11 @@ struct Field_Variables
   dbl grad_c[MAX_CONC][DIM];	/* Gradient of concentration(s). */
   dbl grad_moment[MAX_MOMENTS][DIM];	/* Gradient of moments */
   dbl grad_rho[DIM];		/* Gradient of density. */
+  dbl grad_eikonal[DIM];
+  dbl grad_heaviside_sharp[DIM];
+  dbl grad_heaviside_smooth[DIM];
+  dbl grad_heaviside_projection[DIM];
+  dbl grad_F_prime[DIM];
   dbl grad_F[DIM];		/* Gradient of fill. */
   dbl grad_H[DIM];		/* Gradient of curvature. */
   dbl grad_V[DIM];		/* Gradient of voltage potential. */
@@ -1963,6 +1983,11 @@ struct Diet_Field_Variables
   dbl poynt[DIM];			/* Poynting Vector */
   dbl moment[MAX_MOMENTS];
   dbl rho;
+  dbl eikonal;
+  dbl heaviside_sharp;
+  dbl heaviside_smooth;
+  dbl heaviside_projection;
+  dbl F_prime;
 
   /*  
    * Gradients... concentration is the only one we use in the

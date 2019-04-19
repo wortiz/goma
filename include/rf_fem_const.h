@@ -444,6 +444,11 @@
 #define MOMENT2               185
 #define MOMENT3               186
 #define DENSITY_EQN           187
+#define EIKONAL               188
+#define HEAVISIDE_SHARP             189
+#define HEAVISIDE_SMOOTH      190
+#define HEAVISIDE_PROJECTION  191
+#define FILL_PRIME            192
 
 /*
  * define a variable to hold an external field which will be 
@@ -805,7 +810,12 @@
 #define R_MOMENT2               185
 #define R_MOMENT3               186
 #define R_DENSITY_EQN           187
-#define V_LAST		        188
+#define R_EIKONAL               188
+#define R_HEAVISIDE_SHARP       189
+#define R_HEAVISIDE_SMOOTH      190
+#define R_HEAVISIDE_PROJECTION  191
+#define R_FILL_PRIME            192
+#define V_LAST		       193
 
 
 /* MMH

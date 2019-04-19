@@ -1621,11 +1621,61 @@ load_variable (double *x_var,        /* variable value */
       var = LIGHT_INTD;
       *d_x_var = 1.;
       break;
+    case MOMENT0:
+      *x_var = fv->moment[0];
+      var = MOMENT0;
+      *d_x_var = 1.;
+      break;
+    case MOMENT1:
+      *x_var = fv->moment[0];
+      var = MOMENT1;
+      *d_x_var = 1.;
+      break;
+    case MOMENT2:
+      *x_var = fv->moment[0];
+      var = MOMENT2;
+      *d_x_var = 1.;
+      break;
+    case MOMENT3:
+      *x_var = fv->moment[0];
+      var = MOMENT3;
+      *d_x_var = 1.;
+      break;
+    case DENSITY_EQN:
+      *x_var = fv->rho;
+      var = DENSITY_EQN;
+      *d_x_var = 1.;
+      break;
+    case EIKONAL:
+      *x_var = fv->rho;
+      var = EIKONAL;
+      *d_x_var = 1.;
+      break;
+    case HEAVISIDE_SHARP:
+      *x_var = fv->rho;
+      var = HEAVISIDE_SHARP;
+      *d_x_var = 1.;
+      break;
+    case HEAVISIDE_SMOOTH:
+      *x_var = fv->rho;
+      var = HEAVISIDE_SMOOTH;
+      *d_x_var = 1.;
+      break;
+    case HEAVISIDE_PROJECTION:
+      *x_var = fv->rho;
+      var = HEAVISIDE_PROJECTION;
+      *d_x_var = 1.;
+      break;
+    case FILL_PRIME:
+      *x_var = fv->rho;
+      var = FILL_PRIME;
+      *d_x_var = 1.;
+      break;
     case MASS_FRACTION:
       *x_var = fv->c[wspec];
       var = MASS_FRACTION;
       *d_x_var = 1.;
-      break;
+      break;      
     case MESH_DISPLACEMENT1:
       *x_var = fv->d[0];
       var = MESH_DISPLACEMENT1;

@@ -990,7 +990,13 @@ struct Equation_Names EQ_Name[] = {
     { "R_MOMENT1", "MOMENT1", R_MOMENT1},     /*   184  */
     { "R_MOMENT2", "MOMENT2", R_MOMENT2},     /*   185  */
     { "R_MOMENT3", "MOMENT3", R_MOMENT3},     /*   186  */
-    { "R_DENSITY_EQN", "DENSITY_EQN", R_DENSITY_EQN},     /*   187  */
+    { "R_DENSITY_EQN", "DENSITY_EQN", R_DENSITY_EQN},
+    { "R_EIKONAL", "EIKONAL", R_EIKONAL},
+    { "R_HEAVISIDE", "HEAVISIDE_SHARP", R_HEAVISIDE_SHARP},
+    { "R_HEAVISIDE_SMOOTH", "HEAVISIDE_SMOOTH", R_HEAVISIDE_SMOOTH},
+    { "R_HEAVISIDE_PROJECTION", "HEAVISIDE_PROJECTION", R_HEAVISIDE_PROJECTION},
+    { "R_FILL_PRIME", "FILL_PRIME", R_FILL_PRIME},
+
 
     /*
      *  Note -> these entries must remain until we get rid
@@ -1266,6 +1272,11 @@ struct Equation_Names Var_Name[] =  {
     { "MOMENT2", "MOM2", MOMENT2},                     /* 185 */
     { "MOMENT3", "MOM3", MOMENT3},                     /* 186 */
     { "DENSITY_EQN", "RHO_EQN", DENSITY_EQN},                     /* 187 */
+    { "EIKONAL", "EIKONAL", EIKONAL},
+    { "HEAVISIDE", "HEAVISIDE_SHARP", HEAVISIDE_SHARP},
+    { "HEAVISIDE_SMOOTH", "HEAVISIDE_SMOOTH", HEAVISIDE_SMOOTH},
+    { "HEAVISIDE_PROJECTION", "HEAVISIDE_PROJECTION", HEAVISIDE_PROJECTION},
+    { "FILL_PRIME", "FILL_PRIME", FILL_PRIME},
 
     { "MESH_POSITION1", "X",  MESH_POSITION1 } ,
     { "MESH_POSITION2", "Y",  MESH_POSITION2 } ,	/* 189 */
@@ -1510,6 +1521,11 @@ struct Equation_Names Exo_Var_Names[] =
   { "Moment 2", "MOM2", MOMENT2 },
   { "Moment 3", "MOM3", MOMENT3 },
   { "Density equation", "RHO_EQN", DENSITY_EQN },
+  { "EIKONAL", "EIKONAL", R_EIKONAL},
+  { "HEAVISIDE", "HEAVISIDE_SHARP", R_HEAVISIDE_SHARP},
+  { "HEAVISIDE_SMOOTH", "HEAVISIDE_SMOOTH", R_HEAVISIDE_SMOOTH},
+  { "HEAVISIDE_PROJECTION", "HEAVISIDE_PROJECTION", R_HEAVISIDE_PROJECTION},
+  { "FILL_PRIME", "FILL_PRIME", R_FILL_PRIME},
 
 };
 
@@ -1779,6 +1795,11 @@ struct Equation_Names Var_Units[] =
   { "Moment 2", "[1]", MOMENT2},
   { "Moment 3", "[1]", MOMENT3},
   { "Density equation", "[1]", DENSITY_EQN},
+{ "EIKONAL", "[1]", R_EIKONAL},
+{ "HEAVISIDE_SHARP", "[1]", R_HEAVISIDE_SHARP},
+{ "HEAVISIDE_SMOOTH", "[1]", R_HEAVISIDE_SMOOTH},
+{ "HEAVISIDE_PROJECTION", "[1]", R_HEAVISIDE_PROJECTION},
+{ "FILL_PRIME", "[1]", R_FILL_PRIME},
 };
 
 int Num_Var_Units = sizeof(Var_Units) / sizeof(struct Equation_Names);  

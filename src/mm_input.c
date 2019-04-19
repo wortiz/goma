@@ -9142,7 +9142,16 @@ rd_eq_specs(FILE *ifp,
       ce = set_eqn(R_MOMENT3, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "density")) {
       ce = set_eqn(R_DENSITY_EQN, mtrx_index0, pd_ptr);
-
+    } else if (!strcasecmp(ts, "eikonal")) {
+      ce = set_eqn(R_EIKONAL, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "heaviside_sharp")) {
+      ce = set_eqn(R_HEAVISIDE_SHARP, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "heaviside_smooth")) {
+      ce = set_eqn(R_HEAVISIDE_SMOOTH, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "heaviside_projection")) {
+      ce = set_eqn(R_HEAVISIDE_PROJECTION, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "fill_prime")) {
+      ce = set_eqn(R_FILL_PRIME, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "porous_sat"))  {
       ce = set_eqn(R_POR_LIQ_PRES, mtrx_index0, pd_ptr);
       if( pd_ptr->e[mtrx_index0][R_POR_GAS_PRES] || pd_ptr->e[mtrx_index0][R_POR_SATURATION] 
@@ -9741,6 +9750,16 @@ rd_eq_specs(FILE *ifp,
       cv = set_var(MOMENT3, mtrx_index0, pd_ptr);
     } else if (!strcasecmp(ts, "RHO_EQN")) {
       cv = set_var(DENSITY_EQN, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "EIKONAL")) {
+      cv = set_var(EIKONAL, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "HEAVISIDE_SHARP")) {
+      cv = set_var(HEAVISIDE_SHARP, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "HEAVISIDE_SMOOTH")) {
+      cv = set_var(HEAVISIDE_SMOOTH, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "HEAVISIDE_PROJECTION")) {
+      cv = set_var(HEAVISIDE_PROJECTION, mtrx_index0, pd_ptr);
+    } else if (!strcasecmp(ts, "FILL_PRIME")) {
+      cv = set_var(FILL_PRIME, mtrx_index0, pd_ptr);
     } else if (!strncasecmp(ts, "Sp", 2)) {
       if (!strcasecmp(ts, "Sp")) {
 	cv = SPECIES_UNK_0;
@@ -10244,6 +10263,11 @@ rd_eq_specs(FILE *ifp,
     case MOMENT1:
     case MOMENT2:
     case MOMENT3:
+    case EIKONAL:
+    case HEAVISIDE_SHARP:
+    case HEAVISIDE_SMOOTH:
+    case HEAVISIDE_PROJECTION:
+    case FILL_PRIME:
     case R_BOND_EVOLUTION:
       if ( fscanf(ifp, "%lf %lf %lf  %lf", 
 		  &(pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)]),

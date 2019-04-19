@@ -1294,6 +1294,28 @@ assembly_alloc(Exo_DB *exo)
     esp->rho = (dbl **) alloc_ptr_1(MDE);
   }
 
+  if(Num_Var_In_Type[imtrx][EIKONAL]) {
+    esp->eikonal = (dbl **) alloc_ptr_1(MDE);
+  }
+
+  if(Num_Var_In_Type[imtrx][HEAVISIDE_SHARP]) {
+    esp->heaviside_sharp = (dbl **) alloc_ptr_1(MDE);
+  }
+
+  if(Num_Var_In_Type[imtrx][HEAVISIDE_SMOOTH]) {
+    esp->heaviside_smooth = (dbl **) alloc_ptr_1(MDE);
+  }
+
+  if(Num_Var_In_Type[imtrx][HEAVISIDE_PROJECTION]) {
+    esp->heaviside_projection = (dbl **) alloc_ptr_1(MDE);
+  }
+
+  if(Num_Var_In_Type[imtrx][FILL_PRIME]) {
+    esp->F_prime = (dbl **) alloc_ptr_1(MDE);
+  }
+
+
+
   if(Num_Var_In_Type[imtrx][SHELL_SHEAR_TOP]) {
     esp->sh_shear_top = (dbl **) alloc_ptr_1(MDE);
   }

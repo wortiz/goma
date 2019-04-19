@@ -8066,6 +8066,44 @@ load_fv_sens(void)
       fv_sens->rho += *esp_old->rho[i] * bf[v]->phi[i];
     }
   }
+
+  v = EIKONAL;
+  fv_sens->eikonal = 0.;
+  if ( pd->v[pg->imtrx][v] ) {
+    dofs  = ei[pg->imtrx]->dof[v];
+    for ( i=0; i<dofs; i++) {
+      fv_sens->eikonal += *esp_old->eikonal[i] * bf[v]->phi[i];
+    }
+  }
+
+  v = HEAVISIDE_SHARP;
+  fv_sens->heaviside_sharp = 0.;
+  if ( pd->v[pg->imtrx][v] ) {
+    dofs  = ei[pg->imtrx]->dof[v];
+    for ( i=0; i<dofs; i++) {
+      fv_sens->heaviside_sharp += *esp_old->heaviside_sharp[i] * bf[v]->phi[i];
+    }
+  }
+
+  v = HEAVISIDE_SMOOTH;
+  fv_sens->heaviside_smooth = 0.;
+  if ( pd->v[pg->imtrx][v] ) {
+    dofs  = ei[pg->imtrx]->dof[v];
+    for ( i=0; i<dofs; i++) {
+      fv_sens->heaviside_smooth += *esp_old->heaviside_smooth[i] * bf[v]->phi[i];
+    }
+  }
+
+
+  v = HEAVISIDE_PROJECTION;
+  fv_sens->heaviside_projection = 0.;
+  if ( pd->v[pg->imtrx][v] ) {
+    dofs  = ei[pg->imtrx]->dof[v];
+    for ( i=0; i<dofs; i++) {
+      fv_sens->heaviside_projection += *esp_old->heaviside_projection[i] * bf[v]->phi[i];
+    }
+  }
+
   v = SHELL_PRESS_OPEN;
   fv_sens->sh_p_open = 0.;
   if ( pd->v[pg->imtrx][v] )

@@ -2077,6 +2077,40 @@ load_elem_dofptr(const int ielem,
 				      esp_dot->rho);
     }
 
+  eqn = R_EIKONAL;
+  if ( pd->e[pg->imtrx][eqn] )
+    {
+      load_varType_Interpolation_ptrs(eqn, esp->eikonal, esp_old->eikonal,
+                                      esp_dot->eikonal);
+    }
+
+  eqn = R_HEAVISIDE_SHARP;
+  if ( pd->e[pg->imtrx][eqn] )
+    {
+      load_varType_Interpolation_ptrs(eqn, esp->heaviside, esp_old->heaviside,
+                                      esp_dot->heaviside);
+    }
+
+  eqn = HEAVISIDE_SMOOTH;
+  if ( pd->e[pg->imtrx][eqn] )
+    {
+      load_varType_Interpolation_ptrs(eqn, esp->heaviside_smooth, esp_old->heaviside_smooth,
+                                      esp_dot->heaviside_smooth);
+    }
+
+  eqn = HEAVISIDE_PROJECTION;
+  if ( pd->e[pg->imtrx][eqn] )
+    {
+      load_varType_Interpolation_ptrs(eqn, esp->heaviside_projection, esp_old->heaviside_projection,
+                                      esp_dot->heaviside_projection);
+    }
+
+  eqn = FILL_PRIME;
+  if ( pd->e[pg->imtrx][eqn] )
+    {
+      load_varType_Interpolation_ptrs(eqn, esp->F_prime, esp_old->F_prime,
+                                      esp_dot->F_prime);
+    }
   /*
    * External field variables
    * Warning - here the distinction between nodes and dof's gets
@@ -2917,6 +2951,41 @@ load_elem_dofptr_all(const int ielem,
       {
 	load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->rho, esp_old->rho,
 					esp_dot->rho);
+      }
+
+    eqn = R_EIKONAL;
+    if ( pd->e[pg->imtrx][eqn] )
+      {
+        load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->eikonal, esp_old->eikonal,
+                                        esp_dot->eikonal);
+      }
+
+    eqn = R_HEAVISIDE_SHARP;
+    if ( pd->e[pg->imtrx][eqn] )
+      {
+        load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->heaviside_sharp, esp_old->heaviside_sharp,
+                                        esp_dot->heaviside_sharp);
+      }
+
+    eqn = HEAVISIDE_SMOOTH;
+    if ( pd->e[pg->imtrx][eqn] )
+      {
+        load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->heaviside_smooth, esp_old->heaviside_smooth,
+                                        esp_dot->heaviside_smooth);
+      }
+
+    eqn = HEAVISIDE_PROJECTION;
+    if ( pd->e[pg->imtrx][eqn] )
+      {
+        load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->heaviside_projection, esp_old->heaviside_projection,
+                                        esp_dot->heaviside_projection);
+      }
+
+    eqn = FILL_PRIME;
+    if ( pd->e[pg->imtrx][eqn] )
+      {
+        load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->F_prime, esp_old->F_prime,
+                                        esp_dot->F_prime);
       }
 
   }

@@ -9134,6 +9134,52 @@ load_fv(void)
       stateVector[v] = fv->rho;
     }
 
+  if (pdgv[EIKONAL])
+    {
+      v = EIKONAL;
+      scalar_fv_fill(esp->eikonal, esp_dot->eikonal, esp_old->eikonal, bf[v]->phi, ei[pd->mi[v]]->dof[v],
+          &(fv->eikonal), &(fv_dot->eikonal), &(fv_old->eikonal));
+      stateVector[v] = fv->eikonal;
+    }
+
+  if (pdgv[HEAVISIDE_SHARP])
+    {
+      v = HEAVISIDE_SHARP;
+      scalar_fv_fill(esp->heaviside_sharp, esp_dot->heaviside_sharp, esp_old->heaviside_sharp, bf[v]->phi, ei[pd->mi[v]]->dof[v],
+          &(fv->heaviside_sharp), &(fv_dot->heaviside_sharp), &(fv_old->heaviside_sharp));
+      stateVector[v] = fv->heaviside_sharp;
+    }
+
+  if (pdgv[HEAVISIDE_SMOOTH])
+    {
+      v = HEAVISIDE_SMOOTH;
+      scalar_fv_fill(esp->heaviside_smooth, esp_dot->heaviside_smooth, esp_old->heaviside_smooth, bf[v]->phi, ei[pd->mi[v]]->dof[v],
+          &(fv->heaviside_smooth), &(fv_dot->heaviside_smooth), &(fv_old->heaviside_smooth));
+      stateVector[v] = fv->heaviside_smooth;
+    }
+
+  if (pdgv[HEAVISIDE_PROJECTION])
+    {
+      v = HEAVISIDE_PROJECTION;
+      scalar_fv_fill(esp->heaviside_projection, esp_dot->heaviside_projection, esp_old->heaviside_projection, bf[v]->phi, ei[pd->mi[v]]->dof[v],
+          &(fv->heaviside_projection), &(fv_dot->heaviside_projection), &(fv_old->heaviside_projection));
+      stateVector[v] = fv->heaviside_projection;
+
+    }
+
+  if (pdgv[FILL_PRIME])
+    {
+      v = FILL_PRIME;
+      scalar_fv_fill(esp->F_prime, esp_dot->F_prime, esp_old->F_prime, bf[v]->phi, ei[pd->mi[v]]->dof[v],
+          &(fv->F_prime), &(fv_dot->F_prime), &(fv_old->F_prime));
+      stateVector[v] = fv->F_prime;
+
+    }
+
+
+
+
+
   /*
    * External...
    */
@@ -10981,6 +11027,122 @@ load_fv_grads(void)
   }
 
 #endif
+
+  if ( pd->gv[EIKONAL] )
+    {
+      v = EIKONAL;
+      dofs  = ei[pg->imtrx]->dof[v];
+#ifdef DO_NO_UNROLL
+      for ( p=0; p<VIM; p++)
+        {
+          fv->grad_eikonal[p] = 0.0;
+
+	  for ( i=0; i<dofs; i++)
+	    {
+	      fv->grad_eikonal[p] += *esp->eikonal[i] * bf[v]->grad_phi[i] [p];
+	      fv_old->grad_eikonal[p] += *esp_old->eikonal[i] * bf[v]->grad_phi[i] [p]
+		}
+	}
+#else
+      grad_scalar_fv_fill( esp->eikonal, bf[v]->grad_phi, dofs, fv->grad_eikonal);
+    } else if ( zero_unused_grads &&  upd->vp[pg->imtrx][EIKONAL] == -1 ) {
+    for (p=0; p<VIM; p++) fv->grad_eikonal[p] = 0.0;
+  }
+
+#endif
+
+  if ( pd->gv[HEAVISIDE_SHARP] )
+    {
+      v = HEAVISIDE_SHARP;
+      dofs  = ei[pg->imtrx]->dof[v];
+#ifdef DO_NO_UNROLL
+      for ( p=0; p<VIM; p++)
+        {
+          fv->grad_heaviside_sharp[p] = 0.0;
+
+	  for ( i=0; i<dofs; i++)
+	    {
+	      fv->grad_heaviside_sharp[p] += *esp->heaviside_sharp[i] * bf[v]->grad_phi[i] [p];
+	      fv_old->grad_heaviside_sharp[p] += *esp_old->heaviside_sharp[i] * bf[v]->grad_phi[i] [p]
+		}
+	}
+#else
+      grad_scalar_fv_fill( esp->heaviside_sharp, bf[v]->grad_phi, dofs, fv->grad_heaviside_sharp);
+    } else if ( zero_unused_grads &&  upd->vp[pg->imtrx][HEAVISIDE_SHARP] == -1 ) {
+    for (p=0; p<VIM; p++) fv->grad_heaviside_sharp[p] = 0.0;
+  }
+
+#endif
+
+  if ( pd->gv[HEAVISIDE_SMOOTH] )
+    {
+      v = HEAVISIDE_SMOOTH;
+      dofs  = ei[pg->imtrx]->dof[v];
+#ifdef DO_NO_UNROLL
+      for ( p=0; p<VIM; p++)
+        {
+          fv->grad_heaviside_smooth[p] = 0.0;
+
+	  for ( i=0; i<dofs; i++)
+	    {
+	      fv->grad_heaviside_smooth[p] += *esp->heaviside_smooth[i] * bf[v]->grad_phi[i] [p];
+	      fv_old->grad_heaviside_smooth[p] += *esp_old->heaviside_smooth[i] * bf[v]->grad_phi[i] [p]
+		}
+	}
+#else
+      grad_scalar_fv_fill( esp->heaviside_smooth, bf[v]->grad_phi, dofs, fv->grad_heaviside_smooth);
+    } else if ( zero_unused_grads &&  upd->vp[pg->imtrx][HEAVISIDE_SMOOTH] == -1 ) {
+    for (p=0; p<VIM; p++) fv->grad_heaviside_smooth[p] = 0.0;
+  }
+
+#endif
+
+  if ( pd->gv[HEAVISIDE_PROJECTION] )
+    {
+      v = HEAVISIDE_PROJECTION;
+      dofs  = ei[pg->imtrx]->dof[v];
+#ifdef DO_NO_UNROLL
+      for ( p=0; p<VIM; p++)
+        {
+          fv->grad_heaviside_projection[p] = 0.0;
+
+	  for ( i=0; i<dofs; i++)
+	    {
+	      fv->grad_heaviside_projection[p] += *esp->heaviside_projection[i] * bf[v]->grad_phi[i] [p];
+	      fv_old->grad_heaviside_projection[p] += *esp_old->heaviside_projection[i] * bf[v]->grad_phi[i] [p]
+		}
+	}
+#else
+      grad_scalar_fv_fill( esp->heaviside_projection, bf[v]->grad_phi, dofs, fv->grad_heaviside_projection);
+    } else if ( zero_unused_grads &&  upd->vp[pg->imtrx][HEAVISIDE_PROJECTION] == -1 ) {
+    for (p=0; p<VIM; p++) fv->grad_heaviside_projection[p] = 0.0;
+  }
+
+#endif
+
+  if ( pd->gv[FILL_PRIME] )
+    {
+      v = FILL_PRIME;
+      dofs  = ei[pg->imtrx]->dof[v];
+#ifdef DO_NO_UNROLL
+      for ( p=0; p<VIM; p++)
+        {
+          fv->grad_F_prime[p] = 0.0;
+
+	  for ( i=0; i<dofs; i++)
+	    {
+	      fv->grad_F_prime[p] += *esp->F_prime[i] * bf[v]->grad_phi[i] [p];
+	      fv_old->grad_F_prime[p] += *esp_old->F_prime[i] * bf[v]->grad_phi[i] [p]
+		}
+	}
+#else
+      grad_scalar_fv_fill( esp->F_prime, bf[v]->grad_phi, dofs, fv->grad_F_prime);
+    } else if ( zero_unused_grads &&  upd->vp[pg->imtrx][FILL_PRIME] == -1 ) {
+    for (p=0; p<VIM; p++) fv->grad_F_prime[p] = 0.0;
+  }
+
+#endif
+
 
 
 

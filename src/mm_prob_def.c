@@ -254,6 +254,11 @@ setup_pd()
 		       (ce == R_MOMENT1) ||
 		       (ce == R_MOMENT2) ||
 		       (ce == R_MOMENT3) ||
+		       (ce == R_EIKONAL) ||
+		       (ce == R_HEAVISIDE_SHARP) ||
+		       (ce == R_HEAVISIDE_SMOOTH) ||
+		       (ce == R_HEAVISIDE_PROJECTION) ||
+		       (ce == R_FILL_PRIME) ||
 		       (ce == R_BOND_EVOLUTION))
 	        {
 	         if ( pd_glob[mn]->etm[imtrx][ce][(LOG2_MASS)] != 0. )

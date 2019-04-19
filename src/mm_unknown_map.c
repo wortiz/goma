@@ -3889,6 +3889,62 @@ set_interaction_masks(Exo_DB *exo)
 	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
 	  v = MASS_FRACTION;
 	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  break;
+
+	case EIKONAL:
+	  v = EIKONAL;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY1;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY2;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY3;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  break;
+
+	case HEAVISIDE_SHARP:
+	  v = HEAVISIDE_SHARP;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY1;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY2;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY3;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  break;
+
+	case HEAVISIDE_SMOOTH:
+	  v = HEAVISIDE_SMOOTH;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY1;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY2;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY3;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  break;
+
+	case HEAVISIDE_PROJECTION:
+	  v = HEAVISIDE_PROJECTION;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY1;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY2;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY3;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  break;
+
+	case FILL_PRIME:
+	  v = FILL_PRIME;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY1;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY2;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  v = VELOCITY3;
+	  if(Num_Var_In_Type[imtrx][v])  eqn_var_mask[imtrx][e][v] = 1;
+	  break;
 
 
 	case R_SPECIES_UNK_0:
