@@ -47,6 +47,108 @@ static int discard_previous_time_step(int num_unks,
 				      double *xdot_old, 
 				      double *xdot_older);
 
+struct NodeList {
+  int node;
+  struct NodeList *next;
+};
+
+void add_node_to_list_no_dup(struct NodeList **list, int node)
+{
+  struct NodeList *item = malloc(sizeof(struct NodeList));
+  item->next = NULL;
+  item->node = node;
+  if (*list == NULL)
+    {
+      *list = item;
+    }
+  else
+    {
+      struct NodeList *curr = *list;
+      curr->next = item;
+    }
+}
+
+void get_eikonal_dirichlet_nodes(double *x, double *x_old, double * xdot, double *xdot_old, double *resid_vector,
+                                              int numProcUnknowns, Exo_DB *exo)
+{
+  double eps = 1e-8;
+  //struct NodeList *list = NULL;
+
+  for (int i = 0; i < numProcUnknowns; i++)
+    {
+      if (fabs(x[i]) < eps)
+        {
+          int node;
+          int i_offset;
+          Index_Solution_Inv(i, &node, NULL, &i_offset, NULL, pg->imtrx );
+          //add_node_to_list_no_dup(&list, node);
+          NODE_INFO_STRUCT *node_info = Nodes[node];
+          NODAL_VARS_STRUCT *nv = node_info->Nodal_Vars_Info[pg->imtrx];
+          if (Dolphin[pg->imtrx][node][EIKONAL] > 0) {
+            if (!node_info->DBC[pg->imtrx]) {
+              node_info->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
+            }
+            VARIABLE_DESCRIPTION_STRUCT *vd;
+            int offset = get_nodal_unknown_offset(nv, EIKONAL, -1, 0, &vd);
+
+            node_info->DBC[pg->imtrx][offset] = 0;
+            }
+        }
+    }
+
+  int e_start = exo->eb_ptr[0];
+  int e_end   = exo->eb_ptr[exo->num_elem_blocks];
+  for (int ielem = e_start; ielem < e_end; ielem++)
+    {
+      int ebn = find_elemblock_index(ielem, exo);
+      int mn = Matilda[ebn];
+      if (mn < 0)
+        {
+          continue;
+        }
+
+      int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old,
+                             resid_vector, 0);
+      EH(err, "load_elem_dofptr");
+
+      int mark_elem = 0;
+      for (int local_node=0; local_node < ei[pg->imtrx]->dof[EIKONAL] && !mark_elem; local_node++)
+        {
+          double F = *esp->eikonal[local_node];
+          for (int local_node_other=0; local_node_other < ei[pg->imtrx]->dof[EIKONAL] && !mark_elem; local_node_other++)
+            {
+              double F_other = *esp->eikonal[local_node_other];
+              if (SGN(F) != SGN(F_other))
+                {
+                  mark_elem = 1;
+                  break;
+                }
+            }
+
+        }
+
+      if (mark_elem)
+        {
+          for (int local_node=0; local_node < ei[pg->imtrx]->num_local_nodes; local_node++)
+            {
+              int node = ei[pg->imtrx]->gnn_list[EIKONAL][local_node];
+              NODE_INFO_STRUCT *node_info = Nodes[node];
+              NODAL_VARS_STRUCT *nv = node_info->Nodal_Vars_Info[pg->imtrx];
+              if (Dolphin[pg->imtrx][node][EIKONAL] > 0) {
+                if (!node_info->DBC[pg->imtrx]) {
+                  node_info->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
+                }
+                VARIABLE_DESCRIPTION_STRUCT *vd;
+                int offset = get_nodal_unknown_offset(nv, EIKONAL, mn, 0, &vd);
+
+                node_info->DBC[pg->imtrx][offset] = 0;
+                }
+            }
+        }
+    }
+}
+
+
 /* rf_solve.c */
 extern void initial_guess_stress_to_log_conf(double *x, int num_total_nodes);
 
@@ -1306,6 +1408,7 @@ dbl *te_out) /* te_out - return actual end time */
      *  TOP OF THE TIME STEP LOOP -> Loop over time steps whether
      *                               they be successful or not
      *******************************************************************/
+    int eikonal_set = 0;
     for (n = 0; n < MaxTimeSteps; n++) {
       /*
        * Calculate the absolute time for the current step, time1
@@ -1518,6 +1621,35 @@ dbl *te_out) /* te_out - return actual end time */
 	  nAC = matrix_nAC[pg->imtrx];
 	  augc = matrix_augc[pg->imtrx];
 
+	  if (upd->ep[pg->imtrx][R_EIKONAL] > -1 && !eikonal_set)
+	    {
+	      dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x[pg->imtrx]);
+	      dcopy1(numProcUnknowns[pg->imtrx], x_old[Fill_Matrix], x_old[pg->imtrx]);
+	      for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
+		{
+		  xdot[pg->imtrx][i] = 0.0;
+		}
+              get_eikonal_dirichlet_nodes(x[pg->imtrx], x_old[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx], resid_vector[pg->imtrx],
+                  numProcUnknowns[pg->imtrx], exo);
+              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+              dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx],
+                     x_older[pg->imtrx]);
+              dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx],
+                     x_oldest[pg->imtrx]);
+              eikonal_set = 1;
+              exchange_dof(cx[pg->imtrx],dpi,x[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx],dpi,x_old[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
+            }
+
+          if (upd->ep[pg->imtrx][R_EIKONAL] > -1) {
+              get_eikonal_dirichlet_nodes(x[pg->imtrx], x_old[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx], resid_vector[pg->imtrx],
+                  numProcUnknowns[pg->imtrx], exo);
+              exchange_dof(cx[pg->imtrx],dpi,x[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx],dpi,x_old[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
+            }
+
 	  err = solve_nonlinear_problem(ams[pg->imtrx], x[pg->imtrx], delta_t,
 					theta, x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx],
 					xdot_old[pg->imtrx], resid_vector[pg->imtrx], x_update[pg->imtrx],
@@ -1578,6 +1710,11 @@ dbl *te_out) /* te_out - return actual end time */
 	  af->Sat_hyst_reevaluate = FALSE; /*See load_saturation for description*/
 
 	  if (converged) {
+
+	      if (upd->ep[pg->imtrx][R_EIKONAL] > -1)
+		{
+		  //dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
+		}
 	    for(i=0; matrix_nAC[pg->imtrx] > 0 && i < matrix_nAC[pg->imtrx]; i++)
 	      {
 		gv[5 + invACidx[pg->imtrx][i] ] = x_AC[pg->imtrx][i];

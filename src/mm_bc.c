@@ -389,6 +389,11 @@ find_and_set_Dirichlet(double x[],    /* solution vector at this processor */
       } /* if (BC_Types[ibc].desc->method == DIRICHLET) */
       safer_free((void **) &been_there);
     } /* if (!strcmp(BC_Types[ibc].Set_Type, "MN")) */
+
+    if (BC_Types[ibc].BC_Name == EIKONAL_BC)
+      {
+
+      }
   }  /* END for (ibc = 0; ibc < Num_BC; ibc++) */
 
   if (error_cond) {

@@ -511,6 +511,7 @@ MM_SRC= mm_as_alloc.c\
         mm_fill.c\
         mm_fill_aux.c\
         mm_fill_fill.c\
+        mm_fill_fill_conservative.c\
 	mm_fill_ls.c \
         mm_fill_interface.c\
         mm_fill_jac.c\
@@ -570,6 +571,7 @@ MM_INC=	mm_as.h\
         mm_fill.h\
         mm_fill_aux.h\
         mm_fill_fill.h\
+        mm_fill_fill_conservative.h\
         mm_fill_jac.h\
         mm_fill_porous.h\
         mm_fill_population.h\

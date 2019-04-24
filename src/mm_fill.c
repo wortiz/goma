@@ -52,6 +52,7 @@
 
 #include "mm_eh.h"
 #include "mm_fill_fill.h"
+#include "mm_fill_fill_conservative.h"
 #include "mm_fill_stress.h"
 #include "mm_fill_shell.h"
 #include "mm_fill_population.h"
@@ -2043,6 +2044,16 @@ matrix_fill(
 	  CHECKFINITE("assemble_density");
 #endif
 	}
+
+      if( pde[R_EIKONAL] )
+        {
+          err = assemble_eikonal(pd->Num_Dim, theta, delta_t);
+          EH( err, "assemble_eikonal");
+#ifdef CHECK_FINITE
+          CHECKFINITE("assemble_eikonal");
+#endif
+        }
+
 
 
       if( pde[R_FILL] )

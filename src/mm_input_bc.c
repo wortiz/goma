@@ -457,6 +457,10 @@ rd_bc_specs(FILE *ifp,
         case SHELL_GRAD_PC_NOBC_BC:
 	case STRESS_DEVELOPED_BC:
 	  break;
+	case EIKONAL_BC:
+	  BC_Types[ibc].BC_relax = -1.0;
+	  break;
+
 
 	  /* Fall through for all cases which require a single floating point
 	   * value as data input and one additional optional parameter

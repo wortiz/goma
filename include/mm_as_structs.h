@@ -2005,7 +2005,8 @@ struct Diet_Field_Variables
   dbl grad_T[DIM];              /* Gradient of porous  temperature variable. */
   dbl grad_d[DIM][DIM];	        /* Gradient of mesh displacement. */
   dbl grad_d_rs[DIM][DIM];	/* Gradient of solid displacement. */
-  
+
+  dbl grad_eikonal[DIM];
   /* Material tensors used at old time values */
   dbl strain[DIM][DIM];         /* Strain tensor */
   dbl volume_change;            /* Volume change */

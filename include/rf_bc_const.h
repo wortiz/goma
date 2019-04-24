@@ -540,6 +540,7 @@
 #define INTP_BC        1053
 #define INTM_BC        1054
 #define INTD_BC        1055
+#define EIKONAL_BC        1056
 
 
 /* pressure */

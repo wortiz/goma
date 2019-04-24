@@ -184,6 +184,7 @@ set(GOMA_INCLUDES
     include/mm_fill_aux.h
     include/mm_fill_common.h
     include/mm_fill_fill.h
+    include/mm_fill_fill_conservative.h
     include/mm_fill.h
     include/mm_fill_jac.h
     include/mm_fill_ls.h
@@ -348,6 +349,7 @@ set(GOMA_SOURCES
     src/mm_fill.c
     src/mm_fill_common.c
     src/mm_fill_fill.c
+    src/mm_fill_fill_conservative.c
     src/mm_fill_interface.c
     src/mm_fill_jac.c
     src/mm_fill_ls.c

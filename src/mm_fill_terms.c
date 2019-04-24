@@ -11045,6 +11045,7 @@ load_fv_grads(void)
 	}
 #else
       grad_scalar_fv_fill( esp->eikonal, bf[v]->grad_phi, dofs, fv->grad_eikonal);
+      grad_scalar_fv_fill( esp_old->eikonal, bf[v]->grad_phi, dofs, fv_old->grad_eikonal);
     } else if ( zero_unused_grads &&  upd->vp[pg->imtrx][EIKONAL] == -1 ) {
     for (p=0; p<VIM; p++) fv->grad_eikonal[p] = 0.0;
   }
