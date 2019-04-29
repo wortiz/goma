@@ -815,7 +815,7 @@ matrix_fill(
       (mp->Ewt_funcModel == SUPG && pde[R_ENERGY] &&
        (pd->gv[R_MOMENTUM1] || pd->gv[R_MESH1])) ||
       (mp->Ewt_funcModel == SUPG && pde[R_SHELL_ENERGY] &&
-       (pde[R_LUBP] ))) {
+       (pde[R_LUBP] )) || pde[R_EIKONAL] || pde[R_HEAVISIDE_SMOOTH]) {
     h_elem_siz(pg_data.hsquared, pg_data.hhv, pg_data.dhv_dxnode, pd->gv[R_MESH1]);
     element_velocity(pg_data.v_avg, pg_data.dv_dnode, exo);
   }
@@ -2047,12 +2047,40 @@ matrix_fill(
 
       if( pde[R_EIKONAL] )
         {
-          err = assemble_eikonal(pd->Num_Dim, theta, delta_t);
+          err = assemble_eikonal(pd->Num_Dim, theta, delta_t, &pg_data);
           EH( err, "assemble_eikonal");
 #ifdef CHECK_FINITE
           CHECKFINITE("assemble_eikonal");
 #endif
         }
+
+      if( pde[R_HEAVISIDE_SMOOTH] )
+        {
+          err = assemble_heaviside_smooth(pd->Num_Dim, theta, delta_t, &pg_data);
+          EH( err, "assemble_heaviside_smooth");
+#ifdef CHECK_FINITE
+          CHECKFINITE("assemble_heaviside_smooth");
+#endif
+        }
+
+      if( pde[R_FILL_PRIME] )
+        {
+          err = assemble_fill_prime(pd->Num_Dim, theta, delta_t, &pg_data);
+          EH( err, "assemble_fill_prime");
+#ifdef CHECK_FINITE
+          CHECKFINITE("assemble_fill_prime");
+#endif
+        }
+
+      if( pde[R_HEAVISIDE_PROJECTION] )
+        {
+          err = assemble_heaviside_projection(pd->Num_Dim, theta, delta_t, &pg_data);
+          EH( err, "assemble_heaviside_projection");
+#ifdef CHECK_FINITE
+          CHECKFINITE("assemble_heaviside_projection");
+#endif
+        }
+
 
 
 

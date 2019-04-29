@@ -537,8 +537,8 @@ variable_string_to_int(const char *input, const char *err_string)
   else if (!strcmp(input, "DENSITY_EQN"))                 var = DENSITY_EQN;
   else if (!strcmp(input, "EIKONAL "))                    var = EIKONAL;
   else if (!strcmp(input, "HEAVISIDE_SHARP"))             var = HEAVISIDE_SHARP;
-  else if (!strcmp(input, "HEAVISIDE_SMOOTH"))            var = HEAVISIDE_SHARP;
-  else if (!strcmp(input, "HEAVISIDE_PROJECTED"))         var = HEAVISIDE_SHARP;
+  else if (!strcmp(input, "HEAVISIDE_SMOOTH"))            var = HEAVISIDE_SMOOTH;
+  else if (!strcmp(input, "HEAVISIDE_PROJECTION"))         var = HEAVISIDE_PROJECTION;
   else if (!strcmp(input, "FILL_PRIME"))                  var = FILL_PRIME;
 
   /*

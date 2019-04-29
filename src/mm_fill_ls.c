@@ -10946,6 +10946,138 @@ Courant_Time_Step( double x[], double x_old[], double x_older[],
 }
 #endif
 
+
+double
+cfl_eikonal( double x[], double x_old[], double x_older[],
+                   double xdot[], double xdot_old[],
+                   double resid_vector[],
+                   int *proc_config, Exo_DB *exo )
+{
+  int ebi, ielem, e_start, e_end;
+  int count = 0;
+  double dt, min_dt = 0.;
+  double hsquared[DIM];
+  double hhv[DIM][DIM];
+  double dhv_dxnode[DIM][MDE];
+  double h_elem;
+  double *xi, xi_array[3];
+  double sum, sumv;
+  int dim, wim;
+  int ip_total, ip;
+  double wt, vnorm;
+  int a;
+  int overlaps_interface;
+  int got_interface=FALSE;
+  SGRID *element_search_grid=NULL;
+  int pass, num_passes;
+
+  for ( ebi=0; ebi<exo->num_elem_blocks; ebi++)
+    {
+
+      pd  = pd_glob[Matilda[ebi]];
+      mp  = mp_glob[Matilda[ebi]];
+
+      e_start = exo->eb_ptr[ebi];
+      e_end   = exo->eb_ptr[ebi+1];
+
+      dim = pd->Num_Dim;
+      wim = dim;
+
+
+          for( ielem = e_start ; ielem < e_end ; ielem++)
+            {
+
+
+              load_elem_dofptr(ielem, exo, x, x_old,
+                               xdot, xdot_old,
+                               resid_vector, 0);
+
+              h_elem_siz(hsquared, hhv, dhv_dxnode, pd->e[pg->imtrx][R_MESH1]);
+
+              h_elem = 0.;
+              for ( a=0; a<ei[pg->imtrx]->ielem_dim; a++) h_elem += hsquared[a];
+              /* This is the size of the element */
+              h_elem = sqrt(h_elem/ ((double )ei[pg->imtrx]->ielem_dim));
+
+              ip_total = elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
+
+	      if ( is_xfem_interp( pd->i[pd->mi[VELOCITY1]][VELOCITY1] ) )
+		 num_passes = 2;
+	      else
+		num_passes = 1;
+
+		    ls->Elem_Sign = 0;
+
+		  sum = 0.;
+		  sumv = 0.;
+		  for ( ip = 0; ip < ip_total; ip++ )
+		    {
+
+			xi = &(xi_array[0]);
+			find_stu(ip, ei[pg->imtrx]->ielem_type, xi, xi+1, xi+2); /* find quadrature point */
+			wt = Gq_weight (ip, ei[pg->imtrx]->ielem_type); /* find quadrature weights for */
+
+		      setup_shop_at_point( ei[pg->imtrx]->ielem, xi, exo );
+		      load_lsi( ls->Length_Scale );
+
+		      fv->wt = wt * lsi->delta;
+		      double eikonal_norm = 0;
+		      for (int i = 0; i < dim; i++)
+			{
+			  eikonal_norm += fv->grad_eikonal[i]*fv->grad_eikonal[i];
+			}
+		      eikonal_norm = sqrt(eikonal_norm) + 1e-32;
+
+		      double inv_eikonal_norm = 1 / eikonal_norm;
+
+		      double alpha = h_elem;
+		      double sign = fv_old->eikonal / sqrt(fv_old->eikonal*fv_old->eikonal + eikonal_norm*eikonal_norm*alpha*alpha);//2*lsi->H-1;//fv->F / sqrt(fv->F*fv->F + lsi->gfmag*lsi->gfmag*alpha*alpha);
+
+		      double w[DIM];
+		      for (int i = 0; i < dim; i++)
+			{
+			  w[i] = sign * fv->grad_eikonal[i] * inv_eikonal_norm;
+			}
+
+		      vnorm = 0;
+		      if (1 || fabs(fv->eikonal) < 5*h_elem)
+			{
+			  got_interface = 1;
+			  for (int a = 0; a < dim; a++)
+			    {
+			      vnorm += w[a]*w[a];
+			    }
+			  vnorm = sqrt(vnorm);
+			}
+		      /* prediction of normal velocity */
+		      sumv += fv->wt * vnorm;
+		      sum += fv->wt;
+		    }
+
+		  if ( ( sumv != 0. ) && (sum != 0. ) )
+		    {
+		      dt = fabs( h_elem * sum / sumv );
+		      if ( count++ == 0 || dt < min_dt ) min_dt = dt;
+		    }
+	    }
+
+    }
+  /*fprintf(stderr,"Min dt = %g\n",min_dt);*/
+
+  /* Search for global min_dt */
+  if (Num_Proc > 1)
+    {
+      /* If interface not on this processor, don't allow zero min_dt! */
+      if (!got_interface) min_dt = 0;
+      min_dt = AZ_gmax_double(min_dt, proc_config);
+    }
+
+  /* restore */
+  ls->on_sharp_surf = FALSE;
+  ls->Elem_Sign = 0;
+  return (min_dt);
+}
+
 int
 get_subelement_integration_pts ( double (**s)[DIM], double **weight, int **ip_sign, 
                                  double isoval, int gpt_type, int sign )

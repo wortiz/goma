@@ -769,7 +769,37 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
 
   if (HEAVISIDE != -1 && ls != NULL && pd->e[pg->imtrx][R_FILL]) {
     load_lsi(ls->Length_Scale);
-    local_post[HEAVISIDE] = lsi->H;
+    //local_post[HEAVISIDE] = lsi->H;
+    double eikonal_norm = 0;
+    double eikonal_norm_old = 0;
+    for (int i = 0; i < dim; i++)
+      {
+        eikonal_norm += fv->grad_F[i]*fv->grad_F[i];
+        eikonal_norm_old += fv_old->grad_eikonal[i]*fv_old->grad_eikonal[i];
+      }
+    eikonal_norm = sqrt(eikonal_norm) + 1e-32;
+    eikonal_norm_old = sqrt(eikonal_norm_old) + 1e-32;
+
+
+    load_lsi(ls->Length_Scale);
+    load_lsi_derivs();
+    double inv_eikonal_norm = 1 / eikonal_norm;
+    double inv_eikonal_norm_old = 1 / eikonal_norm_old;
+
+    double d_eikonal_norm[MDE];
+    for (int j = 0; j < ei[pg->imtrx]->dof[EIKONAL]; j++)
+      {
+        d_eikonal_norm[j] = 0;
+        for (int i = 0; i < dim; i++)
+          {
+            d_eikonal_norm[j] += fv->grad_eikonal[i] * bf[EIKONAL]->grad_phi[j][i] * inv_eikonal_norm;
+          }
+      }
+
+    //double alpha = ls->Length_Scale / 2.0;
+    double alpha = 0.02;
+    double sign = fv->F / sqrt(fv->F*fv->F + lsi->gfmag*lsi->gfmag*alpha*alpha);
+    local_post[HEAVISIDE] = fv->F;
     local_lumped[HEAVISIDE] = 1.;
   }
 
@@ -1691,7 +1721,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
 
 
 /*  EXTERNAL tables	*/
-   if (efv->ev) {
+   if (efv->ev && pg->imtrx == 0) {
      for (j=0; j < efv->Num_external_field; j++) {
 	if(efv->i[j] == I_TABLE)
 	   {
@@ -3890,7 +3920,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
      }
    }
 
-   if (efv->ev) {
+   if (efv->ev && pg->imtrx == 0) {
      for (j=0; j < efv->Num_external_field; j++) {
 	if(efv->i[j] != I_TABLE)
 	   {
@@ -10147,7 +10177,7 @@ index_post, index_post_export);
 printf(" Before external vars, IP = %d and IPE = %d\n",
 index_post, index_post_export);
 */
-  if (efv->ev)
+  if (efv->ev && pg->imtrx == 0)
     {
       EXTERNAL_POST = index_post;
       for(i=0; i< efv->Num_external_field; i++)

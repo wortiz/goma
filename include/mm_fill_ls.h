@@ -638,6 +638,12 @@ EXTERN double Courant_Time_Step
         double [],
         int *,
 	Exo_DB *exo );
+
+EXTERN double
+cfl_eikonal( double x[], double x_old[], double x_older[],
+                   double xdot[], double xdot_old[],
+                   double resid_vector[],
+                   int *proc_config, Exo_DB *exo );
         
 EXTERN void subelement_mesh_output
 ( double [],
