@@ -178,6 +178,8 @@ assemble_eikonal(int dim,
   double invdetJ = 1 / detJ;
   double delta = 1 / (2 * sqrt(1.0 / (dt*dt) + (invdetJ * w_old_norm) * (invdetJ * w_old_norm)));
 
+  double kappa = delta + 0.1*h_elem;
+
   if ( af->Assemble_Residual )
     {
       int peqn = upd->ep[pg->imtrx][eqn];
@@ -204,9 +206,9 @@ assemble_eikonal(int dim,
 	  double diffusion = 0;
 	  for (int a = 0; a < dim; a++)
 	    {
-	      diffusion += fv->grad_eikonal[a]  * bf[eqn]->grad_phi[i][a];
+          diffusion += fv->grad_eikonal[a]  * bf[eqn]->grad_phi[i][a];
 	    }
-	  diffusion *= -pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      diffusion *= -kappa*pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
 	  double source = sign * wt_func;
 	  source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
@@ -279,7 +281,7 @@ assemble_eikonal(int dim,
 		      diffusion += bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
 		    }
 
-		  diffusion *= -pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+          diffusion *= -kappa*pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
 		  double source = sign * d_wt_func;
 		  source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];

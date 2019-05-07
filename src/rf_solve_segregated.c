@@ -1623,7 +1623,14 @@ dbl *te_out) /* te_out - return actual end time */
 	  nAC = matrix_nAC[pg->imtrx];
 	  augc = matrix_augc[pg->imtrx];
 
-          if (upd->ep[pg->imtrx][R_EIKONAL] > -1) {
+      if (!eikonal_set && upd->ep[pg->imtrx][R_EIKONAL] > -1)
+      {
+          dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x[pg->imtrx]);
+          dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x_old[pg->imtrx]);
+          eikonal_set = 1;
+      }
+
+          if (0 && upd->ep[pg->imtrx][R_EIKONAL] > -1) {
               dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x[pg->imtrx]);
               dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x_old[pg->imtrx]);
               for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
@@ -2267,7 +2274,29 @@ dbl *te_out) /* te_out - return actual end time */
         for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
           if (upd->ep[pg->imtrx][EIKONAL] > -1)
             {
-              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
+//              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
+                      double distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+                      DPRINTF(stdout, "EIKONAL DISTANCE = %g\n", distance);
+                      distance = 0;
+                    #ifdef PARALLEL
+                      double global_distance = 0;
+                    #endif
+                      double val;
+                      int i;
+                      for (i = 0; i < numProcUnknowns[pg->imtrx]; i++) {
+                          if (fabs(x[pg->imtrx][i]) < 0.02*5)
+                        {
+                          val = (x[pg->imtrx][i] - x_old[pg->imtrx][i]);
+                          distance += val*val;
+                        }
+                      }
+                    #ifdef PARALLEL
+                      MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM,
+                            MPI_COMM_WORLD);
+                      distance = global_distance;
+                    #endif /* PARALLEL */
+                      distance = sqrt(distance);
+                      DPRINTF(stdout, "EIKONAL DISTANCE (CLOSE) = %g\n", distance);
             }
 //          if (upd->ep[pg->imtrx][HEAVISIDE_SMOOTH] > -1)
 //            {
