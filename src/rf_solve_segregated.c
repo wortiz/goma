@@ -1801,8 +1801,8 @@ dbl *te_out) /* te_out - return actual end time */
 
 	  if (converged) {
 
-//	      if (upd->ep[pg->imtrx][R_EIKONAL] > -1)
-//		{
+          if (upd->ep[pg->imtrx][R_EIKONAL] > -1)
+        {
 //		  double distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
 //		  DPRINTF(stdout, "EIKONAL DISTANCE = %g\n", distance);
 //		  distance = 0;
@@ -1826,14 +1826,14 @@ dbl *te_out) /* te_out - return actual end time */
 //		  distance = sqrt(distance);
 //		  DPRINTF(stdout, "EIKONAL DISTANCE (CLOSE) = %g\n", distance);
 
-//		  double mindt_cfl = 0.5 *
-//		    cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
-//				       resid_vector[pg->imtrx], ams[pg->imtrx]->proc_config, exo );
-//		  DPRINTF(stdout, "EIKONAL MIN DT (CFL) = %g\n", mindt_cfl);
+          double mindt_cfl =
+            cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
+                       resid_vector[pg->imtrx], ams[pg->imtrx]->proc_config, exo );
+          DPRINTF(stdout, "EIKONAL MIN DT (CFL) = %g\n", mindt_cfl);
 
 
 
-//		}
+        }
 	    for(i=0; matrix_nAC[pg->imtrx] > 0 && i < matrix_nAC[pg->imtrx]; i++)
 	      {
 		gv[5 + invACidx[pg->imtrx][i] ] = x_AC[pg->imtrx][i];
@@ -2284,7 +2284,7 @@ dbl *te_out) /* te_out - return actual end time */
                       double val;
                       int i;
                       for (i = 0; i < numProcUnknowns[pg->imtrx]; i++) {
-                          if (fabs(x[pg->imtrx][i]) < 0.02*5)
+                          if (fabs(x[pg->imtrx][i]) < 0.01*3)
                         {
                           val = (x[pg->imtrx][i] - x_old[pg->imtrx][i]);
                           distance += val*val;

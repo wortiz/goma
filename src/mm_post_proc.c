@@ -797,9 +797,37 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
       }
 
     //double alpha = ls->Length_Scale / 2.0;
+    int dim = pd->Num_Dim;
     double alpha = 0.02;
     double sign = fv->F / sqrt(fv->F*fv->F + lsi->gfmag*lsi->gfmag*alpha*alpha);
-    local_post[HEAVISIDE] = fv->F;
+
+    int eqn = R_EIKONAL;
+    double Y = 1;
+    double Yinv = 1/Y;
+    double beta = 1;
+
+    double hdc = 0;
+    for (int i = 0; i < ei[pd->mi[eqn]]->dof[eqn]; i++)
+    {
+        for (int j = 0; j < dim; j++)
+        {
+            hdc += fabs(fv_old->grad_eikonal[j] * bf[eqn]->grad_phi[i][j]);
+        }
+    }
+    hdc = 1.0/hdc;
+
+    double Z = fv_dot->eikonal + (eikonal_norm-1);
+
+    double inner = 0;
+    for (int i = 0; i < dim; i++)
+    {
+        double tmp = Yinv*fv->grad_eikonal[i];
+        inner += tmp*tmp;
+    }
+    inner = pow(inner, beta/2 - 1);
+
+    double kdc = fabs(Yinv*Z)*inner*pow(hdc, beta);
+    local_post[HEAVISIDE] = kdc;
     local_lumped[HEAVISIDE] = 1.;
   }
 

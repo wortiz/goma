@@ -10991,7 +10991,7 @@ load_fv_grads(void)
       for (r = 0; r < MAX_MOMENTS; r++ )
 	{
 	  v = MOMENT0 + r;
-	  dofs = ei[pg->imtrx]->dof[v];
+      dofs = ei[pd->mi[v]]->dof[v];
 
 	  for (p = 0; p < VIM; p++)
 	    {
@@ -11008,7 +11008,7 @@ load_fv_grads(void)
   if ( pd->gv[DENSITY_EQN] )
     {
       v = DENSITY_EQN;
-      dofs  = ei[pg->imtrx]->dof[v];
+      dofs  = ei[pd->mi[v]]->dof[v];
 #ifdef DO_NO_UNROLL
       for ( p=0; p<VIM; p++)
 	{
@@ -11031,7 +11031,7 @@ load_fv_grads(void)
   if ( pd->gv[EIKONAL] )
     {
       v = EIKONAL;
-      dofs  = ei[pg->imtrx]->dof[v];
+      dofs  = ei[pd->mi[v]]->dof[v];
 #ifdef DO_NO_UNROLL
       for ( p=0; p<VIM; p++)
         {
@@ -11055,7 +11055,7 @@ load_fv_grads(void)
   if ( pd->gv[HEAVISIDE_SHARP] )
     {
       v = HEAVISIDE_SHARP;
-      dofs  = ei[pg->imtrx]->dof[v];
+      dofs  = ei[pd->mi[v]]->dof[v];
 #ifdef DO_NO_UNROLL
       for ( p=0; p<VIM; p++)
         {
@@ -11078,7 +11078,7 @@ load_fv_grads(void)
   if ( pd->gv[HEAVISIDE_SMOOTH] )
     {
       v = HEAVISIDE_SMOOTH;
-      dofs  = ei[pg->imtrx]->dof[v];
+      dofs  = ei[pd->mi[v]]->dof[v];
 #ifdef DO_NO_UNROLL
       for ( p=0; p<VIM; p++)
         {
@@ -11101,7 +11101,7 @@ load_fv_grads(void)
   if ( pd->gv[HEAVISIDE_PROJECTION] )
     {
       v = HEAVISIDE_PROJECTION;
-      dofs  = ei[pg->imtrx]->dof[v];
+      dofs  = ei[pd->mi[v]]->dof[v];
 #ifdef DO_NO_UNROLL
       for ( p=0; p<VIM; p++)
         {
@@ -11124,7 +11124,7 @@ load_fv_grads(void)
   if ( pd->gv[FILL_PRIME] )
     {
       v = FILL_PRIME;
-      dofs  = ei[pg->imtrx]->dof[v];
+      dofs  = ei[pd->mi[v]]->dof[v];
 #ifdef DO_NO_UNROLL
       for ( p=0; p<VIM; p++)
         {
