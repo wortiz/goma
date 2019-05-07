@@ -1623,14 +1623,7 @@ dbl *te_out) /* te_out - return actual end time */
 	  nAC = matrix_nAC[pg->imtrx];
 	  augc = matrix_augc[pg->imtrx];
 
-      if (!eikonal_set && upd->ep[pg->imtrx][R_EIKONAL] > -1)
-      {
-          dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x[pg->imtrx]);
-          dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x_old[pg->imtrx]);
-          eikonal_set = 1;
-      }
-
-          if (0 && upd->ep[pg->imtrx][R_EIKONAL] > -1) {
+          if (upd->ep[pg->imtrx][R_EIKONAL] > -1) {
               dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x[pg->imtrx]);
               dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x_old[pg->imtrx]);
               for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
@@ -1650,8 +1643,9 @@ dbl *te_out) /* te_out - return actual end time */
               exchange_dof(cx[pg->imtrx],dpi,x_old[pg->imtrx], pg->imtrx);
               exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
 
-	      double eikonal_delta_t = 0.2 * cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
+          double eikonal_delta_t = 0.1 * cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
 						     resid_vector[pg->imtrx], ams[pg->imtrx]->proc_config, exo );
+          double eikonal_cfl = eikonal_delta_t;
 	      //eikonal_delta_t = delta_t;
 	      for (int t = 0; t < 50; t++)
 		{
@@ -1671,8 +1665,14 @@ dbl *te_out) /* te_out - return actual end time */
 		  exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
 
 		  if (err == -1) {
-		    converged = FALSE;
-		    break;
+              if (eikonal_delta_t*0.5 < eikonal_cfl*1e-3)
+              {
+                    converged = FALSE;
+                    break;
+              }
+              else {
+                  eikonal_delta_t *= 0.5;
+              }
 		  }
 		  else if (converged)
 		    {
@@ -1701,7 +1701,7 @@ dbl *te_out) /* te_out - return actual end time */
 
 		      if (distance < 1e-8)
 			{
-			  DPRINTF(stdout, "EIKONAL REDISTANCING COMPLETED in %d steps\n", t);
+              DPRINTF(stdout, "EIKONAL REDISTANCING COMPLETED in %d steps\n", t+1);
 			  break;
 			}
 		      dcopy1(numProcUnknowns[pg->imtrx], xdot_old[pg->imtrx],
@@ -1724,7 +1724,14 @@ dbl *te_out) /* te_out - return actual end time */
 		    }
 		  else
 		    {
-		      break;
+              if (eikonal_delta_t*0.5 < eikonal_cfl*1e-3)
+              {
+                    converged = FALSE;
+                    break;
+              }
+              else {
+                  eikonal_delta_t *= 0.5;
+              }
 		    }
 		}
 
@@ -1801,8 +1808,8 @@ dbl *te_out) /* te_out - return actual end time */
 
 	  if (converged) {
 
-          if (upd->ep[pg->imtrx][R_EIKONAL] > -1)
-        {
+//	      if (upd->ep[pg->imtrx][R_EIKONAL] > -1)
+//		{
 //		  double distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
 //		  DPRINTF(stdout, "EIKONAL DISTANCE = %g\n", distance);
 //		  distance = 0;
@@ -1826,14 +1833,14 @@ dbl *te_out) /* te_out - return actual end time */
 //		  distance = sqrt(distance);
 //		  DPRINTF(stdout, "EIKONAL DISTANCE (CLOSE) = %g\n", distance);
 
-          double mindt_cfl =
-            cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
-                       resid_vector[pg->imtrx], ams[pg->imtrx]->proc_config, exo );
-          DPRINTF(stdout, "EIKONAL MIN DT (CFL) = %g\n", mindt_cfl);
+//		  double mindt_cfl = 0.5 *
+//		    cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
+//				       resid_vector[pg->imtrx], ams[pg->imtrx]->proc_config, exo );
+//		  DPRINTF(stdout, "EIKONAL MIN DT (CFL) = %g\n", mindt_cfl);
 
 
 
-        }
+//		}
 	    for(i=0; matrix_nAC[pg->imtrx] > 0 && i < matrix_nAC[pg->imtrx]; i++)
 	      {
 		gv[5 + invACidx[pg->imtrx][i] ] = x_AC[pg->imtrx][i];
@@ -2274,29 +2281,7 @@ dbl *te_out) /* te_out - return actual end time */
         for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
           if (upd->ep[pg->imtrx][EIKONAL] > -1)
             {
-//              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
-                      double distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-                      DPRINTF(stdout, "EIKONAL DISTANCE = %g\n", distance);
-                      distance = 0;
-                    #ifdef PARALLEL
-                      double global_distance = 0;
-                    #endif
-                      double val;
-                      int i;
-                      for (i = 0; i < numProcUnknowns[pg->imtrx]; i++) {
-                          if (fabs(x[pg->imtrx][i]) < 0.01*3)
-                        {
-                          val = (x[pg->imtrx][i] - x_old[pg->imtrx][i]);
-                          distance += val*val;
-                        }
-                      }
-                    #ifdef PARALLEL
-                      MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM,
-                            MPI_COMM_WORLD);
-                      distance = global_distance;
-                    #endif /* PARALLEL */
-                      distance = sqrt(distance);
-                      DPRINTF(stdout, "EIKONAL DISTANCE (CLOSE) = %g\n", distance);
+              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
             }
 //          if (upd->ep[pg->imtrx][HEAVISIDE_SMOOTH] > -1)
 //            {
