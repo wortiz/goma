@@ -264,7 +264,7 @@ assemble_eikonal(int dim,
             {
                 diffusion += fv->grad_eikonal[a]  * bf[eqn]->grad_phi[i][a];
             }
-            diffusion *= -kdc*pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+            diffusion *= -kappa*pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
             double source = sign * (eikonal_norm-1) * wt_func;
             source *= -pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
@@ -334,13 +334,13 @@ assemble_eikonal(int dim,
                     double diffusion = 0;
                     for (int a = 0; a < dim; a++)
                     {
-                        diffusion += kdc * bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
+                        diffusion += kappa * bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
                     }
 
-                    for (int a = 0; a < dim; a++)
-                    {
-                        diffusion += d_kdc[j]*fv->grad_eikonal[a]  * bf[eqn]->grad_phi[i][a];
-                    }
+//                    for (int a = 0; a < dim; a++)
+//                    {
+//                        diffusion += d_kdc[j]*fv->grad_eikonal[a]  * bf[eqn]->grad_phi[i][a];
+//                    }
 
                     diffusion *= -pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
@@ -621,7 +621,7 @@ assemble_fill_prime(int dim,
     double d_heaviside_dFprime;
     if (fabs(fv->eikonal) < alpha)
     {
-        heaviside = heaviside_smooth(fv->eikonal + fv->F_prime, &d_heaviside_dFprime, alpha);
+        heaviside = heaviside_smooth(fv->F + fv->F_prime, &d_heaviside_dFprime, alpha);
     }
     else if (fv->eikonal > alpha)
     {
@@ -633,7 +633,7 @@ assemble_fill_prime(int dim,
         heaviside = 0;
         d_heaviside_dFprime = 0;
     }
-    double kappa = 10;
+    double kappa = 100;
 
     if ( af->Assemble_Residual )
     {
@@ -664,7 +664,7 @@ assemble_fill_prime(int dim,
             {
                 diffusion += kappa * h_elem * fv->grad_F_prime[a]  * bf[eqn]->grad_phi[i][a];
             }
-            diffusion *= -pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+            diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
             double source = heaviside - fv->heaviside_smooth;
             source *= wt_func;
@@ -739,7 +739,7 @@ assemble_fill_prime(int dim,
                         diffusion += kappa * h_elem * bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
                     }
 
-                    diffusion *= -pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                    diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
                     double source = phi_j * d_heaviside_dFprime;
                     source *= wt_func;

@@ -770,64 +770,64 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
   if (HEAVISIDE != -1 && ls != NULL && pd->e[pg->imtrx][R_FILL]) {
     load_lsi(ls->Length_Scale);
     //local_post[HEAVISIDE] = lsi->H;
-    double eikonal_norm = 0;
-    double eikonal_norm_old = 0;
-    for (int i = 0; i < dim; i++)
-      {
-        eikonal_norm += fv->grad_F[i]*fv->grad_F[i];
-        eikonal_norm_old += fv_old->grad_eikonal[i]*fv_old->grad_eikonal[i];
-      }
-    eikonal_norm = sqrt(eikonal_norm) + 1e-32;
-    eikonal_norm_old = sqrt(eikonal_norm_old) + 1e-32;
+//    double eikonal_norm = 0;
+//    double eikonal_norm_old = 0;
+//    for (int i = 0; i < dim; i++)
+//      {
+//        eikonal_norm += fv->grad_F[i]*fv->grad_F[i];
+//        eikonal_norm_old += fv_old->grad_eikonal[i]*fv_old->grad_eikonal[i];
+//      }
+//    eikonal_norm = sqrt(eikonal_norm) + 1e-32;
+//    eikonal_norm_old = sqrt(eikonal_norm_old) + 1e-32;
 
 
-    load_lsi(ls->Length_Scale);
-    load_lsi_derivs();
-    double inv_eikonal_norm = 1 / eikonal_norm;
-    double inv_eikonal_norm_old = 1 / eikonal_norm_old;
+//    load_lsi(ls->Length_Scale);
+//    load_lsi_derivs();
+//    double inv_eikonal_norm = 1 / eikonal_norm;
+//    double inv_eikonal_norm_old = 1 / eikonal_norm_old;
 
-    double d_eikonal_norm[MDE];
-    for (int j = 0; j < ei[pg->imtrx]->dof[EIKONAL]; j++)
-      {
-        d_eikonal_norm[j] = 0;
-        for (int i = 0; i < dim; i++)
-          {
-            d_eikonal_norm[j] += fv->grad_eikonal[i] * bf[EIKONAL]->grad_phi[j][i] * inv_eikonal_norm;
-          }
-      }
+//    double d_eikonal_norm[MDE];
+//    for (int j = 0; j < ei[pg->imtrx]->dof[EIKONAL]; j++)
+//      {
+//        d_eikonal_norm[j] = 0;
+//        for (int i = 0; i < dim; i++)
+//          {
+//            d_eikonal_norm[j] += fv->grad_eikonal[i] * bf[EIKONAL]->grad_phi[j][i] * inv_eikonal_norm;
+//          }
+//      }
 
-    //double alpha = ls->Length_Scale / 2.0;
-    int dim = pd->Num_Dim;
-    double alpha = 0.02;
-    double sign = fv->F / sqrt(fv->F*fv->F + lsi->gfmag*lsi->gfmag*alpha*alpha);
+//    //double alpha = ls->Length_Scale / 2.0;
+//    int dim = pd->Num_Dim;
+//    double alpha = 0.02;
+//    double sign = fv->F / sqrt(fv->F*fv->F + lsi->gfmag*lsi->gfmag*alpha*alpha);
 
-    int eqn = R_EIKONAL;
-    double Y = 1;
-    double Yinv = 1/Y;
-    double beta = 1;
+//    int eqn = R_EIKONAL;
+//    double Y = 1;
+//    double Yinv = 1/Y;
+//    double beta = 1;
 
-    double hdc = 0;
-    for (int i = 0; i < ei[pd->mi[eqn]]->dof[eqn]; i++)
-    {
-        for (int j = 0; j < dim; j++)
-        {
-            hdc += fabs(fv_old->grad_eikonal[j] * bf[eqn]->grad_phi[i][j]);
-        }
-    }
-    hdc = 1.0/hdc;
+//    double hdc = 0;
+//    for (int i = 0; i < ei[pd->mi[eqn]]->dof[eqn]; i++)
+//    {
+//        for (int j = 0; j < dim; j++)
+//        {
+//            hdc += fabs(fv_old->grad_eikonal[j] * bf[eqn]->grad_phi[i][j]);
+//        }
+//    }
+//    hdc = 1.0/hdc;
 
-    double Z = fv_dot->eikonal + (eikonal_norm-1);
+//    double Z = fv_dot->eikonal + (eikonal_norm-1);
 
-    double inner = 0;
-    for (int i = 0; i < dim; i++)
-    {
-        double tmp = Yinv*fv->grad_eikonal[i];
-        inner += tmp*tmp;
-    }
-    inner = pow(inner, beta/2 - 1);
+//    double inner = 0;
+//    for (int i = 0; i < dim; i++)
+//    {
+//        double tmp = Yinv*fv->grad_eikonal[i];
+//        inner += tmp*tmp;
+//    }
+//    inner = pow(inner, beta/2 - 1);
 
-    double kdc = fabs(Yinv*Z)*inner*pow(hdc, beta);
-    local_post[HEAVISIDE] = kdc;
+//    double kdc = fabs(Yinv*Z)*inner*pow(hdc, beta);
+    local_post[HEAVISIDE] = lsi->H;
     local_lumped[HEAVISIDE] = 1.;
   }
 

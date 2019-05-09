@@ -54,6 +54,17 @@ struct NodeList {
   struct NodeList *next;
 };
 
+void save_data(char * filename, double *data, int count)
+{
+    FILE *f;
+    f = fopen(filename, "w");
+    for (int i = 0; i < count; i++)
+    {
+        fprintf(f, "%g\n", data[i]);
+    }
+    fclose(f);
+}
+
 void add_node_to_list_no_dup(struct NodeList **list, int node)
 {
   struct NodeList *item = malloc(sizeof(struct NodeList));
@@ -332,6 +343,7 @@ dbl *te_out) /* te_out - return actual end time */
   int i;
   int inewton;
   int *numProcUnknowns;
+  char data_name[1000];
 
 #ifdef RELAX_ON_TRANSIENT_PLEASE
   int relax_bit = TRUE; /* Enables relaxation after a transient convergence failure*/
@@ -1643,6 +1655,14 @@ dbl *te_out) /* te_out - return actual end time */
               exchange_dof(cx[pg->imtrx],dpi,x_old[pg->imtrx], pg->imtrx);
               exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
 
+              int curr_matrix = pg->imtrx;
+              pg->imtrx = Fill_Matrix;
+//              huygens_renormalization(x[pg->imtrx], num_total_nodes,
+//                                           exo, cx[pg->imtrx], dpi, num_fill_unknowns, numProcUnknowns[pg->imtrx],
+//                                           time2, TRUE);
+              pg->imtrx = curr_matrix;
+
+#if 0
           double eikonal_delta_t = 0.1 * cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
 						     resid_vector[pg->imtrx], ams[pg->imtrx]->proc_config, exo );
           double eikonal_cfl = eikonal_delta_t;
@@ -1734,7 +1754,7 @@ dbl *te_out) /* te_out - return actual end time */
               }
 		    }
 		}
-
+#endif
 	    }
 	  else
 	    {
@@ -1746,6 +1766,40 @@ dbl *te_out) /* te_out - return actual end time */
 		      x[pg->imtrx][i] = 0.0;
 		    }
 		}
+
+          int eikonal_matrix = 0;
+          int fill_prime_matrix = 0;
+          for (int i = 0; i < upd->Total_Num_Matrices; i++)
+            {
+              if (upd->ep[i][R_EIKONAL] > -1)
+                {
+                  eikonal_matrix = i;
+                  break;
+                }
+            }
+          for (int i = 0; i < upd->Total_Num_Matrices; i++)
+            {
+              if (upd->ep[i][R_FILL_PRIME] > -1)
+                {
+                  fill_prime_matrix = i;
+                  break;
+                }
+            }
+          int heaviside_smooth_matrix = -1;
+          for (int i = 0; i < upd->Total_Num_Matrices; i++)
+            {
+              if (upd->ep[i][R_HEAVISIDE_SMOOTH] > -1)
+                {
+              heaviside_smooth_matrix = i;
+              break;
+                }
+            }
+
+          if (upd->ep[pg->imtrx][R_HEAVISIDE_SMOOTH] > -1) {
+sprintf(data_name, "initial_smooth.%d.dat", n);
+save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smooth_matrix]);
+          }
+
 		err = solve_nonlinear_problem(ams[pg->imtrx], x[pg->imtrx], delta_t,
 					      theta, x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx],
 					      xdot_old[pg->imtrx], resid_vector[pg->imtrx], x_update[pg->imtrx],
@@ -2278,11 +2332,47 @@ dbl *te_out) /* te_out - return actual end time */
 		
 	  }
 
+    sprintf(data_name, "before_fill.%d.dat", n);
+    save_data(data_name, x[Fill_Matrix], numProcUnknowns[Fill_Matrix]);
+                  int eikonal_matrix = 0;
+                  int fill_prime_matrix = 0;
+                  for (int i = 0; i < upd->Total_Num_Matrices; i++)
+                    {
+                      if (upd->ep[i][R_EIKONAL] > -1)
+                        {
+                          eikonal_matrix = i;
+                          break;
+                        }
+                    }
+                  for (int i = 0; i < upd->Total_Num_Matrices; i++)
+                    {
+                      if (upd->ep[i][R_FILL_PRIME] > -1)
+                        {
+                          fill_prime_matrix = i;
+                          break;
+                        }
+                    }
+                  int heaviside_smooth_matrix = -1;
+                  for (int i = 0; i < upd->Total_Num_Matrices; i++)
+                    {
+                      if (upd->ep[i][R_HEAVISIDE_SMOOTH] > -1)
+                        {
+                      heaviside_smooth_matrix = i;
+                      break;
+                        }
+                    }
+
+      sprintf(data_name, "before_smooth.%d.dat", n);
+      save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smooth_matrix]);
+
+
         for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-          if (upd->ep[pg->imtrx][EIKONAL] > -1)
-            {
-              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
-            }
+
+
+//          if (upd->ep[pg->imtrx][EIKONAL] > -1)
+//            {
+//              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
+//            }
 //          if (upd->ep[pg->imtrx][HEAVISIDE_SMOOTH] > -1)
 //            {
 //              int eikonal_matrix = 0;
@@ -2312,6 +2402,8 @@ dbl *te_out) /* te_out - return actual end time */
 //                  xdot[pg->imtrx][i] = (x[pg->imtrx][i] - x_old[pg->imtrx][i]) * (1.0 + 2 * theta) / delta_t;
 //                }
 //            }
+
+#if 0
 	  if (upd->ep[pg->imtrx][HEAVISIDE_SMOOTH] > -1)
 	    {
 		int heaviside_projection_matrix = -1;
@@ -2350,7 +2442,7 @@ dbl *te_out) /* te_out - return actual end time */
 		      }
 		    for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
 		      {
-			double field = x[eikonal_matrix][i] + x[fill_prime_matrix][i];
+            double field = x[Fill_Matrix][i] + x[fill_prime_matrix][i];
 			double alpha = ls->Length_Scale / 2;
 			double heaviside = heaviside_smooth(field, NULL, alpha);
 			x[pg->imtrx][i] = heaviside;
@@ -2358,6 +2450,7 @@ dbl *te_out) /* te_out - return actual end time */
 		      }
 		  }
 	    }
+#endif
 
 	  if (upd->ep[pg->imtrx][R_FILL_PRIME] > -1)
 	    {
@@ -2372,11 +2465,18 @@ dbl *te_out) /* te_out - return actual end time */
 		}
 	      for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
 		{
-		  x[Fill_Matrix][i] = x[eikonal_matrix][i] + x[pg->imtrx][i];
+          x[Fill_Matrix][i] = x[Fill_Matrix][i] + x[pg->imtrx][i];
 		  xdot[Fill_Matrix][i] = (x[Fill_Matrix][i] - x_old[Fill_Matrix][i]) * (1.0 + 2 * theta) / delta_t;
 		}
 	    }
 	  }
+
+        sprintf(data_name, "after_fill.%d.dat", n);
+        save_data(data_name, x[Fill_Matrix], numProcUnknowns[Fill_Matrix]);
+
+
+          sprintf(data_name, "after_smooth.%d.dat", n);
+          save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smooth_matrix]);
 	
         /*
          *   save xdot to xdot_old for next time step
