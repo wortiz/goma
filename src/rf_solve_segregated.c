@@ -1529,6 +1529,8 @@ dbl *te_out) /* te_out - return actual end time */
             for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
             {
               xdot[pg->imtrx][i] = 0.0;
+              xdot_old[pg->imtrx][i] = 0.0;
+              xdot_older[pg->imtrx][i] = 0.0;
             }
             exchange_dof(cx[pg->imtrx], dpi, x[pg->imtrx], pg->imtrx);
             exchange_dof(cx[pg->imtrx], dpi, x_old[pg->imtrx], pg->imtrx);
@@ -1537,9 +1539,10 @@ dbl *te_out) /* te_out - return actual end time */
 
             for (int step = 0; step < 10; step++) {
               DPRINTF(stdout, "Solving eikonal step %d with dt %g\n", step, delta_t);
-              predict_solution(matrix_nAC[pg->imtrx], delta_t, delta_t_old, delta_t_older,
-                               theta, x_AC[pg->imtrx], x_AC_old[pg->imtrx], x_AC_older[pg->imtrx], x_AC_oldest[pg->imtrx],
-                               x_AC_dot[pg->imtrx], x_AC_dot_old[pg->imtrx], x_AC_dot_older[pg->imtrx]);
+              predict_solution(numProcUnknowns[pg->imtrx], delta_t, delta_t_old,
+                               delta_t_older, theta, x[pg->imtrx], x_old[pg->imtrx],
+                               x_older[pg->imtrx], x_oldest[pg->imtrx], xdot[pg->imtrx],
+                               xdot_old[pg->imtrx], xdot_older[pg->imtrx]);
               exchange_dof(cx[pg->imtrx], dpi, x[pg->imtrx], pg->imtrx);
               exchange_dof(cx[pg->imtrx], dpi, x_old[pg->imtrx], pg->imtrx);
               exchange_dof(cx[pg->imtrx], dpi, x_older[pg->imtrx], pg->imtrx);
@@ -1558,12 +1561,12 @@ dbl *te_out) /* te_out - return actual end time */
                 double eikonal_distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
 
                 DPRINTF(stdout, "Eikonal distance %g\n", eikonal_distance);
+                double F_distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
+
+                DPRINTF(stdout, "Eikonal distance from F %g\n\n", F_distance);
 
                 dcopy1(numProcUnknowns[pg->imtrx], xdot_old[pg->imtrx],
                     xdot_older[pg->imtrx]);
-                if (tran->solid_inertia)
-                  dcopy1(numProcUnknowns[pg->imtrx], tran->xdbl_dot,
-                      tran->xdbl_dot_old);
                 dcopy1(numProcUnknowns[pg->imtrx], xdot[pg->imtrx],
                     xdot_old[pg->imtrx]);
                 dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx],
@@ -1583,7 +1586,7 @@ dbl *te_out) /* te_out - return actual end time */
 
             if (converged)
             {
-              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
+//              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
             }
           }
           else {
@@ -2085,6 +2088,11 @@ dbl *te_out) /* te_out - return actual end time */
 	    }
 		
 	  }
+
+        for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+          if (upd->ep[pg->imtrx][R_EIKONAL] > -1)
+            dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
+        }
 	
         /*
          *   save xdot to xdot_old for next time step

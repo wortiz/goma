@@ -156,6 +156,7 @@ assemble_eikonal(int dim,
         eikonal_norm += fv->grad_eikonal[i]*fv->grad_eikonal[i];
 
     }
+    eikonal_norm = sqrt(eikonal_norm);
     double inv_eikonal_norm = 1 / eikonal_norm;
 
     double d_eikonal_norm[MDE];
@@ -181,7 +182,7 @@ assemble_eikonal(int dim,
     {
         w[i] = sign * fv->grad_eikonal[i] * inv_eikonal_norm;
         for (int j = 0; j < ei[pg->imtrx]->dof[eqn]; j++) {
-          d_w[i][j] = sign * (fv->grad_eikonal[i] / d_eikonal_norm[j] + bf[eqn]->grad_phi[j][i] * inv_eikonal_norm);
+          d_w[i][j] = sign * (-fv->grad_eikonal[i] * d_eikonal_norm[j] * inv_eikonal_norm * inv_eikonal_norm + bf[eqn]->grad_phi[j][i] * inv_eikonal_norm);
         }
     }
 
@@ -206,9 +207,11 @@ assemble_eikonal(int dim,
 
     double invdetJ = 1 / detJ;
     double delta = 1 / (sqrt(4.0 / (dt*dt) + aGa));
+//    delta = h_elem;
     double d_delta[MDE];
     for (int j = 0; j < ei[pg->imtrx]->dof[eqn]; j++) {
       d_delta[j] = d_aGa[j] / 2 * pow(sqrt(4.0 / (dt*dt) + aGa), 1.5);
+//      d_delta[j] = 0;
     }
 
     if ( af->Assemble_Residual )
@@ -216,10 +219,16 @@ assemble_eikonal(int dim,
         int peqn = upd->ep[pg->imtrx][eqn];
 
         double residual = fv_dot->eikonal;
+#define ADV_EIKONAL
+#ifdef ADV_EIKONAL
         for (int a = 0; a < dim; a++) {
           residual += w[a]*fv->grad_eikonal[a];
         }
         residual -= sign;
+#else
+        residual += sign * eikonal_norm - sign;
+#endif
+
 
         double penalty = 10 * d_hs * (fv->eikonal - fv->F);
 
@@ -249,10 +258,14 @@ assemble_eikonal(int dim,
         {
 
             double residual = fv_dot->eikonal;
+#ifdef ADV_EIKONAL
             for (int a = 0; a < dim; a++) {
               residual += w[a]*fv->grad_eikonal[a];
             }
             residual -= sign;
+#else
+            residual += sign*eikonal_norm - sign;
+#endif
 
             double wt_func = bf[eqn]->phi[i];
             for (int a = 0; a < dim; a++)
@@ -280,10 +293,13 @@ assemble_eikonal(int dim,
                     }
 
                     double d_residual = phi_j * (1. + 2. * tt) / dt;
+#ifdef ADV_EIKONAL
                     for (int a = 0; a < dim; a++) {
                       d_residual +=  d_w[a][j]*fv->grad_eikonal[a] +  w[a]*bf[eqn]->grad_phi[j][a];
                     }
-
+#else
+                    d_residual += sign*d_eikonal_norm[j];
+#endif
                     double d_penalty =  10 * d_hs * (phi_j);
 
                     lec->J[peqn][pvar][i][j] += (residual * d_wt_func + d_residual * wt_func + d_penalty * bf[eqn]->phi[i]) * wt * h3 * detJ;
