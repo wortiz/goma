@@ -73,7 +73,7 @@ struct Element_Indices                   **ei = NULL;
 struct Element_Indices                  **eiRelated = {NULL};
 struct Element_Stiffness_Pointers        *esp = NULL;
 struct Element_Quality_Metrics           *eqm = NULL;
-struct Element_Variable_Pointers         *esp_old = NULL, *esp_dot = NULL, *esp_dbl_dot = NULL, *evp = NULL;
+struct Element_Variable_Pointers         *esp_old = NULL, *esp_older = NULL, *esp_dot = NULL, *esp_dbl_dot = NULL, *evp = NULL;
 struct Action_Flags                      *af = NULL;
 BASIS_FUNCTIONS_STRUCT                  **bf = NULL;
 BASIS_FUNCTIONS_STRUCT                  **bfd = NULL;
@@ -82,7 +82,7 @@ BASIS_FUNCTIONS_STRUCT                  **bfex = NULL;
 struct Shell_Block                      **shell_blocks = NULL;
 struct Field_Variables                   *fv = NULL, *fv_sens = NULL;
 struct Diet_Field_Variables              *fv_dot_dot = NULL,  *fv_dot_dot_old=NULL;
-struct Diet_Field_Variables              *fv_old = NULL, *fv_dot = NULL;
+struct Diet_Field_Variables              *fv_old = NULL, *fv_older = NULL, *fv_dot = NULL;
 struct Diet_Field_Variables              *fv_dot_old = NULL;
 struct Constitutive_Relations            **cr_glob = NULL, *cr = NULL;
 struct Local_Element_Contributions       *lec = NULL;
@@ -961,6 +961,7 @@ assembly_alloc(Exo_DB *exo)
 
   sz  = sizeof(struct Element_Variable_Pointers);
   esp_old = (struct Element_Variable_Pointers *) array_alloc(1, 1, sz);
+  esp_older = (struct Element_Variable_Pointers *) array_alloc(1, 1, sz);
   esp_dot = (struct Element_Variable_Pointers *) array_alloc(1, 1, sz);
   esp_dbl_dot = (struct Element_Variable_Pointers *) array_alloc(1, 1, sz);
   evp = (struct Element_Variable_Pointers *) array_alloc(1, 1, sz);

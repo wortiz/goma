@@ -86,6 +86,22 @@ double heaviside_smooth(double field, double *d_heaviside_dfield, double alpha)
     return heaviside;
 }
 
+double d_heaviside_smooth(double field, double alpha)
+{
+    double d_heaviside;
+
+    if (fabs(field) < alpha)
+    {
+        d_heaviside = 0.5 * (1. + cos(M_PIE * field / alpha)) / alpha;
+    }
+    else
+    {
+        d_heaviside = 0;
+    }
+
+    return d_heaviside;
+}
+
 int 
 assemble_eikonal(int dim,
                  double tt,
@@ -109,6 +125,25 @@ assemble_eikonal(int dim,
 
     double detJ = bf[eqn]->detJ;
 
+    double G[DIM][DIM];
+
+    for (int i = 0; i < DIM; i++) {
+      for (int j = 0; j < DIM; j++) {
+        G[i][j] = 0;
+        for (int k = 0; k < DIM; k++) {
+          G[i][j] += bf[eqn]->B[k][i] * bf[eqn]->B[k][j];
+        }
+      }
+    }
+
+    double v_d_gv = 0;
+    for (int i = 0; i < dim; i++)
+    {
+      for (int j = 0; j < dim; j++) {
+        v_d_gv += fv->grad_eikonal[i] * G[i][j] * fv->grad_eikonal[j];
+      }
+    }
+
     /**********************************************************************
    **********************************************************************
    ** Residuals
@@ -116,20 +151,12 @@ assemble_eikonal(int dim,
    **********************************************************************/
 
     double eikonal_norm = 0;
-    double eikonal_norm_old = 0;
     for (int i = 0; i < dim; i++)
     {
         eikonal_norm += fv->grad_eikonal[i]*fv->grad_eikonal[i];
-        eikonal_norm_old += fv_old->grad_eikonal[i]*fv_old->grad_eikonal[i];
+
     }
-    eikonal_norm = sqrt(eikonal_norm) + 1e-32;
-    eikonal_norm_old = sqrt(eikonal_norm_old) + 1e-32;
-
-
-    load_lsi(ls->Length_Scale);
-    load_lsi_derivs();
     double inv_eikonal_norm = 1 / eikonal_norm;
-    double inv_eikonal_norm_old = 1 / eikonal_norm_old;
 
     double d_eikonal_norm[MDE];
     for (int j = 0; j < ei[pg->imtrx]->dof[EIKONAL]; j++)
@@ -141,94 +168,61 @@ assemble_eikonal(int dim,
         }
     }
 
-    //double alpha = ls->Length_Scale / 2.0;
     double h_elem = 0.;
     for ( int a=0; a<ei[pg->imtrx]->ielem_dim; a++) h_elem += pg_data->hsquared[a];
     /* This is the size of the element */
     h_elem = sqrt(h_elem/ ((double )ei[pg->imtrx]->ielem_dim));
-    double sign = fv_old->eikonal / sqrt(fv_old->eikonal*fv_old->eikonal + eikonal_norm_old*eikonal_norm_old*h_elem*h_elem);//2*heaviside_smooth(fv->F, NULL, 2*h_elem)-1;//fv_old->eikonal / sqrt(fv_old->eikonal*fv_old->eikonal + eikonal_norm_old*eikonal_norm_old*h_elem*h_elem);//fv->F / sqrt(fv->F*fv->F + lsi->gfmag*lsi->gfmag*h_elem*h_elem);
-            //2 * heaviside_smooth(fv->F, NULL, lsi->alpha)-1;//fv_old->eikonal / sqrt(fv_old->eikonal*fv_old->eikonal + eikonal_norm_old*eikonal_norm_old*h_elem*h_elem);//2*lsi->H-1;//fv->F / sqrt(fv->F*fv->F + lsi->gfmag*lsi->gfmag*alpha*alpha);
-
+    double alpha = h_elem;
+    double sign = 2*heaviside_smooth(fv->F, NULL, alpha) -1;
+    double d_hs = d_heaviside_smooth(fv->F, alpha);
     double w[DIM];
-    double w_old[DIM];
+    double d_w[DIM][MDE];
     for (int i = 0; i < dim; i++)
     {
         w[i] = sign * fv->grad_eikonal[i] * inv_eikonal_norm;
-        w_old[i] = sign * fv_old->grad_eikonal[i] * inv_eikonal_norm_old;
-
-    }
-
-    double d_w_d_eikonal[DIM][MDE];
-    for (int i = 0; i < dim; i++)
-    {
-        for (int j = 0; j < ei[pg->imtrx]->dof[eqn]; j++)
-        {
-            d_w_d_eikonal[i][j] = sign * (bf[eqn]->grad_phi[j][i] * inv_eikonal_norm -
-                                          fv->grad_eikonal[i] * inv_eikonal_norm * inv_eikonal_norm * d_eikonal_norm[j]);
-
+        for (int j = 0; j < ei[pg->imtrx]->dof[eqn]; j++) {
+          d_w[i][j] = sign * (fv->grad_eikonal[i] / d_eikonal_norm[j] + bf[eqn]->grad_phi[j][i] * inv_eikonal_norm);
         }
     }
 
-
-    double w_old_norm = 0;
+    double aGa = 0;
+    double d_aGa[MDE];
     for (int i = 0; i < dim; i++)
     {
-        w_old_norm += w_old[i]*w_old[i];
+      for (int j = 0; j < dim; j++) {
+        aGa += w[i] * G[i][j] * w[j];
+      }
     }
-    w_old_norm = sqrt(w_old_norm);
+
+    for (int k = 0; k < ei[pg->imtrx]->dof[eqn]; k++) {
+      d_aGa[k] = 0;
+      for (int i = 0; i < dim; i++)
+      {
+        for (int j = 0; j < dim; j++) {
+          d_aGa[k] += d_w[i][k] * G[i][j] * w[j] + w[i] * G[i][j] * d_w[j][k];
+        }
+      }
+    }
+
     double invdetJ = 1 / detJ;
-    double delta = 1 / (2 * sqrt(1.0 / (dt*dt) + (invdetJ * w_old_norm) * (invdetJ * w_old_norm)));
-    delta = 0.5*h_elem;//w_old_norm;
-
-    double kappa = delta + 0.1*h_elem;
-
-    double Y = 1;
-    double Yinv = 1/Y;
-    double beta = 2;
-
-    double hdc = 0;
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++)
-    {
-        for (int j = 0; j < dim; j++)
-        {
-            hdc += fabs(fv_old->grad_eikonal[j] * bf[eqn]->grad_phi[i][j]);
-        }
+    double delta = 1 / (sqrt(4.0 / (dt*dt) + aGa));
+    double d_delta[MDE];
+    for (int j = 0; j < ei[pg->imtrx]->dof[eqn]; j++) {
+      d_delta[j] = d_aGa[j] / 2 * pow(sqrt(4.0 / (dt*dt) + aGa), 1.5);
     }
-    hdc = 1.0/hdc;
-
-    double Z = sign*(eikonal_norm-1);
-
-    double d_Z[MDE];
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++)
-    {
-        d_Z[i] = sign*d_eikonal_norm[i];
-//        double phi_i = bf[eqn]->phi[i];
-//        d_Z[i] = phi_i * (1. + 2. * tt) / dt;
-//        d_Z[i] = 0;
-//        for (int j = 0; j < dim; j++)
-//        {
-//            d_Z[i] += w[j] * bf[eqn]->grad_phi[i][j] +
-//                    d_w_d_eikonal[j][i] * fv->grad_eikonal[j];
-//        }
-    }
-
-    double kdc = fabs(Yinv*Z)*pow(hdc, beta);
-    double d_kdc[MDE];
-    for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++)
-    {
-        if (fabs(Z) > 1e-32)
-        {
-            d_kdc[i] = d_Z[i]*(Yinv*Z/fabs(Yinv*Z))*pow(hdc, beta);
-        }
-        else {
-            d_kdc[i] = 0;
-        }
-    }
-
 
     if ( af->Assemble_Residual )
     {
         int peqn = upd->ep[pg->imtrx][eqn];
+
+        double residual = fv_dot->eikonal;
+        for (int a = 0; a < dim; a++) {
+          residual += w[a]*fv->grad_eikonal[a];
+        }
+        residual -= sign;
+
+        double penalty = 10 * d_hs * (fv->eikonal - fv->F);
+
         for(int i=0; i < ei[pg->imtrx]->dof[eqn]; i++ )
         {
             double wt_func = bf[eqn]->phi[i];
@@ -237,39 +231,7 @@ assemble_eikonal(int dim,
                 wt_func += delta * w[a] * bf[eqn]->grad_phi[i][a];
             }
 
-            double mass = fv_dot->eikonal  * wt_func ;
-            mass *= -pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-
-//            double advection = 0;
-//            for (int a = 0; a < dim; a++)
-//            {
-//                advection += w[a] * fv->grad_eikonal[a];
-//            }
-
-//            advection *= wt_func;
-//            advection *= -pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-
-//            double diffusion = 0;
-//            for (int a = 0; a < dim; a++)
-//            {
-//                diffusion += fv->grad_eikonal[a]  * bf[eqn]->grad_phi[i][a];
-//            }
-//            diffusion *= -kdc*pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-
-//            double source = sign * wt_func;
-//            source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-            double advection = 0;
-            double diffusion = 0;
-            for (int a = 0; a < dim; a++)
-            {
-                diffusion += fv->grad_eikonal[a]  * bf[eqn]->grad_phi[i][a];
-            }
-            diffusion *= -kappa*pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-
-            double source = sign * (eikonal_norm-1) * wt_func;
-            source *= -pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-
-            lec->R[peqn][i] += (mass + advection + diffusion + source) * wt * detJ * h3;
+            lec->R[peqn][i] += (residual * wt_func + penalty*bf[eqn]->phi[i]) * wt * detJ * h3;
 
         }
     }
@@ -285,7 +247,12 @@ assemble_eikonal(int dim,
         int peqn = upd->ep[pg->imtrx][eqn];
         for ( int i=0; i < ei[pg->imtrx]->dof[eqn]; i++ )
         {
-            double phi_i = bf[eqn]->phi[i];
+
+            double residual = fv_dot->eikonal;
+            for (int a = 0; a < dim; a++) {
+              residual += w[a]*fv->grad_eikonal[a];
+            }
+            residual -= sign;
 
             double wt_func = bf[eqn]->phi[i];
             for (int a = 0; a < dim; a++)
@@ -306,51 +273,20 @@ assemble_eikonal(int dim,
                 for(int j=0; j < ei[pg->imtrx]->dof[var]; j++)
                 {
                     double phi_j = bf[eqn]->phi[j];
-
                     double d_wt_func = 0;
                     for (int a = 0; a < dim; a++)
                     {
-                        d_wt_func += delta * d_w_d_eikonal[a][j] * bf[eqn]->grad_phi[i][a];
+                        d_wt_func += (d_delta[j] * w[a] + delta * d_w[a][j]) * bf[eqn]->grad_phi[i][a];
                     }
 
-                    double mass = phi_j * (1. + 2. * tt) / dt * wt_func;
-                    mass += fv_dot->eikonal * d_wt_func;
-                    mass *= -pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-
-                    double advection = 0;
-//                    double advection_b = 0;
-//                    for (int a = 0; a < dim; a++)
-//                    {
-//                        advection += w[a] * fv->grad_eikonal[a];
-//                        advection_b += d_w_d_eikonal[a][j] * fv->grad_eikonal[a] + w[a] * bf[var]->grad_phi[j][a];
-//                        //		      advection_b += w_old[a] * bf[var]->grad_phi[j][a];
-
-//                    }
-//                    advection *= d_wt_func;
-//                    advection_b *= wt_func;
-//                    advection += advection_b;
-//                    advection *= -pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-
-                    double diffusion = 0;
-                    for (int a = 0; a < dim; a++)
-                    {
-                        diffusion += kappa * bf[var]->grad_phi[j][a] * bf[eqn]->grad_phi[i][a];
+                    double d_residual = phi_j * (1. + 2. * tt) / dt;
+                    for (int a = 0; a < dim; a++) {
+                      d_residual +=  d_w[a][j]*fv->grad_eikonal[a] +  w[a]*bf[eqn]->grad_phi[j][a];
                     }
 
-//                    for (int a = 0; a < dim; a++)
-//                    {
-//                        diffusion += d_kdc[j]*fv->grad_eikonal[a]  * bf[eqn]->grad_phi[i][a];
-//                    }
+                    double d_penalty =  10 * d_hs * (phi_j);
 
-                    diffusion *= -pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-
-//                    double source = sign * d_wt_func;
-//                    source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-
-                    double source = sign * (eikonal_norm-1) * d_wt_func +  sign * (d_eikonal_norm[j]) * wt_func;
-                    source *= -pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-
-                    lec->J[peqn][pvar][i][j] += (mass + advection + diffusion + source) * wt * h3 * detJ;
+                    lec->J[peqn][pvar][i][j] += (residual * d_wt_func + d_residual * wt_func + d_penalty * bf[eqn]->phi[i]) * wt * h3 * detJ;
 
                 } /* for: FILL DoFs */
 

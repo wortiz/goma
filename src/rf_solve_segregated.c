@@ -37,8 +37,6 @@
 #include "el_quality.h"
 #include "dg_utils.h"
 
-#include "mm_fill_fill_conservative.h"
-
 #define ROUND_TO_ONE 0.9999999
 static int discard_previous_time_step(int num_unks, 
 				      double *x,
@@ -48,119 +46,6 @@ static int discard_previous_time_step(int num_unks,
 				      double *xdot,
 				      double *xdot_old, 
 				      double *xdot_older);
-
-struct NodeList {
-  int node;
-  struct NodeList *next;
-};
-
-void save_data(char * filename, double *data, int count)
-{
-    FILE *f;
-    f = fopen(filename, "w");
-    for (int i = 0; i < count; i++)
-    {
-        fprintf(f, "%g\n", data[i]);
-    }
-    fclose(f);
-}
-
-void add_node_to_list_no_dup(struct NodeList **list, int node)
-{
-  struct NodeList *item = malloc(sizeof(struct NodeList));
-  item->next = NULL;
-  item->node = node;
-  if (*list == NULL)
-    {
-      *list = item;
-    }
-  else
-    {
-      struct NodeList *curr = *list;
-      curr->next = item;
-    }
-}
-
-void get_eikonal_dirichlet_nodes(double *x, double *x_old, double * xdot, double *xdot_old, double *resid_vector,
-                                              int numProcUnknowns, Exo_DB *exo)
-{
-  double eps = 1e-8;
-  //struct NodeList *list = NULL;
-
-  for (int i = 0; i < numProcUnknowns; i++)
-    {
-      if (fabs(x[i]) < eps)
-        {
-          int node;
-          int i_offset;
-          Index_Solution_Inv(i, &node, NULL, &i_offset, NULL, pg->imtrx );
-          //add_node_to_list_no_dup(&list, node);
-          NODE_INFO_STRUCT *node_info = Nodes[node];
-          NODAL_VARS_STRUCT *nv = node_info->Nodal_Vars_Info[pg->imtrx];
-          if (Dolphin[pg->imtrx][node][EIKONAL] > 0) {
-            if (!node_info->DBC[pg->imtrx]) {
-              node_info->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
-            }
-            VARIABLE_DESCRIPTION_STRUCT *vd;
-            int offset = get_nodal_unknown_offset(nv, EIKONAL, -1, 0, &vd);
-
-            node_info->DBC[pg->imtrx][offset] = 0;
-            }
-        }
-    }
-
-  int e_start = exo->eb_ptr[0];
-  int e_end   = exo->eb_ptr[exo->num_elem_blocks];
-  for (int ielem = e_start; ielem < e_end; ielem++)
-    {
-      int ebn = find_elemblock_index(ielem, exo);
-      int mn = Matilda[ebn];
-      if (mn < 0)
-        {
-          continue;
-        }
-
-      int err = load_elem_dofptr(ielem, exo, x, x_old, xdot, xdot_old,
-                             resid_vector, 0);
-      EH(err, "load_elem_dofptr");
-
-      int mark_elem = 0;
-      for (int local_node=0; local_node < ei[pg->imtrx]->dof[EIKONAL] && !mark_elem; local_node++)
-        {
-          double F = *esp->eikonal[local_node];
-          for (int local_node_other=0; local_node_other < ei[pg->imtrx]->dof[EIKONAL] && !mark_elem; local_node_other++)
-            {
-              double F_other = *esp->eikonal[local_node_other];
-              if (SGN(F) != SGN(F_other))
-                {
-                  mark_elem = 1;
-                  break;
-                }
-            }
-
-        }
-
-      if (mark_elem)
-        {
-          for (int local_node=0; local_node < ei[pg->imtrx]->num_local_nodes; local_node++)
-            {
-              int node = ei[pg->imtrx]->gnn_list[EIKONAL][local_node];
-              NODE_INFO_STRUCT *node_info = Nodes[node];
-              NODAL_VARS_STRUCT *nv = node_info->Nodal_Vars_Info[pg->imtrx];
-              if (Dolphin[pg->imtrx][node][EIKONAL] > 0) {
-                if (!node_info->DBC[pg->imtrx]) {
-                  node_info->DBC[pg->imtrx] = alloc_short_1(nv->Num_Unknowns, -1);
-                }
-                VARIABLE_DESCRIPTION_STRUCT *vd;
-                int offset = get_nodal_unknown_offset(nv, EIKONAL, mn, 0, &vd);
-
-                node_info->DBC[pg->imtrx][offset] = 0;
-                }
-            }
-        }
-    }
-}
-
 
 /* rf_solve.c */
 extern void initial_guess_stress_to_log_conf(double *x, int num_total_nodes);
@@ -343,7 +228,6 @@ dbl *te_out) /* te_out - return actual end time */
   int i;
   int inewton;
   int *numProcUnknowns;
-  char data_name[1000];
 
 #ifdef RELAX_ON_TRANSIENT_PLEASE
   int relax_bit = TRUE; /* Enables relaxation after a transient convergence failure*/
@@ -1422,7 +1306,6 @@ dbl *te_out) /* te_out - return actual end time */
      *  TOP OF THE TIME STEP LOOP -> Loop over time steps whether
      *                               they be successful or not
      *******************************************************************/
-    int eikonal_set = 0;
     for (n = 0; n < MaxTimeSteps; n++) {
       /*
        * Calculate the absolute time for the current step, time1
@@ -1635,209 +1518,115 @@ dbl *te_out) /* te_out - return actual end time */
 	  nAC = matrix_nAC[pg->imtrx];
 	  augc = matrix_augc[pg->imtrx];
 
-          if (upd->ep[pg->imtrx][R_EIKONAL] > -1) {
-              dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x[pg->imtrx]);
-              dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x_old[pg->imtrx]);
-              for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
-                {
-                  xdot[pg->imtrx][i] = 0.0;
-                }
-              //get_eikonal_dirichlet_nodes(x[pg->imtrx], x_old[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx], resid_vector[pg->imtrx],
-              //    numProcUnknowns[pg->imtrx], exo);
-              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-              dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx],
-                     x_older[pg->imtrx]);
-              dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx],
-                     x_oldest[pg->imtrx]);
-//              get_eikonal_dirichlet_nodes(x[pg->imtrx], x_old[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx], resid_vector[pg->imtrx],
-//                  numProcUnknowns[pg->imtrx], exo);
-              exchange_dof(cx[pg->imtrx],dpi,x[pg->imtrx], pg->imtrx);
-              exchange_dof(cx[pg->imtrx],dpi,x_old[pg->imtrx], pg->imtrx);
-              exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
+          // Initialize eikonal on first timestep
 
-              int curr_matrix = pg->imtrx;
-              pg->imtrx = Fill_Matrix;
-//              huygens_renormalization(x[pg->imtrx], num_total_nodes,
-//                                           exo, cx[pg->imtrx], dpi, num_fill_unknowns, numProcUnknowns[pg->imtrx],
-//                                           time2, TRUE);
-              pg->imtrx = curr_matrix;
-
-#if 0
-          double eikonal_delta_t = 0.1 * cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
-						     resid_vector[pg->imtrx], ams[pg->imtrx]->proc_config, exo );
-          double eikonal_cfl = eikonal_delta_t;
-	      //eikonal_delta_t = delta_t;
-	      for (int t = 0; t < 50; t++)
-		{
-		  DPRINTF(stdout, "\n=> Try Eikonal step = %d with delta t = %g\n", t, eikonal_delta_t);
-
-		  err = solve_nonlinear_problem(ams[pg->imtrx], x[pg->imtrx], eikonal_delta_t,
-						theta, x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx],
-						xdot_old[pg->imtrx], resid_vector[pg->imtrx], x_update[pg->imtrx],
-						scale[pg->imtrx], &converged, &nprint, tev[pg->imtrx],
-						tev_post[pg->imtrx], gv, rd[pg->imtrx], NULL, NULL, gvec[pg->imtrx],
-						gvec_elem[pg->imtrx], time1, exo, dpi, cx[pg->imtrx], 0, &time_step_reform, 0,
-						x_AC[pg->imtrx], x_AC_dot[pg->imtrx], time1, NULL,
-						NULL, NULL, NULL, dg_neighbor_data);
-
-		  exchange_dof(cx[pg->imtrx],dpi,x[pg->imtrx], pg->imtrx);
-		  exchange_dof(cx[pg->imtrx],dpi,x_old[pg->imtrx], pg->imtrx);
-		  exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
-
-		  if (err == -1) {
-              if (eikonal_delta_t*0.5 < eikonal_cfl*1e-3)
-              {
-                    converged = FALSE;
-                    break;
-              }
-              else {
-                  eikonal_delta_t *= 0.5;
-              }
-		  }
-		  else if (converged)
-		    {
-		      double distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-		      DPRINTF(stdout, "EIKONAL DISTANCE = %g\n", distance);
-		      distance = 0;
-		    #ifdef PARALLEL
-		      double global_distance = 0;
-		    #endif
-		      double val;
-		      int i;
-		      for (i = 0; i < numProcUnknowns[pg->imtrx]; i++) {
-			  if (fabs(x[pg->imtrx][i]) < 0.02*5)
-			    {
-			      val = (x[pg->imtrx][i] - x_old[pg->imtrx][i]);
-			      distance += val*val;
-			    }
-		      }
-		    #ifdef PARALLEL
-		      MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM,
-				    MPI_COMM_WORLD);
-		      distance = global_distance;
-		    #endif /* PARALLEL */
-		      distance = sqrt(distance);
-		      DPRINTF(stdout, "EIKONAL DISTANCE (CLOSE) = %g\n", distance);
-
-		      if (distance < 1e-8)
-			{
-              DPRINTF(stdout, "EIKONAL REDISTANCING COMPLETED in %d steps\n", t+1);
-			  break;
-			}
-		      dcopy1(numProcUnknowns[pg->imtrx], xdot_old[pg->imtrx],
-			  xdot_older[pg->imtrx]);
-		      if (tran->solid_inertia)
-			dcopy1(numProcUnknowns[pg->imtrx], tran->xdbl_dot,
-			    tran->xdbl_dot_old);
-		      dcopy1(numProcUnknowns[pg->imtrx], xdot[pg->imtrx],
-			  xdot_old[pg->imtrx]);
-		      dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx],
-			  x_oldest[pg->imtrx]);
-		      dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx],
-			  x_older[pg->imtrx]);
-		      dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-
-
-		      exchange_dof(cx[pg->imtrx],dpi,x[pg->imtrx], pg->imtrx);
-		      exchange_dof(cx[pg->imtrx],dpi,x_old[pg->imtrx], pg->imtrx);
-		      exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
-		    }
-		  else
-		    {
-              if (eikonal_delta_t*0.5 < eikonal_cfl*1e-3)
-              {
-                    converged = FALSE;
-                    break;
-              }
-              else {
-                  eikonal_delta_t *= 0.5;
-              }
-		    }
-		}
-#endif
-	    }
-	  else
-	    {
-
-	      if (upd->ep[pg->imtrx][R_FILL_PRIME] > -1)
-		{
-		  for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
-		    {
-		      x[pg->imtrx][i] = 0.0;
-		    }
-		}
-
-          int eikonal_matrix = 0;
-          int fill_prime_matrix = 0;
-          for (int i = 0; i < upd->Total_Num_Matrices; i++)
-            {
-              if (upd->ep[i][R_EIKONAL] > -1)
-                {
-                  eikonal_matrix = i;
-                  break;
-                }
-            }
-          for (int i = 0; i < upd->Total_Num_Matrices; i++)
-            {
-              if (upd->ep[i][R_FILL_PRIME] > -1)
-                {
-                  fill_prime_matrix = i;
-                  break;
-                }
-            }
-          int heaviside_smooth_matrix = -1;
-          for (int i = 0; i < upd->Total_Num_Matrices; i++)
-            {
-              if (upd->ep[i][R_HEAVISIDE_SMOOTH] > -1)
-                {
-              heaviside_smooth_matrix = i;
-              break;
-                }
-            }
-
-          if (upd->ep[pg->imtrx][R_HEAVISIDE_SMOOTH] > -1) {
-sprintf(data_name, "initial_smooth.%d.dat", n);
-save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smooth_matrix]);
-          }
-
-		err = solve_nonlinear_problem(ams[pg->imtrx], x[pg->imtrx], delta_t,
-					      theta, x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx],
-					      xdot_old[pg->imtrx], resid_vector[pg->imtrx], x_update[pg->imtrx],
-					      scale[pg->imtrx], &converged, &nprint, tev[pg->imtrx],
-					      tev_post[pg->imtrx], gv, rd[pg->imtrx], NULL, NULL, gvec[pg->imtrx],
-					      gvec_elem[pg->imtrx], time1, exo, dpi, cx[pg->imtrx], 0, &time_step_reform, 0,
-					      x_AC[pg->imtrx], x_AC_dot[pg->imtrx], time1, NULL,
-					      NULL, NULL, NULL, dg_neighbor_data);
-	    }
-
-          if (pd_glob[0]->v[pg->imtrx][MOMENT0] ||
-              pd_glob[0]->v[pg->imtrx][MOMENT1] ||
-              pd_glob[0]->v[pg->imtrx][MOMENT2] ||
-              pd_glob[0]->v[pg->imtrx][MOMENT3])
+          if (upd->ep[pg->imtrx][R_EIKONAL] > -1)
           {
-            /*     Floor values to 0 */
-            int floored_values = 0;
-            for (int var = MOMENT0; var <= MOMENT3; var++) {
-              for (i = 0; i < num_total_nodes; i++)
-              {
-                if (pd_glob[0]->v[pg->imtrx][var])
-                {
-                  int j = Index_Solution(i, var, 0, 0 , -1, pg->imtrx);
+            dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x[pg->imtrx]);
+            dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x_old[pg->imtrx]);
+            dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x_older[pg->imtrx]);
+            dcopy1(numProcUnknowns[pg->imtrx], x[Fill_Matrix], x_oldest[pg->imtrx]);
+            for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
+            {
+              xdot[pg->imtrx][i] = 0.0;
+            }
+            exchange_dof(cx[pg->imtrx], dpi, x[pg->imtrx], pg->imtrx);
+            exchange_dof(cx[pg->imtrx], dpi, x_old[pg->imtrx], pg->imtrx);
+            exchange_dof(cx[pg->imtrx], dpi, x_older[pg->imtrx], pg->imtrx);
+            exchange_dof(cx[pg->imtrx], dpi, x_oldest[pg->imtrx], pg->imtrx);
 
-                  if (j != -1 && x[pg->imtrx][j] < 0)
-                  {
-                    x[pg->imtrx][j] = 0.0;
-                    floored_values++;
-                  }
+            for (int step = 0; step < 10; step++) {
+              DPRINTF(stdout, "Solving eikonal step %d with dt %g\n", step, delta_t);
+              predict_solution(matrix_nAC[pg->imtrx], delta_t, delta_t_old, delta_t_older,
+                               theta, x_AC[pg->imtrx], x_AC_old[pg->imtrx], x_AC_older[pg->imtrx], x_AC_oldest[pg->imtrx],
+                               x_AC_dot[pg->imtrx], x_AC_dot_old[pg->imtrx], x_AC_dot_older[pg->imtrx]);
+              exchange_dof(cx[pg->imtrx], dpi, x[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx], dpi, x_old[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx], dpi, x_older[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx], dpi, x_oldest[pg->imtrx], pg->imtrx);
+
+              err = solve_nonlinear_problem(ams[pg->imtrx], x[pg->imtrx], delta_t,
+                                            theta, x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx],
+                                            xdot_old[pg->imtrx], resid_vector[pg->imtrx], x_update[pg->imtrx],
+                                            scale[pg->imtrx], &converged, &nprint, tev[pg->imtrx],
+                                            tev_post[pg->imtrx], gv, rd[pg->imtrx], NULL, NULL, gvec[pg->imtrx],
+                                            gvec_elem[pg->imtrx], time1, exo, dpi, cx[pg->imtrx], 0, &time_step_reform, 0,
+                                            x_AC[pg->imtrx], x_AC_dot[pg->imtrx], time1, NULL,
+                                            NULL, NULL, NULL, dg_neighbor_data);
+
+              if (converged) {
+                double eikonal_distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+
+                DPRINTF(stdout, "Eikonal distance %g\n", eikonal_distance);
+
+                dcopy1(numProcUnknowns[pg->imtrx], xdot_old[pg->imtrx],
+                    xdot_older[pg->imtrx]);
+                if (tran->solid_inertia)
+                  dcopy1(numProcUnknowns[pg->imtrx], tran->xdbl_dot,
+                      tran->xdbl_dot_old);
+                dcopy1(numProcUnknowns[pg->imtrx], xdot[pg->imtrx],
+                    xdot_old[pg->imtrx]);
+                dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx],
+                    x_oldest[pg->imtrx]);
+                dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx],
+                    x_older[pg->imtrx]);
+                dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+
+                if (eikonal_distance < 1e-10) {
+                  break;
                 }
+              }
+              else {
+                break;
               }
             }
 
-            int global_floored = 0;
-            MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-            P0PRINTF("Floored %d moment values\n", global_floored);
+            if (converged)
+            {
+              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
+            }
           }
+          else {
+            err = solve_nonlinear_problem(ams[pg->imtrx], x[pg->imtrx], delta_t,
+                                          theta, x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx],
+                                          xdot_old[pg->imtrx], resid_vector[pg->imtrx], x_update[pg->imtrx],
+                                          scale[pg->imtrx], &converged, &nprint, tev[pg->imtrx],
+                                          tev_post[pg->imtrx], gv, rd[pg->imtrx], NULL, NULL, gvec[pg->imtrx],
+                                          gvec_elem[pg->imtrx], time1, exo, dpi, cx[pg->imtrx], 0, &time_step_reform, 0,
+                                          x_AC[pg->imtrx], x_AC_dot[pg->imtrx], time1, NULL,
+                                          NULL, NULL, NULL, dg_neighbor_data);
+          }
+
+
+
+//          if (pd_glob[0]->v[pg->imtrx][MOMENT0] ||
+//              pd_glob[0]->v[pg->imtrx][MOMENT1] ||
+//              pd_glob[0]->v[pg->imtrx][MOMENT2] ||
+//              pd_glob[0]->v[pg->imtrx][MOMENT3])
+//          {
+//            /*     Floor values to 0 */
+//            int floored_values = 0;
+//            for (int var = MOMENT0; var <= MOMENT3; var++) {
+//              for (i = 0; i < num_total_nodes; i++)
+//              {
+//                if (pd_glob[0]->v[pg->imtrx][var])
+//                {
+//                  int j = Index_Solution(i, var, 0, 0 , -1, pg->imtrx);
+
+//                  if (j != -1 && x[pg->imtrx][j] < 0)
+//                  {
+//                    x[pg->imtrx][j] = 0.0;
+//                    floored_values++;
+//                  }
+//                }
+//              }
+//            }
+
+//            int global_floored = 0;
+//            MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+//            P0PRINTF("Floored %d moment values\n", global_floored);
+//          }
 
 	  /*
 	    err = solve_linear_segregated(ams[pg->imtrx], x[pg->imtrx], delta_t,
@@ -1861,40 +1650,6 @@ save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smoot
 	  af->Sat_hyst_reevaluate = FALSE; /*See load_saturation for description*/
 
 	  if (converged) {
-
-//	      if (upd->ep[pg->imtrx][R_EIKONAL] > -1)
-//		{
-//		  double distance = vector_distance(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-//		  DPRINTF(stdout, "EIKONAL DISTANCE = %g\n", distance);
-//		  distance = 0;
-//		#ifdef PARALLEL
-//		  double global_distance = 0;
-//		#endif
-//		  double val;
-//		  int i;
-//		  for (i = 0; i < numProcUnknowns[pg->imtrx]; i++) {
-//		      if (fabs(x[pg->imtrx][i]) < 0.02*5)
-//			{
-//			  val = (x[pg->imtrx][i] - x_old[pg->imtrx][i]);
-//			  distance += val*val;
-//			}
-//		  }
-//		#ifdef PARALLEL
-//		  MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM,
-//				MPI_COMM_WORLD);
-//		  distance = global_distance;
-//		#endif /* PARALLEL */
-//		  distance = sqrt(distance);
-//		  DPRINTF(stdout, "EIKONAL DISTANCE (CLOSE) = %g\n", distance);
-
-//		  double mindt_cfl = 0.5 *
-//		    cfl_eikonal( x[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx], xdot[pg->imtrx], xdot_old[pg->imtrx],
-//				       resid_vector[pg->imtrx], ams[pg->imtrx]->proc_config, exo );
-//		  DPRINTF(stdout, "EIKONAL MIN DT (CFL) = %g\n", mindt_cfl);
-
-
-
-//		}
 	    for(i=0; matrix_nAC[pg->imtrx] > 0 && i < matrix_nAC[pg->imtrx]; i++)
 	      {
 		gv[5 + invACidx[pg->imtrx][i] ] = x_AC[pg->imtrx][i];
@@ -1955,7 +1710,6 @@ save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smoot
 	      }
 	    }
 	  }
-
 	
 	  /*
 	   * HKM -> I do not know if these operations are needed. I added
@@ -2236,7 +1990,7 @@ save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smoot
 	if (converged && ls != NULL) 
 	  {
 	    pg->imtrx = Fill_Matrix;
-	    int ibc, ls_adc_event=FALSE;
+	    int ibc, ls_adc_event;
 	    /* Resolve LS_ADC boundaries ( Attach/Dewet/Coalesce ) */
 	    for( ibc=0;ibc<Num_BC;ibc++)
 	      {
@@ -2331,158 +2085,11 @@ save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smoot
 	    }
 		
 	  }
-
-    sprintf(data_name, "before_fill.%d.dat", n);
-    save_data(data_name, x[Fill_Matrix], numProcUnknowns[Fill_Matrix]);
-                  int eikonal_matrix = 0;
-                  int fill_prime_matrix = 0;
-                  for (int i = 0; i < upd->Total_Num_Matrices; i++)
-                    {
-                      if (upd->ep[i][R_EIKONAL] > -1)
-                        {
-                          eikonal_matrix = i;
-                          break;
-                        }
-                    }
-                  for (int i = 0; i < upd->Total_Num_Matrices; i++)
-                    {
-                      if (upd->ep[i][R_FILL_PRIME] > -1)
-                        {
-                          fill_prime_matrix = i;
-                          break;
-                        }
-                    }
-                  int heaviside_smooth_matrix = -1;
-                  for (int i = 0; i < upd->Total_Num_Matrices; i++)
-                    {
-                      if (upd->ep[i][R_HEAVISIDE_SMOOTH] > -1)
-                        {
-                      heaviside_smooth_matrix = i;
-                      break;
-                        }
-                    }
-
-      sprintf(data_name, "before_smooth.%d.dat", n);
-      save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smooth_matrix]);
-
-
-        for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-
-
-//          if (upd->ep[pg->imtrx][EIKONAL] > -1)
-//            {
-//              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x[Fill_Matrix]);
-//            }
-//          if (upd->ep[pg->imtrx][HEAVISIDE_SMOOTH] > -1)
-//            {
-//              int eikonal_matrix = 0;
-//              int fill_prime_matrix = 0;
-//              for (int i = 0; i < upd->Total_Num_Matrices; i++)
-//                {
-//                  if (upd->ep[i][R_EIKONAL] > -1)
-//                    {
-//                      eikonal_matrix = i;
-//                      break;
-//                    }
-//                }
-//              for (int i = 0; i < upd->Total_Num_Matrices; i++)
-//                {
-//                  if (upd->ep[i][R_FILL_PRIME] > -1)
-//                    {
-//                      fill_prime_matrix = i;
-//                      break;
-//                    }
-//                }
-//              for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
-//                {
-//                  double field = x[eikonal_matrix][i] + x[fill_prime_matrix][i];
-//                  double alpha = ls->Length_Scale / 2;
-//                  double heaviside = heaviside_smooth(field, NULL, alpha);
-//                  x[pg->imtrx][i] = heaviside;
-//                  xdot[pg->imtrx][i] = (x[pg->imtrx][i] - x_old[pg->imtrx][i]) * (1.0 + 2 * theta) / delta_t;
-//                }
-//            }
-
-#if 0
-	  if (upd->ep[pg->imtrx][HEAVISIDE_SMOOTH] > -1)
-	    {
-		int heaviside_projection_matrix = -1;
-		for (int i = 0; i < upd->Total_Num_Matrices; i++)
-		  {
-		    if (upd->ep[i][R_HEAVISIDE_PROJECTION] > -1)
-		      {
-			heaviside_projection_matrix = i;
-			break;
-		      }
-		  }
-
-		if (heaviside_projection_matrix >= 0)
-		  {
-		    dcopy1(numProcUnknowns[pg->imtrx], x[heaviside_projection_matrix], x[pg->imtrx]);
-		  }
-		else
-		  {
-		    int eikonal_matrix = 0;
-		    int fill_prime_matrix = 0;
-		    for (int i = 0; i < upd->Total_Num_Matrices; i++)
-		      {
-			if (upd->ep[i][R_EIKONAL] > -1)
-			  {
-			    eikonal_matrix = i;
-			    break;
-			  }
-		      }
-		    for (int i = 0; i < upd->Total_Num_Matrices; i++)
-		      {
-			if (upd->ep[i][R_FILL_PRIME] > -1)
-			  {
-			    fill_prime_matrix = i;
-			    break;
-			  }
-		      }
-		    for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
-		      {
-            double field = x[Fill_Matrix][i] + x[fill_prime_matrix][i];
-			double alpha = ls->Length_Scale / 2;
-			double heaviside = heaviside_smooth(field, NULL, alpha);
-			x[pg->imtrx][i] = heaviside;
-			xdot[pg->imtrx][i] = (x[pg->imtrx][i] - x_old[pg->imtrx][i]) * (1.0 + 2 * theta) / delta_t;
-		      }
-		  }
-	    }
-#endif
-
-	  if (upd->ep[pg->imtrx][R_FILL_PRIME] > -1)
-	    {
-	      int eikonal_matrix = 0;
-	      for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++)
-		{
-		  if (upd->ep[imtrx][R_EIKONAL] > -1)
-		    {
-		      eikonal_matrix = imtrx;
-		      break;
-		    }
-		}
-	      for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++)
-		{
-          x[Fill_Matrix][i] = x[Fill_Matrix][i] + x[pg->imtrx][i];
-		  xdot[Fill_Matrix][i] = (x[Fill_Matrix][i] - x_old[Fill_Matrix][i]) * (1.0 + 2 * theta) / delta_t;
-		}
-	    }
-	  }
-
-        sprintf(data_name, "after_fill.%d.dat", n);
-        save_data(data_name, x[Fill_Matrix], numProcUnknowns[Fill_Matrix]);
-
-
-          sprintf(data_name, "after_smooth.%d.dat", n);
-          save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smooth_matrix]);
 	
         /*
          *   save xdot to xdot_old for next time step
          */
         for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-
           dcopy1(numProcUnknowns[pg->imtrx], xdot_old[pg->imtrx],
               xdot_older[pg->imtrx]);
           if (tran->solid_inertia)
@@ -2503,9 +2110,7 @@ save_data(data_name, x[heaviside_smooth_matrix], numProcUnknowns[heaviside_smoot
 	    dcopy1(matrix_nAC[pg->imtrx], x_AC_old[pg->imtrx],     x_AC_older[pg->imtrx]);
 	    dcopy1(matrix_nAC[pg->imtrx], x_AC[pg->imtrx],         x_AC_old[pg->imtrx]);
 	  }
-	  exchange_dof(cx[pg->imtrx],dpi,x[pg->imtrx], pg->imtrx);
-	  exchange_dof(cx[pg->imtrx],dpi,x_old[pg->imtrx], pg->imtrx);
-	  exchange_dof(cx[pg->imtrx],dpi,xdot[pg->imtrx], pg->imtrx);
+
         }
 	
       } /*  if(converged && success_dt) */

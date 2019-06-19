@@ -1,13 +1,13 @@
 cmake_minimum_required (VERSION 3.10)
 cmake_policy(VERSION 3.10)
 
+project(goma)
+
 enable_language(C)
 enable_language(CXX)
 enable_language(Fortran)
 
 set(CMAKE_CXX_STANDARD 11)
-
-set(PROJECT_NAME goma)
 
 SET(CMAKE_PREFIX_PATH ${Trilinos_PREFIX} ${CMAKE_PREFIX_PATH})
 
@@ -89,8 +89,17 @@ option(PARALLEL "PARALLEL" ON)
 if(PARALLEL)
     add_definitions(-DPARALLEL)
 endif()
-option(EIGEN_SERIAL "EIGEN_SERIAL" ON)
+if (ARPACK_LIBRARY)
+    option(EIGEN_SERIAL "EIGEN_SERIAL" ON)
+else()
+    option(EIGEN_SERIAL "EIGEN_SERIAL" OFF)
+endif()
 option(EIGEN_PARALLEL "EIGEN_PARALLEL" OFF)
+
+option(FP_EXCEPT "FP_EXCEPT" OFF)
+if(FP_EXCEPT)
+    add_definitions(-DFP_EXCEPT)
+endif()
 if(EIGEN_PARALLEL)
     if(NOT ${ARPACK_FOUND})
         message(FATAL_ERROR "Cannot use EIGEN_PARALLEL without ARPACK Library")
