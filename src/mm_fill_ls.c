@@ -68,6 +68,8 @@
 
 #include "sl_util.h"
 
+#include "mm_fill_fill_conservative.h"
+
 #define _MM_FILL_LS_C
 #include "goma.h"
 
@@ -10986,6 +10988,7 @@ cfl_eikonal( double x[], double x_old[], double x_older[],
 
           for( ielem = e_start ; ielem < e_end ; ielem++)
             {
+              double wGw = 0;
 
 
               load_elem_dofptr(ielem, exo, x, x_old,
@@ -11030,33 +11033,36 @@ cfl_eikonal( double x[], double x_old[], double x_older[],
 
 		      double inv_eikonal_norm = 1 / eikonal_norm;
 
-		      double alpha = h_elem;
-		      double sign = fv_old->eikonal / sqrt(fv_old->eikonal*fv_old->eikonal + eikonal_norm*eikonal_norm*alpha*alpha);//2*lsi->H-1;//fv->F / sqrt(fv->F*fv->F + lsi->gfmag*lsi->gfmag*alpha*alpha);
-
+                      double alpha = h_elem * 2;
+                      double sign = heaviside_smooth(fv->F, NULL, alpha);
 		      double w[DIM];
 		      for (int i = 0; i < dim; i++)
 			{
 			  w[i] = sign * fv->grad_eikonal[i] * inv_eikonal_norm;
 			}
 
-		      vnorm = 0;
-		      if (1 || fabs(fv->eikonal) < 5*h_elem)
-			{
-			  got_interface = 1;
-			  for (int a = 0; a < dim; a++)
-			    {
-			      vnorm += w[a]*w[a];
-			    }
-			  vnorm = sqrt(vnorm);
-			}
-		      /* prediction of normal velocity */
-		      sumv += fv->wt * vnorm;
-		      sum += fv->wt;
+                      double G[DIM][DIM];
+
+                      for (int i = 0; i < DIM; i++) {
+                        for (int j = 0; j < DIM; j++) {
+                          G[i][j] = 0;
+                          for (int k = 0; k < DIM; k++) {
+                            G[i][j] += bf[EIKONAL]->B[k][i] * bf[EIKONAL]->B[k][j];
+                          }
+                        }
+                      }
+
+                      wGw = 0;
+                      for (int i = 0; i < DIM; i++) {
+                        for (int j = 0; j < dim; j++) {
+                          wGw += w[i] * G[i][j] * w[j];
+                        }
+                      }
 		    }
 
-		  if ( ( sumv != 0. ) && (sum != 0. ) )
+                  if ( ( wGw > 1e-14 ) )
 		    {
-		      dt = fabs( h_elem * sum / sumv );
+                      dt = fabs( 2 * 1/sqrt(wGw));
 		      if ( count++ == 0 || dt < min_dt ) min_dt = dt;
 		    }
 	    }

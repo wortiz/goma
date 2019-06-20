@@ -9139,6 +9139,11 @@ load_fv(void)
       v = EIKONAL;
       scalar_fv_fill(esp->eikonal, esp_dot->eikonal, esp_old->eikonal, bf[v]->phi, ei[pd->mi[v]]->dof[v],
           &(fv->eikonal), &(fv_dot->eikonal), &(fv_old->eikonal));
+      fv_dot_old->eikonal = 0;
+      for (int i = 0; i < ei[pd->mi[v]]->dof[v]; i++) {
+        fv_dot_old->eikonal += *(pg->matrices[pd->mi[v]].xdot_old - pg->matrices[pd->mi[v]].xdot +
+                                 esp_dot->eikonal[i]) * bf[v]->phi[i];
+      }
       stateVector[v] = fv->eikonal;
     }
 
