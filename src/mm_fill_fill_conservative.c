@@ -274,7 +274,7 @@ int assemble_eikonal(int dim, double tt, double dt, PG_DATA *pg_data)
     kappa_bg = 0.01 * h_elem;
   }
 
-  double lambda = 10 * h_elem;
+  double lambda = 100 * h_elem;
 
   if (af->Assemble_Residual) {
     int peqn = upd->ep[pg->imtrx][eqn];
@@ -298,7 +298,7 @@ int assemble_eikonal(int dim, double tt, double dt, PG_DATA *pg_data)
       //      }
 
       double shock_capturing = 0;
-#define EIK_SHOCK_CAPTURING
+#undef EIK_SHOCK_CAPTURING
 #ifdef EIK_SHOCK_CAPTURING
       for (int a = 0; a < dim; a++) {
         shock_capturing +=
@@ -309,7 +309,7 @@ int assemble_eikonal(int dim, double tt, double dt, PG_DATA *pg_data)
 #endif
 
       double supg = 0;
-#define EIK_SUPG
+#undef EIK_SUPG
 #ifdef EIK_SUPG
       for (int a = 0; a < dim; a++) {
         supg += delta * residual_strong * w[a] * bf[eqn]->grad_phi[i][a];

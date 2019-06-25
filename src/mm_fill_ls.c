@@ -75,6 +75,7 @@
 
 #include "sl_epetra_interface.h"
 #include "sl_epetra_util.h"
+#include <assert.h>
 
 /*
 static int interface_on_side 
@@ -119,6 +120,8 @@ static double gradient_norm_err
         Exo_DB *,
         Dpi *,
         dbl  );
+
+static double calc_distance_line(double *p1, double *p2, double *r);
 
 static int
 Hrenorm_simplemass( Exo_DB *exo,
@@ -2003,10 +2006,20 @@ surf_based_initialization ( double *x,
 			  closest->closest_point->distance *= sign;
 		  }
 		  
-          if (delta_x != NULL) delta_x[ie] = x[ie] - closest->closest_point->distance;
-          if (xdot != NULL) xdot[ie] -= delta_x[ie] * (1.0 + 2 * theta) / delta_t;
-		  
-          x[ie] = closest->closest_point->distance;
+                  int node_is_frozen = 0;
+                  for (int ielem = exo->node_elem_pntr[I]; ielem < exo->node_elem_pntr[I+1]; ielem++) {
+                    int elem = exo->node_elem_list[ielem];
+                    if (elem_near_isosurface ( elem, x, exo, ls->var, 0)) {
+                      node_is_frozen = 1;
+                    }
+                  }
+
+                  if (!node_is_frozen) {
+                    if (delta_x != NULL) delta_x[ie] = x[ie] - closest->closest_point->distance;
+                    if (xdot != NULL) xdot[ie] -= delta_x[ie] * (1.0 + 2 * theta) / delta_t;
+
+                    x[ie] = closest->closest_point->distance;
+                  }
           
 	  }
   }
@@ -2073,6 +2086,19 @@ free_subsurfs ( struct LS_Surf_List *list )
       
     }
 return;
+}
+
+static double calc_distance_line(double *p1, double *p2, double *r) {
+  double from_line = fabs((p2[1] - p1[1]) * r[0] - (p2[0] - p1[0]) * r[1] + p2[0] * p1[1] -
+              p2[1] * p1[0]) /
+         sqrt((p2[1] - p1[1]) * (p2[1] - p1[1]) +
+              (p2[0] - p1[0]) * (p2[0] - p1[0]));
+  double from_p1 = sqrt((r[1] - p1[1]) * (r[1] - p1[1]) +
+      (r[0] - p1[0]) * (r[0] - p1[0]));
+  double from_p2 = sqrt((r[1] - p2[1]) * (r[1] - p2[1]) +
+      (r[0] - p2[0]) * (r[0] - p2[0]));
+
+  return fmin(fmin(from_line, from_p1), from_p2);
 }
 
 struct LS_Surf *
@@ -2291,8 +2317,16 @@ find_surf_closest_point ( struct LS_Surf *surf,
  
             d[0] = r[0] - p1[0];
             d[1] = r[1] - p1[1];
+
+            double ray_nm[2];
+            ray_nm[0] = ray[0];
+            ray_nm[1] = ray[1];
+            normalize_really_simple_vector(ray_nm, 2);
  
-            d_dot_ray = dot_product( 2, d, ray );
+            d_dot_ray = dot_product( 2, d, ray_nm );
+            d_dot_ray = dot_product( 2, d, ray);
+
+            int assert_flag = 0;
  
             if (d_dot_ray <= 0.) /* we are closest to point p1 */
               {
@@ -2310,6 +2344,7 @@ find_surf_closest_point ( struct LS_Surf *surf,
                   }
                 else /* we are closest to some point on the segment */
                   {
+                    assert_flag = 1;
                     fraction = d_dot_ray / ray_mag_squared;
                     d[0] -= fraction * ray[0];
                     d[1] -= fraction * ray[1];
@@ -2318,6 +2353,22 @@ find_surf_closest_point ( struct LS_Surf *surf,
               }
 	      
 	    distance = sqrt(d[0]*d[0] + d[1]*d[1]);
+//            if (assert_flag) {
+//              double distance_line = calc_distance_line(p1, p2, r);
+//              if (!(fabs(distance - distance_line) < 1e-14)) {
+//                double from_line = fabs((p2[1] - p1[1]) * r[0] - (p2[0] - p1[0]) * r[1] + p2[0] * p1[1] -
+//                            p2[1] * p1[0]) /
+//                       sqrt((p2[1] - p1[1]) * (p2[1] - p1[1]) +
+//                            (p2[0] - p1[0]) * (p2[0] - p1[0]));
+//                double from_p1 = sqrt((r[1] - p1[1]) * (r[1] - p1[1]) +
+//                    (r[0] - p1[0]) * (r[0] - p1[0]));
+//                double from_p2 = sqrt((r[1] - p2[1]) * (r[1] - p2[1]) +
+//                    (r[0] - p2[0]) * (r[0] - p2[0]));
+
+//                printf("line %g, p1 %g, p2 %g\n", from_line, from_p1, from_p2);
+//                assert(0);
+//              }
+//            }
 	    d_dot_n = dot_product( 2, d, ray_normal );
 	    if (d_dot_n < 0) distance *= -1.;
  
@@ -3265,6 +3316,84 @@ elem_on_isosurface ( int elem,
 
   return (FALSE);
 }
+
+int
+elem_near_isosurface ( int elem,
+                     double x[],
+                     const Exo_DB* exo,
+                     int isovar,
+                     double isoval )
+{
+  int i, I;
+  int iconn_ptr = exo->elem_ptr[elem];
+  int dofs;
+  double f[MDE];
+  int ielem_type, ielem_shape, interpolation;
+  int ebn, mn;
+
+  ebn = find_elemblock_index(elem, exo);
+  mn = Matilda[ebn];
+  if (!(pd_glob[mn]->v[pg->imtrx][isovar])) return (FALSE);
+
+  ielem_type = Elem_Type(exo, elem);
+  ielem_shape  = type2shape(ielem_type);
+  interpolation = pd_glob[mn]->i[pg->imtrx][isovar];
+  dofs = getdofs(ielem_shape, interpolation);
+
+  I = exo->node_list[ iconn_ptr + 0 ];
+
+  f[0] = x[Index_Solution(I, isovar, 0, 0, -2, pg->imtrx)] - isoval;
+
+  /* if there is a zero crossing, somebody must have a different
+   * sign than node 0
+   */
+  for ( i=1 ; i< dofs; i++)
+    {
+      I = exo->node_list[ iconn_ptr + i ];
+
+      f[i] = x[Index_Solution(I, isovar, 0, 0, -2, pg->imtrx)] - isoval;
+
+      if (f[i] < (0.01*0.5))
+        {
+          return ( TRUE );
+        }
+    }
+
+/* DRN - this is somewhat experimental */
+#if 0
+  /* look for crossings that don't intersect a side but don't change the sign
+     of any nodes
+   */
+  switch ( interpolation ) {
+    case I_Q1:
+      return FALSE;
+    case I_Q2:
+      switch ( ielem_shape ) {
+        case QUADRILATERAL:
+          {
+            int iside;
+            int nodes_per_side;
+            int lnn[3];
+            for ( iside=0; iside<4; iside++ )
+              {
+                get_side_info( ielem_type, iside+1, &nodes_per_side, lnn);
+                if ( fabs(f[lnn[2]]) < 0.25*fabs(f[lnn[0]]+f[lnn[1]]) - 0.5*sqrt(f[lnn[0]]*f[lnn[1]]) )
+                  {
+#if 0
+                    DPRINTF(stderr,"Yikes! Zero crossing in elem_on_isosurface for ielem=%d with all nodes on one side!!!\n",elem);
+#endif
+                    return TRUE;
+                  }
+              }
+            return FALSE;
+          }
+      }
+  }
+#endif
+
+  return (FALSE);
+}
+
 
 /* 
  * Following examines an element, elem, and computes the
@@ -4812,6 +4941,9 @@ find_quad_facets( struct LS_Surf_List *list,
                point_on_ca_boundary( J, exo ) ) inflection = TRUE;
                
 	  map_local_coordinates( xi, x );
+          if (fabs(x[0] -0.515523 ) < 1e-4 && fabs(x[1] - 0.85) < 1e-4) {
+            printf("Here\n");
+          }
           vertex[vert_count] = create_surf_point ( x, ei[pg->imtrx]->ielem, xi, inflection );
           
 	  vert_count++;

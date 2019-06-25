@@ -1028,6 +1028,107 @@ matrix_fill(
   
   /* Loop over all the Volume Quadrature integration points */
 
+  double projected_eikonal[MDE];
+  double d_projected_eikonal[MDE][MDE];
+
+
+  if (pde[R_FILL]) {
+    double MM[MDE];
+    double rhs[MDE];
+    double d_rhs[MDE][MDE];
+    for (int i = 0; i < MDE; i++) {
+      MM[i] = 0;
+      rhs[i] = 0;
+      for (int k = 0; k < MDE; k++) {
+        d_rhs[i][k] = 0;
+      }
+    }
+
+    for (int ip = 0; ip < ip_total; ip++) {
+      find_stu(ip, ielem_type, &s, &t, &u); /* find quadrature point */
+      wt = Gq_weight (ip, ielem_type); /* find quadrature weights for */
+
+      xi[0] = s;
+      xi[1] = t;
+      xi[2] = u;
+
+      fv->wt = wt;
+      err = load_basis_functions(xi, bfd);
+      EH( err, "problem from load_basis_functions");
+
+      err = beer_belly();
+      EH( err, "beer_belly");
+      if( neg_elem_volume ) return;
+      if( zero_detJ ) return;
+
+      err = load_fv();
+      EH( err, "load_fv");
+
+      err = load_bf_grad();
+      EH( err, "load_bf_grad");
+
+      err = load_fv_grads();
+      EH( err, "load_fv_grads");
+
+      int eqn = R_FILL;
+      int dim = pd->Num_Dim;
+
+      double eikonal_norm = 0;
+      double eikonal_norm_old = 0;
+      for (int i = 0; i < dim; i++) {
+        eikonal_norm += fv->grad_F[i] * fv->grad_F[i];
+        eikonal_norm_old += fv_old->grad_F[i] * fv_old->grad_F[i];
+      }
+      eikonal_norm = sqrt(eikonal_norm);
+      eikonal_norm_old = sqrt(eikonal_norm_old);
+      double inv_eikonal_norm = 1 / eikonal_norm;
+      double inv_eikonal_norm_old = 1 / eikonal_norm_old;
+
+      double d_eikonal_norm[MDE];
+      for (int j = 0; j < ei[pg->imtrx]->dof[EIKONAL]; j++) {
+        d_eikonal_norm[j] = 0;
+        for (int i = 0; i < dim; i++) {
+          d_eikonal_norm[j] +=
+              fv->grad_F[i] * bf[EIKONAL]->grad_phi[j][i] * inv_eikonal_norm;
+        }
+      }
+
+      double h_elem = 0.;
+      for (int a = 0; a < ei[pg->imtrx]->ielem_dim; a++)
+        h_elem += pg_data.hsquared[a];
+      /* This is the size of the element */
+      h_elem = sqrt(h_elem / ((double)ei[pg->imtrx]->ielem_dim));
+
+      double vnorm = 0;
+      for (int a = 0; a < dim; a++) {
+        vnorm += fv->v[a] * fv->v[a];
+      }
+      vnorm = sqrt(vnorm);
+
+      double lambda = 0.8 * h_elem * h_elem * vnorm  * 0.5;
+      for (int i = 0; i < ei[pg->imtrx]->dof[R_FILL]; i++) {
+//        rhs[i] += fv->wt * bf[R_FILL]->detJ * bf[R_FILL]->phi[i] * (eikonal_norm - 1);
+        rhs[i] += fv->wt * bf[R_FILL]->detJ * bf[R_FILL]->phi[i] * lambda * (sqrt(fv->grad_F[0] * fv->grad_F[0] + fv->grad_F[1] * fv->grad_F[1]) - 1);
+        for (int k = 0; k <  ei[pg->imtrx]->dof[R_FILL]; k++) {
+//          d_rhs[i][k] += fv->wt * bf[R_FILL]->detJ * bf[R_FILL]->phi[i] * d_eikonal_norm[k];
+          d_rhs[i][k] += fv->wt * bf[R_FILL]->detJ * bf[R_FILL]->phi[i] * lambda * (2*bf[R_FILL]->grad_phi[k][0]*fv->grad_F[0] + 2*bf[R_FILL]->grad_phi[k][1]*fv->grad_F[1])/(2*sqrt(fv->grad_F[0] * fv->grad_F[0] + fv->grad_F[1] * fv->grad_F[1]));
+        }
+        for (int j = 0; j < ei[pg->imtrx]->dof[R_FILL]; j++) {
+          MM[i] += fv->wt * bf[R_FILL]->detJ * bf[R_FILL]->phi[i] * bf[R_FILL]->phi[j];
+        }
+      }
+
+    }
+
+    for (int i = 0; i < ei[pg->imtrx]->dof[R_FILL]; i++) {
+      projected_eikonal[i] = rhs[i] / MM[i];
+      for (int k = 0; k < ei[pg->imtrx]->dof[R_FILL]; k++) {
+        d_projected_eikonal[i][k] = d_rhs[i][k] / MM[i];
+      }
+    }
+
+  }
+
   if( pde[R_FILL] )  /* No need to do this loop if there is no LS/FILL variable OK */
     {
       for (ip = 0; ip < ip_total; ip++)
@@ -1160,7 +1261,7 @@ matrix_fill(
 	    }
 	  else if(  tran->Fill_Equation == FILL_EQN_ADVECT )
 	    {
-	      err = assemble_fill(theta, delta_t, pg_data.hsquared, pg_data.hh, pg_data.dh_dxnode, R_FILL, xi, exo, time_value);
+              err = assemble_fill(theta, delta_t, pg_data.hsquared, pg_data.hh, pg_data.dh_dxnode, R_FILL, xi, exo, time_value, projected_eikonal, d_projected_eikonal);
 	      EH( err, "assemble_fill");
 #ifdef CHECK_FINITE
 	      CHECKFINITE("assemble_fill");
@@ -1170,7 +1271,7 @@ matrix_fill(
 		  ls_old = ls;
 		  ls = pfd->ls[0]; 
 		  err = assemble_fill(theta, delta_t, pg_data.hsquared, pg_data.hh, 
-				      pg_data.dh_dxnode, R_PHASE1, xi, exo, time_value);
+                                      pg_data.dh_dxnode, R_PHASE1, xi, exo, time_value, projected_eikonal, d_projected_eikonal);
 		  ls = ls_old; /*Make things right again */
 		  EH( err, "assemble_fill");
 #ifdef CHECK_FINITE
@@ -3822,8 +3923,7 @@ zero_lec(void)
       **************************************************************************/
 {
   memset(lec->R, 0, sizeof(lec->R));  
-  memset(lec->J, 0, sizeof(lec->J)); 
-  memset(lec->J_stress_neighbor, 0, sizeof(lec->J_stress_neighbor));
+  memset(lec->J, 0, sizeof(lec->J));
 }
 /****************************************************************************/
 

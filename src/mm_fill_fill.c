@@ -141,7 +141,10 @@ assemble_fill(double tt,
 	      const int applied_eqn,
 	      double xi[DIM],
 	      Exo_DB *exo,
-	      double time
+              double time,
+              double projected_eikonal[MDE],
+              double d_projected_eikonal[MDE][MDE]
+
 	      )
 {
 /******************************************************************************
@@ -391,6 +394,7 @@ assemble_fill(double tt,
     }
   
   /* Get the SUPG stuff, if necessary. */
+  supg_term = 0;
   if ( Fill_Weight_Fcn == FILL_WEIGHT_SUPG )
     {
       memset(vcent,          0, sizeof(double)*DIM);
@@ -399,8 +403,27 @@ assemble_fill(double tt,
       memset(d_supg_term_dx, 0, sizeof(double)*MDE*DIM);
       memset(vc_dot_Dphi, 0, sizeof(double)*MDE);
       supg_term = 0.;
-      get_supg_stuff(&supg_term, vcent, d_vcent_du, d_supg_term_du, d_supg_term_dx,
-		     pd->e[pg->imtrx][R_MESH1]);
+//      get_supg_stuff(&supg_term, vcent, d_vcent_du, d_supg_term_du, d_supg_term_dx,
+//		     pd->e[pg->imtrx][R_MESH1]);
+      double h_elem = 0.;
+      for (int a = 0; a < ei[pg->imtrx]->ielem_dim; a++)
+        h_elem += hsquared[a];
+      /* This is the size of the element */
+      h_elem = sqrt(h_elem / ((double)ei[pg->imtrx]->ielem_dim));
+
+      double vnorm = 0;
+      for (int a = 0; a < dim; a++) {
+        vnorm += fv->v[a] * fv->v[a];
+      }
+      vnorm = sqrt(vnorm);
+
+      if (vnorm > 0) {
+        supg_term = 0.5*h_elem/vnorm;
+      }
+      else {
+        supg_term = 0.5*h_elem;
+      }
+
     }
 
   /* Compute and save v.grad(phi) and vcent.grad(phi). */
@@ -426,7 +449,37 @@ assemble_fill(double tt,
     }
   vmag_old = sqrt( vmag_old );
   tau_gls = 1./sqrt((2./dt)*(2./dt) + (2.*vmag_old/h_elem)*(2.*vmag_old/h_elem));
-		
+
+  double eikonal_norm = 0;
+  for (int i = 0; i < pd->Num_Dim; i++) {
+    eikonal_norm += fv->grad_F[i] * fv->grad_F[i];
+  }
+  eikonal_norm = sqrt(eikonal_norm);
+
+  double inv_eikonal_norm = 1/eikonal_norm;
+
+  double d_eikonal_norm[MDE];
+  for (int j = 0; j < ei[pg->imtrx]->dof[EIKONAL]; j++) {
+    d_eikonal_norm[j] = 0;
+    for (int i = 0; i < dim; i++) {
+      d_eikonal_norm[j] +=
+          fv->grad_F[i] * bf[EIKONAL]->grad_phi[j][i] * inv_eikonal_norm;
+    }
+  }
+
+  double p_e = 0;
+  double d_p_e[MDE];
+  for (int i = 0; i < ei[pg->imtrx]->dof[R_FILL]; i++) {
+    p_e += projected_eikonal[i] * bf[R_FILL]->phi[i];
+
+  }
+  for (int k = 0; k < ei[pg->imtrx]->dof[R_FILL]; k++) {
+    d_p_e[k] = 0;
+    for (int i = 0; i < ei[pg->imtrx]->dof[R_FILL]; i++) {
+      d_p_e[k] += d_projected_eikonal[i][k] * bf[R_FILL]->phi[i];
+    }
+  }
+
   /**********************************************************************
    **********************************************************************
    ** Residuals
@@ -440,6 +493,7 @@ assemble_fill(double tt,
       	else var  = ls->var;  
       for( i=0; i < ei[pg->imtrx]->dof[eqn]; i++ )
 	{
+          double source = 0;
 	  phi_i = bf[eqn]->phi[i];
 	  
 	  /************************************************************
@@ -511,10 +565,25 @@ assemble_fill(double tt,
 	      break;
 
 	    case FILL_WEIGHT_SUPG:  /* Streamline Upwind Petrov Galerkin (SUPG) */
+              {
+                double wt_func = phi_i;
+                for (int a = 0; a < dim; a++) {
+                  wt_func += supg_term * fv->v[a] * bf[eqn]->grad_phi[i][a];
+                }
 
-	      mass = F_dot  * (vc_dot_Dphi[i] * supg_term + phi_i);   
-	      advection = v_dot_DF  * (vc_dot_Dphi[i] * supg_term + phi_i);
+                mass = fv_dot->F * wt_func;
+                advection = 0;
+                for (int a = 0; a < dim; a++) {
+                  advection += fv->v[a] * fv->grad_F[a] * wt_func;
+                }
 
+                source = 0;
+                for (int a = 0; a < dim; a++) {
+//                  source += p_e * fv->grad_F[a] * inv_eikonal_norm * bf[eqn]->grad_phi[i][a];
+                  double tmp = 1.0 / sqrt(fv->grad_F[0] * fv->grad_F[0] + fv->grad_F[1] * fv->grad_F[1]);
+                  source += p_e * fv->grad_F[a] * tmp  * bf[eqn]->grad_phi[i][a];
+                }
+              }
 	      break;
 
 	    default:
@@ -528,7 +597,7 @@ assemble_fill(double tt,
 	  /* hang on to the integrand (without the "dV") for use below. */
 	  rmp[i] = mass + advection;
 
-	  lec->R[peqn][i] += (mass + advection) * wt * det_J * h3;
+          lec->R[peqn][i] += (mass + advection + source) * wt * det_J * h3;
 	  
 	}
     }
@@ -592,6 +661,7 @@ assemble_fill(double tt,
 	      pvar = upd->vp[pg->imtrx][var];
 	      for( j=0; j < ei[pg->imtrx]->dof[var]; j++) 
 		{
+                  double source = 0;
 		  phi_j = bf[eqn]->phi[j];
 
 		  /* So: grad_phi_j[a] == bf[var]->grad_phi[j][a] */
@@ -641,12 +711,33 @@ assemble_fill(double tt,
 		    case FILL_WEIGHT_G:  /* Plain ol' Galerkin method */
 		    case FILL_WEIGHT_SUPG:  /* Streamline Upwind Petrov Galerkin (SUPG) */
 
-                      mass = ( phi_j * (1. + 2.*tt) * dtinv ) * wfcn;
-		      advection = v_dot_Dphi[j] * wfcn;
-		      if (lubon) {
-			for (a = 0; a < dim; a++) advection += LubAux->dv_avg_df[a][j] * grad_F[a] * wfcn;
-		      }
+                  {
+                    double wt_func = phi_i;
+                    for (int a = 0; a < dim; a++) {
+                      wt_func += supg_term * fv->v[a] * bf[eqn]->grad_phi[i][a];
+                    }
 
+                    mass = phi_j * (1. + 2.*tt) * dtinv * wt_func;
+                    advection = 0;
+                    for (int a = 0; a < dim; a++) {
+                      advection += fv->v[a] * bf[var]->grad_phi[j][a] * wt_func;
+                    }
+
+                    source = 0;
+                    for (int a = 0; a < dim; a++) {
+//                      source += d_p_e[j] * fv->grad_F[a] * inv_eikonal_norm * bf[eqn]->grad_phi[i][a];
+//                      source += p_e * bf[eqn]->grad_phi[j][a] * inv_eikonal_norm * bf[eqn]->grad_phi[i][a];
+//                      source += p_e * fv->grad_F[a] * d_eikonal_norm[j] * inv_eikonal_norm * inv_eikonal_norm * bf[eqn]->grad_phi[i][a];
+                      double tmp = 1.0 / sqrt(fv->grad_F[0] * fv->grad_F[0] + fv->grad_F[1] * fv->grad_F[1]);
+                      source += p_e * bf[eqn]->grad_phi[j][a] * tmp * bf[eqn]->grad_phi[i][a];
+                      source += d_p_e[j] * fv->grad_F[a] * tmp * bf[eqn]->grad_phi[i][a];
+                      double d_tmp = (1.0/(fv->grad_F[0] * fv->grad_F[0] + fv->grad_F[1] * fv->grad_F[1])) * tmp*(2*bf[R_FILL]->grad_phi[j][0]*fv->grad_F[0] + 2*bf[R_FILL]->grad_phi[j][1]*fv->grad_F[1]);
+                      source += p_e * fv->grad_F[a] * d_tmp * bf[eqn]->grad_phi[i][a];
+//                      source += - 0.5 * d_p_e[j] * fv->grad_F[a] * (2*bf[var]->grad_phi[j][0] * fv->grad_F[0] + 2*bf[var]->grad_phi[j][1] * fv->grad_F[1]) / ((fv->grad_F[0] * fv->grad_F[0] + fv->grad_F[1] * fv->grad_F[1]) *sqrt((fv->grad_F[0] * fv->grad_F[0] + fv->grad_F[1] * fv->grad_F[1]))) * bf[eqn]->grad_phi[i][a];
+
+                    }
+
+                  }
 		      break;
 
 		    default:
@@ -658,7 +749,7 @@ assemble_fill(double tt,
 		  mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
 	          advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
-		  lec->J[peqn][pvar][i][j] += (mass + advection) * wt * h3 * det_J;		  
+                  lec->J[peqn][pvar][i][j] += (mass + advection + source) * wt * h3 * det_J;
 
 		} /* for: FILL DoFs */
 

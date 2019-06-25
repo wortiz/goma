@@ -1754,6 +1754,18 @@ rd_timeint_specs(FILE *ifp,
 	  {
 	    tran->Fill_Weight_Fcn = FILL_WEIGHT_EXPLICIT;
 	  }
+        else if ( strcmp( input, "SUPG_SHAKIB") == 0 )
+          {
+            tran->Fill_Weight_Fcn = FILL_WEIGHT_SUPG_SHAKIB;
+          }
+        else if ( strcmp( input, "SUPG_ELEMENT") == 0 )
+        {
+          tran->Fill_Weight_Fcn = FILL_WEIGHT_SUPG_ELEMENT;
+        }
+        else if ( strcmp( input, "TOURE") == 0 )
+        {
+          tran->Fill_Weight_Fcn = FILL_WEIGHT_TOURE;
+        }
 	else
 	  {
 	    EH(-1, "Fill Weight Function not known.\n");

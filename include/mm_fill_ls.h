@@ -107,6 +107,13 @@ EXTERN void surf_based_initialization
          double,
          double );
 
+int
+elem_near_isosurface ( int elem,
+                     double x[],
+                     const Exo_DB* exo,
+                     int isovar,
+                     double isoval );
+
 EXTERN void free_surf_list
 ( struct LS_Surf_List **);
 

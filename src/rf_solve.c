@@ -2583,7 +2583,7 @@ DPRINTF(stderr,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 	 * current timestep, n = timestep. */ 
 	if(Particle_Dynamics)
 	  err = compute_particles(exo, x, x_old, xdot, xdot_old, resid_vector, time, delta_t, n);
-	EH(err, "Error performing particle calculations.");
+        EH(err, "Error performing particle calculations.");
 
 	error = 0;
 	if (i_print) {
@@ -2642,6 +2642,8 @@ DPRINTF(stderr,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 	      }
 
 	  }
+
+
 	  /* Print out values of extra unknowns from augmenting conditions */
 	  if (nAC > 0) {
 	    DPRINTF(stderr, "\n------------------------------\n");
@@ -2699,6 +2701,88 @@ DPRINTF(stderr,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 	  }
 
 	} /* if(i_print) */
+
+        if (converged && ls != NULL)
+        {
+          int ibc, ls_adc_event;
+                /* Resolve LS_ADC boundaries ( Attach/Dewet/Coalesce ) */
+                for( ibc=0;ibc<Num_BC;ibc++)
+                {
+                  ls_adc_event = FALSE;
+                        switch ( BC_Types[ibc].BC_Name )
+                        {
+                        case LS_ADC_OLD_BC:
+                                resolve_ls_adc_old ( &(BC_Types[ibc]), exo, x, delta_t, &ls_adc_event, nt );
+                                break;
+                        case LS_ADC_BC:
+                                resolve_ls_adc ( ls->last_surf_list->start->subsurf_list, &(BC_Types[ibc]), exo, x, delta_t, &ls_adc_event, nt );
+
+                                break;
+                        default:
+                                break;
+                        }
+#ifdef PARALLEL
+                    if (ls_adc_event)
+                      {
+                        exchange_dof( cx[0], dpi, x , 0);
+                      }
+#endif
+                  if ( ls_adc_event && tran->Restart_Time_Integ_After_Renorm )
+                         {
+                      /* like a restart */
+                      discard_previous_time_step(numProcUnknowns, x, x_old,x_older,
+                                      x_oldest, xdot,xdot_old,xdot_older);
+                      last_renorm_nt = nt;
+                      if ( delta_t_new > fabs(Delta_t0) )
+                              delta_t_new *= tran->time_step_decelerator;
+                        }
+
+                }
+
+                /* Check for renormalization  */
+
+
+                ls->Renorm_Countdown -= 1;
+
+                switch (ls->Renorm_Method)
+                {
+
+                        case HUYGENS:
+                        case HUYGENS_C:
+                        case HUYGENS_MASS_ITER:
+                                Renorm_Now = ( ls->Renorm_Freq != 0 &&
+                                        ls->Renorm_Countdown == 0 )
+                                        || ls_adc_event == TRUE;
+
+                                did_renorm = huygens_renormalization(x, num_total_nodes,
+                                         exo, cx[0], dpi, num_fill_unknowns, numProcUnknowns,
+                                          time2, Renorm_Now);
+                                if ( did_renorm )
+                                  { exchange_dof(cx[0], dpi, x, 0);	}
+                                if ( did_renorm && tran->Restart_Time_Integ_After_Renorm )
+                                {
+                                        /* like a restart */
+                                        discard_previous_time_step(numProcUnknowns, x, x_old,x_older,x_oldest, xdot,xdot_old,xdot_older);
+                                        last_renorm_nt = nt;
+                                        if ( delta_t_new > fabs(Delta_t0) ) delta_t_new *= tran->time_step_decelerator;
+                                }
+
+                                        break;
+
+                        case CORRECT:
+                                EH(-1,"Use of \"CORRECT\" is obsolete.");
+                                break;
+                        default:
+                                break;
+                }
+
+                if( ls->Sat_Hyst_Renorm_Lockout > 0 ) {
+                  af->Sat_hyst_reevaluate = FALSE;
+                  ls->Sat_Hyst_Renorm_Lockout -= 1;
+                }
+
+        }
+
 	evpl_glob[0]->update_flag = 1; 
 
         /* Fix output if current time step matches frequency */
@@ -2754,86 +2838,7 @@ DPRINTF(stderr,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 #endif
 
 
-	if (converged && ls != NULL) 
-	{
-	  int ibc, ls_adc_event;
-		/* Resolve LS_ADC boundaries ( Attach/Dewet/Coalesce ) */
-		for( ibc=0;ibc<Num_BC;ibc++)
-		{
-		  ls_adc_event = FALSE;
-			switch ( BC_Types[ibc].BC_Name )
-			{
-			case LS_ADC_OLD_BC:
-				resolve_ls_adc_old ( &(BC_Types[ibc]), exo, x, delta_t, &ls_adc_event, nt );
-				break;
-			case LS_ADC_BC:
-				resolve_ls_adc ( ls->last_surf_list->start->subsurf_list, &(BC_Types[ibc]), exo, x, delta_t, &ls_adc_event, nt );
 
-				break;
-			default:
-				break;
-			}
-#ifdef PARALLEL
-		    if (ls_adc_event) 
-		      {
-			exchange_dof( cx[0], dpi, x , 0);
-		      }
-#endif
-                  if ( ls_adc_event && tran->Restart_Time_Integ_After_Renorm )
-                         {
-                      /* like a restart */
-                      discard_previous_time_step(numProcUnknowns, x, x_old,x_older,
-                                      x_oldest, xdot,xdot_old,xdot_older);
-                      last_renorm_nt = nt;
-                      if ( delta_t_new > fabs(Delta_t0) )
-                              delta_t_new *= tran->time_step_decelerator;
-                        }
-
-		}
-
-		/* Check for renormalization  */
-
-
-		ls->Renorm_Countdown -= 1;
-		
-		switch (ls->Renorm_Method) 
-		{
-			
-			case HUYGENS:
-			case HUYGENS_C:
-			case HUYGENS_MASS_ITER:
-				Renorm_Now = ( ls->Renorm_Freq != 0 && 
-					ls->Renorm_Countdown == 0 ) 
-					|| ls_adc_event == TRUE;
-				
-				did_renorm = huygens_renormalization(x, num_total_nodes,
-					 exo, cx[0], dpi, num_fill_unknowns, numProcUnknowns,
-					  time2, Renorm_Now);
-				if ( did_renorm )
-                                  { exchange_dof(cx[0], dpi, x, 0);	}
-				if ( did_renorm && tran->Restart_Time_Integ_After_Renorm )
-				{
-					/* like a restart */
-					discard_previous_time_step(numProcUnknowns, x, x_old,x_older,x_oldest, xdot,xdot_old,xdot_older);
-					last_renorm_nt = nt;
-					if ( delta_t_new > fabs(Delta_t0) ) delta_t_new *= tran->time_step_decelerator;
-				}
-
-					break;
-				
-			case CORRECT:
-				EH(-1,"Use of \"CORRECT\" is obsolete.");
-				break;
-			default:
-				break;
-		}
-		
-		if( ls->Sat_Hyst_Renorm_Lockout > 0 ) {
-		  af->Sat_hyst_reevaluate = FALSE;
-		  ls->Sat_Hyst_Renorm_Lockout -= 1;
-		}
-		
-	}
 
 	if( converged && pfd != NULL )
 	  {

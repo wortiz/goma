@@ -115,7 +115,10 @@ EXTERN int assemble_fill
        const int,                    /* equation -  */
        double [DIM],                 /* xi - coordinates */
        Exo_DB * const,               /* Exodus database */
-       double                        /* Time */
+       double ,                       /* Time */
+       double [MDE],
+ double [MDE][MDE]
+
        );
 
 EXTERN int assemble_fill_ext_v
