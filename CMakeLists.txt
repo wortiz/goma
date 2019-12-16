@@ -244,6 +244,7 @@ set(GOMA_INCLUDES
     include/rf_solve_segregated.h
     include/rf_util.h
     include/rf_vars_const.h
+    include/rotate_util.h
     include/shell_tfmp_struct.h
     include/shell_tfmp_util.h
     include/sl_amesos_interface.h
@@ -396,6 +397,7 @@ set(GOMA_SOURCES
     src/rf_solve_segregated.c
     src/rf_util.c
     src/rf_vars.c
+    src/rotate_util.c
     src/shell_tfmp_util.c
     src/sl_amesos_interface.C
     src/sl_aux.c
