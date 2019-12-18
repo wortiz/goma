@@ -290,7 +290,8 @@ set(GOMA_INCLUDES
     include/brkfix/sam_perea.h
     include/brkfix/utils.h
     include/brkfix/wr_coords.h
-    include/brkfix/wr_graph_file.h)
+    include/brkfix/wr_graph_file.h
+    include/gds/gds_vector.h)
 
 set(GOMA_SOURCES
     src/ac_conti.c
@@ -450,6 +451,11 @@ set(GOMA_SOURCES
     src/brkfix/wr_coords.c
     src/brkfix/wr_graph_file.c)
 
+set(GDS_INCLUDES
+    include/gds/gds_vector.h)
+set(GDS_SOURCES
+    src/gds/gds_vector.c)
+
 # Set a default build type for single-configuration
 # CMake generators if no build type is set.
 IF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -467,6 +473,9 @@ SET(CMAKE_C_FLAGS ${GOMA_WARNINGS})
 SET(CMAKE_C_FLAGS_RELEASE "${GOMA_RELEASE_FLAGS}")
 SET(CMAKE_C_FLAGS_DEBUG  "${GOMA_DEBUG_FLAGS}")
 
+add_library(gds ${GDS_SOURCES} ${GDS_INCLUDES})
+target_include_directories(gds PUBLIC include)
+
 add_executable(${PROJECT_NAME} ${GOMA_INCLUDES} ${GOMA_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE include ${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS} ${Sparse_INCLUDES})
-target_link_libraries(${PROJECT_NAME} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} ${Trilinos_EXTRA_LD_FLAGS} ${GOMA_TPL_LIBRARIES}) 
+target_link_libraries(${PROJECT_NAME} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} ${Trilinos_EXTRA_LD_FLAGS} ${GOMA_TPL_LIBRARIES} gds)
