@@ -1,5 +1,5 @@
-cmake_minimum_required (VERSION 3.10)
-cmake_policy(VERSION 3.10)
+cmake_minimum_required (VERSION 3.11)
+cmake_policy(VERSION 3.11)
 
 project(goma)
 
@@ -32,7 +32,6 @@ MESSAGE("   Trilinos_TPL_INCLUDE_DIRS = ${Trilinos_TPL_INCLUDE_DIRS}")
 # MESSAGE("   Trilinos_TPL_LIBRARY_DIRS = ${Trilinos_TPL_LIBRARY_DIRS}")
 # MESSAGE("   Trilinos_BUILD_SHARED_LIBS = ${Trilinos_BUILD_SHARED_LIBS}")
 message("Trilinos LD Flags = ${Trilinos_EXTRA_LD_FLAGS}")
-MESSAGE("End of Trilinos details\n")
 
 set(MPI_C_COMPILER ${Trilinos_C_COMPILER})
 find_package(MPI REQUIRED)
@@ -52,6 +51,20 @@ set(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
 set(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
 
 include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS} ${MPI_C_INCLUDE_PATH})
+
+# stratimikos and teko
+LIST(FIND Trilinos_PACKAGE_LIST Stratimikos stratimikos_package_index)
+if(${stratimikos_package_index} GREATER_EQUAL 0)
+    message("Stratimikos found in Trilinos, enabling in Goma")
+    add_definitions(-DHAVE_STRATIMIKOS)
+    LIST(FIND Trilinos_PACKAGE_LIST Teko teko_package_index)
+    if(${teko_package_index} GREATER_EQUAL 0)
+        message("Teko found in Trilinos, enabling in Goma")
+        add_definitions(-DHAVE_TEKO)
+    endif()
+endif()
+
+message("")
 
 set(GOMA_TPL_LIBRARIES "")
 
@@ -120,6 +133,7 @@ elseif(EIGEN_SERIAL)
     endif()
     add_definitions(-DEIGEN_SERIAL)
 endif()
+
 
 set(MDE "27" CACHE STRING "set MDE")
 add_definitions(-DMDE=${MDE})
@@ -479,3 +493,8 @@ target_include_directories(gds PUBLIC include)
 add_executable(${PROJECT_NAME} ${GOMA_INCLUDES} ${GOMA_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE include ${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS} ${Sparse_INCLUDES})
 target_link_libraries(${PROJECT_NAME} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} ${Trilinos_EXTRA_LD_FLAGS} ${GOMA_TPL_LIBRARIES} gds)
+
+option(ENABLE_TESTING "ENABLE_TESTING" OFF)
+if(ENABLE_TESTING)
+    add_subdirectory(tests)
+endif()
