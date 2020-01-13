@@ -640,11 +640,6 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
   dbl Patm;
 
 
-#ifdef DEBUG
-  fprintf(stderr, 
-	  "P_%d: %s:%d Num_Nodal_Post_Proc_Var = %d\n", 
-	  ProcID,  __FILE__, __LINE__,  Num_Nodal_Post_Proc_Var);
-#endif
 
   local_post   = alloc_dbl_1(rd->TotalNVPostOutput, 0.0);
   local_lumped = alloc_dbl_1(rd->TotalNVPostOutput, 0.0);
@@ -3546,9 +3541,6 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
   FILE *jfp=NULL;				/*  file pointer  */
   int velo_interp=0;	/*  velocity basis functions  */
 
-#ifdef DEBUG
-  static char yo[] = "post_process_nodal"; /* My name to take blame... */
-#endif
 
   struct Porous_Media_Terms pm_terms;   /*added for POROUS_LIQUID_ACCUM_RATE*/
 
@@ -4208,10 +4200,6 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
        if (fabs(lumped_mass[ii][I]) > DBL_SMALL) {
 	 post_proc_vect[ii][I] /= lumped_mass[ii][I];
        } else {
-#ifdef DEBUG
-   printf("WARNING: lumped_mass[%d][%d] = %g, post_proc_vect[%d][%d] = %g\n",
-		ii, I, lumped_mass[ii][I], ii, I, post_proc_vect[ii][I]);
-#endif
 	 post_proc_vect[ii][I] = 0.0;
        }
      }
@@ -4601,19 +4589,6 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
        * into a monolith we may simply ignore this processor's concept of
        * the nodal result variable at external nodes.
        */
-#ifdef DEBUG
-      if (i == (DIFFUSION_VECTORS+0+1)) {
-	{
-	  int inode;
-	  FILE *tfile;
-          tfile=fopen("df_dump.txt", "a");
-	  for (inode = 0; inode < exo->num_nodes; inode++) {	   
-	    fprintf(tfile, "Y0DIFF1[%3d] = %15.6g\n", inode, post_proc_vect[i][inode]);
-	  } 
-	  fclose(tfile);
-	}
-      }
-#endif     
       if (filename != NULL)
         {
           wr_nodal_result_exo(exo, filename, post_proc_vect[i],
@@ -8900,9 +8875,6 @@ look_for_post_proc(FILE *ifp,	/* pointer to file                           */
     *
     */
 {
-#ifdef DEBUG
-  static char yo[] = "look_for_post_proc";
-#endif
   char	input[MAX_CHAR_IN_INPUT];
   int iread;
   char echo_string[MAX_CHAR_ECHO_INPUT]="\0";
