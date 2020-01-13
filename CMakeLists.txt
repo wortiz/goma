@@ -134,6 +134,16 @@ elseif(EIGEN_SERIAL)
     add_definitions(-DEIGEN_SERIAL)
 endif()
 
+option(PRINT_STACK_TRACE_ON_EH "PRINT_STACK_TRACE_ON_EH" ON)
+if(PRINT_STACK_TRACE_ON_EH)
+    add_definitions(-DPRINT_STACK_TRACE_ON_EH)
+    set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} -rdynamic)
+endif()
+
+option(DISABLE_COLOR_ERROR_PRINT "DISABLE_COLOR_ERROR_PRINT" OFF)
+if(DISABLE_COLOR_ERROR_PRINT)
+    add_definitions(-DDISABLE_COLOR_ERROR_PRINT)
+endif()
 
 set(MDE "27" CACHE STRING "set MDE")
 add_definitions(-DMDE=${MDE})
@@ -338,7 +348,6 @@ set(GOMA_SOURCES
     src/loca_lib.c
     src/loca_util.c
     src/main.c
-    src/Makefile
     src/md_ieee.c
     src/md_timer.c
     src/mm_as_alloc.c
