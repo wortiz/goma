@@ -108,7 +108,7 @@ Type_Elem;
 #endif
 
 #ifndef MAX_SUR_ELEM_3D
-#define MAX_SUR_ELEM_3D  50  /* A more realistic estimate of number of elements */
+#define MAX_SUR_ELEM_3D  70  /* A more realistic estimate of number of elements */
 #endif
                              /* surrounding (containing )a given node */
 #ifndef AVG_SUR_ELEM_3D
