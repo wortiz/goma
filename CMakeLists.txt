@@ -39,6 +39,30 @@ set(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
 
 include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS} ${MPI_C_INCLUDE_PATH})
 
+# Trilinos required packages
+foreach(package Amesos AztecOO Epetra)
+  LIST(FIND Trilinos_PACKAGE_LIST ${package} trilinos_package_index)
+  if(${trilinos_package_index} LESS 0)
+  message(FATAL_ERROR "Trilinos not built with ${package}")
+  endif()
+endforeach()
+
+# Trilinos required TPLs
+foreach(package MPI UMFPACK)
+  LIST(FIND Trilinos_TPL_LIST ${package} trilinos_package_index)
+  if(${trilinos_package_index} LESS 0)
+    message(FATAL_ERROR "Trilinos not built with TPL ${package}")
+  endif()
+endforeach()
+
+# Trilinos extra TPLs
+foreach(package SuperLUDist MUMPS)
+  LIST(FIND Trilinos_TPL_LIST ${package} trilinos_package_index)
+  if(${trilinos_package_index} LESS 0)
+    message(WARNING "Trilinos not built with TPL ${package} some features of Goma won't work")
+  endif()
+endforeach()
+
 # stratimikos and teko
 LIST(FIND Trilinos_PACKAGE_LIST Stratimikos stratimikos_package_index)
 if(${stratimikos_package_index} GREATER_EQUAL 0)
@@ -51,9 +75,18 @@ if(${stratimikos_package_index} GREATER_EQUAL 0)
   endif()
 endif()
 
+# Exodus
+find_package(SEACASExodus REQUIRED HINTS ${Trilinos_DIR}/../SEACASExodus)
+MESSAGE(STATUS "SEACASExodus_DIR = ${SEACASExodus_DIR}")
+find_package(SEACASChaco REQUIRED HINTS ${Trilinos_DIR}/../SEACASChaco)
+MESSAGE(STATUS "SEACASChaco_DIR = ${SEACASChaco_DIR}")
+
+
 message("")
 
 set(GOMA_TPL_LIBRARIES "")
+
+set(ARPACK_PREFIX "${Trilinos_DIR}/../../../../ARPACK" CACHE PATH "set ARPACK library location")
 
 find_package(ARPACK)
 
@@ -62,6 +95,7 @@ if(ARPACK_FOUND)
   set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} ${ARPACK_LIBRARIES})
 endif()
 
+set(Sparse_PREFIX "${Trilinos_DIR}/../../../../sparse" CACHE PATH "set sparse library location")
 find_package(Sparse REQUIRED)
 message(STATUS "Using Sparse ${Sparse_LIBRARIES}")
 set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} ${Sparse_LIBRARIES})
@@ -472,12 +506,43 @@ foreach(d ${GOMA_COMPILE_DEFINITIONS})
 endforeach()
 message("\n")
 
+set(GOMA_TPL_INCLUDES
+  ${Sparse_INCLUDES}
+  ${Trilinos_INCLUDE_DIRS}
+  ${Trilinos_TPL_INCLUDE_DIRS}
+  ${SEACASExodus_INCLUDE_DIRS}
+  ${SEACASChaco_INCLUDE_DIRS}
+  ${SEACASExodus_TPL_INCLUDE_DIRS}
+  ${SEACASChaco_TPL_INCLUDE_DIRS}
+)
+
+set(GOMA_TPL_LIBRARY_DIRS
+  ${Trilinos_LIBRARY_DIRS}
+  ${Trilinos_TPL_LIBRARY_DIRS}
+  ${SEACASExodus_LIBRARY_DIRS}
+  ${SEACASExodus_TPL_LIBRARY_DIRS}
+  ${SEACASChaco_LIBRARY_DIRS}
+  ${SEACASChaco_TPL_LIBRARY_DIRS}
+)
+
+set(GOMA_TPL_LIBRARIES
+  ${GOMA_TPL_LIBRARIES}
+  ${Trilinos_LIBRARIES}
+  ${Trilinos_TPL_LIBRARIES}
+  ${Trilinos_EXTRA_LD_FLAGS}
+  ${SEACASExodus_LIBRARIES}
+  ${SEACASExodus_TPL_LIBRARIES}
+  ${SEACASChaco_LIBRARIES}
+  ${SEACASChaco_TPL_LIBRARIES}
+)
+
 add_library(gds ${GDS_SOURCES} ${GDS_INCLUDES})
 target_include_directories(gds PUBLIC include)
 
 add_executable(${PROJECT_NAME} ${GOMA_INCLUDES} ${GOMA_SOURCES})
-target_include_directories(${PROJECT_NAME} PRIVATE include ${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS} ${Sparse_INCLUDES})
-target_link_libraries(${PROJECT_NAME} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} ${Trilinos_EXTRA_LD_FLAGS} ${GOMA_TPL_LIBRARIES} gds)
+target_include_directories(${PROJECT_NAME} PRIVATE include ${GOMA_TPL_INCLUDES})
+target_link_directories(${PROJECT_NAME} PUBLIC ${GOMA_TPL_LIBRARY_DIRS})
+target_link_libraries(${PROJECT_NAME} ${GOMA_TPL_LIBRARIES} gds)
 
 option(ENABLE_TESTING "ENABLE_TESTING" OFF)
 if(ENABLE_TESTING)
