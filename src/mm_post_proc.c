@@ -55,7 +55,7 @@
 #include "exodusII.h"
 #include "exo_struct.h"
 #include "ac_particles.h"
-#include "bc_rotate.h"
+#include "bc/rotate.h"
 #include "el_elm_info.h"
 #include "mm_as_alloc.h"
 #include "mm_bc.h"
@@ -925,9 +925,9 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
 	}
 
 	if (wCO2 == -1) {
-	  EH(-1, "Expected a Species Source of FOAM_PMDI_10_CO2");
+	  EH(GOMA_ERROR, "Expected a Species Source of FOAM_PMDI_10_CO2");
 	} else if (wH2O == -1) {
-	  EH(-1, "Expected a Species Source of FOAM_PMDI_10_H2O");
+	  EH(GOMA_ERROR, "Expected a Species Source of FOAM_PMDI_10_H2O");
 	}
 
 	double rho_gas = 0;
@@ -1511,7 +1511,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
 	sh_n[0] = cos( fv->sh_ang[0] );
 	sh_n[1] = sin( fv->sh_ang[0] );
       } else {
-        EH(-1,"Not hard at all to implement SHELL_NORMALS for 3D, so just do it!");
+        EH(GOMA_ERROR,"Not hard at all to implement SHELL_NORMALS for 3D, so just do it!");
       }
     } else if ( pd->e[pg->imtrx][R_LUBP] ) {
       int *n_dof = NULL;
@@ -1525,7 +1525,7 @@ calc_standard_fields(double **post_proc_vect, /* rhs vector now called
       fv->wt = wt;
       safe_free((void *) n_dof);
     } else {
-      EH(-1,"Not sure how I got here.");
+      EH(GOMA_ERROR,"Not sure how I got here.");
     }
     for ( a=0; a<dim; a++) {
       local_post[SHELL_NORMALS + a] = sh_n[a];
@@ -3365,7 +3365,7 @@ sum_average_nodal(double **avg_count, double ** avg_sum, int global_node, double
               }
               break;
             default:
-              EH(-1, "Unknown nodal average type");
+              EH(GOMA_ERROR, "Unknown nodal average type");
               break;
             }
         }
@@ -3403,7 +3403,7 @@ sum_average_nodal(double **avg_count, double ** avg_sum, int global_node, double
               }
               break;
             default:
-              EH(-1, "Unknown nodal average non-variable type");
+              EH(GOMA_ERROR, "Unknown nodal average non-variable type");
               break;
             }
         }
@@ -3656,7 +3656,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
 	    }
 
 	   if (DIFFUSION_VECTORS == -1) 
-	     EH(-1, "Need diffusion vectors for flux-function");
+	     EH(GOMA_ERROR, "Need diffusion vectors for flux-function");
 	   if (pd->TimeIntegration != STEADY )
 	     {
 	       DPRINTF(stdout, 
@@ -3676,7 +3676,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
 	{
 	  listnde         = (int *) smalloc(num_universe_nodes * sizeof(int));
 	  if(CONDUCTION_VECTORS == -1) 
-	    EH(-1, "Need conduction vectors for flux-function");
+	    EH(GOMA_ERROR, "Need conduction vectors for flux-function");
 	  if (pd->TimeIntegration != STEADY )
 	    {
 	      DPRINTF(stdout,
@@ -4101,7 +4101,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
 					       Proc_Num_Side_Sets, 
 					       ss_to_blks[0])) == -1)
 			 {
-			   EH(-1,"Cannot match side SSID to ss_to_blks[].");
+			   EH(GOMA_ERROR,"Cannot match side SSID to ss_to_blks[].");
 			 }
 
 		       if( exo->eb_id[find_elemblock_index(ei[pg->imtrx]->ielem, exo)] == 
@@ -4134,7 +4134,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
 		   /* also convert from node number to dof number */
 		   ldof = ei[pg->imtrx]->ln_to_dof[eqn][id];
 		   if (ldof < 0) {
-                     EH(-1,"post_process_nodal: bad surface projection");
+                     EH(GOMA_ERROR,"post_process_nodal: bad surface projection");
 		   }
 		   phi_i = bf[eqn]->phi[ldof];
 		   for (var = 0; var < rd->TotalNVPostOutput; var++) {
@@ -4294,7 +4294,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
 		   else
 		     {
 #if 1
-		       EH(-1,"No stream function in 3D ");
+		       EH(GOMA_ERROR,"No stream function in 3D ");
 #endif
 		     }
 		   err = correct_stream_fcn(&kount, iel, del_stream_fcn, 
@@ -4367,7 +4367,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
 			 }
 		       else
 			 {
-			   EH(-1,"No flux lines in 3D ");
+			   EH(GOMA_ERROR,"No flux lines in 3D ");
 			 }
 		       err = correct_stream_fcn(&kountm[w], iel, del_stream_fcn, 
 						post_proc_vect[FLUXLINES + w], listndm[w]);
@@ -4413,7 +4413,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
 		     } 
 		   else 
 		     {
-		       EH(-1,"No energy flux lines in 3D ");
+		       EH(GOMA_ERROR,"No energy flux lines in 3D ");
 		     }
 		   err = correct_stream_fcn(&kounte, iel, del_stream_fcn,
 					    post_proc_vect[ENERGY_FLUXLINES], listnde);
@@ -4648,7 +4648,7 @@ post_process_nodal(double x[],	 /* Solution vector for the current processor */
 				     0, exo->num_elems);
 
             if( pp_particles[i]->Current_element_id == -1)
-			EH(-1,"Cannot locate one of your particles");
+			EH(GOMA_ERROR,"Cannot locate one of your particles");
 	}	/* if steady	*/
 
   /* find basis functions associated with velocity variables */
@@ -5141,7 +5141,7 @@ post_process_elem(double x[], /* soln vector */
 			  ev_indx,      /* Variable index for zz_error  */
 			  gvec_elem,    /* elem var vals[eb_indx][ev_indx][elem] */
 			  exo, dpi, compute_elem_size ) != 0 ) {
-      EH(-1, " calc_zz_error_vel failure");
+      EH(GOMA_ERROR, " calc_zz_error_vel failure");
     } else {
       /* If we get to here, calc_zz_error_vel worked and we need to increment ev_indx */
       if ( compute_elem_size ) {
@@ -5244,7 +5244,7 @@ post_process_global(double *x,	 /* Solution vector for the current processor */
       }
       break;
     default:
-      EH(-1, "Unknown global post process type");
+      EH(GOMA_ERROR, "Unknown global post process type");
       break;
     }
   }
@@ -5293,7 +5293,7 @@ calc_zz_error_vel(double x[], /* Solution vector                       */
 
   /* Sanity check for mesh topology data */
   if ( ! exo->node_elem_conn_exists ) {
-    EH(-1, "Attempt to access undeveloped node->elem connectivity.");
+    EH(GOMA_ERROR, "Attempt to access undeveloped node->elem connectivity.");
   }  
 
   i_node_coords = (double *) smalloc (3*sizeof(double));
@@ -5659,7 +5659,7 @@ calc_zz_error_vel(double x[], /* Solution vector                       */
 		  rhs[9] += zgp*zgp * tau * det * wt;
 		  break;
 		default:
-		  EH(-1, "Unsupported size in building RHS of least"
+		  EH(GOMA_ERROR, "Unsupported size in building RHS of least"
 		     " squares patch for error");
 		  break;
 		}
@@ -5673,7 +5673,7 @@ calc_zz_error_vel(double x[], /* Solution vector                       */
 
 	  if (lu_decomp_backsub_driver(s_lhs, rhs, indx, max_terms,
 				       do_the_lu_decomp) == -1) {
-	    EH(-1, " Error occurred in calc_zz_error_vel" );
+	    EH(GOMA_ERROR, " Error occurred in calc_zz_error_vel" );
 	    status = -1;
 	    return (status);
 	  }
@@ -7007,7 +7007,7 @@ calc_stream_fcn(double x[],				/* soln vector */
    }
 
  } else {
-   EH(-1,"Stream function routine called with incompatible coord system");
+   EH(GOMA_ERROR,"Stream function routine called with incompatible coord system");
  }
  return (status);
 } /* End routine stream function */
@@ -7093,7 +7093,7 @@ correct_stream_fcn(int *kount,	/* a counter for element connectivity ??     */
   double s, stream_fcn[9];
 
   if (ei[pg->imtrx]->num_sides > 4) {
-    EH(-1, "correct_stream_fcn not available in 3D");
+    EH(GOMA_ERROR, "correct_stream_fcn not available in 3D");
     return -1;
   }
 
@@ -7417,7 +7417,7 @@ rd_post_process_specs(FILE *ifp,
   if (look_for_optional(ifp, "Error ZZ velocity elem size", input, '=') 
       == 1) { 
     if (ERROR_ZZ_VEL == -1) {
-      EH(-1, "'Error ZZ velocity elem size' card REQUIRES 'Error ZZ "
+      EH(GOMA_ERROR, "'Error ZZ velocity elem size' card REQUIRES 'Error ZZ "
 	 "velocity = yes' card - please add");
     } else {
       ERROR_ZZ_VEL_ELSIZE = 1;
@@ -7927,10 +7927,10 @@ rd_post_process_specs(FILE *ifp,
 			  id3 = cont->upMDID;
 			  break;
 			case 5:
-			  EH(-1,"sensitivities to UF not done");
+			  EH(GOMA_ERROR,"sensitivities to UF not done");
 			  break;
 			case 6:
-			  EH(-1,"sensitivities to AN not done");
+			  EH(GOMA_ERROR,"sensitivities to AN not done");
 			  break;
 			}
 		      if(id1 == pp_fluxes_sens[i]->sens_id &&
@@ -8021,7 +8021,7 @@ rd_post_process_specs(FILE *ifp,
       save_position = ftell(ifp);
       fgetsretval = fgets(data_line_buffer, MAX_CHAR_IN_INPUT, ifp);
       if (fgetsretval == NULL) {
-	EH(-1, "Error reading post processing line");
+	EH(GOMA_ERROR, "Error reading post processing line");
       }
 
       fseek(ifp, save_position, SEEK_SET);
@@ -8221,13 +8221,13 @@ rd_post_process_specs(FILE *ifp,
 	    {
 	      for (k=0; k<Num_Post_Var_Names; k++)
 		{
-		  EH(-1,"Unrecognized print variable. ");
+		  EH(GOMA_ERROR,"Unrecognized print variable. ");
 		  if(!strcmp(input,Post_Var_Name[k].name1))
 		    pp_data_sens[i]->data_type = -1;  /* Ok this says it is a Post var */
 		  strcpy(pp_data_sens[i]->data_type_name, input);
 		}
 	    }
-	  if(pp_data_sens[i]->data_type == -2)  EH(-1, "Invalid choice of print_sens variable");
+	  if(pp_data_sens[i]->data_type == -2)  EH(GOMA_ERROR, "Invalid choice of print_sens variable");
 
 
 
@@ -8391,10 +8391,10 @@ rd_post_process_specs(FILE *ifp,
 			  id3 = cont->upMDID;
 			  break;
 			case 5:
-			  EH(-1,"sensitivities to UF not done");
+			  EH(GOMA_ERROR,"sensitivities to UF not done");
 			  break;
 			case 6:
-			  EH(-1,"sensitivities to AN not done");
+			  EH(GOMA_ERROR,"sensitivities to AN not done");
 			  break;
 			}
 		      if(id1 == pp_data_sens[i]->sens_id &&
@@ -8411,7 +8411,7 @@ rd_post_process_specs(FILE *ifp,
 	  nargs = sscanf(first_string, "%s", second_string);
 	  if ( nargs == 0 )
 	    {
-	      EH(-1,"Found zero arguments for the Data Sensitivity file name");
+	      EH(GOMA_ERROR,"Found zero arguments for the Data Sensitivity file name");
 	    }
 	  strcpy(pp_data_sens[i]->data_filenm, second_string);
 	}   /*   data card count loop  */
@@ -8494,7 +8494,7 @@ rd_post_process_specs(FILE *ifp,
 	  nargs = sscanf(first_string, "%s", second_string);
 	  if ( nargs == 0 )
 	    {
-	      EH(-1,"Found zero arguments for the Particle file name");
+	      EH(GOMA_ERROR,"Found zero arguments for the Particle file name");
 	    }
 	  strcpy(pp_particles[i]->filenm, second_string);
 	  SPF(endofstring(echo_string)," %s",pp_particles[i]->filenm);
@@ -8541,7 +8541,7 @@ rd_post_process_specs(FILE *ifp,
 
 	  if ( fscanf(ifp, "%s", ts) != 1 )
 	    {
-	      EH(-1,"error reading Post Processing volume integral card \n");
+	      EH(GOMA_ERROR,"error reading Post Processing volume integral card \n");
 	    }
 
 	  pp_volume[i]->volume_type = -1;
@@ -8581,7 +8581,7 @@ rd_post_process_specs(FILE *ifp,
 
 	  if ( nargs == 0 )
 	    {
-              EH(-1,"Found zero arguments for the Volumetric Integration file name");
+              EH(GOMA_ERROR,"Found zero arguments for the Volumetric Integration file name");
             }
 
 	  strcpy(pp_volume[i]->volume_fname, second_string);
@@ -8625,7 +8625,7 @@ rd_post_process_specs(FILE *ifp,
     int i;
     if ( fscanf(ifp, "%s", ts) != 1 )
       {
-	EH(-1,"error reading Volume Integration Output Format card \n");
+	EH(GOMA_ERROR,"error reading Volume Integration Output Format card \n");
       }
     if ( !strcasecmp( ts, "Verbose" ) ) {
       ppvi_type = PPVI_VERBOSE;
@@ -8730,7 +8730,7 @@ rd_post_process_specs(FILE *ifp,
 	    }
 	    break;
 	  default:
-	    EH(-1, "Unsupported GLOBAL Post Processing Type");
+	    EH(GOMA_ERROR, "Unsupported GLOBAL Post Processing Type");
 	    break;
 	  }
 
@@ -8775,7 +8775,7 @@ rd_post_process_specs(FILE *ifp,
           char * fgetsret = fgets(data_line_buffer, MAX_CHAR_IN_INPUT, ifp);
           if (fgetsret == NULL)
           {
-            EH(-1, "Error reading post processing line in Averages");
+            EH(GOMA_ERROR, "Error reading post processing line in Averages");
           }
 
           fseek(ifp, save_position, SEEK_SET);
@@ -8788,7 +8788,7 @@ rd_post_process_specs(FILE *ifp,
 
 	  if (read_average_items < 2)
 	    {
-	      EH(-1, "Error in reading Average post_processing");
+	      EH(GOMA_ERROR, "Error in reading Average post_processing");
 	    }
 
 	  for (k=0; k<Num_Var_Names; k++)
@@ -8808,7 +8808,7 @@ rd_post_process_specs(FILE *ifp,
 					 "_AVG");
 		      if (err < 0 || err >= MAX_VAR_NAME_LNGTH)
 			{
-			  EH(-1, "Error writing mass fraction variable for average");
+			  EH(GOMA_ERROR, "Error writing mass fraction variable for average");
 			}
 		    }
 		  else
@@ -8843,7 +8843,7 @@ rd_post_process_specs(FILE *ifp,
 		else
 		  {
 		    fprintf(stderr, "Error reading unknown variable type: %s\n", variable_name);
-		    EH(-1, "Unknown variable type for post processing");
+		    EH(GOMA_ERROR, "Unknown variable type for post processing");
 		  }
 	      }
 
@@ -9471,7 +9471,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
      {
        if (CONC_CONT == 2)
          {
-           EH(-1, "Post-processing vectors cannot be exported yet!");
+           EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
          }
       CONC_CONT = index_post;
       for (w = 0; w < upd->Max_Num_Species_Eqn; w++)
@@ -9491,7 +9491,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
 
       if (STRESS_CONT == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
 
       for ( mode=0; mode<MAX_MODES; mode++)
@@ -9637,7 +9637,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
      { 
        if (DIELECTROPHORETIC_FIELD == 2)
          {
-           EH(-1, "Post-processing vectors cannot be exported yet!");
+           EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
          }
        DIELECTROPHORETIC_FIELD = index_post;
        for(i = 0; i < Num_Dim; i++)
@@ -9672,7 +9672,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
      {
        if (ENORMSQ_FIELD == 2)
          {
-           EH(-1, "Post-processing vectors cannot be exported yet!");
+           EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
          }
        ENORMSQ_FIELD = index_post;
        for(i = 0; i < Num_Dim; i++)
@@ -9706,7 +9706,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
    if (DIFFUSION_VECTORS != -1) {
      if (DIFFUSION_VECTORS == 2)
        {
-         EH(-1, "Post-processing vectors cannot be exported yet!");
+         EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
        }
      DIFFUSION_VECTORS = index_post;
      if (upd->Max_Num_Species_Eqn == 0) DIFFUSION_VECTORS = -1;
@@ -9766,7 +9766,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
    if (FLUXLINES != -1 && Num_Var_In_Type[pg->imtrx][R_MASS]) {
      if (FLUXLINES == 2)
        {
-         EH(-1, "Post-processing vectors cannot be exported yet!");
+         EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
        }
      if (Num_Dim == 3) {
        WH(-1,"Cant do flux function in 3D");
@@ -9791,7 +9791,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (CONDUCTION_VECTORS == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       CONDUCTION_VECTORS = index_post;
       for (i=0; i<Num_Dim; i++)
@@ -9808,7 +9808,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (ELECTRIC_FIELD == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       ELECTRIC_FIELD = index_post;
 
@@ -9878,7 +9878,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (STRESS_TENSOR == 2)
         {
-          EH(-1, "Post-processing tensors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
         }
       STRESS_TENSOR = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "T11","[1]",
@@ -9915,7 +9915,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (REAL_STRESS_TENSOR == 2)
         {
-          EH(-1, "Post-processing tensors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
         }
       REAL_STRESS_TENSOR = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "T11_RS","[1]",
@@ -9951,7 +9951,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (STRAIN_TENSOR == 2)
         {
-          EH(-1, "Post-processing tensors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
         }
       STRAIN_TENSOR = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "E11","[1]",
@@ -9989,7 +9989,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (EVP_DEF_GRAD_TENSOR == 2)
         {
-          EH(-1, "Post-processing tensors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing tensors cannot be exported yet!");
         }
       EVP_DEF_GRAD_TENSOR = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "FVP11","[1]",
@@ -10088,7 +10088,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (LAGRANGE_CONVECTION == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       LAGRANGE_CONVECTION = index_post;
       for (i = 0; i < Num_Dim; i++)
@@ -10105,7 +10105,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (SURFACE_VECTORS == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       SURFACE_VECTORS = index_post;
       
@@ -10145,7 +10145,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
     {
       if (SHELL_NORMALS == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       SHELL_NORMALS = index_post;
       
@@ -10219,7 +10219,7 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
 
       if (Num_Dim > 2)
         {
-          EH(-1, "Log Conf Stress not implemented for 3D");
+          EH(GOMA_ERROR, "Log Conf Stress not implemented for 3D");
         }
     }
 
@@ -10387,7 +10387,7 @@ index_post, index_post_export);
       Num_Var_In_Type[pg->imtrx][R_POR_LIQ_PRES] &&  check) {
     if (POROUS_RHO_TOTAL_SOLVENTS == 2)
       {
-        EH(-1, "Post-processing vectors cannot be exported yet!");
+        EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
     POROUS_RHO_TOTAL_SOLVENTS = index_post;
     sprintf(species_name, "Rho_Total_liq");
@@ -10416,7 +10416,7 @@ index_post, index_post_export);
       Num_Var_In_Type[pg->imtrx][R_POR_LIQ_PRES] && check) {
     if (POROUS_RHO_GAS_SOLVENTS == 2)
       {
-        EH(-1, "Post-processing vectors cannot be exported yet!");
+        EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
     POROUS_RHO_GAS_SOLVENTS = index_post;
     if (Num_Var_In_Type[pg->imtrx][R_POR_LIQ_PRES]) {
@@ -10465,7 +10465,7 @@ index_post, index_post_export);
       Num_Var_In_Type[pg->imtrx][R_POR_GAS_PRES] && check) {
     if (DARCY_VELOCITY_GAS == 2)
       {
-        EH(-1, "Post-processing vectors cannot be exported yet!");
+        EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
     DARCY_VELOCITY_GAS = index_post;
     for (i = 0; i < Num_Dim; i++) {
@@ -10481,7 +10481,7 @@ index_post, index_post_export);
       Num_Var_In_Type[pg->imtrx][R_POR_LIQ_PRES] && check) {
     if (DARCY_VELOCITY_LIQ == 2)
       {
-        EH(-1, "Post-processing vectors cannot be exported yet!");
+        EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
     DARCY_VELOCITY_LIQ = index_post;
     for (i = 0; i < Num_Dim; i++) {
@@ -10542,7 +10542,7 @@ index_post, index_post_export);
       Num_Var_In_Type[pg->imtrx][R_POR_LIQ_PRES] && check) {
     if (POROUS_SUPGVELOCITY == 2)
       {
-        EH(-1, "Post-processing vectors cannot be exported yet!");
+        EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
       }
     POROUS_SUPGVELOCITY = index_post;
     for (i = 0; i < Num_Dim; i++) {
@@ -10590,7 +10590,7 @@ index_post, index_post_export);
 	 {
            if (CURL_V == 2)
              {
-               EH(-1, "Post-processing vectors cannot be exported yet!");
+               EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
              }
 	   CURL_V = index_post;
 	   set_nv_tkud(rd, index, 0, 0, -2, "VORTX", "[1]",
@@ -10653,7 +10653,7 @@ index_post, index_post_export);
 	 {
            if (LAMB_VECTOR == 2)
              {
-               EH(-1, "Post-processing vectors cannot be exported yet!");
+               EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
              }
 	   LAMB_VECTOR = index_post;
 	   set_nv_tkud(rd, index, 0, 0, -2, "LAMBX", "[1]",
@@ -10698,7 +10698,7 @@ index_post, index_post_export);
 	 {
            if (HELICITY == 2)
              {
-               EH(-1, "Post-processing vectors cannot be exported yet!");
+               EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
              }
 	   HELICITY = index_post;
 	   set_nv_tkud(rd, index, 0, 0, -2, "HELIX", "[1]",
@@ -10859,7 +10859,7 @@ index_post, index_post_export);
     {
       if (PRINCIPAL_STRESS == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       PRINCIPAL_STRESS = index_post;
 
@@ -10887,7 +10887,7 @@ index_post, index_post_export);
     {
       if (PRINCIPAL_REAL_STRESS == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       PRINCIPAL_REAL_STRESS = index_post;
 
@@ -10916,7 +10916,7 @@ index_post, index_post_export);
     {
       if (LUB_HEIGHT == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       LUB_HEIGHT = index_post;
       sprintf(nm, "LUB_H");
@@ -10930,7 +10930,7 @@ index_post, index_post_export);
     {
       if (LUB_HEIGHT_2 == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       LUB_HEIGHT_2 = index_post;
       sprintf(nm, "LUB_H_2");
@@ -10944,7 +10944,7 @@ index_post, index_post_export);
     {
       if (LUB_VELO_UPPER == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       LUB_VELO_UPPER = index_post;
       sprintf(nm, "LUB_VUX");
@@ -10968,7 +10968,7 @@ index_post, index_post_export);
     {
       if (LUB_VELO_LOWER == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       LUB_VELO_LOWER = index_post;
       sprintf(nm, "LUB_VLX");
@@ -10992,7 +10992,7 @@ index_post, index_post_export);
     {
       if (LUB_VELO_FIELD == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       LUB_VELO_FIELD = index_post;
       sprintf(nm, "LUB_VELO_X");
@@ -11016,7 +11016,7 @@ index_post, index_post_export);
     {
       if (LUB_VELO_FIELD_2 == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       LUB_VELO_FIELD_2 = index_post;
       sprintf(nm, "LUB_VELO_2_X");
@@ -11040,7 +11040,7 @@ index_post, index_post_export);
     {
       if (DISJ_PRESS == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       DISJ_PRESS = index_post;
       sprintf(nm, "DISJ_PRESS");
@@ -11054,7 +11054,7 @@ index_post, index_post_export);
     {
       if (SH_SAT_OPEN == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       SH_SAT_OPEN = index_post;
       sprintf(nm, "SH_SAT_OPEN");
@@ -11068,7 +11068,7 @@ index_post, index_post_export);
     {
       if (SH_SAT_OPEN_2 == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       SH_SAT_OPEN_2 = index_post;
       sprintf(nm, "SH_SAT_OPEN_2");
@@ -11083,7 +11083,7 @@ index_post, index_post_export);
     {
       if (SH_STRESS_TENSOR == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       SH_STRESS_TENSOR = index_post;
       sprintf(nm, "SH_S11");
@@ -11108,7 +11108,7 @@ index_post, index_post_export);
     {
       if (SH_TANG == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       SH_TANG = index_post;
 
@@ -11151,7 +11151,7 @@ index_post, index_post_export);
     {
       if (PP_LAME_MU == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       PP_LAME_MU = index_post;
       sprintf(nm, "LAME_MU");
@@ -11165,7 +11165,7 @@ index_post, index_post_export);
     {
       if (PP_LAME_LAMBDA == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       PP_LAME_LAMBDA = index_post;
       sprintf(nm, "LAME_LAMBDA");
@@ -11207,7 +11207,7 @@ index_post, index_post_export);
     {
       if (TFMP_GAS_VELO == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       TFMP_GAS_VELO = index_post;
       sprintf(nm, "TFMP_GAS_VX");
@@ -11235,7 +11235,7 @@ index_post, index_post_export);
     {
       if (TFMP_LIQ_VELO == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       TFMP_LIQ_VELO = index_post;
       sprintf(nm, "TFMP_LIQ_VX");
@@ -11263,7 +11263,7 @@ index_post, index_post_export);
     {
       if (TFMP_INV_PECLET == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       TFMP_INV_PECLET = index_post;
       sprintf(nm, "TFMP_INV_PECLET");
@@ -11280,7 +11280,7 @@ index_post, index_post_export);
     {
       if (TFMP_KRG == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       TFMP_KRG = index_post;
       sprintf(nm, "TFMP_KRG");
@@ -11329,7 +11329,7 @@ index_post, index_post_export);
      {
       if (NS_RESIDUALS == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       NS_RESIDUALS = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "RMX", "[1]",
@@ -11353,7 +11353,7 @@ index_post, index_post_export);
      {
       if (MM_RESIDUALS == 2)
         {
-          EH(-1, "Post-processing vectors cannot be exported yet!");
+          EH(GOMA_ERROR, "Post-processing vectors cannot be exported yet!");
         }
       MM_RESIDUALS = index_post;
       set_nv_tkud(rd, index, 0, 0, -2, "RDX", "[1]",
@@ -11475,7 +11475,7 @@ index_post, index_post_export);
   if (TIME_DERIVATIVES != -1  && (TimeIntegration != STEADY)) {
     if (TIME_DERIVATIVES == 2)
       {
-        EH(-1, "Post-processing time derivatives cannot be exported yet!");
+        EH(GOMA_ERROR, "Post-processing time derivatives cannot be exported yet!");
       }
     for (var = V_FIRST; var < V_LAST; var++) {
       if (Num_Var_In_Type[pg->imtrx][var]) {
@@ -11854,7 +11854,7 @@ find_id_edge (const int ielem,			/* 0-based element number */
       id_local_elem_coord[i] = in_list (local_edge_node_list[i], 0, 
 		    num_local_nodes, &(exo->node_list[iconnect_ptr]));
       if ((id_local_elem_coord[i]) == -1) {
-	 EH(-1,"find_id_edge ERROR: side set nodal map error\n");
+	 EH(GOMA_ERROR,"find_id_edge ERROR: side set nodal map error\n");
        }
     }
 
@@ -11974,13 +11974,13 @@ find_id_edge (const int ielem,			/* 0-based element number */
       *param_dir = 0;
       return 1; // node number
     }
-    /*EH(-1,"Can't have edges in 1D");*/
+    /*EH(GOMA_ERROR,"Can't have edges in 1D");*/
       break;
 
     } /* END switch ielem_dim */
 
  /* An error condition has occurred, if here */
-    EH(-1,"find_id_edge ERROR: no edge was found !\n");
+    EH(GOMA_ERROR,"find_id_edge ERROR: no edge was found !\n");
     return (0);
 
 }
@@ -12037,7 +12037,7 @@ find_id_edge_TET (const int ielem,			/* 0-based element number */
     for (i = 0; i < num_nodes_on_edge; i++) {
        if ((id_local_elem_coord[i] = in_list (local_edge_node_list[i], 0, 
 		   num_local_nodes, &(exo->node_list[iconnect_ptr])) ) == -1) {
-	 EH(-1,"find_id_edge_TET ERROR: side set nodal map error\n");
+	 EH(GOMA_ERROR,"find_id_edge_TET ERROR: side set nodal map error\n");
        }
     }
 
@@ -12087,16 +12087,16 @@ find_id_edge_TET (const int ielem,			/* 0-based element number */
        }
        break;
    case 2:
-     EH(-1,"find_id_edge_TET not working in 2D");
+     EH(GOMA_ERROR,"find_id_edge_TET not working in 2D");
      break;
    case 1:
-     EH(-1,"Can't have edges in 1D");
+     EH(GOMA_ERROR,"Can't have edges in 1D");
        break;
 
     } /* END switch ielem_dim */
 
  /* An error condition has occurred, if here */
-    EH(-1,"find_id_edge_TET ERROR: no edge was found !\n");
+    EH(GOMA_ERROR,"find_id_edge_TET ERROR: no edge was found !\n");
     return (0);
 
 }
