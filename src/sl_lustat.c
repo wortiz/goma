@@ -109,8 +109,6 @@ static char rcsid[] = "$Id: sl_lustat.c,v 5.1 2007-09-18 18:53:48 prschun Exp $"
 
 #include "goma.h"
 
-#define DECADES	(100)
-
 #ifdef MATRIX_STATISTICS
 
 
@@ -124,19 +122,19 @@ static int mpp_open = FALSE;
 static int mpp_written = FALSE;
 
 static void plot_a
-  PROTO (( int,                     /* n  */
+  ( int,                     /* n  */
 	   int,                     /* nnz  */
 	   double [],               /* a[]  */
-	   int []  ));              /* ija[] */
+	   int []  );              /* ija[] */
 
 static void histogram
-  PROTO (( int,                     /* n  */
+  ( int,                     /* n  */
 	   int,                     /* nnz  */
 	   double [],               /* a[]  */
 	   int [],                  /* ija[] */
 	   int,                     /* lo  */
 	   int,                     /* hi  */
-	   int *  ));               /* *d   */
+	   int *  );               /* *d   */
 
 /* static int call=0; */
 
@@ -314,7 +312,7 @@ plot_a ( int n,
        */
       for ( i=0; i<n; i++)
 	{
-	  if ( idv[i][0] == PRESSURE )
+	  if ( idv[pg->imtrx][i][0] == PRESSURE )
 	    {
 	      sym = 26101;
 	    }

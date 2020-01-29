@@ -39,7 +39,7 @@ GOMA_LIBS = /home/goma/production/$(ARCH)
 
 # MPI install location, used for include, lib, and bin directories
 
-MPI_TOP = /usr/bin/openmpi-1.6.3
+MPI_TOP = /usr/bin/openmpi-2.1.1
 
 # GCC_TOP is the corresponding location of the gcc compilers and libs that are
 # used by the MPI compilers
@@ -116,6 +116,7 @@ DEFINES ?= -Dlinux \
            -DCOUPLED_FILL \
            -DPARALLEL \
            -DHAVE_STRATIMIKOS \
+           -DHAVE_SPARSE \
            -DEIGEN_SERIAL
 
 # Other defines:
@@ -215,7 +216,7 @@ SPARSE_INC ?= -I$(SPARSE_TOP)/src
 # FORTRAN LIBRARIES
 # -----------------
 
-FORTRAN_LIB ?= -lc  -lgcc  -lstdc++  -lgfortran
+FORTRAN_LIB ?= -lc  -lgcc  -lstdc++ -lgfortran
 
 # SYSTEM LIBRARIES
 # ----------------
@@ -242,7 +243,8 @@ DEBUG_FLAGS ?= -g -gdwarf-2
 CCFLAGS ?= -O2
 
 # C/C++ warning flags
-C_WARN_FLAGS ?= -Wall
+C_WARN_FLAGS ?= -Wall -Wextra -Wno-unused-parameter
+CXX_WARN_FLAGS ?= -Wall -Wextra
 
 # Fortran warning flags
 F_WARN_FLAGS ?=
@@ -256,7 +258,7 @@ CFLAGS = $(CCFLAGS) $(C_WARN_FLAGS) $(DEFINES) $(VERSION) $(INCLUDES) $(CSTD)
 
 # C++ compiler flags
 CXXSTD ?= -std=c++11
-CXXFLAGS = $(CCFLAGS) $(C_WARN_FLAGS) $(DEFINES) $(INCLUDES) -Wno-deprecated $(CXXSTD)
+CXXFLAGS = $(CCFLAGS) $(CXX_WARN_FLAGS) $(DEFINES) $(INCLUDES) -Wno-deprecated $(CXXSTD)
 
 # linker flags
 LD_EXTRA_FLAGS ?=
@@ -368,6 +370,7 @@ RF_SRC= rf_allo.c\
         rf_setup_problem.c\
         rf_shape.c\
         rf_solve.c\
+	rf_solve_segregated.c\
         rf_util.c\
         rf_vars.c\
         wr_dpi.c\
@@ -393,6 +396,7 @@ RF_INC= rf_allo.h\
         rf_pre_proc.h\
         rf_shape.h\
         rf_solve.h\
+	rf_solve_segregated.h\
         rf_solver.h\
         rf_solver_const.h\
         rf_util.h\
@@ -511,6 +515,7 @@ MM_SRC= mm_as_alloc.c\
         mm_fill_interface.c\
         mm_fill_jac.c\
         mm_fill_porous.c\
+        mm_fill_population.c\
 	mm_porous_EOS.c\
         mm_fill_potential.c\
         mm_fill_pthings.c\
@@ -566,6 +571,7 @@ MM_INC=	mm_as.h\
         mm_fill_fill.h\
         mm_fill_jac.h\
         mm_fill_porous.h\
+        mm_fill_population.h\
         mm_fill_potential.h\
         mm_fill_pthings.h\
         mm_fill_ptrs.h\
@@ -789,7 +795,7 @@ install: $(BIN_DIR)/$(TARGET) $(LIB_DIR)/$(GOMA_LIB) $(LIB_DIR)/$(GOMA_USER_LIB)
 		echo "Making $(PREFIX_BIN)";\
 		mkdir -p $(PREFIX_BIN);\
 	fi;\
-	echo "Installing $(TARGET) in $(PREFIX_BIN)...";\
+	echo "Installing $(BIN_DIR)/$(TARGET) in $(PREFIX_BIN)...";\
 	$(INSTALL) $(INSTFLAGS) $(BIN_DIR)/$(TARGET) $(PREFIX_BIN);\
 	if [ ! -d $(PREFIX_LIB) ]; then\
 		echo "Making $(PREFIX_LIB)";\
