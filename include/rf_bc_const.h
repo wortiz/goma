@@ -66,9 +66,6 @@
 #include "exo_struct.h"		/* To know about Exo_DB type. */
 #include "dpi.h"		/* To know about Dpi type. */
 
-#ifdef USE_CGM
-#include "gm_cgm_typedefs.h"    /* Typedefs for the CGM C Interface */
-#endif
 
 #ifndef EXTERN
 #define EXTERN extern
@@ -216,6 +213,7 @@
 #define LS_SPECIAL        19
 
 /* define some other catagories */
+#define STRESS  6 /* Six components in each mode */
 #define VECTOR  3
 #define SCALAR  1
 #define STRESS  6
@@ -376,21 +374,25 @@
 #define GD_TIME_EXP  400002
 #define GD_TIME_SIN  400003
 #define GD_TIME_TABLE  400004
-#define GD_TIME_MAX   400005
+#define GD_TIME_MAX  400005
 
 /* velocity constants in cartesian form */
 
 #define U_BC     1
 #define UVARY_BC 3
+#define U_PARABOLA_BC 35
 #define UUSER_BC 4
+#define UUSER_COLLOC_BC 5
 
-#define PU_BC     5
+#define PU_BC     6
 
 #define V_BC     10
 #define VVARY_BC 30
+#define V_PARABOLA_BC 305
 #define VUSER_BC 40
+#define VUSER_COLLOC_BC 50
 
-#define PV_BC     50
+#define PV_BC     60
 
 #define U_STAR_BC     989991
 #define V_STAR_BC     989992
@@ -399,17 +401,19 @@
 #define W_BC     100
 
 #define WVARY_BC 300
+#define W_PARABOLA_BC 3005
 #define WUSER_BC 400
+#define WUSER_COLLOC_BC 500
 
-#define PW_BC     500
+#define PW_BC     600
 
-#define DX_USER_BC 510
-#define DY_USER_BC 520
-#define DZ_USER_BC 530
+#define DX_USER_BC 710
+#define DY_USER_BC 720
+#define DZ_USER_BC 730
 
-#define DX_USER_NODE_BC 511
-#define DY_USER_NODE_BC 521
-#define DZ_USER_NODE_BC 531
+#define DX_USER_NODE_BC 711
+#define DY_USER_NODE_BC 721
+#define DZ_USER_NODE_BC 731
 
 /* velocity constants in normal/tangential form */
 
@@ -540,6 +544,18 @@
 #define INTP_BC        1053
 #define INTM_BC        1054
 #define INTD_BC        1055
+#define EM_E1R_BC      1056
+#define EM_E2R_BC      1057
+#define EM_E3R_BC      1058
+#define EM_E1I_BC      1059
+#define EM_E2I_BC      1060
+#define EM_E3I_BC      1061
+#define EM_H1R_BC      1062
+#define EM_H2R_BC      1063
+#define EM_H3R_BC      1064
+#define EM_H1I_BC      1065
+#define EM_H2I_BC      1066
+#define EM_H3I_BC      1067
 
 
 /* pressure */
@@ -581,6 +597,8 @@
 #define LIGHTD_TRANS_BC   9700000
 #define LIGHTP_JUMP_BC   9510000
 #define LIGHTM_JUMP_BC   9610000
+#define LIGHTP_JUMP_2_BC   9510001
+#define LIGHTM_JUMP_2_BC   9610001
 
 /* species unknown variables */
 
@@ -604,6 +622,7 @@
 #define YFLUX_ALLOY_BC 24200000
 #define YFLUX_BV2_BC    24130000  /* RSL 3/9/01 */
 #define YFLUX_NI_BC    24120000  /* RSL 3/9/01 */
+#define YFLUX_ETCH_BC    24111111
 #define RAOULT  24300000
 #define FLORY   24700000
 #define FLORY_CC   24800000
@@ -627,6 +646,7 @@
 #define POR_LIQ_FLUX_FILL_BC 25900500
 #define POROUS_TEMP_BC  26000000
 #define P_LIQ_USER_BC   26000001
+#define POROUS_SINK_BC   26000003
 
 /* real solid displacement */
 #define DX_RS_BC     40000001
@@ -694,8 +714,12 @@
 #define PLANEY_BC 950000000
 #define PLANEZ_BC 960000000
 #define PLANE_BC  961000000
+#define FILLET_BC  961123400
+#define DOUBLE_RAD_BC  961123500
+#define ROLL_FLUID_BC  961124500
 #define TENSION_SHEET_BC 96210200
 #define MOVING_PLANE_BC  96110000
+#define MOVING_PLANE_ETCH_BC  96115000
 #define SM_PLANE_BC 961200000        /* Solid Model PLANE BC */
 #define MESH_CONSTRAINT_BC 961300000
 #define KINEMATIC_BC  962000000
@@ -722,6 +746,7 @@
 #define HYDROSTATIC_SYMM_BC  963600000
 #define FLOW_STRESSNOBC_BC  963700000
 #define FLOW_GRADV_BC  963800000
+#define FLOW_GRADV_SIC_BC 963800001
 #define SHEET_ENDSLOPE_BC 963900000
 #define CA_BC  964000000
 #define CA_MOMENTUM_BC  964000008
@@ -765,6 +790,9 @@
 #define VELO_SLIP_SOLID_BC 964430000
 #define VELO_SLIP_ROT_FILL_BC 964435000
 #define VELO_SLIP_EK_BC       964440000
+#define VELO_SLIP_POWER_BC  964400001
+#define VELO_SLIP_POWER_CARD_BC  964400002
+
 #define VELO_EK_3D_BC         964450000
 #define MOVING_CA_BC          964500000
 #define CA_EDGE_OR_FIX_BC     964500001
@@ -777,6 +805,10 @@
 #define LINEAR_WETTING_SIC_BC  964500009    
 #define VELO_STREAMING_BC  964600000
 #define HYSTERESIS_WETTING_BC 964700000
+#define AIR_FILM_BC  964800000
+#define AIR_FILM_ROT_BC  964810000
+#define VELO_SLIP_FLUID_BC  964900000
+#define VELO_SLIP_ROT_FLUID_BC  964910000
 
 
 /* Structural Shells */
@@ -792,6 +824,12 @@
 #define SH_LUBP_BC          970000013
 #define SH_LUBP_SOLID_BC    970000014
 #define SH_LUBP_SOLID_RS_BC    970000015
+#define SH_S11_WEAK_BC      970000016
+#define SH_S22_WEAK_BC      970000017
+
+#define SH_SDET_BC          970000020
+#define SH_MESH2_WEAK_BC    970000021
+
 
 /* Shell variables that are not structural shells */
 #define SH_GAMMA1_BC            980000001
@@ -986,8 +1024,18 @@
 #define SH_P_OPEN_USER_BC 777000021
 #define LUB_PRESS_2_BC  777000022
 #define SHELL_OPEN_PRESS_2_BC 777000023
+#define LUB_STATIC_BC 777000024
 
+#define SHELL_TFMP_PRES_BC            777000030
+#define SHELL_TFMP_SAT_BC             777000031
+#define SHELL_TFMP_GRAD_S_BC          777000034
+#define SHELL_TFMP_FREE_LIQ_BC        777000041
+#define SHELL_TFMP_NUM_DIFF_BC        777000042
+#define SHELL_TFMP_AVG_PLATE_VELO_BC  777000043
+#define SHELL_TFMP_FREE_GAS_BC        777000044
 
+#define RESTIME_BC        788000030
+#define SHELL_LUBRICATION_OUTFLOW_BC  777000050
 
 
 /* Vectors used for rotations */
@@ -1186,6 +1234,7 @@ struct Boundary_Condition {
   dbl   BC_Data_Float[MAX_BC_FLOAT_DATA];
   int   len_u_BC;		/* number of elements in the user constant 
 				   list (0 most of the time) */
+  int   max_DFlt;
   int   Storage_ID;             /* ID of the quadature point storage for this bc 
 				 * Must be positive for it to exist. zero means
 				 * that it does not yet exist 
@@ -1232,16 +1281,6 @@ struct Boundary_Condition {
                                  *  2 - Yes, hanging off of side  */
   int matrix;
   int equation;
-#ifdef USE_CGM
-  /* CGM handles.  There's probably a more generic way to do this, but
-   * for now here you go... We need the strings because the assignment
-   * of the handle pointers is delayed until well after input is read
-   * in to allow for multiple processors to get their own handles...
-   */
-  char cgm_edge_name[255];
-  EdgeHandle *cgm_edge_handle;
-  PlaneHandle *cgm_plane_handle;
-#endif
 };
 typedef struct Boundary_Condition BOUNDARY_CONDITION_STRUCT;
 

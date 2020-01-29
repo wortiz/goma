@@ -900,20 +900,16 @@ vector_scaling(const int N,
  * @return 0 if compatible, -1 if not
  */
 int
-check_compatible_solver()
+check_compatible_solver(void)
 {
-  if (strcmp(Matrix_Format, "epetra") == 0)
-  {
-    switch (Linear_Solver)
-    {
-      case AZTECOO:
-        return 0;
-      case AMESOS:
-        return 0;
-      case STRATIMIKOS:
-        return 0;
-      default:
-        return -1;
+  if (strcmp(Matrix_Format, "epetra") == 0) {
+    switch (Linear_Solver) {
+    case AZTECOO:
+    case AMESOS:
+    case STRATIMIKOS:
+      return 0;
+    default:
+      return -1;
     }
   }
 

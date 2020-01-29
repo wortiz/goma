@@ -82,20 +82,6 @@ int w;
  * Declarations of static functions defined in this file.
  */
 
-void predict_solution
-(int ,			/* N */
-       double ,			/* delta_t */
-       double ,			/* delta_t_old */
-       double ,			/* delta_t_older */
-       double ,			/* theta */
-       double  [],		/* x */
-       double  [],		/* x_old */
-       double  [],		/* x_older */
-       double  [],		/* x_oldest */
-       double  [],		/* xdot */
-       double  [],	        /* xdot_old */
-       double  []);		/* xdot_older */
-
 static void predict_solution_newmark
 (int ,			/* N */
        double ,			/* delta_t */
@@ -385,7 +371,7 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
   int    i, num_total_nodes;
   int    numProcUnknowns;
   int    const_delta_t, const_delta_ts, step_print;
-  int    step_fix = 0;           /* What step to fix the problem on */
+  int    step_fix = 0, i_fix = 0;           /* What step to fix the problem on */
   int    good_mesh = TRUE;
   int    w;                      /* counter for looping external variables */
   static int nprint = 0;
@@ -407,7 +393,6 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 #ifdef RESET_TRANSIENT_RELAXATION_PLEASE
   double damp_factor_org[2]={damp_factor1,damp_factor2};
   double toler_org[3]={custom_tol1,custom_tol2,custom_tol3};
-
 #endif
   /*
    * Other local variables...
@@ -458,6 +443,7 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 #else
   int relax_bit = FALSE;	
 #endif
+  int no_relax_retry = 8;
 
   static const char yo[]="solve_problem"; /* So my name is in a string.        */
 
@@ -908,6 +894,7 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
       /*
        *  Determine if we should use this time as the initial time in the simulation
        */
+#ifndef ALLOW_NEGATIVE_TIMES_PLEASE
       if (TimeIntegration != STEADY)
 	{
 	  if (tran->init_time < 0.0)  
@@ -916,6 +903,7 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 	      DPRINTF(stdout, "\n Initial Simulation Time Has been set to %g\n", timeValueRead);
 	    }
 	}
+#endif
     }
 
   if(Conformation_Flag == 1) // If mapping is needed for log-conformation tensor
@@ -1050,9 +1038,8 @@ solve_problem(Exo_DB *exo,	 /* ptr to the finite element mesh database  */
 				  rd, gindex, p_gsize, gvec, gvec_elem, 
 				  time1, exo, dpi, cx[0], 0, 
 				  &time_step_reform, is_steady_state,
- 				  x_AC, x_AC_dot, time1, resid_vector_sens,
-                                  x_sens, x_sens_p, NULL, NULL);
-
+                                  x_AC, x_AC_dot, time1, resid_vector_sens,
+                                    x_sens, x_sens_p, NULL);
 #ifdef DEBUG
     fprintf(stderr, "%s: returned from solve_nonlinear_problem\n", yo);
 #endif /* DEBUG */
@@ -1330,26 +1317,26 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
   else
     {
       if (Debug_Flag && ProcID == 0) {
-	fprintf(stderr,"MaxTimeSteps: %d \tTimeMax: %f\n",MaxTimeSteps,TimeMax);
-	fprintf(stderr,"solving transient problem\n");
+        fprintf(stdout,"MaxTimeSteps: %d \tTimeMax: %f\n",tran->MaxTimeSteps,tran->TimeMax);
+        fprintf(stdout,"solving transient problem\n");
       }
     
     /*
      *  Transfer information from the Transient_Information structure to local variables
      */
-    Delta_t0     = tran->Delta_t0;
-    Delta_t_min  = tran->Delta_t_min;
-    Delta_t_max  = tran->Delta_t_max;
-    MaxTimeSteps = tran->MaxTimeSteps;
-    TimeMax      = tran->TimeMax;
+    double delta_t0     = tran->Delta_t0;
+    double delta_t_min  = tran->Delta_t_min;
+    double delta_t_max  = tran->Delta_t_max;
+    double max_time_steps = tran->MaxTimeSteps;
+    double time_max      = tran->TimeMax;
     eps          = tran->eps;
 #ifndef COUPLED_FILL
     exp_subcycle = tran->exp_subcycle;
 #endif /* not COUPLED_FILL */   
 
     // Determine if we are using a constant time step or not
-    if (Delta_t0 < 0.0 ) {
-      Delta_t0	    = -Delta_t0;
+    if (delta_t0 < 0.0 ) {
+      delta_t0	    = -delta_t0;
       const_delta_t = 1;
     }  else {
       const_delta_t = 0;
@@ -1384,9 +1371,9 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 
     time   = time1 = tran->init_time; /* Allow non-zero initial time */
     tran->time_value = tran->time_value_old = time1;
-    tran->delta_t_old = Delta_t0;
-    if (Delta_t0 > Delta_t_max) Delta_t0 = Delta_t_max;
-    delta_t = delta_t_old = delta_t_older = Delta_t0;
+    tran->delta_t_old = delta_t0;
+    if (delta_t0 > delta_t_max) delta_t0 = delta_t_max;
+    delta_t = delta_t_old = delta_t_older = delta_t0;
     tran->delta_t = delta_t;    /*Load this up for use in load_fv_mesh_derivs */
     tran->delta_t_avg = delta_t;    
 
@@ -1593,7 +1580,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
      *  TOP OF THE TIME STEP LOOP -> Loop over time steps whether
      *                               they be successful or not
      *******************************************************************/
-    for (n = 0; n < MaxTimeSteps; n++)
+    for (n = 0; n < max_time_steps; n++)
       {
       /*
        * Calculate the absolute time for the current step, time1
@@ -1602,9 +1589,9 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 #ifdef LIBRARY_MODE
       delta_t_save = delta_t;
 #endif
-      if (time1 > TimeMax) { 
+      if (time1 > time_max) {
 	DPRINTF(stdout, "\t\tLAST TIME STEP!\n"); 
-	time1 = TimeMax;
+        time1 = time_max;
 	delta_t = time1 - time;
 	tran->delta_t = delta_t;
 	tran->delta_t_avg = 0.25*(delta_t+delta_t_old+delta_t_older
@@ -1872,7 +1859,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 	      break;
 
 	  case SM_OBJECT:
-	    cgm_based_initialization(x, num_total_nodes);
+	    EH(-1, "CGM not supported, SM_OBJECT level set initialization");
 #ifndef COUPLED_FILL
               if (Explicit_Fill)
 		{
@@ -1997,9 +1984,12 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
           put_fill_vector(num_total_nodes, x, xf, node_to_fill);
 	}
 #endif /* not COUPLED_FILL */
-	dcopy1(numProcUnknowns, x, x_old);
-	dcopy1(numProcUnknowns, x, x_older);
-	dcopy1(numProcUnknowns, x, x_oldest);
+	if (converged) // avoid death spiral on initial failure
+	  {
+	    dcopy1(numProcUnknowns, x, x_old);
+	    dcopy1(numProcUnknowns, x, x_older);
+	    dcopy1(numProcUnknowns, x, x_oldest);
+          }
 
 	exchange_dof(cx[0], dpi, x, 0);
 	exchange_dof(cx[0], dpi, x_old, 0);
@@ -2411,9 +2401,9 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
        */
       if (nt > 0)
       {
-              if (converged && (nt - last_renorm_nt) > 0 )
-              { damp_factor2 = -1.;  damp_factor1 = 1.0;}
-              else
+              if (converged)
+              { damp_factor2 = -1.;  damp_factor1 = 1.0; }
+              else if (nt < no_relax_retry)
               {
                damp_factor2 = damp_factor_org[1];
                damp_factor1 = damp_factor_org[0];
@@ -2435,7 +2425,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 				    gvec, gvec_elem, time1, exo, dpi, cx[0], 
 				    n, &time_step_reform, is_steady_state,
  				    x_AC, x_AC_dot, time1, resid_vector_sens,
-                                    x_sens, x_sens_p, NULL, NULL);
+                                    x_sens, x_sens_p, NULL);
       if (err == -1) converged = FALSE;
       inewton = err;
       evpl_glob[0]->update_flag = 0; /*See get_evp_stress_tensor for description */
@@ -2472,79 +2462,104 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 	delta_t_new = time_step_control(delta_t, delta_t_old, const_delta_t,
 					x, x_pred, x_old, x_AC, x_AC_pred,
 					eps, &success_dt, tran->use_var_norm);
-	if (const_delta_t) {
+	if (const_delta_t) 
+          {
 	  success_dt  = TRUE;
 	  delta_t_new = delta_t;
-	} else if ( failed_recently_countdown > 0 ) {
+	  } 
+       else if ( failed_recently_countdown > 0 ) 
+          {
           delta_t_new = delta_t;
           failed_recently_countdown--;
-	} else if (delta_t_new > Delta_t_max) {
-	  delta_t_new = Delta_t_max;
-/*        } else if ( !success_dt && delta_t_new < tran->resolved_delta_t_min ) {*/
-        } else if ( delta_t_new < tran->resolved_delta_t_min ) {
-/*          if ( delta_t > tran->resolved_delta_t_min ) {  */
+	  } 
+       else if (delta_t_new > delta_t_max)
+          {
+          delta_t_new = delta_t_max;
+          } 
+       else if ( delta_t_new < tran->resolved_delta_t_min ) 
+          {
             /* fool algorithm into using delta_t = tran->resolved_delta_t_min */
             delta_t_new = tran->resolved_delta_t_min;
 	    success_dt  = TRUE;
-	DPRINTF(stdout,"\n\tminimum resolved step limit!\n");
+	    DPRINTF(stderr,"\n\tminimum resolved step limit! - step control\n");
        /*     if(!success_dt)delta_t /= tran->time_step_decelerator;
 	    tran->delta_t  = delta_t;
 	    tran->delta_t_avg = 0.25*(delta_t+delta_t_old+delta_t_older
 					+delta_t_oldest);  */
-/*          } else {
-             accept any converged solution with
+          } 
+       else 
+          {
+            /* accept any converged solution with
                delta_t <= tran->resolved_delta_t_min 
-            success_dt = TRUE;
-            delta_t_new = delta_t;
-          }  */
-        }
+            */
+            /*success_dt = TRUE;
+            delta_t_new = delta_t;*/
+          }  
         
-        if ( ls != NULL && tran->Courant_Limit != 0. ) {
+        if ( ls != NULL && tran->Courant_Limit != 0. ) 
+          {
           double Courant_dt;
           Courant_dt = tran->Courant_Limit *
                        Courant_Time_Step( x, x_old, x_older, xdot, xdot_old,
                                         resid_vector, ams[0]->proc_config, exo );
-          if ( Courant_dt > 0. && Courant_dt < delta_t_new ) {
+          if ( Courant_dt > 0. && Courant_dt < delta_t_new ) 
+            {
             DPRINTF(stdout,"\nCourant Limit requires dt <= %g\n",Courant_dt);
             delta_t_new = Courant_dt;
+            }
           }
-        }
         
       }
 
-      if (converged && success_dt) {
-	if (Filter_Species) {
+      if (converged && success_dt) 
+        {
+	if (Filter_Species) 
+          {
 	  err = filter_conc(num_total_nodes, x, filter_species_material_number, 
 			    c_min, c_max ); 
-	}
+	  }
 	nt  += 1;
 	time = time1;
   
 	/* Determine whether to print out the data or not */
 	i_print = 0;
-	if (tran->print_freq == 0) {
+	i_fix = 0;
+	if (tran->print_freq == 0) 
+          {
 	  if ((time > time_print) || 
 	      (fabs(time - time_print) < (1.e-4 * tran->print_delt)))
-	  {
-	    if (tran->print_delt2 < 0.) {
+	    {
+	    if (tran->print_delt2 < 0.) 
+              {
 	      i_print	  = 1;
+	      i_fix	  = 1;
 	      time_print += tran->print_delt;
-	    } else {
-	      if (time < tran->print_delt2_time) {
+	      } 
+            else 
+              {
+	      if (time < tran->print_delt2_time) 
+                {
 		i_print	    = 1;
+	        i_fix	  = 1;
 		time_print += tran->print_delt;
-	      } else {
+	        } 
+              else 
+                {
 		i_print	    = 1;
-		time_print += tran->print_delt2;
+	        i_fix	    = 1;
+                time_print += tran->print_delt2;
+	        }
 	      }
 	    }
-	  }
-	} else {
-	  if (nt == step_print) {
-	    i_print	= 1;
-	    step_print += tran->print_freq;
-	  }
-	}
+	   } 
+         else 
+           {
+	    if (nt == step_print) 
+              {
+	       i_print	= 1;
+	       step_print += tran->print_freq;
+	      }
+	   }
 
         /* Check if steady state has been reached */
         if (tran->march_to_steady_state && n > 0) {
@@ -2558,6 +2573,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
           }
           max_distance = distance;
 
+        
 
           if (ProcID == 0) {
             printf("\nDelta x %g\n", max_distance);
@@ -2572,7 +2588,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
         }
 
 
-	if (time1 >= (ROUND_TO_ONE * TimeMax)) i_print = 1;
+	if (time1 >= (ROUND_TO_ONE * time_max)) i_print = 1;
 
 	/* Dump out user specified information to separate file.
 	 */
@@ -2647,7 +2663,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 	    DPRINTF(stdout, "\n------------------------------\n");
 	    DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
 	    DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
-		      
+
 	    for (iAC = 0; iAC < nAC; iAC++) {
 	      if (augc[iAC].Type == AC_USERBC) 
 		{
@@ -2680,10 +2696,10 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 		  evol_local = augc[iAC].evol;
 #ifdef PARALLEL
 		  if (Num_Proc > 1) {
-		    MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);		  
+		    MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 		    evol_local = evol_global;
 		  }
-#endif	  
+#endif
 		  DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID, augc[iAC].VOLID, evol_local, x_AC[iAC]);
 		} 
 	      else if (augc[iAC].Type == AC_FLUX) 
@@ -2699,43 +2715,46 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 	  }
 
 	} /* if(i_print) */
-	evpl_glob[0]->update_flag = 1; 
+	evpl_glob[0]->update_flag = 1;
 
         /* Fix output if current time step matches frequency */
-        if (step_fix != 0 && nt == step_fix) {
+        if ( (step_fix != 0 && nt == step_fix) ||
+             ((i_fix == 1) && (tran->fix_freq > 0)) ) {
 #ifdef PARALLEL
-          /* Barrier because fix needs both files to be finished printing 
+          /* Barrier because fix needs both files to be finished printing
              and fix always occurs on the same timestep as printing */
           MPI_Barrier(MPI_COMM_WORLD);
 #endif
-          if (ProcID == 0 && Brk_Flag == 1) {
-            fix_output();
-          }
+          if (ProcID == 0 && Brk_Flag == 1) { fix_output(); }
           /* Fix step is relative to print step */
           step_fix += tran->fix_freq*tran->print_freq;
         }
-	/* 
+	/*
 	 * Adjust the time step if the new time will be larger than the
 	 * next printing time.
 	 */
-	if (tran->print_freq == 0 && success_dt) {
+	if (tran->print_freq == 0 && success_dt) 
+          {
 	  if ((time + 1.2 * delta_t_new >= time_print)
-	      && (time_print > time)) {
+	      && (time_print > time)) 
+            {
 	    delta_t_new = time_print - time;
 	    DPRINTF(stdout, 
 		    "reset delta_t = %g to maintain printing frequency\n"
 		    , delta_t_new);
 	    if (delta_t_new <= 0) 
 		EH(-1, "error with time-step printing control");
-	  } else if(time >= time_print) {
-	    if (delta_t_new != tran->print_delt) {
+	    } 
+          else if(time >= time_print) 
+            {
+	    if (delta_t_new != tran->print_delt) 
+              {
 	      delta_t_new = tran->print_delt;
 	      DPRINTF(stdout, 
 		      "reset delta_t = %g to maintain printing frequency\n"
 		      , delta_t_new);
-	      if (delta_t_new <= 0) {
-		EH(-1, "error with time-step printing control");
-	      }
+	      if (delta_t_new <= 0) 
+                { EH(-1, "error with time-step printing control"); }
 	    }
 	  }
 	}
@@ -2785,7 +2804,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
                       discard_previous_time_step(numProcUnknowns, x, x_old,x_older,
                                       x_oldest, xdot,xdot_old,xdot_older);
                       last_renorm_nt = nt;
-                      if ( delta_t_new > fabs(Delta_t0) )
+                      if ( delta_t_new > fabs(delta_t0) )
                               delta_t_new *= tran->time_step_decelerator;
                         }
 
@@ -2816,7 +2835,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 					/* like a restart */
 					discard_previous_time_step(numProcUnknowns, x, x_old,x_older,x_oldest, xdot,xdot_old,xdot_older);
 					last_renorm_nt = nt;
-					if ( delta_t_new > fabs(Delta_t0) ) delta_t_new *= tran->time_step_decelerator;
+                                        if ( delta_t_new > fabs(delta_t0) ) delta_t_new *= tran->time_step_decelerator;
 				}
 
 					break;
@@ -2864,7 +2883,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 			discard_previous_time_step(numProcUnknowns, x, x_old,x_older,
 						   x_oldest, xdot,xdot_old,xdot_older);
 			last_renorm_nt = nt;
-			if ( delta_t_new > fabs(Delta_t0) ) 
+                        if ( delta_t_new > fabs(delta_t0) )
 			  delta_t_new *= tran->time_step_decelerator;
 		      }
 		    break;
@@ -3006,6 +3025,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
  	  }	/*search  */
 	}	/*  nn_volume	*/
 #endif
+#ifdef REACTION_PRODUCT_EFV
         for (i = 0; i < exo->num_nodes; i++) {
             if (efv->ev  && nt > 1) {
                      int ef;
@@ -3017,6 +3037,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
                 }
              }
           memset(Spec_source_lumped_mass, 0.0, sizeof(double)*exo->num_nodes);
+#endif
  	  for (i = 0; i < nn_volume; i++) {
  	    evaluate_volume_integral(exo, dpi, pp_volume[i]->volume_type,
  				     pp_volume[i]->volume_name,
@@ -3028,7 +3049,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
  				     NULL, x, xdot, delta_t_old, time, 1);
  	  }
 
-#if 0
+#ifdef REACTION_PRODUCT_EFV
         for (i = 0; i < exo->num_nodes; i++) {
   if (efv->ev  && nt > 1 ) {
     int ef;
@@ -3041,9 +3062,28 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
     }
   }
           }
+  if (efv->ev && i_print) {
+	error = 0;
+	  if (file != NULL) {
+	    error = write_ascii_soln(x, resid_vector, numProcUnknowns,
+				     x_AC, nAC, time, file);
+	    if (error != 0) {
+	      fprintf(stderr, 
+		      "%s:  error writing ASCII soln file\n", yo);
+	    }
+	  }
+	  if (Write_Intermediate_Solutions == 0) {
+	    write_solution(ExoFileOut, resid_vector, x, x_sens_p,
+			   x_old, xdot, xdot_old, tev, tev_post, gv,
+			   rd, gindex, p_gsize, gvec, gvec_elem,
+			   &nprint, delta_t, theta, time, x_pp, exo, dpi);
+	    nprint++;
+	  }
+     }
 #endif
 
-	if (time1 >= (ROUND_TO_ONE * TimeMax))  {
+        if (time1 >= (ROUND_TO_ONE * time_max))
+          {
 	  DPRINTF(stdout,"\t\tout of time!\n");
      	  if (Anneal_Mesh)
 	    {
@@ -3057,15 +3097,15 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 	      EH(err, "anneal_mesh() bad return.");
 	    }
 	  goto free_and_clear;
-	}
+	  }
         if (!good_mesh) goto free_and_clear;
 
       } /*  if(converged && success_dt) */
 	  
       else /* not converged or unsuccessful time step */
       {
-/* Set bit TRUE in next line to enable retries for failed first timestep*/
-        if(relax_bit && nt == 0 && n < 15) {
+        if(relax_bit && ((n-nt) < no_relax_retry)  ) {
+	      /*success_dt = TRUE;  */
              if(inewton == -1)        {
  	DPRINTF(stdout,"\nHmm... trouble on first step \n  Let's try some more relaxation  \n");
                   if((damp_factor1 <= 1. && damp_factor1 >= 0.) &&
@@ -3082,7 +3122,7 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
                          damp_factor1 *= 0.5;
                          DPRINTF(stdout,"  damping factor %g  \n",damp_factor1);
                       }
-                  }   else  {
+                  }   else if(!converged)  {
         DPRINTF(stdout,"\nHmm... could not converge on first step\n Let's try some more iterations\n");
                     dcopy1(numProcUnknowns, x,x_old);
                     if (nAC > 0) { dcopy1(nAC, x_AC,       x_AC_old); }
@@ -3101,10 +3141,28 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
                           damp_factor1 = MIN(damp_factor1,1.0);
                           DPRINTF(stdout,"  damping factor %g  \n",damp_factor1);
                        }
-                   }
-           } else if(delta_t < tran->resolved_delta_t_min/tran->time_step_decelerator)
+                   }   else {
+fprintf(stderr,"should be not successful %d %d %d \n",inewton,converged,success_dt);
+	DPRINTF(stderr,"\n\tlast time step failed, dt *= %g for next try!\n",
+		tran->time_step_decelerator);
+	      
+	delta_t *= tran->time_step_decelerator;
+	tran->delta_t  = delta_t;
+	tran->delta_t_avg = 0.25*(delta_t+delta_t_old+delta_t_older
+					+delta_t_oldest);
+	time1 = time + delta_t;
+        tran->time_value = time1;
+	evpl_glob[0]->update_flag = 2;
+	af->Sat_hyst_reevaluate = 0;
+
+        /* if specified with "Steps of constant delta_t after failure"
+           use a constant delta_t to help the painful recovery
+         */
+        failed_recently_countdown = tran->const_dt_after_failure;
+			}
+           } else if(converged && delta_t < tran->resolved_delta_t_min/tran->time_step_decelerator)
                    {
-	DPRINTF(stdout,"\n\tminimum resolved step limit!\n");
+	DPRINTF(stderr,"\n\tminimum resolved step limit! - not converged\n");
 	delta_t_oldest = delta_t_older;
 	delta_t_older  = delta_t_old;
 	delta_t_old    = delta_t;
@@ -3164,8 +3222,8 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
 #endif /* not COUPLED_FILL */
       }
       
-      if (delta_t <= Delta_t_min) {
-	DPRINTF(stdout,"\n\tdelta_t = %e < %e\n\n",delta_t, Delta_t_min);
+      if (delta_t <= delta_t_min) {
+        DPRINTF(stderr,"\n\tdelta_t = %e < %e\n\n",delta_t, delta_t_min);
 	
 	DPRINTF(stdout,"time step too small, I'm giving up!\n");
 	break;
@@ -3188,7 +3246,6 @@ DPRINTF(stdout,"new surface value = %g \n",pp_volume[i]->params[pd->Num_Species]
   } /* end of if steady else transient */
   
  free_and_clear:
-
 
 /* If exporting variables to another code, save them now! */
 #ifdef LIBRARY_MODE
@@ -3646,7 +3703,7 @@ anneal_mesh(double x[], int tev, int tev_post, double *glob_vars_val,
 
   for(ielem = e_start; ielem < e_end; ielem++)
   {
-    load_elem_dofptr(ielem, exo, x, x_file, x, x, x, 1);
+    load_elem_dofptr(ielem, exo, x, x_file, x, x, 1);
 
     memset(d, 0, sizeof(double  )*DIM*MDE);
     memset(dofs, 0, sizeof(int)*DIM);
@@ -3730,6 +3787,12 @@ anneal_mesh(double x[], int tev, int tev_post, double *glob_vars_val,
   wr_mesh_exo(exo, afilename, 0);
 
   /*
+   * Return internal EXODUS II data to 0 based node and element numbers
+   * for convenience.
+   */
+  zero_base(exo);
+
+  /*
    * Grab back the undisplaced coordinates that were originally read.
    */
 
@@ -3790,7 +3853,7 @@ anneal_mesh(double x[], int tev, int tev_post, double *glob_vars_val,
 
   /* Now pick up the element variables */
   for (i = 0; i < tev; i++) {
-    wr_elem_result_exo(exo, anneal_file, gvec_elem, i, 1,
+    wr_elem_result_exo(exo, afilename, gvec_elem, i, 1,
 		       time_value, rd);
   }
 
@@ -3798,22 +3861,18 @@ anneal_mesh(double x[], int tev, int tev_post, double *glob_vars_val,
 
   if( rd->ngv > 0  )
     {
-      wr_global_result_exo( exo, anneal_file, 1, rd->ngv, glob_vars_val );
+      wr_global_result_exo( exo, afilename, 1, rd->ngv, glob_vars_val );
     }
 
-  anneal_dat = fopen("anneal.dat", "w");
+  if ( Num_Proc == 1) {
+    anneal_dat = fopen("anneal.dat", "w");
 
-  (void) write_ascii_soln(x_file, NULL, numProcUnknowns,
-		          x, 0, 0.0, anneal_dat);
+    (void) write_ascii_soln(x_file, NULL, numProcUnknowns,
+                            x, 0, 0.0, anneal_dat);
 
-  fclose(anneal_dat);
+    fclose(anneal_dat);
+  }
 
-  /*
-   * Return internal EXODUS II data to 0 based node and element numbers
-   * for convenience.
-   */
-
-  zero_base(exo);
 	  
   /*
    * Free up any temporarily allocated memory.

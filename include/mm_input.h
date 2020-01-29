@@ -32,9 +32,7 @@
 
 #include <stdio.h>
 
-#ifndef MAX_INPUT_LINE_LENGTH
 #define MAX_INPUT_LINE_LENGTH 2048
-#endif
 
 /*
  *  Definition of a Token structure
@@ -98,8 +96,6 @@ extern int count_list		/* mm_input.c                                */
        char [],			/* input -                                   */
        const char ,		/* ch_term                                   */
        const char *);		/* stringend                                 */
-
-extern int look_for_n_doubles(FILE *ifp, int n, double *buf);
 
 extern int look_for_optional	/* mm_input.c                                */
 (FILE *,			/* ifp                                       */
@@ -462,5 +458,5 @@ extern int in_char_list
        const char *,            /* list                                       */
        const int);             /* num_list                                   */
 
-    
+EXTERN int look_for_n_doubles(FILE *ifp, int n, double *array);
 #endif /* GOMA_MM_INPUT_H */

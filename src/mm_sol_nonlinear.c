@@ -53,7 +53,6 @@ static char rcsid[] =
 
 #include "sl_stratimikos_interface.h"
 
-#include "dg_utils.h"
 #define GOMA_MM_SOL_NONLINEAR_C
 #include "goma.h"
 
@@ -97,10 +96,6 @@ static int first_linear_solver_call=TRUE;
 
 #include "mm_eh.h"
 
-
-/* EDW: This function invokes LOCA bordering algorithms as needed. */
-extern int continuation_hook
-(double *, double *, void *, double, double);
 
 static int soln_sens		/* mm_sol_nonlinear.c                        */
 (double ,			/* lambda - parameter                        */
@@ -262,8 +257,7 @@ int solve_nonlinear_problem(struct Aztec_Linear_Solver_System *ams,
 			    double *resid_vector_sens,
 			    double *x_sens,
 			    double **x_sens_p,	/*  solution sensitivities */
-                            void *con_ptr,
-                            dg_neighbor_type *dg_neighbor_data)   /* Identifies if called from LOCA */
+                            void *con_ptr)
 {
 
   static int prev_matrix = 0;
@@ -755,9 +749,9 @@ int solve_nonlinear_problem(struct Aztec_Linear_Solver_System *ams,
 		  }
 	  }
 
-	
+
       /* get global element size and velocity norm if needed for PSPG or Cont_GLS */
-	  if(pd_glob[0]->mi[VELOCITY1] == pg->imtrx && ((PSPG && Num_Var_In_Type[PRESSURE]) || (Cont_GLS && Num_Var_In_Type[VELOCITY1])))
+          if(upd->matrix_index[VELOCITY1] == pg->imtrx && ((PSPG && Num_Var_In_Type[pg->imtrx][PRESSURE]) || (Cont_GLS && Num_Var_In_Type[pg->imtrx][VELOCITY1])))
 	  {
           h_elem_avg = global_h_elem_siz(x, x_old, xdot, resid_vector, exo, dpi);
 		  U_norm     = global_velocity_norm(x, exo, dpi);
@@ -853,10 +847,6 @@ int solve_nonlinear_problem(struct Aztec_Linear_Solver_System *ams,
              is properly communicated */
           exchange_dof(cx,dpi, x, pg->imtrx);
 
-          if (dg_neighbor_data != NULL) {
-            dg_communicate_neighbor_data(exo, dpi, dg_neighbor_data, upd, x, pg->imtrx, Nodes, vn_glob);
-          }
-
 	  if (Linear_Solver == FRONT)
 	    {
 	      zero	  = 0;
@@ -887,7 +877,7 @@ int solve_nonlinear_problem(struct Aztec_Linear_Solver_System *ams,
 					 x_old, x_older, xdot, xdot_old, x_update,
 					 &delta_t, &theta, First_Elem_Side_BC_Array[pg->imtrx], 
 					 &time_value, exo, dpi, &num_total_nodes,
-                                         &h_elem_avg, &U_norm, NULL, NULL);
+                                         &h_elem_avg, &U_norm, NULL);
 		  a_end = ut();
 		}
 	
@@ -955,9 +945,10 @@ EH(-1,"version not compiled with frontal solver");
 				     First_Elem_Side_BC_Array[pg->imtrx], 
 				     &time_value, exo, dpi,
 				     &num_total_nodes,
-                                     &h_elem_avg, &U_norm, NULL, dg_neighbor_data);
-
-	      if( vn->evssModel == LOG_CONF && upd->ep[pg->imtrx][POLYMER_STRESS11] >= 0 && af->Assemble_Jacobian == TRUE)
+				     &h_elem_avg, &U_norm, NULL);
+	     
+              if( (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
+		  && pd->v[POLYMER_STRESS11] && af->Assemble_Jacobian == TRUE)
                 {
                   numerical_jacobian_compute_stress(ams, x, resid_vector, delta_t, theta,
 						    x_old, x_older, xdot, xdot_old,x_update,
@@ -1274,13 +1265,13 @@ EH(-1,"version not compiled with frontal solver");
       }
 
 #ifdef DEBUG_JACOBIAN
-      if (inewton < 1) {
+      if (inewton < 2) {
 	if (strcmp(Matrix_Format, "msr") == 0) {
 	  print_msr_matrix(num_internal_dofs[pg->imtrx]  + num_boundary_dofs[pg->imtrx],
 			   ija, a, x);
 	  print_array(ija, ija[ija[0]-1], "ija", type_int, ProcID);
 	} else {
-	  print_vbr_matrix(ams, exo, dpi, Num_Unknowns_Node);
+	  print_vbr_matrix(ams, exo, dpi, NumUnknowns[pg->imtrx]);
 	}
       }
 #endif /* DEBUG_JACOBIAN */
@@ -1798,6 +1789,7 @@ EH(-1,"version not compiled with frontal solver");
 	  if (sAC[j][j] == 0.0) { 
 	    sAC[j][j] = 1.0e-20;
 	  }
+
 	  dumAC = 1.0/sAC[j][j];
 	  for (i=j+1;i<nAC;i++) {
 	    sAC[i][j] *= dumAC;
@@ -1872,8 +1864,8 @@ EH(-1,"version not compiled with frontal solver");
       Norm_new = Norm[0][1];
 
       /* fail if we didn't get a finite solution */
-      if (!finite(Norm[1][0]) || !finite(Norm[1][1]) || !finite(Norm[1][2]) ||
-          !finite(Norm[0][0]) || !finite(Norm[0][1]) || !finite(Norm[0][2])) {
+      if (!isfinite(Norm[1][0]) || !isfinite(Norm[1][1]) || !isfinite(Norm[1][2]) ||
+          !isfinite(Norm[0][0]) || !isfinite(Norm[0][1]) || !isfinite(Norm[0][2])) {
         return_value = -1;
         goto free_and_clear;
       }
@@ -2057,19 +2049,6 @@ EH(-1,"version not compiled with frontal solver");
 	  xdot[i] -= damp_factor * var_damp[idv[pg->imtrx][i][0]] * delta_x[i] * (1.0 + 2 * theta) / delta_t;
 	}
 	exchange_dof(cx, dpi, xdot, pg->imtrx);	
-     /* Check and correct for negative values of thickness and concentration 
-        in shell film profile equation */
-
-
-
-
-
-	/*       /\* if (values_floored > 0) { *\/ */
-	/*       /\* 	printf("floored %d mx %g mn %g mom %d\n", values_floored, mx ,mn, MOMENT0 - var); *\/ */
-	/*       /\* } *\/ */
-	/*     } */
-	/*   } */
-
 		
 	/* Now go back and correct all those dofs in solid regions undergoing newmark-beta
 	 * transient scheme */
@@ -2154,9 +2133,9 @@ EH(-1,"version not compiled with frontal solver");
        */
       if (nAC > 0) {
 	if (Debug_Flag > 0) {
-	  DPRINTF(stderr, "\n------------------------------\n");
-	  DPRINTF(stderr, "Augmenting Conditions:    %4d\n", nAC);
-	  DPRINTF(stderr, "Number of extra unknowns: %4d\n\n", nAC);
+          DPRINTF(stdout, "\n------------------------------\n");
+          DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
+          DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
         }
 	for (iAC = 0;iAC < nAC;iAC++) {
 	  x_AC[iAC] -= damp_factor * yAC[iAC]; 
@@ -2174,51 +2153,51 @@ EH(-1,"version not compiled with frontal solver");
 	   */
 	  if (Debug_Flag > 0) {
 	    if (augc[iAC].Type == AC_USERBC) {	      
-	      DPRINTF(stderr, "\tBC[%4d] DF[%4d]=% 10.6e Update=% 10.6e\n", 
+              DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e Update=% 10.6e\n",
 		      augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC], 
 		      damp_factor*yAC[iAC]);	      
 	    } else {
               if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT ) {
-		DPRINTF(stderr, "\tMT[%4d] MP[%4d]=% 10.6e Update=% 10.6e\n", 
+                DPRINTF(stdout, "\tMT[%4d] MP[%4d]=% 10.6e Update=% 10.6e\n",
 			augc[iAC].MTID, augc[iAC].MPID,
 			x_AC[iAC], damp_factor*yAC[iAC]);
 	      } else {
 		if (augc[iAC].Type == AC_VOLUME) {
-		  DPRINTF(stderr,
+                  DPRINTF(stdout,
 			  "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", 
 			  augc[iAC].MTID, augc[iAC].VOLID,
 			  augc[iAC].evol, x_AC[iAC]);
 		} else {
 		  if (augc[iAC].Type == AC_FLUX) {
-		    DPRINTF(stderr,
+                    DPRINTF(stdout,
 			    "\tBC[%4d] DF[%4d]=% 10.6e Update=% 10.6e\n", 
 			    augc[iAC].BCID, augc[iAC].DFID,
 			    x_AC[iAC], damp_factor*yAC[iAC]);
 		  } else {
 		    if (augc[iAC].Type == AC_LGRM) {
-		      DPRINTF(stderr,
+                      DPRINTF(stdout,
 			      "\tAC[%d], Lagrange Multiplier=%10.6e Update=%10.6e\n",
 			      iAC, x_AC[iAC], damp_factor*yAC[iAC] );
 		    } else {
 		      if (augc[iAC].Type == AC_ARC_LENGTH) {
-		        DPRINTF(stderr,
+                        DPRINTF(stdout,
 			        "\tAC[%d], Arc Length Parameter=%10.6e Update=%10.6e\n",
 			        iAC, x_AC[iAC], damp_factor*yAC[iAC] );
                       } else {
                         if (augc[iAC].Type == AC_OVERLAP) {
-                          DPRINTF(stderr,
+                          DPRINTF(stdout,
                                   "\tAC[%d], Elem %d Side %d  Dim %d:  LM=%10.6e  Update=%10.6e\n",
                                   iAC, augc[iAC].lm_elem, augc[iAC].lm_side,
                                   augc[iAC].lm_dim, x_AC[iAC], damp_factor*yAC[iAC] );
                         } else {
                           if (augc[iAC].Type == AC_PERIODIC) {
-                            DPRINTF(stderr,
+                            DPRINTF(stdout,
                                     "\tAC[%d], Elem %d Side %d  Var %s:  LM=%10.6e  Update=%10.6e\n",
                                     iAC, augc[iAC].lm_elem, augc[iAC].lm_side,
                                     Var_Name[augc[iAC].VAR].name1, x_AC[iAC], damp_factor*yAC[iAC] );
                           } else {
 			    if (augc[iAC].Type == AC_POSITION) {
-			      DPRINTF(stderr,
+                              DPRINTF(stdout,
 				      "\tMT[%4d] XY[%4d]=%10.6e Param=%10.6e\n", 
 				      augc[iAC].MTID, augc[iAC].VOLID,
 				      augc[iAC].evol, x_AC[iAC]);
@@ -2477,7 +2456,6 @@ skip_solve:
       DPRINTF(stdout, "scaled solution norms  %13.6e %13.6e %13.6e \n",
 	      Norm[4][0], Norm[4][1], Norm[4][2]);
 
-
   /*
     * COMPUTE SOLUTION SENSITIVITY TO PARAMETERS AS REQUESTED
     */
@@ -2650,8 +2628,9 @@ if( *converged )
 
    */
 
+/*  only if converged */
 
-  if (Continuation > 0) {
+  if (Continuation > 0  &&  *converged) {
 
     switch (Continuation) {
     case  ALC_FIRST:
@@ -2792,7 +2771,6 @@ free_and_clear:
           dofs_hidden = FALSE;
         }
     }
-
 
   safe_free( (void *) delta_x);
   safe_free( (void *) res_p);
@@ -3252,7 +3230,7 @@ print_array(const void *array,
 #if 0
 	  fprintf(f, "%s[%d] = %d\n", name, i, ((int *)array)[i]);
 #endif
-	  fprintf(f, "%d %d\n", i, ((int *)array)[i]);
+	  fprintf(f, "%d %d\n", i, ((const int *)array)[i]);
 	}
       break;
       
@@ -3262,7 +3240,7 @@ print_array(const void *array,
 #if 0
 	  fprintf(f, "%s[%d] = %g\n", name, i, ((double *)array)[i]);
 #endif
-	  fprintf(f, "%d %23.16e\n", i, ((double *)array)[i]);
+	  fprintf(f, "%d %23.16e\n", i, ((const double *)array)[i]);
 	}
       break;
       
@@ -3350,7 +3328,7 @@ soln_sens ( double lambda,  /*  parameter */
 {
   double dlambda, lambda_tmp, hunt_val;
 
-  int i,iHC;
+  int i,iHC,iAC;
   dbl          a_start;        /* mark start of assembly */
   dbl          a_end;          /* mark end of assembly */
   int       err;
@@ -3367,7 +3345,7 @@ soln_sens ( double lambda,  /*  parameter */
   double time_local =0.0;
   double time_global=0.0;
 
-  double fd_factor=1.0E-06;	/*  finite difference step */
+  double fd_factor=FD_FACTOR;	/*  finite difference step */
 
   /*
   static int first_soln_sens_linear_solver_call = 1;
@@ -3387,8 +3365,7 @@ soln_sens ( double lambda,  /*  parameter */
   a_start = ut();
 
   dlambda = fd_factor*lambda;
-  if (dlambda == 0.0) 
-    { dlambda = fd_factor; }
+  dlambda = (fabs(dlambda) < fd_factor ? fd_factor : dlambda);
 
   /*
    * GET RESIDUAL SENSITIVITY
@@ -3405,12 +3382,20 @@ soln_sens ( double lambda,  /*  parameter */
 		break;
 		case HUN_FIRST:
 		for (iHC=0;iHC<nHC;iHC++)
-			{
-			hunt_val = hunt[iHC].BegParameterValue + lambda_tmp*
+		  {
+                   if( hunt[iHC].ramp ==2 )
+                    {
+                     hunt_val = hunt[iHC].BegParameterValue*
+                                pow(hunt[iHC].EndParameterValue/hunt[iHC].BegParameterValue,lambda_tmp);
+                    }  
+                   else  
+                    {
+		     hunt_val = hunt[iHC].BegParameterValue + lambda_tmp*
 				(hunt[iHC].EndParameterValue - hunt[iHC].BegParameterValue);
-			update_parameterHC(iHC, hunt_val, x, xdot, NULL, 1.0, cx, exo,dpi);
-			}
-		break;
+                    }
+		   update_parameterHC(iHC, hunt_val, x, xdot, NULL, 1.0, cx, exo,dpi);
+	           }
+		 break;
 		}
 	}
 	else
@@ -3424,6 +3409,11 @@ soln_sens ( double lambda,  /*  parameter */
   af->Assemble_Jacobian = FALSE;
   af->Assemble_LSA_Jacobian_Matrix = FALSE;
   af->Assemble_LSA_Mass_Matrix = FALSE;
+  if(nAC > 0)
+    {
+     for(iAC=0 ; iAC<nAC ; iAC++)
+          {augc[iAC].evol =0.0;}
+    }
 
   err = matrix_fill_full(ams, x, res_p, 
 			 x_old, x_older, xdot, xdot_old, x_update, 
@@ -3431,7 +3421,7 @@ soln_sens ( double lambda,  /*  parameter */
 			 First_Elem_Side_BC_Array[pg->imtrx], 
 			 &time_value, exo, dpi,
 			 &num_total_nodes,
-                         &h_elem_avg, &U_norm, NULL, NULL);
+                         &h_elem_avg, &U_norm, NULL);
   if (err == -1) return(err);
 
   lambda_tmp = lambda-dlambda;
@@ -3445,11 +3435,19 @@ soln_sens ( double lambda,  /*  parameter */
 		break;
 		case HUN_FIRST:
 		for (iHC=0;iHC<nHC;iHC++)
-			{
-			hunt_val = hunt[iHC].BegParameterValue + lambda_tmp*
+		  {
+                   if(hunt[iHC].ramp == 2)
+                     {
+                      hunt_val = hunt[iHC].BegParameterValue*
+                    pow(hunt[iHC].EndParameterValue/hunt[iHC].BegParameterValue,lambda_tmp);
+                     }  
+                   else  
+                     {
+		      hunt_val = hunt[iHC].BegParameterValue + lambda_tmp*
 				(hunt[iHC].EndParameterValue - hunt[iHC].BegParameterValue);
-			update_parameterHC(iHC, hunt_val, x, xdot, NULL, 1.0, cx, exo,dpi);
-			}
+                     }
+		    update_parameterHC(iHC, hunt_val, x, xdot, NULL, 1.0, cx, exo,dpi);
+		  }
 		break;
 		}
 	}
@@ -3464,6 +3462,11 @@ soln_sens ( double lambda,  /*  parameter */
   af->Assemble_Jacobian = FALSE;
   af->Assemble_LSA_Jacobian_Matrix = FALSE;
   af->Assemble_LSA_Mass_Matrix = FALSE;
+  if(nAC > 0)
+    {
+     for(iAC=0 ; iAC<nAC ; iAC++)
+          {augc[iAC].evol =0.0;}
+    }
 
   err = matrix_fill_full(ams, x, res_m, 
 			 x_old, x_older, xdot, xdot_old, x_update,
@@ -3471,7 +3474,7 @@ soln_sens ( double lambda,  /*  parameter */
 			 First_Elem_Side_BC_Array[pg->imtrx], 
 			 &time_value, exo, dpi,
 			 &num_total_nodes,
-                         &h_elem_avg, &U_norm, NULL, NULL);
+                         &h_elem_avg, &U_norm, NULL);
   
   if (err == -1) return(err);
 
@@ -3488,11 +3491,20 @@ soln_sens ( double lambda,  /*  parameter */
 		break;
 		case HUN_FIRST:
 		for (iHC=0;iHC<nHC;iHC++)
-			{
-			hunt_val = hunt[iHC].BegParameterValue + lambda*
-				(hunt[iHC].EndParameterValue - hunt[iHC].BegParameterValue);
-			update_parameterHC(iHC, hunt_val, x, xdot, NULL, 1.0, cx, exo,dpi);
-			}
+		  {
+                   if( hunt[iHC].ramp == 2 )
+                    {
+                      hunt_val = hunt[iHC].BegParameterValue*
+                      pow(hunt[iHC].EndParameterValue/hunt[iHC].BegParameterValue,lambda);
+                    }  
+
+                   else  
+                    {
+		      hunt_val = hunt[iHC].BegParameterValue + lambda*
+		           (hunt[iHC].EndParameterValue - hunt[iHC].BegParameterValue);
+                    }
+		   update_parameterHC(iHC, hunt_val, x, xdot, NULL, 1.0, cx, exo,dpi);
+		  }
 		break;
 		}
 	}
@@ -3668,6 +3680,21 @@ soln_sens ( double lambda,  /*  parameter */
         matrix_solved = (ams->status[AZ_why] == AZ_normal);
       } else {
         EH(-1, "Sorry, only Epetra matrix formats are currently supported with the AztecOO solver suite\n");
+      }
+      break;
+
+    case STRATIMIKOS:
+      if ( strcmp( Matrix_Format,"epetra" ) == 0 ) {
+        int iterations;
+        int err = stratimikos_solve(ams,  x_sens, resid_vector_sens, &iterations, Stratimikos_File[pg->imtrx]);
+        EH(err, "Error in stratimikos solve");
+	if (iterations == -1) {
+	  strcpy(stringer, "err");
+	} else {
+	  aztec_stringer(AZ_normal, iterations, &stringer[0]);
+	}
+      } else {
+        EH(-1, "Sorry, only Epetra matrix formats are currently supported with the Stratimikos interface\n");
       }
       break;
     case MA28:

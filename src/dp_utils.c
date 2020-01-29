@@ -141,6 +141,7 @@ ddd_alloc(void)
 void 
 ddd_free(DDD p)
 {
+  MPI_Type_free(&p->new_type);
   free(p->block_count);
   free(p->data_type);
   free(p->address);
@@ -415,14 +416,13 @@ check_parallel_error_FL(char *errstring, char *file_name, int lineno)
      *   this routine posts an error message and terminates GOMA.
      ********************************************************************/
 {
-  extern int parallel_err, parallel_err_global;
 #ifdef PARALLEL
 
   MPI_Allreduce(&parallel_err, &parallel_err_global, 1,
                  MPI_INT, MPI_LOR, MPI_COMM_WORLD);
   if (parallel_err_global) { 
     DPRINTF(stderr, "PARALLEL ERROR: ");
-    if (!errstring) DPRINTF(stderr, "%s", errstring);
+    if (errstring) DPRINTF(stderr, "%s", errstring);
     DPRINTF(stderr,
 	    " check previous output for cause of error: %s line %d",
 	    file_name, lineno);
@@ -580,7 +580,7 @@ gminloc_int(const int value, const int local_loc, int *global_minloc)
 /************************************************************************/
 
 int
-gmin_int(const int value)
+gmin_int(int value)
     
     /********************************************************************
      *
@@ -612,7 +612,7 @@ gmin_int(const int value)
 /************************************************************************/
 
 int
-gmax_int(const int value)
+gmax_int(int value)
     
     /********************************************************************
      *
@@ -644,7 +644,7 @@ gmax_int(const int value)
 /************************************************************************/
 
 int
-gsum_Int(const int value)
+gsum_Int(int value)
     
     /********************************************************************
      *
@@ -676,7 +676,7 @@ gsum_Int(const int value)
 /************************************************************************/
 
 double
-gavg_double(const double value)
+gavg_double(double value)
 
     /********************************************************************
      *

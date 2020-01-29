@@ -10,6 +10,9 @@
 * This software is distributed under the GNU General Public License.      *
 \************************************************************************/
 
+/* Needed to declare POSIX function drand48 */
+#define _XOPEN_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -45,6 +48,8 @@
 
 #include "exo_struct.h"
 
+#include "rd_pixel_image.h"
+
 #include "goma.h"
 
 
@@ -72,15 +77,6 @@
 ******************************************************************************/
 
 /******************** PROTOTYPES FOR STATIC FUNCTIONS ************************/
-int rd_image_to_mesh
-( int ,                  /* Index of external field */
-        const Exo_DB *);      /* Exodus database */
-
-int rd_image_to_mesh2
-( int ,                  /* Index of external field */
-        const Exo_DB *);      /* Exodus database */
-
-
 static void read_initial_guess	/* rf_util.c                                 */
 (double [],		/* u                                         */
        const int ,		/* np                                        */
@@ -100,10 +96,7 @@ static void init_structural_shell_coord
 
 static void init_shell_normal_unknowns
 (double [] ,              /* u[] - solution vector */
-       const Exo_DB *,		/* Exodus database */
-       const int,		/* Shell node set ID */
-       double , 		/* Focal point X-coordinate */
-       double);		/* Focal point Y-coordinate */
+       const Exo_DB *);		/* Exodus database */
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -736,12 +729,14 @@ time_step_control(const double delta_t,  const double delta_t_old,
     Err_norm      += ecp[POR_GAS_PRES];
     Err_norm      += ecp[POR_POROSITY];
     Err_norm      += ecp[POR_SATURATION];
+    Err_norm      += ecp[POR_SINK_MASS];
 
     num_unknowns += ncp[MASS_FRACTION];
     num_unknowns += ncp[POR_LIQ_PRES];
     num_unknowns += ncp[POR_GAS_PRES];
     num_unknowns += ncp[POR_POROSITY];
     num_unknowns += ncp[POR_SATURATION];
+    num_unknowns += ncp[POR_SINK_MASS];
   }
 
   if (use_var_norm[4]) {	/* Pressure, even though there is no dP/dt
@@ -804,6 +799,7 @@ time_step_control(const double delta_t,  const double delta_t_old,
  
     Err_norm      += ecp[SURF_CHARGE];
     Err_norm      += ecp[SHELL_CURVATURE];
+    Err_norm      += ecp[SHELL_CURVATURE2];
     Err_norm      += ecp[SHELL_TENSION];
     Err_norm      += ecp[SHELL_X];
     Err_norm      += ecp[SHELL_Y];
@@ -821,10 +817,14 @@ time_step_control(const double delta_t,  const double delta_t_old,
     Err_norm      += ecp[LIGHT_INTP];
     Err_norm      += ecp[LIGHT_INTM];
     Err_norm      += ecp[LIGHT_INTD];
+    Err_norm      += ecp[RESTIME];  
 /*    Err_norm      += ecp[EXT_VELOCITY];  */
+    Err_norm      += ecp[TFMP_PRES];
+    Err_norm      += ecp[TFMP_SAT];
  
     num_unknowns += ncp[SURF_CHARGE];
     num_unknowns += ncp[SHELL_CURVATURE];
+    num_unknowns += ncp[SHELL_CURVATURE2];
     num_unknowns += ncp[SHELL_TENSION];
     num_unknowns += ncp[SHELL_X];
     num_unknowns += ncp[SHELL_Y];
@@ -842,7 +842,10 @@ time_step_control(const double delta_t,  const double delta_t_old,
     num_unknowns += ncp[LIGHT_INTP];
     num_unknowns += ncp[LIGHT_INTM];
     num_unknowns += ncp[LIGHT_INTD];
+    num_unknowns += ncp[RESTIME];  
 /*    num_unknowns += ncp[EXT_VELOCITY];  */
+    num_unknowns += ncp[TFMP_PRES];
+    num_unknowns += ncp[TFMP_SAT];
 
   if (use_var_norm[8] ) /* LS equation is set with special card in Level Set section */
   {
@@ -916,7 +919,7 @@ time_step_control(const double delta_t,  const double delta_t_old,
   e_v = ecp[VELOCITY1] + ecp[VELOCITY2] + ecp[VELOCITY3];
   e_T = ecp[TEMPERATURE];
   e_y = (ecp[MASS_FRACTION] + ecp[POR_LIQ_PRES] + ecp[POR_GAS_PRES] +
-	 ecp[POR_POROSITY]  + ecp[POR_SATURATION]);
+	 ecp[POR_POROSITY]  + ecp[POR_SATURATION] + ecp[POR_SINK_MASS] );
   e_P = ecp[PRESSURE];
   e_S = (ecp[POLYMER_STRESS11] + ecp[POLYMER_STRESS12] +
 	 ecp[POLYMER_STRESS22] + ecp[POLYMER_STRESS13] +
@@ -928,7 +931,7 @@ time_step_control(const double delta_t,  const double delta_t_old,
 
   e_V = ecp[VOLTAGE];
   e_qs = ecp[SURF_CHARGE];
-  e_shk = ecp[SHELL_CURVATURE];
+  e_shk = ecp[SHELL_CURVATURE] + ecp[SHELL_CURVATURE2];
   e_sht = ecp[SHELL_TENSION];
   e_shd = ecp[SHELL_X] + ecp[SHELL_Y];
   e_shu = ecp[SHELL_USER];
@@ -937,7 +940,7 @@ time_step_control(const double delta_t,  const double delta_t_old,
   e_F = ecp[FILL] + ecp[PHASE1];
   e_ap = ecp[ACOUS_PREAL] + ecp[ACOUS_PIMAG] + ecp[ACOUS_REYN_STRESS];
   e_extv = ecp[EXT_VELOCITY];
-  e_int = ecp[LIGHT_INTP] + ecp[LIGHT_INTM] + ecp[LIGHT_INTD];
+  e_int = ecp[LIGHT_INTP] + ecp[LIGHT_INTM] + ecp[LIGHT_INTD] + ecp[RESTIME];
 
   e_d = sqrt(e_d*scaling);
   e_v = sqrt(e_v*scaling);
@@ -971,102 +974,102 @@ time_step_control(const double delta_t,  const double delta_t_old,
   *success_dt = (Err_norm < beta * abs_eps);
     if( const_delta_t)
 	{
-        DPRINTF(stderr, "\nCONSTANT DELTA_T          [");
-        if(ncp[MESH_DISPLACEMENT1]){ DPRINTF(stderr, "%7.1e", e_d); }
-        if(ncp[VELOCITY1] || ncp[PVELOCITY1]){ DPRINTF(stderr, ", %7.1e", e_v); }
-        if(ncp[TEMPERATURE]){ DPRINTF(stderr, ", %7.1e", e_T); }
+        DPRINTF(stdout, "\nCONSTANT DELTA_T          [");
+        if(ncp[MESH_DISPLACEMENT1]){ DPRINTF(stdout, "%7.1e", e_d); }
+        if(ncp[VELOCITY1] || ncp[PVELOCITY1]){ DPRINTF(stdout, ", %7.1e", e_v); }
+        if(ncp[TEMPERATURE]){ DPRINTF(stdout, ", %7.1e", e_T); }
         if(ncp[MASS_FRACTION] || ncp[POR_LIQ_PRES] || ncp[POR_GAS_PRES] 
-		|| ncp[POR_POROSITY] || ncp[POR_SATURATION])
- 		{ DPRINTF(stderr, ", %7.1e", e_y); }
-        if(ncp[PRESSURE]){ DPRINTF(stderr, ", %7.1e", e_P); }
-        if(ncp[POLYMER_STRESS11]){ DPRINTF(stderr, ", %7.1e", e_S); }
-        if(ncp[VOLTAGE]){ DPRINTF(stderr, ", %7.1e", e_V); }
-        if(ncp[SURF_CHARGE]){ DPRINTF(stderr, ", %7.1e", e_qs); }
-        if(ncp[SHELL_CURVATURE]){ DPRINTF(stderr, ", %7.1e", e_shk); }
-        if(ncp[SHELL_TENSION]){ DPRINTF(stderr, ", %7.1e", e_sht); }
-        if(ncp[SHELL_X]){ DPRINTF(stderr, ", %7.1e", e_shd); }
-        if(ncp[SHELL_USER]){ DPRINTF(stderr, ", %7.1e", e_shu); }
-        if(ncp[FILL] || ncp[PHASE1] ){ DPRINTF(stderr, ", %7.1e", e_F); }
-        if(ncp[ACOUS_PREAL] || ncp[ACOUS_PIMAG]){ DPRINTF(stderr, ", %7.1e", e_ap); }
-        if(ncp[EXT_VELOCITY]){ DPRINTF(stderr, ", %7.1e", e_extv); }
-	if(ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD] ){ DPRINTF(stderr, ", %7.1e", e_int); }
-	if(ncp[LUBP] || ncp[LUBP_2] || ncp[SHELL_FILMP] || ncp[SHELL_TEMPERATURE] || ncp[SHELL_DELTAH] || ncp[SHELL_LUB_CURV] || ncp[SHELL_LUB_CURV_2] || ncp[SHELL_SAT_CLOSED] || ncp[SHELL_PRESS_OPEN] || ncp[SHELL_PRESS_OPEN_2]){ DPRINTF(stderr, ", %7.1e", e_sh_lub); }
-        if(nAC > 0){ DPRINTF(stderr, ", %7.1e", e_AC); }
-        DPRINTF(stderr, "]\n");
+		|| ncp[POR_POROSITY] || ncp[POR_SATURATION] || ncp[POR_SINK_MASS])
+                { DPRINTF(stdout, ", %7.1e", e_y); }
+        if(ncp[PRESSURE]){ DPRINTF(stdout, ", %7.1e", e_P); }
+        if(ncp[POLYMER_STRESS11]){ DPRINTF(stdout, ", %7.1e", e_S); }
+        if(ncp[VOLTAGE]){ DPRINTF(stdout, ", %7.1e", e_V); }
+        if(ncp[SURF_CHARGE]){ DPRINTF(stdout, ", %7.1e", e_qs); }
+        if(ncp[SHELL_CURVATURE]){ DPRINTF(stdout, ", %7.1e", e_shk); }
+        if(ncp[SHELL_TENSION]){ DPRINTF(stdout, ", %7.1e", e_sht); }
+        if(ncp[SHELL_X]){ DPRINTF(stdout, ", %7.1e", e_shd); }
+        if(ncp[SHELL_USER]){ DPRINTF(stdout, ", %7.1e", e_shu); }
+        if(ncp[FILL] || ncp[PHASE1] ){ DPRINTF(stdout, ", %7.1e", e_F); }
+        if(ncp[ACOUS_PREAL] || ncp[ACOUS_PIMAG]){ DPRINTF(stdout, ", %7.1e", e_ap); }
+        if(ncp[EXT_VELOCITY]){ DPRINTF(stdout, ", %7.1e", e_extv); }
+        if(ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD] || ncp[RESTIME]){ DPRINTF(stdout, ", %7.1e", e_int); }
+        if(ncp[LUBP] || ncp[LUBP_2] || ncp[SHELL_FILMP] || ncp[SHELL_TEMPERATURE] || ncp[SHELL_DELTAH] || ncp[SHELL_LUB_CURV] || ncp[SHELL_LUB_CURV_2] || ncp[SHELL_SAT_CLOSED] || ncp[SHELL_PRESS_OPEN] || ncp[SHELL_PRESS_OPEN_2]){ DPRINTF(stdout, ", %7.1e", e_sh_lub); }
+        if(nAC > 0){ DPRINTF(stdout, ", %7.1e", e_AC); }
+        DPRINTF(stdout, "]\n");
       log_msg("Constant delta_t");
 	}
     else if (*success_dt) {
-        DPRINTF(stderr, "\nOK  %7.1e < %3g %7.1e [", Err_norm, beta, abs_eps);
-        if(ncp[MESH_DISPLACEMENT1]){ DPRINTF(stderr, "%7.1e", e_d); }
-        if(ncp[VELOCITY1] || ncp[PVELOCITY1]){ DPRINTF(stderr, ", %7.1e", e_v); }
-        if(ncp[TEMPERATURE]){ DPRINTF(stderr, ", %7.1e", e_T); }
+        DPRINTF(stdout, "\nOK  %7.1e < %3g %7.1e [", Err_norm, beta, abs_eps);
+        if(ncp[MESH_DISPLACEMENT1]){ DPRINTF(stdout, "%7.1e", e_d); }
+        if(ncp[VELOCITY1] || ncp[PVELOCITY1]){ DPRINTF(stdout, ", %7.1e", e_v); }
+        if(ncp[TEMPERATURE]){ DPRINTF(stdout, ", %7.1e", e_T); }
         if(ncp[MASS_FRACTION] || ncp[POR_LIQ_PRES] || ncp[POR_GAS_PRES] 
-		|| ncp[POR_POROSITY] || ncp[POR_SATURATION])
- 		{ DPRINTF(stderr, ", %7.1e", e_y); }
-        if(ncp[PRESSURE]){ DPRINTF(stderr, ", %7.1e", e_P); }
-        if(ncp[POLYMER_STRESS11]){ DPRINTF(stderr, ", %7.1e", e_S); }
-        if(ncp[VOLTAGE]){ DPRINTF(stderr, ", %7.1e", e_V); }
-        if(ncp[SURF_CHARGE]){ DPRINTF(stderr, ", %7.1e", e_qs); }
-        if(ncp[SHELL_CURVATURE]){ DPRINTF(stderr, ", %7.1e", e_shk); }
-        if(ncp[SHELL_TENSION]){ DPRINTF(stderr, ", %7.1e", e_sht); }
-        if(ncp[SHELL_X]){ DPRINTF(stderr, ", %7.1e", e_shd); }
-        if(ncp[SHELL_USER]){ DPRINTF(stderr, ", %7.1e", e_shu); }
-        if(ncp[FILL] || ncp[PHASE1]  ){ DPRINTF(stderr, ", %7.1e", e_F); }
-        if(ncp[ACOUS_PREAL] || ncp[ACOUS_PIMAG]){ DPRINTF(stderr, ", %7.1e", e_ap); }
-        if(ncp[EXT_VELOCITY]){ DPRINTF(stderr, ", %7.1e", e_extv); }
-	if(ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD] ){ DPRINTF(stderr, ", %7.1e", e_int); }
-	if(ncp[LUBP] || ncp[LUBP_2] || ncp[SHELL_FILMP] || ncp[SHELL_TEMPERATURE] || ncp[SHELL_DELTAH] || ncp[SHELL_LUB_CURV] || ncp[SHELL_LUB_CURV_2] || ncp[SHELL_SAT_CLOSED] || ncp[SHELL_PRESS_OPEN] || ncp[SHELL_PRESS_OPEN_2]){ DPRINTF(stderr, ", %7.1e", e_sh_lub); }
-        if(nAC > 0){ DPRINTF(stderr, ", %7.1e", e_AC); }
-        DPRINTF(stderr, "]\n");
+		|| ncp[POR_POROSITY] || ncp[POR_SATURATION] || ncp[POR_SINK_MASS])
+                { DPRINTF(stdout, ", %7.1e", e_y); }
+        if(ncp[PRESSURE]){ DPRINTF(stdout, ", %7.1e", e_P); }
+        if(ncp[POLYMER_STRESS11]){ DPRINTF(stdout, ", %7.1e", e_S); }
+        if(ncp[VOLTAGE]){ DPRINTF(stdout, ", %7.1e", e_V); }
+        if(ncp[SURF_CHARGE]){ DPRINTF(stdout, ", %7.1e", e_qs); }
+        if(ncp[SHELL_CURVATURE]){ DPRINTF(stdout, ", %7.1e", e_shk); }
+        if(ncp[SHELL_TENSION]){ DPRINTF(stdout, ", %7.1e", e_sht); }
+        if(ncp[SHELL_X]){ DPRINTF(stdout, ", %7.1e", e_shd); }
+        if(ncp[SHELL_USER]){ DPRINTF(stdout, ", %7.1e", e_shu); }
+        if(ncp[FILL] || ncp[PHASE1]  ){ DPRINTF(stdout, ", %7.1e", e_F); }
+        if(ncp[ACOUS_PREAL] || ncp[ACOUS_PIMAG]){ DPRINTF(stdout, ", %7.1e", e_ap); }
+        if(ncp[EXT_VELOCITY]){ DPRINTF(stdout, ", %7.1e", e_extv); }
+        if(ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD] || ncp[RESTIME]){ DPRINTF(stdout, ", %7.1e", e_int); }
+        if(ncp[LUBP] || ncp[LUBP_2] || ncp[SHELL_FILMP] || ncp[SHELL_TEMPERATURE] || ncp[SHELL_DELTAH] || ncp[SHELL_LUB_CURV] || ncp[SHELL_LUB_CURV_2] || ncp[SHELL_SAT_CLOSED] || ncp[SHELL_PRESS_OPEN] || ncp[SHELL_PRESS_OPEN_2]){ DPRINTF(stdout, ", %7.1e", e_sh_lub); }
+        if(nAC > 0){ DPRINTF(stdout, ", %7.1e", e_AC); }
+        DPRINTF(stdout, "]\n");
       log_msg("Predictor was OK, %g < %g * %g", Err_norm, beta, eps);
     } else {
-        DPRINTF(stderr, "\nYUK %7.1e > %3g %7.1e [", Err_norm, beta, abs_eps);
-        if(ncp[MESH_DISPLACEMENT1]){ DPRINTF(stderr, "%7.1e", e_d); }
-        if(ncp[VELOCITY1] || ncp[PVELOCITY1]){ DPRINTF(stderr, ", %7.1e", e_v); }
-        if(ncp[TEMPERATURE]){ DPRINTF(stderr, ", %7.1e", e_T); }
+        DPRINTF(stdout, "\nYUK %7.1e > %3g %7.1e [", Err_norm, beta, abs_eps);
+        if(ncp[MESH_DISPLACEMENT1]){ DPRINTF(stdout, "%7.1e", e_d); }
+        if(ncp[VELOCITY1] || ncp[PVELOCITY1]){ DPRINTF(stdout, ", %7.1e", e_v); }
+        if(ncp[TEMPERATURE]){ DPRINTF(stdout, ", %7.1e", e_T); }
         if(ncp[MASS_FRACTION] || ncp[POR_LIQ_PRES] || ncp[POR_GAS_PRES]
- 		 || ncp[POR_POROSITY] || ncp[POR_SATURATION])
- 		{ DPRINTF(stderr, ", %7.1e", e_y); }
-        if(ncp[PRESSURE]){ DPRINTF(stderr, ", %7.1e", e_P); }
-        if(ncp[POLYMER_STRESS11]){ DPRINTF(stderr, ", %7.1e", e_S); }
-        if(ncp[VOLTAGE]){ DPRINTF(stderr, ", %7.1e", e_V); }
-        if(ncp[SURF_CHARGE]){ DPRINTF(stderr, ", %7.1e", e_qs); }
-        if(ncp[SHELL_CURVATURE]){ DPRINTF(stderr, ", %7.1e", e_shk); }
-        if(ncp[SHELL_TENSION]){ DPRINTF(stderr, ", %7.1e", e_sht); }
-        if(ncp[SHELL_X]){ DPRINTF(stderr, ", %7.1e", e_shd); }
-        if(ncp[SHELL_USER]){ DPRINTF(stderr, ", %7.1e", e_shu); }
-        if(ncp[FILL] || ncp[PHASE1] ){ DPRINTF(stderr, ", %7.1e", e_F); }
-        if(ncp[ACOUS_PREAL] || ncp[ACOUS_PIMAG]){ DPRINTF(stderr, ", %7.1e", e_ap); }
-        if(ncp[EXT_VELOCITY]){ DPRINTF(stderr, ", %7.1e", e_extv); }
-	if(ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD]){ DPRINTF(stderr, ", %7.1e", e_int); }
-	if(ncp[LUBP] || ncp[LUBP_2] || ncp[SHELL_FILMP] || ncp[SHELL_TEMPERATURE] || ncp[SHELL_DELTAH] || ncp[SHELL_LUB_CURV] ||  ncp[SHELL_LUB_CURV_2] || ncp[SHELL_SAT_CLOSED] || ncp[SHELL_PRESS_OPEN] || ncp[SHELL_PRESS_OPEN_2]){ DPRINTF(stderr, ", %7.1e", e_sh_lub); }
-        if(nAC > 0){ DPRINTF(stderr, ", %7.1e", e_AC); }
-        DPRINTF(stderr, "]\n");
+ 		 || ncp[POR_POROSITY] || ncp[POR_SATURATION] || ncp[POR_SINK_MASS])
+                { DPRINTF(stdout, ", %7.1e", e_y); }
+        if(ncp[PRESSURE]){ DPRINTF(stdout, ", %7.1e", e_P); }
+        if(ncp[POLYMER_STRESS11]){ DPRINTF(stdout, ", %7.1e", e_S); }
+        if(ncp[VOLTAGE]){ DPRINTF(stdout, ", %7.1e", e_V); }
+        if(ncp[SURF_CHARGE]){ DPRINTF(stdout, ", %7.1e", e_qs); }
+        if(ncp[SHELL_CURVATURE]){ DPRINTF(stdout, ", %7.1e", e_shk); }
+        if(ncp[SHELL_TENSION]){ DPRINTF(stdout, ", %7.1e", e_sht); }
+        if(ncp[SHELL_X]){ DPRINTF(stdout, ", %7.1e", e_shd); }
+        if(ncp[SHELL_USER]){ DPRINTF(stdout, ", %7.1e", e_shu); }
+        if(ncp[FILL] || ncp[PHASE1] ){ DPRINTF(stdout, ", %7.1e", e_F); }
+        if(ncp[ACOUS_PREAL] || ncp[ACOUS_PIMAG]){ DPRINTF(stdout, ", %7.1e", e_ap); }
+        if(ncp[EXT_VELOCITY]){ DPRINTF(stdout, ", %7.1e", e_extv); }
+        if(ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD] || ncp[RESTIME]){ DPRINTF(stdout, ", %7.1e", e_int); }
+        if(ncp[LUBP] || ncp[LUBP_2] || ncp[SHELL_FILMP] || ncp[SHELL_TEMPERATURE] || ncp[SHELL_DELTAH] || ncp[SHELL_LUB_CURV] ||  ncp[SHELL_LUB_CURV_2] || ncp[SHELL_SAT_CLOSED] || ncp[SHELL_PRESS_OPEN] || ncp[SHELL_PRESS_OPEN_2]){ DPRINTF(stdout, ", %7.1e", e_sh_lub); }
+        if(nAC > 0){ DPRINTF(stdout, ", %7.1e", e_AC); }
+        DPRINTF(stdout, "]\n");
       log_msg("Predictor was YUK, %g > %g * %g", Err_norm, beta, eps);
     }
-  DPRINTF(stderr, "Predictor-corrector norm: [");
-        if(ncp[MESH_DISPLACEMENT1]){DPRINTF(stderr,"  %1d d  ",use_var_norm[0]); }
+  DPRINTF(stdout, "Predictor-corrector norm: [");
+        if(ncp[MESH_DISPLACEMENT1]){DPRINTF(stdout,"  %1d d  ",use_var_norm[0]); }
         if(ncp[VELOCITY1] || ncp[PVELOCITY1])
- 		{ DPRINTF(stderr, ",   %1d v  ", use_var_norm[1]); }
-        if(ncp[TEMPERATURE]){ DPRINTF(stderr, ",   %1d T  ", use_var_norm[2]); }
+                { DPRINTF(stdout, ",   %1d v  ", use_var_norm[1]); }
+        if(ncp[TEMPERATURE]){ DPRINTF(stdout, ",   %1d T  ", use_var_norm[2]); }
         if(ncp[MASS_FRACTION] || ncp[POR_LIQ_PRES] || ncp[POR_GAS_PRES] ||
- 	    ncp[POR_POROSITY] || ncp[POR_SATURATION])
- 		{ DPRINTF(stderr, ",   %1d y  ", use_var_norm[3]); }
-        if(ncp[PRESSURE]){ DPRINTF(stderr, ",   %1d P  ", use_var_norm[4]); }
-        if(ncp[POLYMER_STRESS11]){DPRINTF(stderr,",   %1d S  ",use_var_norm[5]); }
-        if(ncp[VOLTAGE]){ DPRINTF(stderr, ",   %1d V  ", use_var_norm[6]); }
-        if(ncp[SURF_CHARGE]){ DPRINTF(stderr, ",   %1d Q  ", 1); }
-        if(ncp[SHELL_CURVATURE]){ DPRINTF(stderr, ",   %1d K  ", 1); }
-        if(ncp[SHELL_TENSION]){ DPRINTF(stderr, ",   %1d ST ", 1); }
-        if(ncp[SHELL_X]){ DPRINTF(stderr, ",   %1d Sd ", 1); }
-        if(ncp[SHELL_USER]){ DPRINTF(stderr, ",   %1d Su ", 1); }
-        if(ncp[FILL] || ncp[PHASE1] ){ DPRINTF(stderr, ",   %1d F  ", 1); }
-        if(ncp[ACOUS_PREAL] || ncp[ACOUS_PIMAG]){ DPRINTF(stderr, ",   %1d A  ", 1); }
-        if(ncp[EXT_VELOCITY]){ DPRINTF(stderr, ",   %1d Ev  ", 1); }
-	if(ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD] ){ DPRINTF(stderr, ", %1d INT", 1); }
-	if(ncp[LUBP] || ncp[LUBP_2] || ncp[SHELL_FILMP] || ncp[SHELL_TEMPERATURE] || ncp[SHELL_DELTAH] || ncp[SHELL_LUB_CURV] || ncp[SHELL_LUB_CURV_2] || ncp[SHELL_SAT_CLOSED] || ncp[SHELL_PRESS_OPEN] || ncp[SHELL_PRESS_OPEN_2]){ DPRINTF(stderr, ", %1d SHELL", 1); }
-        if(nAC > 0){ DPRINTF(stderr, ",   %1d AC ", use_var_norm[9]); }
-        DPRINTF(stderr, "]\n");
+ 	    ncp[POR_POROSITY] || ncp[POR_SATURATION] || ncp[POR_SINK_MASS] )
+                { DPRINTF(stdout, ",   %1d y  ", use_var_norm[3]); }
+        if(ncp[PRESSURE]){ DPRINTF(stdout, ",   %1d P  ", use_var_norm[4]); }
+        if(ncp[POLYMER_STRESS11]){DPRINTF(stdout,",   %1d S  ",use_var_norm[5]); }
+        if(ncp[VOLTAGE]){ DPRINTF(stdout, ",   %1d V  ", use_var_norm[6]); }
+        if(ncp[SURF_CHARGE]){ DPRINTF(stdout, ",   %1d Q  ", 1); }
+        if(ncp[SHELL_CURVATURE]){ DPRINTF(stdout, ",   %1d K  ", 1); }
+        if(ncp[SHELL_TENSION]){ DPRINTF(stdout, ",   %1d ST ", 1); }
+        if(ncp[SHELL_X]){ DPRINTF(stdout, ",   %1d Sd ", 1); }
+        if(ncp[SHELL_USER]){ DPRINTF(stdout, ",   %1d Su ", 1); }
+        if(ncp[FILL] || ncp[PHASE1] ){ DPRINTF(stdout, ",   %1d F  ", 1); }
+        if(ncp[ACOUS_PREAL] || ncp[ACOUS_PIMAG]){ DPRINTF(stdout, ",   %1d A  ", 1); }
+        if(ncp[EXT_VELOCITY]){ DPRINTF(stdout, ",   %1d Ev  ", 1); }
+        if(ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD] || ncp[RESTIME]){ DPRINTF(stdout, ", %1d INT", 1); }
+        if(ncp[LUBP] || ncp[LUBP_2] || ncp[SHELL_FILMP] || ncp[SHELL_TEMPERATURE] || ncp[SHELL_DELTAH] || ncp[SHELL_LUB_CURV] || ncp[SHELL_LUB_CURV_2] || ncp[SHELL_SAT_CLOSED] || ncp[SHELL_PRESS_OPEN] || ncp[SHELL_PRESS_OPEN_2]){ DPRINTF(stdout, ", %1d SHELL", 1); }
+        if(nAC > 0){ DPRINTF(stdout, ",   %1d AC ", use_var_norm[9]); }
+        DPRINTF(stdout, "]\n");
 
       
   log_msg("Predictor details:");
@@ -1359,7 +1362,7 @@ init_vec(double u[], Comm_Ex *cx, Exo_DB *exo, Dpi *dpi, double uAC[],
     /* Shell normal vector unknowns requiring initialization */
     if ( upd->vp[pg->imtrx][SHELL_NORMAL1] > -1 && upd->vp[pg->imtrx][SHELL_NORMAL2] > -1 )
       {
-	init_shell_normal_unknowns(u, exo, 10, 0.0, 0.0);
+        init_shell_normal_unknowns(u, exo);
       }
     break;
 
@@ -1403,7 +1406,7 @@ init_vec(double u[], Comm_Ex *cx, Exo_DB *exo, Dpi *dpi, double uAC[],
      * As of Mar 18, 2002, brkfix doesn't support global variables, hence, this
      * capability does not exist for parallel operations.
      */
-    if( nAC > 0 && Num_Proc == 1)  
+    if( nAC > 0 )
       {
 	int ngv;
 
@@ -1451,7 +1454,7 @@ init_vec(double u[], Comm_Ex *cx, Exo_DB *exo, Dpi *dpi, double uAC[],
      * capability does not exist for parallel operations.
      */
 	
-    if( nAC > 0 && Num_Proc == 1) 
+    if( nAC > 0 )
       {
 	int ngv;
 
@@ -1507,7 +1510,7 @@ init_vec(double u[], Comm_Ex *cx, Exo_DB *exo, Dpi *dpi, double uAC[],
     for (i = 0; i < Num_Var_Init; i++) {
       switch (Var_init[i].var) {
       case MASS_FRACTION :
-	DPRINTF(stderr,
+        DPRINTF(stdout,
 		"\tSetting %s number %d (variable [%d]) to %g\n", 
 		Var_Name[Var_init[i].var].name1, Var_init[i].ktype,
 		Var_init[i].var,  Var_init[i].init_val);
@@ -1519,7 +1522,7 @@ init_vec(double u[], Comm_Ex *cx, Exo_DB *exo, Dpi *dpi, double uAC[],
 	retn = 1;
 	continue;
       default:
-	DPRINTF(stderr, "\tSetting %s (variable [%d]) to %g\n", 
+        DPRINTF(stdout, "\tSetting %s (variable [%d]) to %g\n",
 		Var_Name[Var_init[i].var].name1, Var_init[i].var, 
 		Var_init[i].init_val);
 	break;
@@ -1861,29 +1864,26 @@ void init_structural_shell_coord(double u[])
 
 } /* End of init_structural_shell_coord() */
 
-void init_shell_normal_unknowns(double u[], const Exo_DB *exo, 
-                                const int nsid, double xfocus, double yfocus)
+
+void init_shell_normal_unknowns(double x[], const Exo_DB *exo)
 /******************************************************************************
  *
- * init_shell_normal_unknowns(): Provides an APPROXIMATE initialization of the
- *                               shell normal vector unknowns (X and Y
- *                               components, not yet 3D-compatible). This is 
+ * init_shell_normal_unknowns_3D(): Provides an initialization of the
+ *                               shell normal vector unknowns. This is
  *                               necessary because if not provided, the
  *                               the accompanying curvature equation may
- *				 degenerate to a false trivial solution.
+ *                               degenerate to a false trivial solution.
  *
- *                               The approximate normal vector determined
- *				 for each node lying on the shell surface
- *				 corresponding to the node set ID passed in
- *				 is simply a unit vector pointing toward
- *				 the "focal point" at <xfocus, yfocus>.
+ *                               The unknowns are initialized by looping
+ *                               over all of elements containing shell
+ *                               normal, setup shop at every node,
+ *                               compute the normal vector, then copy it to
+ *                               solution vectors
  *
 / * Input
 * =====
 * u = Array of initial values for the indepenedent variables.
 * exo = Exodus database
-* nsid = Id of a node set which coincides with the shell surface of interest.
-* xfocus, yfocus = coordinates of a "focal point"
 *
 * Return
 * ======
@@ -1891,50 +1891,64 @@ void init_shell_normal_unknowns(double u[], const Exo_DB *exo,
 *
 ******************************************************************************/
 {
-  int nxi, nyi, nn, inode;
-  int has_normal = FALSE;
-  double dx, dy, dj, nx, ny, sumOld;
-  nn = exo->num_nodes;
-  /* Loop over shell nodes */
-  for (inode = 0; inode < nn; inode++)
-    {
-      /* Get node number and indices into solution vector for normal dofs */
-      has_normal = FALSE;
-      nxi = Index_Solution(inode, SHELL_NORMAL1, 0, 0, -2, pg->imtrx);
-      nyi = Index_Solution(inode, SHELL_NORMAL2, 0, 0, -2, pg->imtrx);
-      if (nxi > -1 && nyi > -1) has_normal = TRUE;
+  int e_start=0, e_end=0, ielem = 0;
+  int ielem_type, ielem_dim, iconnect_ptr;
+  int ilnode, ignode, num_local_nodes;
+  int nxi, nyi, nzi;
+  int err;
+  dbl s, t, u, xi[DIM];
 
-      /* Proceed only when shell normal variable exists at this node */
-      if (has_normal)
-        {
-	  sumOld = u[nxi] * u[nxi] +  u[nyi] * u[nyi];
-	  /*
-	   *  Insert estimates into solution vector, if there hasn't been an 
-	   * estimate applied before
-	   */
-	  if (sumOld < 0.5) 
-	    {
-	      /* Construct unit vector from the node pointing to the focal point */
-	      dx = Coor[0][inode] - xfocus;
-	      dy = Coor[1][inode] - yfocus;
-	      dj = sqrt(dx * dx + dy * dy);
-	      if (dj < 1.0E-12) 
-		{
-		  nx = 1.0;
-		  ny = 0.0;
-		} 
-	      else
-		{
-		  nx = -dx / dj;
-		  ny = -dy / dj;
-		}
-	      u[nxi] = nx;
-	      u[nyi] = ny;
-	    }
-        }
-    }
+
+  e_start = exo->eb_ptr[0];
+  e_end   = exo->eb_ptr[exo->num_elem_blocks];
+
+  /* Loop over all elements */
+  for (ielem = e_start; ielem < e_end; ielem++)
+     {
+      ielem_type = Elem_Type(exo, ielem);
+      load_ei(ielem, exo, 0, pg->imtrx);
+      err = load_elem_dofptr(ielem, exo, x, x,
+                             x, x, 0);
+      EH(err, "Can't load elem_dofptr in shell normals initialization");
+
+      ielem_dim       = elem_info(NDIM, ielem_type);
+      num_local_nodes = elem_info(NNODES, ielem_type);
+      iconnect_ptr    = Proc_Connect_Ptr[ielem];
+
+      /* Loop over nodes within the element */
+      for (ilnode = 0; ilnode < num_local_nodes; ilnode++)
+         {
+          /* Find s, t, u, coordinates of each node */
+          find_nodal_stu (ilnode, ielem_type, &s, &t, &u);
+          xi[0] = s;
+          xi[1] = t;
+          xi[2] = u;
+
+          setup_shop_at_point(ielem, xi, exo);
+
+          shell_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes,
+                                       ielem_dim, 1);
+
+          /* Get global node number */
+          ignode = Proc_Elem_Connect[iconnect_ptr + ilnode];
+
+          /* Get node number and indices into solution vector for normal dofs */
+          nxi = Index_Solution(ignode, SHELL_NORMAL1, 0, 0, -2, pg->imtrx);
+          nyi = Index_Solution(ignode, SHELL_NORMAL2, 0, 0, -2, pg->imtrx);
+
+          x[nxi] = fv->snormal[0];
+          x[nyi] = fv->snormal[1];
+
+          if (pd->Num_Dim == 3)
+            {
+             nzi = Index_Solution(ignode, SHELL_NORMAL3, 0, 0, -2, pg->imtrx);
+             x[nzi] = fv->snormal[2];
+            }
+         }
+     }
   return;
 }
+
 
 static void
 read_initial_guess(double u[], const int np, double uAC[], const int nAC)
@@ -2235,7 +2249,7 @@ rd_vectors_from_exoII(double u[], const char *file_nm, const int action_flag,
   if (num_vars > 0) {
     var_names = alloc_VecFixedStrings(num_vars, (MAX_STR_LENGTH+1));
     error = ex_get_variable_names(exoid, EX_NODAL, num_vars, var_names);
-    EH(error, "ex_get_var_names");
+    EH(error, "ex_get_variable_names nodal");
     for (i = 0; i < num_vars; i++) strip(var_names[i]);
   } else {
     fprintf(stderr,
@@ -2315,8 +2329,14 @@ rd_vectors_from_exoII(double u[], const char *file_nm, const int action_flag,
        */
       efv->ext_fld_ndl_val[variable_no] = alloc_dbl_1(num_nodes, 0.0); 
       printf("rd_vectors_from_exoII: Allocated field %d for %s at %p\n",
-	     variable_no, efv->name[variable_no], efv->ext_fld_ndl_val[variable_no]);
+	     variable_no, efv->name[variable_no], (void *) efv->ext_fld_ndl_val[variable_no]);
       vdex = -1;
+#ifdef REACTION_PRODUCT_EFV
+      if (TimeIntegration != STEADY)	{
+        efv->ext_fld_ndl_val_old[variable_no] = alloc_dbl_1(num_nodes,0.); 
+        efv->ext_fld_ndl_val_older[variable_no] = alloc_dbl_1(num_nodes,0.); 
+      	}
+#endif
       for (i = 0; i < num_vars; i++) {
 	if (strcmp(var_names[i], efv->name[variable_no]) == 0) {
 	  vdex = i + 1;
@@ -2327,8 +2347,8 @@ rd_vectors_from_exoII(double u[], const char *file_nm, const int action_flag,
 		"\n Cannot find external fields in exoII database, setting to null");
       } else {
 	error = ex_get_var(exoid, time_step, EX_NODAL, vdex, 1, num_nodes,
-                     efv->ext_fld_ndl_val[variable_no]);
-	EH(error, "ex_get_nodal_var"); 
+			   efv->ext_fld_ndl_val[variable_no]);
+	EH(error, "ex_get_var nodal");
       }        
     }
   }
@@ -2466,7 +2486,7 @@ rd_trans_vectors_from_exoII(double u[], const char *file_nm,
   if (num_vars > 0) {
     var_names = alloc_VecFixedStrings(num_vars, (MAX_STR_LENGTH+1));
     error = ex_get_variable_names(exoid, EX_NODAL, num_vars, var_names);
-    EH(error, "ex_get_var_names");
+    EH(error, "ex_get_variable_names nodal");
     for (i = 0; i < num_vars; i++) strip(var_names[i]);
   } else {
     fprintf(stderr,
@@ -2486,7 +2506,7 @@ rd_trans_vectors_from_exoII(double u[], const char *file_nm,
       if( desired_time_step == 0)
 	{
 	  fprintf(stderr, "rd_trans_vectors_from_exoII: Into existing field %d for %s at %p\n",
-		  variable_no, efv->name[variable_no], efv->ext_fld_ndl_val[variable_no]);
+		  variable_no, efv->name[variable_no], (void *) efv->ext_fld_ndl_val[variable_no]);
 	}
       vdex = -1;
       for (i = 0; i < num_vars; i++) {
@@ -2499,8 +2519,8 @@ rd_trans_vectors_from_exoII(double u[], const char *file_nm,
 		"\n Cannot find external fields in exoII database, setting to null");
       } else {
 	error = ex_get_var(exoid, time_step_lower, EX_NODAL, vdex, 1, num_nodes, val_low);
-  error = ex_get_var(exoid, time_step_higher, EX_NODAL, vdex, 1, num_nodes, val_high);
-	EH(error, "ex_get_nodal_var");
+        error = ex_get_var(exoid, time_step_higher, EX_NODAL, vdex, 1, num_nodes, val_high);
+	EH(error, "ex_get_var nodal");
 
         for (k=0; k<num_nodes; k++){
 		slope = (val_high[k] - val_low[k])/(time_higher - time_lower);

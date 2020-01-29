@@ -23,12 +23,12 @@
 #undef EXTERN
 #endif
 
-#ifdef GOMA_RF_ALLO_C
-#define EXTERN
-#endif
+#include <stdlib.h>
 
 #ifndef GOMA_RF_ALLO_C
 #define EXTERN extern
+#else
+#define EXTERN
 #endif
 
 /*

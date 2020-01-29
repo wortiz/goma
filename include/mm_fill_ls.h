@@ -92,10 +92,6 @@ EXTERN int huygens_renormalization
         double  ,
 	int    );
 
-EXTERN void cgm_based_initialization 
-( double *,
-         int);
-
 EXTERN void surf_based_initialization 
 ( double *,
          double *,
@@ -288,13 +284,6 @@ ls_modulate_property_offset ( double p1,
                        double dpdF[MDE],
                        double *factor );
 
-EXTERN int level_set_property_offset
-( const double,          /*  p0           */
-        const double,          /*  p1           */
-        const double,          /*  width        */
-        double *,              /* *pp           */
-        double [MDE]);
-
 EXTERN int is_xfem_interp
 ( const int);		/* interp type */
 
@@ -373,6 +362,9 @@ EXTERN int load_lsi
 
 EXTERN int load_lsi_offset
 ( const double );       /* width */
+
+EXTERN int
+load_lsi_old(const double width, struct Level_Set_Interface *lsi_old);
 
 EXTERN int load_lsi_adjmatr
 ( const double );      /* width */
@@ -560,12 +552,6 @@ EXTERN void map_subelement_stu
         Integ_Elem *,
         double * );
                     
-void subelement_J
-( Integ_Elem *,
-        double *,
-        double [DIM][DIM],
-        int );
-
 EXTERN double subelement_detJ
 ( Integ_Elem *,
         double *,
@@ -709,12 +695,6 @@ EXTERN int gather_surface_subgrid_integration_pts
 		double (*)[DIM], 
 		double *, 
 		int  );
-
-
-EXTERN void map_subelement_stu
-( double *,
-        Integ_Elem *,
-        double * );
 
 
 EXTERN void subelement_J

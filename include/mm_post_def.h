@@ -71,6 +71,9 @@
 #define FORCE_Z_NEG		376
 #define SPECIES_FLUX_REVOLUTION	398
 #define REPULSIVE_FORCE   	399
+#define POYNTING_X   	        400
+#define POYNTING_Y   	        401
+#define POYNTING_Z   	        402
 
 #define I_VOLUME        0
 #define I_DISSIP        1
@@ -106,14 +109,21 @@
 #define I_SURF_TEMP     31
 #define I_JOULE         32
 #define I_LUB_LOAD      33
-#define I_VOLUME_PLANE  34 
-#define I_POS_VOLPLANE  35 
-#define I_NEG_VOLPLANE  36 
+#define I_VOLUME_PLANE  34
+#define I_POS_VOLPLANE  35
+#define I_NEG_VOLPLANE  36
 #define I_SPECIES_SOURCE  37
-#define I_MASS 38
-#define I_MASS_NEGATIVE_FILL  39
-#define I_MASS_POSITIVE_FILL  40
-
+#define I_KINETIC_ENERGY  38
+#define I_SHELL_VOLUME  39
+#define I_TFMP_FORCE    40
+#define I_MASS 41
+#define I_MASS_NEGATIVE_FILL  42
+#define I_MASS_POSITIVE_FILL  43
+#define I_VORTICITY     44
+#define I_GIESEKUS      45
+#define I_LAMB_MAG      46
+#define I_HELICITY      47
+#define I_Q_FCN         48
 
 #ifdef GOMA_MM_POST_PROC_C
 struct Post_Processing_Flux_Names
@@ -127,7 +137,7 @@ typedef struct Post_Processing_Flux_Names FLUX_NAME_STRUCT;
 extern FLUX_NAME_STRUCT pp_flux_names[];
 extern int Num_Flux_Names;
 
-struct Post_Processing_Flux_Names pp_flux_names[46] =  {
+struct Post_Processing_Flux_Names pp_flux_names[49] =  {
         { "FORCE_NORMAL",       FORCE_NORMAL },
         { "FORCE_TANGENT1",     FORCE_TANGENT1 },
         { "FORCE_TANGENT2",     FORCE_TANGENT2 },
@@ -173,7 +183,10 @@ struct Post_Processing_Flux_Names pp_flux_names[46] =  {
         { "FORCE_Y_NEG",            FORCE_Y_NEG },
         { "FORCE_Z_NEG",            FORCE_Z_NEG },
         { "SPECIES_FLUX_REVOLUTION",       SPECIES_FLUX_REVOLUTION },
-        { "REPULSIVE_FORCE",       REPULSIVE_FORCE }
+        { "REPULSIVE_FORCE",       REPULSIVE_FORCE },
+        { "POYNTING_X",       POYNTING_X },
+        { "POYNTING_Y",       POYNTING_Y },
+        { "POYNTING_Z",       POYNTING_Z },
 };
 
 int Num_Flux_Names = sizeof(pp_flux_names) / 
@@ -225,13 +238,21 @@ VOL_NAME_STRUCT pp_vol_names[] =
   { "ELECTRIC_LOAD_Y",   I_ELOADY },
   { "ELECTRIC_LOAD_Z",   I_ELOADZ },
   { "SURFACE_TEMPERATURE",   I_SURF_TEMP },
-  { "VOL_PLANE",          I_VOLUME_PLANE },
-  { "POS_PLANE_FILL",   I_POS_VOLPLANE},
-  { "NEG_PLANE_FILL",   I_NEG_VOLPLANE},
+  { "VOL_PLANE",         I_VOLUME_PLANE },
+  { "POS_PLANE_FILL",    I_POS_VOLPLANE},
+  { "NEG_PLANE_FILL",    I_NEG_VOLPLANE},
   { "SPECIES_SOURCE",    I_SPECIES_SOURCE},
+  { "KINETIC_ENERGY",    I_KINETIC_ENERGY},
+  { "SHELL_VOLUME",      I_SHELL_VOLUME},
+  { "TFMP_FORCE",        I_TFMP_FORCE},
   { "MASS",              I_MASS},
   { "MASS_NEGATIVE_FILL",              I_MASS_NEGATIVE_FILL},
-  { "MASS_POSITIVE_FILL",              I_MASS_POSITIVE_FILL}
+  { "MASS_POSITIVE_FILL",              I_MASS_POSITIVE_FILL},
+  { "VORTICITY",         I_VORTICITY},
+  { "GIESEKUS",          I_GIESEKUS},
+  { "LAMB_MAG",          I_LAMB_MAG},
+  { "HELICITY",          I_HELICITY},
+  { "Q_FCN",             I_Q_FCN}
 };
 
 int Num_Vol_Names = sizeof( pp_vol_names )/ sizeof( VOL_NAME_STRUCT );
@@ -375,10 +396,6 @@ struct Post_Processing_Error
 };
 
 typedef struct Post_Processing_Error pp_Error;
-
-/*
- * Define structure to hold details of global post process types
- */
 
 struct Post_Processing_Global
 {
@@ -549,6 +566,7 @@ extern int POROUS_LIQUID_ACCUM_RATE;
                                 /* The rate at which liquid in a partially
 				 * saturated porous medium is accumulating
 				 * at a point */
+extern int REL_LIQ_PERM;        /* Relative liquid permeability in porous media */
 extern int PRESSURE_CONT;	/* pressure at vertex & midside nodes*/
 extern int SH_DIV_S_V_CONT;	/* SH_DIV_S_V at midside nodes */
 extern int SH_CURV_CONT;	/* SH_SURF_CURV at midside nodes */
@@ -557,6 +575,8 @@ extern int SEC_INVAR_STRAIN;	/* 2nd strain invariant vertex,midside nodes*/
 extern int STRAIN_TENSOR;	/* strain tensor for mesh deformation  */
 extern int STREAM;		/* stream function*/
 extern int STREAM_NORMAL_STRESS; /* streamwise normal stress function*/
+extern int STREAM_SHEAR_STRESS; /* streamwise shear stress function*/
+extern int STREAM_TENSION;      /* streamwise Stress Difference*/
 extern int STRESS_CONT;	        /* stress at vertex & midside nodes*/
 extern int STRESS_TENSOR;	/* stress tensor for mesh deformation 
 				 * (Lagrangian pressure) */
@@ -573,6 +593,7 @@ extern int TOTAL_STRESS23;	/* sum over all modes for multi-mode models */
 extern int TOTAL_STRESS33;	/* sum over all modes for multi-mode models */
 extern int USER_POST;		/* a user defined function */
 extern int PP_Viscosity;        /* Value of the fluid viscosity */
+extern int PP_FlowingLiquid_Viscosity;   /* Value of the fluid flowing liquid viscosity (Porous Brinkman term) */
 extern int PP_VolumeFractionGas;/* Value of the volume fraction of the gas component
                                    in a foam or other two phase material */
 
@@ -594,20 +615,40 @@ extern int LUB_HEIGHT_2;       /* Lubrication gap, second layer*/
 extern int LUB_VELO_UPPER;       /* Lubrication upper surface velocity*/
 extern int LUB_VELO_LOWER;       /* Lubrication lower surface velocity*/
 extern int LUB_VELO_FIELD;       /* Velocity field calculated from lubrication */
+extern int LUB_VELO_FIELD_2;     /* Velocity field calculated from lubrication, second layer */
 extern int DISJ_PRESS;       /* Disjoining pressure */
 extern int SH_SAT_OPEN;          /* Saturation for open porous shells */
 extern int SH_SAT_OPEN_2;        /* Saturation for open porous shells 2 */
+extern int SH_STRESS_TENSOR;    /* stress tensor for structural shell */
+extern int SH_TANG;             /* Tangents vectors for structural shell */
 extern int PP_LAME_MU;         /* Lame MU coefficient for solid/mesh */
 extern int PP_LAME_LAMBDA;     /* Lame LAMBDA coefficient for solid/mesh */
 extern int VON_MISES_STRAIN;
 extern int VON_MISES_STRESS;
-extern int UNTRACKED_SPEC;		/*Untracked Species Concentration */
-extern int LOG_CONF_MAP;
+extern int LOG_CONF_MAP;      /* Map log-conformation tensor to stress */
+extern int J_FLUX;            /* Particle stress flux                  */
+extern int EIG;               /* Eigenvalues of rate-of-strain tensor  */
+extern int EIG1;              /* Eigenvector of rate-of-strain tensor  */
+extern int EIG2;              /* Eigenvector of rate-of-strain tensor  */
+extern int EIG3;              /* Eigenvector of rate-of-strain tensor  */
 extern int HEAVISIDE;
 extern int RHO_DOT;
 extern int MOMENT_SOURCES;
 extern int YZBETA;
+extern int GRAD_Y;            /* Concentration gradient                  */
+extern int GRAD_SH;            /* Shear gradient                */
+extern int UNTRACKED_SPEC;		/*Untracked Species Concentration */
 
+extern int TFMP_GAS_VELO;
+extern int TFMP_LIQ_VELO;
+extern int TFMP_INV_PECLET;
+extern int TFMP_KRG;
+extern int VELO_SPEED;              /* i.e., velocity magnitude */
+extern int GIES_CRIT;              /* Giesekus Flow Character */
+extern int HELICITY;              /* v dot vorticity  */
+extern int LAMB_VECTOR;           /* Lamb Vector = vorticity x v  */
+extern int Q_FCN;           /* 2nd invariant of grad_v  */
+extern int POYNTING_VECTORS;	/* EM Poynting Vectors*/
 /*
  *  Post-processing Step 1: add a new variable flag to end of mm_post_proc.h
  *

@@ -1105,7 +1105,7 @@ load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fill, 
                             {
                               if (enunks) 
                                 {
-                                  if ((v < MESH_DISPLACEMENT1) && (v > MESH_DISPLACEMENT3))
+                                  if ((v < MESH_DISPLACEMENT1) || (v > MESH_DISPLACEMENT3))
                                     {
                                       printf("Inconsistency unless mesh\n");
                                       exit(-1);
@@ -1186,7 +1186,7 @@ load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fill, 
                             {
                               if (enunks) 
                                 {
-                                  if ((v < MESH_DISPLACEMENT1) && (v > MESH_DISPLACEMENT3)) 
+                                  if ((v < MESH_DISPLACEMENT1) || (v > MESH_DISPLACEMENT3)) 
                                     {
                                       printf("Inconsistency unless mesh\n");
                                       exit(-1);
@@ -1217,14 +1217,6 @@ load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fill, 
   return (mn);
 }
 /**************************************************************************/
-
-double *x_static;
-double *x_old_static;
-double *xdot_static;
-double *xdot_old_static;
-double *x_dbl_dot_static;
-double *x_dbl_dot_old_static;
-
 
 static void
 load_varType_Interpolation_ptrs(const int varType, double **esp_ptr,
@@ -1315,11 +1307,10 @@ load_varType_Interpolation_ptrs_mat(int imtrx, const int varType, double **esp_p
 int 
 load_elem_dofptr(const int ielem,
 		 const Exo_DB * exo,
-		 dbl * const x,
-		 dbl * const x_old,
-		 dbl * const xdot,
-		 dbl * const xdot_old,
-		 dbl * const resid_vector,
+                 dbl *x,
+                 dbl *x_old,
+                 dbl *xdot,
+                 dbl *xdot_old,
 		 const int early_return) /* if true we just get 
 					  * some of the element information for 
 					  * routines that need it like 
@@ -1449,6 +1440,7 @@ load_elem_dofptr(const int ielem,
   }
   else if ((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
             pd_glob[0]->CoordinateSystem == SWIRLING ||
+            pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
 	    pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) && upd->ep[pg->imtrx][R_MESH1] >= 0) {
     dofs = ei[pg->imtrx]->dof[R_MESH1];
     for (i = 0; i < dofs; i++) {
@@ -1507,6 +1499,7 @@ load_elem_dofptr(const int ielem,
   }
   else if((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
            pd_glob[0]->CoordinateSystem == SWIRLING ||
+           pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
 	   pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) && upd->ep[pg->imtrx][R_SOLID1] >= 0) {
     dofs = ei[pg->imtrx]->dof[R_SOLID1];
     for ( i=0; i<dofs; i++) {
@@ -1558,6 +1551,7 @@ load_elem_dofptr(const int ielem,
   }
   else if((pd_glob[0] ->CoordinateSystem == CYLINDRICAL ||
 	   pd_glob[0]->CoordinateSystem == SWIRLING    ||
+	   pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D    ||
 	   pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN ) &&
 	  upd->ep[pg->imtrx][R_NORMAL1] >= 0) {
     dofs = ei[pg->imtrx]->dof[R_NORMAL1];
@@ -1704,6 +1698,7 @@ load_elem_dofptr(const int ielem,
   }
   else if((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
            pd_glob[0]->CoordinateSystem == SWIRLING ||
+           pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
 	   pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) &&
 	  upd->ep[pg->imtrx][R_PMOMENTUM1] >= 0) {
     dofs = ei[pg->imtrx]->dof[R_PMOMENTUM1];
@@ -1741,6 +1736,11 @@ load_elem_dofptr(const int ielem,
   eqn = R_SHELL_CURVATURE;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
     load_varType_Interpolation_ptrs(eqn, esp->sh_K, esp_old->sh_K, esp_dot->sh_K);
+  }
+
+  eqn = R_SHELL_CURVATURE2;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->sh_K2, esp_old->sh_K2, esp_dot->sh_K2);
   }
 
   eqn = R_SHELL_TENSION;
@@ -1829,6 +1829,11 @@ load_elem_dofptr(const int ielem,
  eqn = R_SHELL_NORMAL2;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
     load_varType_Interpolation_ptrs(eqn, esp->n[1], esp_old->n[1], esp_dot->n[1]);
+  }
+
+ eqn = R_SHELL_NORMAL3;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->n[2], esp_old->n[2], esp_dot->n[2]);
   }
 
   for( b=0; b<MAX_PHASE_FUNC; b++) {
@@ -1929,6 +1934,72 @@ load_elem_dofptr(const int ielem,
     load_varType_Interpolation_ptrs(eqn, esp->poynt[2], esp_old->poynt[2],
 				    esp_dot->poynt[2]);
   }
+  eqn = R_EM_E1_REAL;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_er[0], esp_old->em_er[0],
+				    esp_dot->em_er[0]);
+  }
+  eqn = R_EM_E1_IMAG;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_ei[0], esp_old->em_ei[0],
+				    esp_dot->em_ei[0]);
+  }
+  eqn = R_EM_E2_REAL;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_er[1], esp_old->em_er[1],
+				    esp_dot->em_er[1]);
+  }
+  eqn = R_EM_E2_IMAG;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_ei[1], esp_old->em_ei[1],
+				    esp_dot->em_ei[1]);
+  }
+  eqn = R_EM_E3_REAL;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_er[2], esp_old->em_er[2],
+				    esp_dot->em_er[2]);
+  }
+  eqn = R_EM_E3_IMAG;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_ei[2], esp_old->em_ei[2],
+				    esp_dot->em_ei[2]);
+  }
+  eqn = R_EM_H1_REAL;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_hr[0], esp_old->em_hr[0],
+				    esp_dot->em_hr[0]);
+  }
+  eqn = R_EM_H1_IMAG;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_hi[0], esp_old->em_hi[0],
+				    esp_dot->em_hi[0]);
+  }
+  eqn = R_EM_H2_REAL;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_hr[1], esp_old->em_hr[1],
+				    esp_dot->em_hr[1]);
+  }
+  eqn = R_EM_H2_IMAG;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_hi[1], esp_old->em_hi[1],
+				    esp_dot->em_hi[1]);
+  }
+  eqn = R_EM_H3_REAL;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_hr[2], esp_old->em_hr[2],
+				    esp_dot->em_hr[2]);
+  }
+  eqn = R_EM_H3_IMAG;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->em_hi[2], esp_old->em_hi[2],
+				    esp_dot->em_hi[2]);
+  }
+
+  eqn = R_RESTIME;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->restime, esp_old->restime,
+				    esp_dot->restime);
+  }  
 
   eqn = R_SHELL_SHEAR_TOP;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
@@ -1984,6 +2055,7 @@ load_elem_dofptr(const int ielem,
     }
     if((pd_glob[0]->CoordinateSystem == CYLINDRICAL ||
 	pd_glob[0]->CoordinateSystem == SWIRLING ||
+	pd_glob[0]->CoordinateSystem == CARTESIAN_2pt5D ||
 	pd_glob[0]->CoordinateSystem == PROJECTED_CARTESIAN) ) {
       if( upd->ep[pg->imtrx][R_STRESS33] == -1 )
 	  EH(-1,"Hey,the STRESS33 is needed in CYLINDRICAL VE problems!");
@@ -2035,16 +2107,30 @@ load_elem_dofptr(const int ielem,
     }
 
   eqn = R_POR_ENERGY;
-  if ( pd->e[pg->imtrx][eqn] )
+  if ( upd->ep[pg->imtrx][eqn] >= 0 )
     {
       load_varType_Interpolation_ptrs(eqn, esp->T, esp_old->T,
 				      esp_dot->T);
     }
 
   eqn = R_POR_SATURATION;
-  if ( upd->ep[pg->imtrx][eqn] >= 0 )
+  if ( upd->ep[pg->imtrx][eqn] >= 0)
     {
       EH(-1,"Saturation-based formulation not implemented yet");
+    }
+
+  eqn = R_TFMP_MASS;
+  if ( upd->ep[pg->imtrx][eqn] >= 0)
+    {
+      load_varType_Interpolation_ptrs(eqn, esp->tfmp_sat, esp_old->tfmp_sat,
+				      esp_dot->tfmp_sat);
+    }
+
+  eqn = R_TFMP_BOUND;
+  if ( upd->ep[pg->imtrx][eqn] >= 0)
+    {
+      load_varType_Interpolation_ptrs(eqn, esp->tfmp_pres, esp_old->tfmp_pres,
+				      esp_dot->tfmp_pres);
     }
   
   eqn  = R_MASS;
@@ -2071,7 +2157,7 @@ load_elem_dofptr(const int ielem,
     }
   }
   eqn = R_DENSITY_EQN;
-  if ( pd->e[pg->imtrx][eqn] )
+  if ( upd->ep[pg->imtrx][eqn] >= 0)
     {
       load_varType_Interpolation_ptrs(eqn, esp->rho, esp_old->rho,
 				      esp_dot->rho);

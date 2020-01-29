@@ -315,6 +315,7 @@ wr_mesh_exo(Exo_DB *x,		/* def'd in exo_struct.h */
         {
           fprintf(stderr, "ex_put_concat_sets() side sets...\n");
         }
+	
 
       ex_set_specs ss_specs;
       ss_specs.sets_ids            = x->ss_id;
@@ -1016,9 +1017,6 @@ wr_global_result_exo( Exo_DB *exo,
    * This capability is deactivated for parallel processing.
    * brkfix doesn't support global variables, when this
    * changes this restriction should be removed. TAB 3/2002 */
-
-  if( Num_Proc != 1 ) return;  /* Return if not running serial */
-
 
   if( u == NULL ) return ; /* Do nothing if this is NULL */
 
@@ -1864,7 +1862,7 @@ add_qa_stamp(Exo_DB *exo)
    */
 
   strcpy(Q[n][0], "GOMA");
-  strcpy(Q[n][1], VERSION); /* def'd in std.h for now */
+  strcpy(Q[n][1], GOMA_VERSION); /* def'd in std.h for now */
   get_date(Q[n][2]);
   get_time(Q[n][3]);
 

@@ -176,7 +176,7 @@ invert_isoparametric_map(  int *current_ielem,  /* initial element of search */
   int dim;			/*  problem dimension */
   int converged, inewton;  /*  convergence flag, iteration counter */
   double R[MAX_PDIM];		/* residual vector for invert */
-  double update[MAX_PDIM];	/* update vector for xi */
+  double update[MAX_PDIM] = {0};	/* update vector for xi */
   double norm;			/* convergence norm */
   double max_xi, tmp;		/*  element switching vars, flags  */
   int i_max_xi, face=0, newface=0, old_ielem ;
@@ -191,11 +191,11 @@ invert_isoparametric_map(  int *current_ielem,  /* initial element of search */
   if (xv == x_static) /* be the least disruptive possible */
     {
       err = load_elem_dofptr(*current_ielem, exo, x_static, x_old_static,
-                             xdot_static, xdot_old_static, x_static, 0);
+                             xdot_static, xdot_old_static, 0);
     }
   else
     {
-      err = load_elem_dofptr(*current_ielem, exo, xv, xv, xv, xv, xv, 0);
+      err = load_elem_dofptr(*current_ielem, exo, xv, xv, xv, xv, 0);
     }
 
   /* Initialize */
@@ -337,11 +337,11 @@ invert_isoparametric_map(  int *current_ielem,  /* initial element of search */
         if (xv == x_static) /* be the least disruptive possible */
           {
             err = load_elem_dofptr(*current_ielem, exo, x_static, x_old_static,
-                                   xdot_static, xdot_old_static, x_static, 0);
+                                   xdot_static, xdot_old_static, 0);
           }
         else
           {
-            err = load_elem_dofptr(*current_ielem, exo, xv, xv, xv, xv, xv, 0);
+            err = load_elem_dofptr(*current_ielem, exo, xv, xv, xv, xv, 0);
           }
 
 

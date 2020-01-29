@@ -25,9 +25,12 @@
 #include "rf_io_const.h"
 
 #define LINE_BUFFER_LENGTH		1024
-
+#ifndef MAX_CHAR_ERR_MSG
 #define MAX_CHAR_ERR_MSG		1024
+#endif
 #define MAX_NEIGHBOR_NODES		1000
+#ifndef MAX_SYSTEM_COMMAND_LENGTH
+#endif
 #define MAX_ADJOINING_SETS		10
 
 

@@ -16,7 +16,6 @@
 
 
 #include "wr_soln.h"
-#define GOMA_WR_SOLN_C
 #include "goma.h"
 
 /***********************************************************************/
@@ -54,13 +53,16 @@ write_solution(char output_file[], double resid_vector[], double x[], double **x
   }
 
   /* Special case for global post processing, usually file output */
+#ifdef DEBUG
+  fprintf(stderr, "%s: done with regular nodal vars; start global\n", yo);
+#endif
+
+  /* Special case for global post processing, special case file output for now*/
   post_process_global(x, exo, dpi, time_value);
 
 #ifdef DEBUG
-  fprintf(stderr, "%s: done with regular nodal vars; start tnv_post\n", yo);
+  fprintf(stderr, "%s: done with global; start tnv_post\n", yo);
 #endif
-
-
   /*
    *  Add additional user-specified post processing variables
    */

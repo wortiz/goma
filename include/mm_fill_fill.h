@@ -34,8 +34,6 @@
 #define EXTERN extern
 #endif
 
-#include "dg_utils.h"
-
 struct LS_Mass_Lumped_Penalty {
   dbl penalty[MDE];
   dbl penalty_old[MDE];
@@ -66,15 +64,17 @@ EXTERN int integrate_explicit_eqn
 
 
 #ifndef COUPLED_FILL
-EXTERN int assemble_fill
-(double [],               /* afill - Jacobian matrix for fill equation */
-       int [],                  /* ijaf - pointer to nonzeros in Jacobian    */
-       double [],               /* rf - rhs vector                           */
-       double ,                 /* dt - current time step size               */
-       double ,                 /* tt - parameter to vary time integration from
-                                 * explicit (tt = 1) to implicit (tt = 0) */
-       int [] ,               /* node_to_fill -  */
-       const int );               /* equation -  */
+int 
+assemble_fill(double tt, 
+	      double dt, 
+	      dbl hsquared[DIM], 
+	      dbl hh[DIM][DIM], 
+	      dbl dh_dxnode[DIM][MDE],
+	      const int applied_eqn,
+	      double xi[DIM],
+	      Exo_DB *exo,
+	      double time
+	      );
 
 EXTERN int assemble_fill_ext_v
 (double [],               /* afill - Jacobian matrix for fill equation */
@@ -113,15 +113,17 @@ EXTERN int assemble_fill_fake
 
 
 #ifdef COUPLED_FILL
-EXTERN int assemble_fill(double tt,
-                         double dt,
-                         PG_DATA *pg_data,
-                         const int applied_eqn,
-                         double xi[DIM],
-                         Exo_DB *exo,
-                         double time,
-                         struct LS_Mass_Lumped_Penalty *penalty
-                         );
+int 
+assemble_fill(double tt, 
+	      double dt, 
+	      dbl hsquared[DIM], 
+	      dbl hh[DIM][DIM], 
+	      dbl dh_dxnode[DIM][MDE],
+	      const int applied_eqn,
+	      double xi[DIM],
+	      Exo_DB *exo,
+	      double time
+	      );
 
 EXTERN int assemble_fill_ext_v
 (double ,			/* tt - parameter varies time integration from 
@@ -189,22 +191,19 @@ EXTERN int get_side_info
        int *,			/* nodes_per_side                            */
        int []);		/* local_elem_node_id                        */
 
-EXTERN int assemble_surface_species
-(Exo_DB *,
-       Dpi *,/* exo - ptr to basic exodus ii mesh info    */
-       double [],		/* x                                         */
-       double ,			/* delta_t - current time step size          */
-       double ,			/* theta - parameter to vary time integration 
-				 * from explicit (tt = 1) 
-				 * to implicit (tt = 0)                      */
-       int ,			/* ielem_type - element type                 */
-       int ,			/* ielem_type_fill - element type fill func  */
-       int ,			/* id_side - id number of current side 
-				 * according to EXODUS convention            */
-       int ,			/* neighbor - element neighboring this side  */
-       int ,			/* ielem - current element                   */
-       int ,                    /* num_local_nodes - number nodes per elem   */
-       dg_neighbor_type *);
+int
+assemble_surface_species (Exo_DB *exo,	/* ptr to basic exodus ii mesh information */
+			  double x[],
+			  double delta_t, /* current time step size */
+			  double theta,	/* parameter to vary time integration from
+					 * explicit (theta = 1) to implicit (theta = 0) */
+			  int ielem_type, /* element type  */
+			  int ielem_type_fill, /* element type for fill function */
+			  int id_side,	/* id number of current side according to 
+					 * EXODUS convention  */
+			  int neighbor,	/* element neighboring this side */
+			  int ielem,	/* current element */
+			  int num_local_nodes);   /* number of nodes per element */
 
 EXTERN int elem_on_ss
 (Exo_DB *,		/* exo                                       */
@@ -283,10 +282,6 @@ EXTERN int huygens_renormalization
 	int     ,
         double  ,
 	int    );
-
-EXTERN void cgm_based_initialization 
-( double *,
-         int);
 
 EXTERN void surf_based_initialization 
 ( double *,

@@ -267,13 +267,13 @@ set_init_Element_Storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
 	   * space for storage of their names.
 	   */
 	  error = ex_get_variable_param(exoid, EX_ELEM_BLOCK, &num_vars);
-	  EH(error, "ex_get_var_param");
+	  EH(error, "ex_get_variable_param");
   
 	  /* First extract all nodal variable names in exoII database */
 	  if (num_vars > 0) {
 	    var_names = alloc_VecFixedStrings(num_vars, (MAX_STR_LENGTH+1));
 	    error = ex_get_variable_names(exoid, EX_ELEM_BLOCK, num_vars, var_names);
-	    EH(error, "ex_get_var_names");
+	    EH(error, "ex_get_variable_names");
 	    for (i = 0; i < num_vars; i++) strip(var_names[i]);
 	  } else {
 	    fprintf(stderr,

@@ -49,10 +49,10 @@
 #define MAX_CHAR_IN_INPUT	256 /* How many characters in input line? */
 #endif
 
-
 #ifndef MAX_CHAR_ECHO_INPUT
-#define MAX_CHAR_ECHO_INPUT 1024
-#endif
+#define MAX_CHAR_ECHO_INPUT	1024 /* specifier for echo_string needs to be at least */
+#endif                               /* 3*MAX_CHAR_IN_INPUT + 4 to account for "%s = %s %s" format */
+
 
 #ifndef MAX_INFO
 #define MAX_INFO	101	/* maximum number of "info" records */
@@ -65,7 +65,7 @@
 #ifndef MAX_VAR_NAME_LNGTH
 #define MAX_VAR_NAME_LNGTH 32 /* maximum length of variable names         */
                               /* for Exodus II db output                  */
-                              /* HKM -> Changed it from 10 to             */
+                              /* HKM -> Changed it from 20 to             */
                               /*         32 to conform to exodus standard */
                               /*        Note: Chemkin needs at least 16   */
                               /*              Plus 3 for a prefix standard */
@@ -90,6 +90,12 @@
 #ifndef MAX_SYSTEM_COMMAND_LENGTH
 #define MAX_SYSTEM_COMMAND_LENGTH	(1280) /* maximum number of characters in */
 /* a system command for aprepro */
+#endif
+
+
+#ifndef MAX_SYSTEM_COMMAND_LENGTH
+#define MAX_SYSTEM_COMMAND_LENGTH	(1280) /* maximum number of characters in */
+				       /* a system command for aprepro */
 #endif
 
 
@@ -130,6 +136,8 @@
 #define CONT_MPID              131 /* MPID */
 #define CONT_MTID              132 /* MAT PROPOERTY TAG ID */
 #define CONT_BC_LIST           900 /* BC LIST AND STOP */
+#define WRITE_INTERMEDIATE     901 /* Turn Write_Intermediate_Solution on */
+#define EXOII_TIME_PLANE       902 /* Specify read_exoII_file time plane (step number) */
 
 #ifndef ANNEAL_FILE_NAME
 #define ANNEAL_FILE_NAME		"anneal.exoII"

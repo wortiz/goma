@@ -102,6 +102,15 @@ find_problem_graph_fill(int *[], /* ija - column pointer array                */
 static int find_VBR_problem_graph(int *[], int *[], int *[], int *[], int *[],
                                   int, int, Exo_DB *);
 
+static int var_if_interp_type_enabled(PROBLEM_DESCRIPTION_STRUCT *pd_ptr,
+                               int interp_type); 
+static dbl yzbeta1(dbl scale, int dim, dbl Y, dbl Z, dbl d_Z[MDE], dbl beta,
+                       dbl u, dbl d_u[MDE], dbl grad_u[DIM],
+                       dbl d_grad_u[MDE][DIM], dbl h_elem, int interp_eqn,
+                       dbl deriv[MDE]); 
+
+static dbl yzbeta2(dbl scale, dbl Y, dbl Z, dbl d_Z[MDE], dbl deriv[MDE], dbl h_elem, int interp_eqn);
+
 static const dbl DIFFUSION_EPSILON = 1e-8;
 
 /*****************************************************************************/
@@ -300,29 +309,47 @@ int beer_belly(void) {
    * other order interpolants.
    */
 
-  /* But first we pull a fast one.  If this is a 3D shell element, we up dim to
-   * dim+1 so that the 3D case is executed, but only after we populate the 3rd
-   * column of J with arbitrary nonzero constants so as to keep J full rank
+  /* But first we pull a fast one.  If this is a 3D shell element, we up dim to dim+1 so
+   *  that the 3D case is executed, but only after we populate the 3rd column of J with 
+   * arbitrary nonzero constants so as to keep J full rank
+   
+   * AMC - This might work for the gradients once they are in the plane of the element,
+   * but the gradients with respect to global coordinate system do indeed depend on
+   * the values assigned to the right most column of the 
+   * Jacobian of the mapping (MapBf->J).
+   * 
+   * There are problems that depend on the rightmost column being the values
+   * computed above, so use this block with caution.
    */
-  if (elem_shape == SHELL || elem_shape == TRISHELL) {
-    dim++;
-    for (t = 0; t < Num_Basis_Functions; t++) {
-      for (j = 0; j < pdim; j++) {
-        bfd[t]->J[2][j] = MapBf->J[2][j] = (j + 1) * 1.0;
-      }
-    }
+  if(elem_shape == SHELL
+     || elem_shape == TRISHELL
+     || (mp->ehl_integration_kind == SIK_S))
+    {
+      dim++;
+      for (t = 0; t < Num_Basis_Functions; t++)
+	{ 
+	  for (j = 0; j < pdim; j++)
+	    {
+	      bfd[t]->J[pd->Num_Dim-1][j] = MapBf->J[pd->Num_Dim-1][j] = (j+1)*1.0;
+	    }
+	}
 
     /*Real Quick check on Jacobian to make sure this arbitrary assignment
      *didn't screw things up. Note that the detJ in the shell case can be
      *negative, but it is important to point out that we are not using it for
      *for integration, but only as a crutch for inversion of J */
-
-    MapBf->detJ = MapBf->J[0][0] * (MapBf->J[1][1] * MapBf->J[2][2] -
-                                    MapBf->J[1][2] * MapBf->J[2][1]) -
-                  MapBf->J[0][1] * (MapBf->J[1][0] * MapBf->J[2][2] -
-                                    MapBf->J[2][0] * MapBf->J[1][2]) +
-                  MapBf->J[0][2] * (MapBf->J[1][0] * MapBf->J[2][1] -
-                                    MapBf->J[2][0] * MapBf->J[1][1]);
+      if (pd->Num_Dim == 3) {
+      MapBf->detJ = MapBf->J[0][0] * ( MapBf->J[1][1] * MapBf->J[2][2]
+				       -MapBf->J[1][2] * MapBf->J[2][1])
+	- MapBf->J[0][1] * ( MapBf->J[1][0] * MapBf->J[2][2]
+			     -MapBf->J[2][0] * MapBf->J[1][2])
+	+ MapBf->J[0][2] * ( MapBf->J[1][0] * MapBf->J[2][1]
+			     -MapBf->J[2][0] * MapBf->J[1][1]);
+      }
+      if (pd->Num_Dim == 2) {
+        MapBf->detJ = MapBf->J[0][0] * MapBf->J[1][1]
+	- MapBf->J[0][1] * MapBf->J[1][0];
+      }
 
     if (fabs(MapBf->detJ) < 1.e-10) {
       zero_detJ = TRUE;
@@ -375,9 +402,10 @@ int beer_belly(void) {
     }
     break;
 
-  case 2:
-    MapBf->detJ =
-        MapBf->J[0][0] * MapBf->J[1][1] - MapBf->J[0][1] * MapBf->J[1][0];
+    case 2:
+      dim = ei[pg->imtrx]->ielem_dim;
+      MapBf->detJ    =  MapBf->J[0][0] * MapBf->J[1][1]
+	- MapBf->J[0][1] * MapBf->J[1][0];
 
     MapBf->B[0][0] = MapBf->J[1][1] / MapBf->detJ;
     MapBf->B[0][1] = -MapBf->J[0][1] / MapBf->detJ;
@@ -730,12 +758,13 @@ void calc_surf_tangent(
      *  In 2D n x t = k, these vectors satisfy the rh rule.
      */
     fv->stangent[0][0] = -fv->snormal[1];
-    fv->stangent[0][1] = fv->snormal[0];
-    for (j = 0; j < nodes_per_elem; j++) {
-      fv->dstangent_dx[0][0][0][j] = 0.;
-      fv->dstangent_dx[0][0][1][j] = 0.;
-      fv->dstangent_dx[0][1][0][j] = 0.;
-      fv->dstangent_dx[0][1][1][j] = 0.;
+    fv->stangent[0][1] =  fv->snormal[0];
+    fv->stangent[1][2] =  1.0;
+    for (j=0 ; j < nodes_per_elem; j++) {
+      fv->dstangent_dx[0][0][0][j]=0.;
+      fv->dstangent_dx[0][0][1][j]=0.;
+      fv->dstangent_dx[0][1][0][j]=0.;
+      fv->dstangent_dx[0][1][1][j]=0.;
     }
     for (i = 0; i < num_nodes_on_side; i++) {
       id = (int)local_elem_node_id[i];
@@ -1699,7 +1728,7 @@ void simple_normalize_vector(struct Rotation_Vectors *vector, const int dim) {
 /********************************************************************************/
 /********************************************************************************/
 
-int load_bf_grad()
+int load_bf_grad(void)
 
 /********************************************************************************
  *
@@ -2137,7 +2166,8 @@ int load_bf_mesh_derivs(void) {
   int mdofs; /* degrees of freedom for mesh displacement */
   /* unknowns interpolated using bfm */
   int mn = ei[pg->imtrx]->mn;
-  dbl f, g[DIM], g2[DIM];     /* Temporary variables for convenience. */
+  dbl f, g[DIM] = {0};      /* Temporary variables for convenience. */
+  dbl g2[DIM] = {0};
   dbl phi_m[MDE], phi_l[MDE]; /* load shapefunctions into local variables */
 
   BASIS_FUNCTIONS_STRUCT *bfl; /* Basis function of current interest */
@@ -2160,7 +2190,8 @@ int load_bf_mesh_derivs(void) {
         pd->CoordinateSystem == CYLINDRICAL ||
         pd->CoordinateSystem == PROJECTED_CARTESIAN) {
       wim = dim;
-    } else if (pd->CoordinateSystem == SWIRLING) {
+    } else if (pd->CoordinateSystem == SWIRLING ||
+             pd->CoordinateSystem == CARTESIAN_2pt5D) {
       wim = 3;
     } else {
       /* MMH: What makes it here??? */
@@ -3075,12 +3106,12 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
 #endif
 
   if (Fill) {
-    DPRINTF(stderr, "\n%-30s= %d\n", "Number of fill unknowns",
+    DPRINTF(stdout, "\n%-30s= %d\n", "Number of fill unknowns",
             num_total_fill_unknowns);
-    DPRINTF(stderr, "\n%-30s= %d\n", "Number of filmatrix nonzeroes", nnz);
+    DPRINTF(stdout, "\n%-30s= %d\n", "Number of filmatrix nonzeroes", nnz);
   } else {
-    DPRINTF(stderr, "\n%-30s= %d\n", "Number of unknowns", num_total_unknowns);
-    DPRINTF(stderr, "\n%-30s= %d\n", "Number of matrix nonzeroes", nnz);
+    DPRINTF(stdout, "\n%-30s= %d\n", "Number of unknowns", num_total_unknowns);
+    DPRINTF(stdout, "\n%-30s= %d\n", "Number of matrix nonzeroes", nnz);
   }
 
   *ptr_ija = ija;
@@ -3149,8 +3180,8 @@ void alloc_VBR_sparse_arrays(struct Aztec_Linear_Solver_System *ams,
       gsum_Int(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]);
   nnz_tmp = gsum_Int(nnz);
 
-  DPRINTF(stderr, "\n%-30s= %d\n", "Number of unknowns", dpi->num_dofs_global);
-  DPRINTF(stderr, "\n%-30s= %d\n", "Number of matrix nonzeroes", nnz_tmp);
+  DPRINTF(stdout, "\n%-30s= %d\n", "Number of unknowns", dpi->num_dofs_global);
+  DPRINTF(stdout, "\n%-30s= %d\n", "Number of matrix nonzeroes", nnz_tmp);
   return;
 }
 /*****************************************************************************/
@@ -3903,6 +3934,7 @@ double newshape(const double xi[],    /* local coordinates    */
       case PSI:
         value = 1.;
         break;
+
 
       case DPSI_S:
         value = 0.;
@@ -4771,115 +4803,152 @@ extended_shape(const double xi[],    /* local coordinates    */
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-
-int calc_shearrate(dbl *gammadot,           /* strain rate invariant */
-                   dbl gamma_dot[DIM][DIM], /* strain rate tensor */
-                   dbl d_gd_dv[DIM][MDE], dbl d_gd_dmesh[DIM][MDE]) {
+int
+calc_shearrate(dbl *gammadot,	/* strain rate invariant */
+	       dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+	       dbl d_gd_dv[DIM][MDE],
+	       dbl d_gd_dmesh[DIM][MDE])
+{
   int mdofs = 0;
   int p, q, a, b;
   int vdofs, i, j, v;
 
-  dbl grad_phi_e_gam[MDE][DIM][DIM][DIM]; /* transpose of grad(phi_i ea) tensor
-                                             + grad(phi_i ea) tensor */
-  dbl d_gamma_dot_dmesh[DIM][DIM][DIM][MDE]; /* d/dmesh(grad_v)T */
+  dbl grad_phi_e_gam[MDE][DIM] [DIM][DIM]; /* transpose of grad(phi_i ea) tensor
+					      + grad(phi_i ea) tensor */
+  dbl d_gamma_dot_dmesh [DIM][DIM] [DIM][MDE]; /* d/dmesh(grad_v)T */
 
   int status = 1;
 
+
   /* Zero out sensitivities */
 
-  memset(d_gd_dv, 0, sizeof(double) * DIM * MDE);
-  memset(d_gd_dmesh, 0, sizeof(double) * DIM * MDE);
+  if(d_gd_dv != NULL) memset(d_gd_dv, 0, sizeof(double)*DIM*MDE);
+  if(d_gd_dmesh != NULL) memset(d_gd_dmesh, 0, sizeof(double)*DIM*MDE);
+
 
   *gammadot = 0.;
   /* get gamma_dot invariant for viscosity calculations */
-  for (a = 0; a < VIM; a++) {
-    for (b = 0; b < VIM; b++) {
-      *gammadot += gamma_dot[a][b] * gamma_dot[b][a];
+  for ( a=0; a<VIM; a++)
+    {
+      for ( b=0; b<VIM; b++)
+	{
+	  *gammadot +=  gamma_dot[a][b] * gamma_dot[b][a];
+	}
     }
-  }
-
-  *gammadot = sqrt(*gammadot / 2.);
-
+  
+  *gammadot  =  sqrt(0.5*fabs(*gammadot)); 
+  
   /* get stuff for Jacobian entries */
   v = VELOCITY1;
   vdofs = ei[pg->imtrx]->dof[v];
-
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
-  }
-
-  for (p = 0; p < VIM; p++) {
-    for (q = 0; q < VIM; q++) {
-      for (a = 0; a < VIM; a++) {
-        for (i = 0; i < vdofs; i++) {
-          grad_phi_e_gam[i][a][p][q] =
-              bf[v]->grad_phi_e[i][a][p][q] + bf[v]->grad_phi_e[i][a][q][p];
-        }
-      }
+  
+  if ( d_gd_dmesh != NULL || d_gd_dv != NULL)
+  {
+  if ( pd->v[pg->imtrx][R_MESH1] )
+    {
+      mdofs = ei[pg->imtrx]->dof[R_MESH1];
+    }
+  
+  for ( p=0; p<VIM; p++)
+    {
+      for ( q=0; q<VIM; q++)
+	{
+	  for ( a=0; a<VIM; a++)
+	    {
+	      for ( i=0; i<vdofs; i++)
+		{
+		  grad_phi_e_gam[i][a] [p][q] =
+		    bf[v]->grad_phi_e[i][a] [p][q]
+		    + bf[v]->grad_phi_e[i][a] [q][p]  ;
+		}
+	    }
+	}
     }
   }
-
+  
   /*
    * d( gamma_dot )/dmesh
    */
-
-  if (pd->e[pg->imtrx][R_MESH1]) {
-
-    for (p = 0; p < VIM; p++) {
-      for (q = 0; q < VIM; q++) {
-        for (b = 0; b < VIM; b++) {
-          for (j = 0; j < mdofs; j++) {
-
-            d_gamma_dot_dmesh[p][q][b][j] =
-                fv->d_grad_v_dmesh[p][q][b][j] + fv->d_grad_v_dmesh[q][p][b][j];
-          }
-        }
-      }
+  
+  if ( pd->v[pg->imtrx][R_MESH1] && d_gd_dmesh != NULL)
+    {
+      
+      for ( p=0; p<VIM; p++)
+	{
+	  for ( q=0; q<VIM; q++)
+	    {
+	      for ( b=0; b<VIM; b++)
+		{
+		  for ( j=0; j<mdofs; j++)
+		    {
+		      
+		      d_gamma_dot_dmesh[p][q] [b][j] =
+			fv->d_grad_v_dmesh[p][q] [b][j] +
+			fv->d_grad_v_dmesh[q][p] [b][j] ;
+		    }
+		}
+	    }
+	}
+      
+      /*
+       * d( gammadot )/dmesh
+       */
+      
+      if(*gammadot != 0.)
+	{
+	  for ( b=0; b<VIM; b++)
+	    {
+	      for ( j=0; j<mdofs; j++)
+		{
+		  d_gd_dmesh [b][j] = 0.;
+		  for ( p=0; p<VIM; p++)
+		    {
+		      for ( q=0; q<VIM; q++)
+			{
+			  d_gd_dmesh [b][j] +=
+			    0.5 * d_gamma_dot_dmesh[p][q] [b][j] 
+			    * gamma_dot[q][p]
+			    / *gammadot; 
+		      
+			}
+		    }
+		}
+	    }
+	}
     }
-
-    /*
-     * d( gammadot )/dmesh
-     */
-
-    if (*gammadot != 0.) {
-      for (b = 0; b < VIM; b++) {
-        for (j = 0; j < mdofs; j++) {
-          d_gd_dmesh[b][j] = 0.;
-          for (p = 0; p < VIM; p++) {
-            for (q = 0; q < VIM; q++) {
-              d_gd_dmesh[b][j] += 0.5 * d_gamma_dot_dmesh[p][q][b][j] *
-                                  gamma_dot[q][p] / *gammadot;
-            }
-          }
-        }
-      }
-    }
-  }
-
+  
   /*
    * d( gammadot )/dv
    */
-
-  if (*gammadot != 0.) {
-    for (a = 0; a < VIM; a++) {
-      for (i = 0; i < vdofs; i++) {
-        d_gd_dv[a][i] = 0.;
-        for (p = 0; p < VIM; p++) {
-          for (q = 0; q < VIM; q++) {
-            d_gd_dv[a][i] +=
-                0.5 * grad_phi_e_gam[i][a][p][q] * gamma_dot[q][p] / *gammadot;
-          }
-        }
-      }
+  
+  if(*gammadot != 0. && d_gd_dv != NULL)
+    {
+      for ( a=0; a<VIM; a++)
+	{
+	  for ( i=0; i<vdofs; i++)
+	    {
+	      d_gd_dv[a][i] = 0.;
+	      for ( p=0; p<VIM; p++)
+		{
+		  for ( q=0; q<VIM; q++)
+		    {
+		      d_gd_dv[a][i] +=
+			0.5 * grad_phi_e_gam[i][a] [p][q] 
+			* gamma_dot[q][p]
+			/ *gammadot; 
+		    }
+		}
+	    }
+	}
     }
-  }
-  return (status);
+  return(status);
 }
+
 /*************************************************************************/
 /*************************************************************************/
 /*************************************************************************/
 
-int var_if_interp_type_enabled(PROBLEM_DESCRIPTION_STRUCT *pd_ptr,
+static int var_if_interp_type_enabled(PROBLEM_DESCRIPTION_STRUCT *pd_ptr,
                                int interp_type) {
   int imtrx;
   int var;
@@ -5017,7 +5086,7 @@ void determine_ProjectionVar(PROBLEM_DESCRIPTION_STRUCT *pd_ptr)
 /*************************************************************************/
 /*************************************************************************/
 
-void set_solid_inertia()
+void set_solid_inertia(void)
 /* Initializes tran->solid_inertia flag */
 {
   int mn;
@@ -5310,7 +5379,7 @@ void supg_tau(SUPG_terms *supg_terms, int dim, dbl diffusivity,
   }
 }
 
-dbl yzbeta1(dbl scale, int dim, dbl Y, dbl Z, dbl d_Z[MDE], dbl beta,
+static dbl yzbeta1(dbl scale, int dim, dbl Y, dbl Z, dbl d_Z[MDE], dbl beta,
                        dbl u, dbl d_u[MDE], dbl grad_u[DIM],
                        dbl d_grad_u[MDE][DIM], dbl h_elem, int interp_eqn,
                        dbl deriv[MDE]) {
@@ -5329,7 +5398,7 @@ dbl yzbeta1(dbl scale, int dim, dbl Y, dbl Z, dbl d_Z[MDE], dbl beta,
 
 }
 
-dbl yzbeta2(dbl scale, dbl Y, dbl Z, dbl d_Z[MDE], dbl deriv[MDE], dbl h_elem, int interp_eqn)
+static dbl yzbeta2(dbl scale, dbl Y, dbl Z, dbl d_Z[MDE], dbl deriv[MDE], dbl h_elem, int interp_eqn)
 {
 //  static const dbl EPSILON = 1e-10;
   for (int k = 0; k < ei[pg->imtrx]->dof[interp_eqn]; k++) {
@@ -5441,4 +5510,112 @@ dbl yzbeta_model(int model, dbl scale, dbl beta, int dim, dbl Y,
   }
 
   return dc;
+}
+void get_supg_tau(SUPG_terms *supg_terms,
+                  int dim,
+                  dbl diffusivity,
+                  PG_DATA *pg_data)
+{
+  double vnorm = 0;
+
+  for (int i = 0; i < VIM; i++) {
+    vnorm += fv->v[i]*fv->v[i];
+  }
+  vnorm = sqrt(vnorm);
+
+  double hk = 0;
+  for (int i = 0; i < dim; i++) {
+    hk += sqrt(pg_data->hsquared[i]);
+  }
+
+  hk /= (double) dim;
+
+  double D = diffusivity;
+
+  double hk_dX[DIM][MDE];
+  for (int a = 0; a < dim; a++)
+    {
+      for (int j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1+a]; j++)
+        {
+          double tmp = 0;
+          for (int b = 0; b < dim; b++)
+            {
+              tmp += (2*pg_data->hhv[b][a] * pg_data->dhv_dxnode[b][j])/(2*sqrt(pg_data->hsquared[b]));
+            }
+          hk_dX[a][j] = tmp/dim;
+        }
+    }
+
+  double Pek = 0.5 * vnorm * hk / D;
+
+  double eta = Pek;
+  double eta_dX[DIM][MDE];
+  double eta_dV[DIM][MDE];
+  if (Pek > 1) {
+    eta = 1;
+    for (int i = 0; i < DIM; i++)
+    {
+      for (int j = 0; j < MDE; j++)
+      {
+        eta_dX[i][j] = 0;
+        eta_dV[i][j] = 0;
+      }
+    }
+  }
+  else
+  {
+    for (int i = 0; i < DIM; i++)
+    {
+      for (int j = 0; j < MDE; j++)
+      {
+        if (pd->e[VELOCITY1+i])
+        {
+          eta_dV[i][j] = 0.5 * 0.5 * hk * fv->v[i]*bf[VELOCITY1+i]->phi[j] / (vnorm*D);
+
+        }
+
+        if (pd->e[MESH_DISPLACEMENT1+i])
+        {
+          eta_dX[i][j] = 0.5 * vnorm * hk_dX[i][j] / D;
+
+        }
+      }
+    }
+  }
+
+  if (vnorm > 0) {
+    supg_terms->supg_tau = 0.5 * hk * eta / vnorm;
+
+    for (int a = 0; a < VIM; a++)
+      {
+        int var = VELOCITY1 + a;
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+          {
+            supg_terms->d_supg_tau_dv[a][j] = 0.5*hk*eta*fv->v[a]*bf[var]->phi[j] /
+                (- vnorm*vnorm*vnorm) + 0.5 * hk * eta_dV[a][j] / vnorm;
+          }
+
+        var = MESH_DISPLACEMENT1 + a;
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+          {
+            supg_terms->d_supg_tau_dX[a][j] = 0.5 * hk_dX[a][j] * eta / vnorm + 0.5 * hk * eta_dX[a][j] / vnorm;
+          }
+      }
+
+
+  } else {
+    supg_terms->supg_tau = 0;
+    for (int i = 0; i < DIM; i++)
+      {
+        for (int j = 0; j < MDE; j++)
+          {
+            supg_terms->d_supg_tau_dv[i][j] = 0.0;
+          }
+        for (int j = 0; j < MDE; j++)
+          {
+            supg_terms->d_supg_tau_dX[i][j] = 0.0;
+          }
+      }
+  }
+
 }

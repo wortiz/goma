@@ -9,7 +9,7 @@
 *                                                                         *
 * This software is distributed under the GNU General Public License.      *
 \************************************************************************/
- 
+// 
 /*
  * $Id: ac_particles.h,v 5.1 2007-09-18 18:53:40 prschun Exp $
  */
@@ -175,12 +175,6 @@ extern dbl Particle_Move_Domain_Reals[MAX_DOMAIN_REAL_VALUES];
 
 extern dbl xi_boundary_tolerances[3];
 
-#ifdef USE_CGM
-extern FaceHandle *Particle_Creation_Domain_FaceHdl;
-extern VolumeHandle *Particle_Creation_Domain_VolumeHdl;
-extern FaceHandle *Particle_Move_Domain_FaceHdl;
-extern VolumeHandle *Particle_Move_Domain_VolumeHdl;
-#endif
 
 extern int Particle_Number_PBCs;
 extern PBC_t *PBCs;
@@ -207,12 +201,5 @@ EXTERN int compute_particles
 EXTERN void rd_particle_specs	/* mm_input_particles.c */
 (FILE *,
        char *);
-
-EXTERN void backup_particles
-(void);
-
-EXTERN void restore_particles
-(void);
-
 #endif /* GOMA_AC_PARTICLES_H */
 

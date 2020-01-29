@@ -19,6 +19,7 @@
 #define GOMA_RF_GOMA_H
 
 #include <ctype.h>
+#include <stdlib.h> /* WEXITSTATUS */
 
 /* If we're using autoconf, then include the config.h file. */
 #ifdef HAVE_CONFIG_H
@@ -35,10 +36,10 @@
 #define HAVE_AZTEC 1
 /* Trilinos now seems to define these */
 #ifndef GOMA_HAVE_BLAS
-  #define GOMA_HAVE_BLAS 1
+#define GOMA_HAVE_BLAS 1
 #endif
 #ifndef GOMA_HAVE_LAPACK
-  #define GOMA_HAVE_LAPACK 1
+#define GOMA_HAVE_LAPACK 1
 #endif
 #define HAVE_Y12M 1
 
@@ -53,8 +54,14 @@
 
 #endif /* HAVE_CONFIG_H */
 
-#ifndef VERSION
-#define VERSION "6.0.0"
+#ifndef GOMA_VERSION                      /* 1) VERSION must be a keyword, won't work with it */
+  #ifdef GIT_VERSION                      /* 2) needed all of this to convet GIT_VERSION to the proper string */
+    #define STRINGCON_(x) #x
+    #define STRINGCON(x) STRINGCON_(x)
+    #define GOMA_VERSION STRINGCON(GIT_VERSION)
+  #else
+    #define GOMA_VERSION "6.0.0"
+  #endif
 #endif
 
 /***********************************************************************************/
@@ -183,8 +190,17 @@
 #define PETA_2                          1125899906842624
 #define EXA_2                           1152921504606846976
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+
 #ifndef M_PIE
-#define M_PIE 3.14159265358979323846
+#define M_PIE M_PI
+#endif
+
+#ifndef PI
+#define PI M_PI
 #endif
 
 #define delta(m,n)	((m) == (n) ? 1 : 0 ) /* Kroenecker delta */
@@ -214,6 +230,10 @@
 #endif
 #ifndef DBL_MAX
 #define DBL_MAX 1.0E300
+#endif
+/* finite difference stepsize  */
+#ifndef FD_FACTOR
+#define FD_FACTOR 1.0E-05
 #endif
 
 /*
@@ -350,7 +370,9 @@ typedef int MPI_Aint;
 #  define DFPUTS(...) do {if (ProcID == 0) { fputs(__VA_ARGS__); } } while(0)
 #else
 #  define DPRINTF fprintf
+#  define DFPUTS fputs
 #  define P0PRINTF printf
+#  define DFPUTS fputs
 #endif
 
 
@@ -452,9 +474,6 @@ typedef enum datatype Edt;
  *  typedef shortcuts for structures defined later in other include files.
  */
 
-typedef struct Node_Struct     NODE_STRUCT;
-typedef struct Node_Var_Struct NODE_VAR_STRUCT;
-typedef struct Var_Struct      VAR_STRUCT;
 typedef struct Material_Properties MATRL_PROP_STRUCT;
 
 /***************************************************************************/
@@ -511,8 +530,15 @@ extern int zero_detJ_global;
  * versus 6 issue.)  This is not needed if goma is compiled with autoconf.
  * (Eric Benner 8/6/09)
  */ 
-#ifndef VERSION
-#define VERSION "6.0.0"
+
+#ifndef GOMA_VERSION                      /* 1) VERSION must be a keyword, won't work with it */
+  #ifdef GIT_VERSION                      /* 2) needed all of this to convet GIT_VERSION to the proper string */
+    #define STRINGCON_(x) #x
+    #define STRINGCON(x) STRINGCON_(x)
+    #define GOMA_VERSION STRINGCON(GIT_VERSION)
+  #else
+    #define GOMA_VERSION "6.0.0"
+  #endif
 #endif
 
 #endif

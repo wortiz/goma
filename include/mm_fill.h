@@ -30,8 +30,6 @@
 #define EXTERN extern
 #endif
 
-#include "dg_utils.h"
-
 extern int matrix_fill_full
 (struct Aztec_Linear_Solver_System *,
        double [],   /* x - Solution vector                       */	
@@ -50,11 +48,10 @@ extern int matrix_fill_full
        int *,	    /* num_total_nodes - Number of nodes that proc owns */
        dbl *,       /* h_elem_avg - global average element size  for PSPG */
        dbl *,       /* U_norm - global average velocity for PSPG */
-       dbl *,
-       dg_neighbor_type *);     /* estifm - element stiffness Matrix for frontal solver */
+       dbl *);
 
 
-EXTERN void matrix_fill
+EXTERN int matrix_fill
 (struct Aztec_Linear_Solver_System *,	
        double [],		/* x - Solution vector                       */
        double [],		/* resid_vector - Residual vector            */
@@ -85,13 +82,45 @@ EXTERN void matrix_fill
        dbl *,			/* U_norm - global average velocity for PSPG */
        dbl *,			/* estifm - element stiffness Matrix for 
 				 * frontal solver                            */
-       int ,
-       dg_neighbor_type *);                  /* zeroCA */
+       int );
 
-EXTERN void checkfinite
-(const char * const,      /* file                                      */
-       const int ,	       	/* line                                      */
-       const char * const);	/* message                                   */
+EXTERN int matrix_fill_stress
+(struct Aztec_Linear_Solver_System *,    
+       double [],               /* x - Solution vector                       */
+       double [],               /* resid_vector - Residual vector            */
+       double [],               /* x_old -  previous last time step          */
+       double [],               /* x_older - previous prev time step         */
+       double [],               /* xdot - xdot of current solution           */
+       double [],               /* xdot_old - xdot_old of current soln       */
+       double [],               /* x_update - last update vector             */
+       double *,                /* delta_t - current time step size          */
+       double *,                /* theta- parameter to vary time integration 
+                                 * from explicit (theta = 1) to implicit 
+                                 * (theta = 0)                               */
+       struct elem_side_bc_struct *[], /* first_elem_side_BC_array
+                                        * This is an array of pointers to the 
+                                        * first surface integral defined for 
+                                        * each element.
+                                        * It has a length equal to the total 
+                                        * number of elements defined on 
+                                        * current processor                  */
+       double *,                /* time_value  */
+       Exo_DB *,                /* exo - ptr to EXODUS II finite element db  */
+       Dpi *,                   /* dpi - ptr to distributed processing info  */
+       int *,                   /* ielem - element number                    */
+       int *,                   /* num_total_nodes - Number of nodes that each
+                                 * processor is responsible for              */
+       dbl *,                   /* h_elem_avg - global average element size 
+                                 * for PSPG                                  */
+       dbl *,                   /* U_norm - global average velocity for PSPG */
+       dbl *,                   /* estifm - element stiffness Matrix for 
+                                 * frontal solver                            */
+       int );                  /* zeroCA */
+
+EXTERN int checkfinite
+       (const char * file,
+        const int line,	       	/* line                                      */
+       const char * message);	/* message                                   */
 
 EXTERN int load_pf_constraint
 (double pf_constraint,
@@ -103,7 +132,7 @@ EXTERN int load_pf_constraint
 #if  defined (CHECK_FINITE)  || defined (DEBUG_NAN) || defined (DEBUG_INF)
 #define CHECKFINITE(MESSAGE)	checkfinite(__FILE__, __LINE__, MESSAGE)
 #else
-#define CHECKFINITE(MESSAGE)	{}
+#define CHECKFINITE(MESSAGE)	0
 #endif
 
 #endif /* GOMA_MM_FILL_H */

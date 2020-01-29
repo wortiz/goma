@@ -75,7 +75,6 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 		    const double theta,	/* parameter (0 to 1) to vary time integration
 					 *  ( implicit - 0 to explicit - 1)             */
 		    const PG_DATA *pg_data,
-
 		    const int ielem,       /* element number */
 		    const int ielem_type,  /* element type */
 		    const int num_local_nodes,
@@ -99,7 +98,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
  *
  ****************************************************************************/
 {
-  int ip, w, i, I, ibc, k, j, id, icount, ss_index, type, mn, lnn;
+  int ip, w, i, I, ibc, k, j, id, icount, ss_index, is_ns, mn, lnn;
   int iapply, matID_apply, id_side, i_basis = -1, skip_other_side;
   int new_way = FALSE, ledof, mn_first;
   int eqn, ieqn, var, pvar, p, q, index_eq, ldof_eqn, lvdesc, jlv;
@@ -225,9 +224,9 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
         if ( ls != NULL ) ls->Elem_Sign = 0;
 	/* find the quadrature point locations (s, t) for current ip */
 	find_surf_st(ip, ielem_type, elem_side_bc->id_side,
-		     pd->Num_Dim, xi, &s, &t, &u);
+                     ei[pg->imtrx]->ielem_dim, xi, &s, &t, &u);
         /* find the quadrature weight for current surface ip */
-        wt = Gq_surf_weight(ip, ielem_type);  
+        wt = Gq_surf_weight(ip, ielem_type);
       } 
     
     err = load_basis_functions(xi, bfd);
@@ -356,9 +355,10 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
       bc = BC_Types + bc_input_id;
       bc_desc = bc->desc;
 
-      if ((ss_index = 
-	   in_list(bc->BC_ID, 0, exo->num_side_sets,
-		   &(ss_to_blks[0][0]))) == -1) {
+      ss_index = in_list(bc->BC_ID, 0, exo->num_side_sets,
+                         &(ss_to_blks[0][0]));
+      is_ns = strcmp(BC_Types[bc_input_id].Set_Type, "NS");
+      if (ss_index == -1 && is_ns != 0) {
 	sprintf(Err_Msg, "Could not find BC_ID %d in ss_to_blks",
 	        BC_Types[bc_input_id].BC_ID);
 	EH(-1, Err_Msg);
@@ -379,7 +379,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
                      interface_id = icount;
                      }
                 }
-          if (is) 
+          if (is)
             {
 	     for (icount = 0; icount < mp->Num_Species; icount++)  {
                     is[interface_id].Processed[icount] = FALSE;
@@ -390,8 +390,10 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
       }
       iapply = 0;
       skip_other_side = FALSE;
-      if (ei[pg->imtrx]->elem_blk_id == ss_to_blks[1][ss_index]) {
-	iapply = 1;
+      if (is_ns != 0) {
+        if (ei[pg->imtrx]->elem_blk_id == ss_to_blks[1][ss_index]) {
+          iapply = 1;
+        }
       }
 
       /*
@@ -399,8 +401,10 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
        *  other words, if the side set is an external side set, we will
        *  apply the boundary condition no matter what.
        */
-      if (SS_Internal_Boundary[ss_index] == -1) {
-	iapply = 1;
+      if (SS_Internal_Boundary != NULL ) {
+        if (SS_Internal_Boundary[ss_index] == -1) {
+          iapply = 1;
+        }
       }
 	
       /*  check to see if this bc is an integrated bc and thus to be handled
@@ -434,7 +438,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  else
 	    memset(d_func,0, (MAX_VARIABLE_TYPES + MAX_CONC)*MDE*sizeof(double));
 
-	  memset(func_stress, 0.0, MAX_MODES * 6 * sizeof(double));
+          memset(func_stress, 0.0, MAX_MODES * 6 * sizeof(double));
           memset(d_func_stress, 0.0, MAX_MODES * 6 * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
 	}
 	/*
@@ -490,11 +494,11 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	      second - internal boundaries with an explicit block id
 	      third  - internal boundaries with implicit iapply logic
 	  */
-	  if ( (SS_Internal_Boundary[ss_index] == -1 && pd->gv[VELOCITY1])
+	  if ( (SS_Internal_Boundary[ss_index] == -1 && pd->v[pg->imtrx][VELOCITY1])
 	       || (SS_Internal_Boundary[ss_index] != -1 &&
 		   bc->BC_Data_Int[0] == ei[pg->imtrx]->elem_blk_id)
 	       || (SS_Internal_Boundary[ss_index] != -1 && 
-		   bc->BC_Data_Int[0] == -1 && iapply && pd->gv[VELOCITY1]))
+		   bc->BC_Data_Int[0] == -1 && iapply && pd->v[pg->imtrx][VELOCITY1]))
 	    {
 	      fvelo_normal_bc(func, d_func, bc->BC_Data_Float[0], contact_flag,
 			      x_dot, theta, delta_t, (int) bc->BC_Name,
@@ -697,7 +701,27 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	case VELO_SLIP_ROT_BC:
 	case VELO_SLIP_FILL_BC:
  	case VELO_SLIP_ROT_FILL_BC:
+	case VELO_SLIP_FLUID_BC:
+	case VELO_SLIP_ROT_FLUID_BC:
 	  fvelo_slip_bc(func, d_func, x, 
+			(int) bc->BC_Name,
+			(int) bc->max_DFlt,
+			bc->BC_Data_Float,
+			(int) bc->BC_Data_Int[0],
+			xsurf, theta, delta_t);
+	  break;
+	case VELO_SLIP_POWER_CARD_BC:
+	case VELO_SLIP_POWER_BC:
+	  fvelo_slip_power_bc(func, d_func,
+			      (int) bc->BC_Name,
+			      (int) bc->max_DFlt,
+			      bc->BC_Data_Float,
+			      theta, delta_t);
+	break;
+
+	case AIR_FILM_BC:
+	case AIR_FILM_ROT_BC:
+	  fvelo_airfilm_bc(func, d_func, x, 
 			(int) bc->BC_Name,
 			bc->BC_Data_Float,
 			(int) bc->BC_Data_Int[0],
@@ -982,7 +1006,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	    }
 
 	    if (bc->BC_Name == CAP_REPULSE_ROLL_BC) {
-	      apply_repulsion_roll(cfunc, d_cfunc, 
+	      apply_repulsion_roll(cfunc, d_cfunc, x, 
                                bc->BC_Data_Float[2], 
 			       &(bc->BC_Data_Float[3]),
 			       &(bc->BC_Data_Float[6]),
@@ -991,6 +1015,8 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
                                bc->BC_Data_Float[11], 
                                bc->BC_Data_Float[12], 
                                bc->BC_Data_Float[13], 
+                               bc->BC_Data_Float[14], 
+                               bc->BC_Data_Int[2],
 			      elem_side_bc, iconnect_ptr);
 	    }
 	    if (bc->BC_Name == CAP_REPULSE_USER_BC) {
@@ -1081,8 +1107,15 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 			     bc->BC_Data_Int[0]);
 	  break;
 
+
+	case FLOW_GRADV_SIC_BC:
+	  flow_n_dot_T_gradv_sic(func, d_func,
+			     bc->BC_Data_Float[0],
+			     bc->BC_Data_Int[0]);
+	  break;
+	  
         case STRESS_DEVELOPED_BC:
-          if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_LAGGED)
+          if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
             {
               stress_no_v_dot_gradS_logc(func_stress, d_func_stress, delta_t, theta);
             }
@@ -1091,6 +1124,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
               stress_no_v_dot_gradS(func_stress, d_func_stress, delta_t, theta);
             }
           break;
+
 
         case GRAD_LUB_PRESS_BC:
 	  shell_n_dot_flow_bc_confined(func, d_func,
@@ -1104,6 +1138,17 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 					 (elem_side_bc->local_elem_node_id) );
 	  break;
 
+         case LUB_STATIC_BC:
+         lub_static_pressure(func, d_func,
+                             bc->BC_Data_Float[0],
+                             time_value, delta_t,
+                             xi, exo);
+         surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes,
+                                       	ielem_dim - 1,
+                                       	(int) elem_side_bc->id_side,
+                                       	(int) elem_side_bc->num_nodes_on_side,
+                                       	(elem_side_bc->local_elem_node_id) );
+          break;
 
 
         case SHELL_GRAD_FP_BC:
@@ -1183,6 +1228,87 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
                                            (int) elem_side_bc->num_nodes_on_side,
                                            (elem_side_bc->local_elem_node_id) );
             break;
+
+	case SHELL_TFMP_FREE_LIQ_BC:
+          if (pd->e[pg->imtrx][R_TFMP_MASS]) {
+            shell_n_dot_liq_velo_bc_tfmp(func, d_func, 0.0,
+                                         time_value, delta_t,
+                                         xi, exo);
+
+            surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes,
+                   ielem_dim - 1,
+                   (int) elem_side_bc->id_side,
+                   (int) elem_side_bc->num_nodes_on_side,
+                 (elem_side_bc->local_elem_node_id) );
+          }
+
+	  break;
+	case SHELL_TFMP_NUM_DIFF_BC:
+	  shell_num_diff_bc_tfmp(func, d_func, 
+                                 time_value, delta_t,
+                                 xi, exo);
+	  surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes,
+					 ielem_dim - 1,
+					 (int) elem_side_bc->id_side,
+					 (int) elem_side_bc->num_nodes_on_side,
+					 (elem_side_bc->local_elem_node_id) );
+	  break;
+        case SHELL_LUBRICATION_OUTFLOW_BC:
+            shell_lubrication_outflow(func, d_func,
+                                      time_value, delta_t,
+                                      xi, exo);
+            surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes,
+                                           ielem_dim - 1,
+                                           (int) elem_side_bc->id_side,
+                                           (int) elem_side_bc->num_nodes_on_side,
+                                           (elem_side_bc->local_elem_node_id) );
+            break;
+
+        case SH_S11_WEAK_BC:
+        case SH_S22_WEAK_BC:
+          apply_shell_traction_bc(func, d_func,
+                                  bc->BC_Name,
+                                  bc->BC_Data_Float[0],
+                                  bc->BC_Data_Float[1],
+                                  bc->BC_Data_Float[2]);
+
+            break;
+	case SHELL_TFMP_AVG_PLATE_VELO_BC:
+          shell_tfmp_avg_plate_velo_liq(func, d_func,
+                                        time_value,
+                                        delta_t,
+                                        xi,
+                                        exo);
+          surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes,
+                                         ielem_dim - 1,
+                                         (int) elem_side_bc->id_side,
+                                         (int) elem_side_bc->num_nodes_on_side,
+                                         (elem_side_bc->local_elem_node_id) );
+          break;
+
+	case SHELL_TFMP_FREE_GAS_BC:
+	  shell_n_dot_gas_velo_bc_tfmp(func, d_func, 0.0, 
+				       time_value, delta_t,
+				       xi, exo);
+          surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes,
+					 ielem_dim - 1,
+					 (int) elem_side_bc->id_side,
+					 (int) elem_side_bc->num_nodes_on_side,
+					 (elem_side_bc->local_elem_node_id) );
+
+	  break;
+	case SHELL_TFMP_GRAD_S_BC:
+          shell_tfmp_n_dot_grad_s(func, d_func,
+                                  time_value,
+                                  delta_t,
+                                  xi,
+                                                                                                                exo);
+          surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes,
+                                         ielem_dim - 1,
+                                         (int) elem_side_bc->id_side,
+                                         (int) elem_side_bc->num_nodes_on_side,
+                                         (elem_side_bc->local_elem_node_id) );
+          break;
 
 
 	case HYDROSTATIC_SYMM_BC:
@@ -1289,12 +1415,19 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 				    bc->BC_Data_Float[0], time_value, delta_t, theta);
 	  }
 	  break;
-	    
+
 	case YFLUX_BC:
 	  if (iapply) {
 	    mass_flux_surf_bc(func, d_func, bc->BC_Data_Int[0],
 			      bc->BC_Data_Float[0], bc->BC_Data_Float[1], 
 			      delta_t, theta);
+	  }
+	  break;
+
+	case YFLUX_ETCH_BC:
+	  if (iapply) {
+	    mass_flux_surf_etch(func, d_func, bc->BC_Data_Int[0],
+			        bc->BC_Data_Int[1], time_value, delta_t, theta);
 	  }
 	  break;
 
@@ -1648,6 +1781,21 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	    break;
 	case LIGHTP_JUMP_BC:
 	case LIGHTM_JUMP_BC:
+	  if (ei[pg->imtrx]->elem_blk_id == bc->BC_Data_Int[0]) {
+	    iapply = 1;
+	  } else {
+	    iapply = 1;
+	  }
+	  if (iapply) {
+	  qside_light_jump(func, d_func, time_intermediate,(int)bc->BC_Name,
+			    bc->BC_Data_Int[0],
+			    bc->BC_Data_Int[1]);
+	  } else {
+	    skip_other_side = FALSE;
+	  }
+	 break;
+	case LIGHTP_JUMP_2_BC:
+	case LIGHTM_JUMP_2_BC:
 	  qside_light_jump(func, d_func, time_intermediate,(int)bc->BC_Name,
 			    bc->BC_Data_Int[0],
 			    bc->BC_Data_Int[1]);
@@ -1766,10 +1914,14 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 			wall_velo[1] = -fv->snormal[0]*BC_Types[i1].BC_Data_Float[0];
 			break;
 		      case VELO_SLIP_BC:
+		      case VELO_SLIP_FLUID_BC:
+		      case AIR_FILM_BC:
 			wall_velo[0] = BC_Types[i1].BC_Data_Float[1];
 			wall_velo[1] = BC_Types[i1].BC_Data_Float[2];
 			break;
 		      case VELO_SLIP_ROT_BC:
+		      case VELO_SLIP_ROT_FLUID_BC:
+		      case AIR_FILM_ROT_BC:
 			wall_velo[0] = BC_Types[i1].BC_Data_Float[1]*(fv->x[1]-BC_Types[i1].BC_Data_Float[3]);
 			wall_velo[1] =BC_Types[i1].BC_Data_Float[1]*(fv->x[0]-BC_Types[i1].BC_Data_Float[2]);
 			break;
@@ -1910,6 +2062,16 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  }
 	  break;
 
+        case SH_SDET_BC:
+          apply_sdet(func, d_func, xi, exo);
+
+          break;
+        case SH_MESH2_WEAK_BC:
+          apply_sh_weak(func, d_func, xi, exo,
+                       BC_Types[bc_input_id].BC_Data_Float[0]);
+
+          break;
+
 	default:
 	  sprintf(Err_Msg, "Integrated BC %s not found", bc_desc->name1);
 	  EH(-1, Err_Msg);
@@ -1993,426 +2155,327 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	      }
 	    }
 
-	  /* Here , we are going to determine whether it is a stress BCs or not */
+          /* Here , we are going to determine whether it is a stress BCs or not */
           if (bc_desc->equation == R_STRESS11)
             {
-	      stress_bc = 1;
+             stress_bc = 1;
             }
           else
             {
-	      stress_bc = 0;
+             stress_bc = 0;
             }
 
-	  if (!stress_bc) {
-	    /*
-	     * Boundary condition may actually be a vector of
-	     * bc's. Loop over that vector here.
+          /* If it is not a stress BC go for the loop over vector components */
+          if (stress_bc == 0) {
+          /*
+	   * Boundary condition may actually be a vector of
+	   * bc's. Loop over that vector here.
+	   */
+	  for (p = 0; p < bc_desc->vector; p++) {
+	    /* 
+	     *   Check to see if this BC on this node is
+	     *   applicable (i.e. no other overriding Dirichlet conditions),
+	     *   And, find the global unknown number, index_eq, on which 
+	     *   to applyi this additive boundary condition, eqn
 	     */
-	    for (p = 0; p < bc_desc->vector; p++) {
+            index_eq = bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn,
+				    p, &eqn, &matID_apply, &vd);
+
+	    if (index_eq >= 0) {
 	      /*
-	       *   Check to see if this BC on this node is
-	       *   applicable (i.e. no other overriding Dirichlet conditions),
-	       *   And, find the global unknown number, index_eq, on which
-	       *   to applyi this additive boundary condition, eqn
+	       * Obtain the first local variable degree of freedom
+	       * at the current node, whether or not it actually an
+	       * interpolating degree of freedom
 	       */
-	      index_eq = bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn,
-				      p, &eqn, &matID_apply, &vd);
+	      ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
-	      if (index_eq >= 0) {
+	      /*
+	       *   for weakly integrated boundary conditions,
+	       *   weight the function by wt
+	       */
+	      weight = wt;
+
+	      /*
+	       * Weight the function by the weighting function unless it is 
+	       * integrated by parts twice
+	       */
+	      if (BC_Types[bc_input_id].BC_Name != CAPILLARY_BC  &&
+		  BC_Types[bc_input_id].BC_Name != CAPILLARY_SHEAR_VISC_BC  &&
+		  BC_Types[bc_input_id].BC_Name != ELEC_TRACTION_BC  &&
+                  BC_Types[bc_input_id].BC_Name != YFLUX_USER_BC &&
+		  BC_Types[bc_input_id].BC_Name != CAP_REPULSE_BC &&
+		  BC_Types[bc_input_id].BC_Name != CAP_REPULSE_ROLL_BC &&
+		  BC_Types[bc_input_id].BC_Name != CAP_REPULSE_USER_BC &&
+		  BC_Types[bc_input_id].BC_Name != CAP_REPULSE_TABLE_BC &&
+		  BC_Types[bc_input_id].BC_Name != CAP_RECOIL_PRESS_BC &&
+		  BC_Types[bc_input_id].BC_Name != CAPILLARY_TABLE_BC &&
+		  BC_Types[bc_input_id].BC_Name != TENSION_SHEET_BC &&
+		  BC_Types[bc_input_id].BC_Name != SHEAR_TO_SHELL_BC ) {
 		/*
-		 * Obtain the first local variable degree of freedom
-		 * at the current node, whether or not it actually an
-		 * interpolating degree of freedom
+		 * Do processing specific to CROSS_PHASE_DISCONTINUOUS
+		 * boundary conditions.
 		 */
-		ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
-
-		/*
-		 *   for weakly integrated boundary conditions,
-		 *   weight the function by wt
-		 */
-		weight = wt;
-
-		/*
-		 * Weight the function by the weighting function unless it is
-		 * integrated by parts twice
-		 */
-		if (BC_Types[bc_input_id].BC_Name != CAPILLARY_BC  &&
-		    BC_Types[bc_input_id].BC_Name != CAPILLARY_SHEAR_VISC_BC  &&
-		    BC_Types[bc_input_id].BC_Name != ELEC_TRACTION_BC  &&
-		    BC_Types[bc_input_id].BC_Name != YFLUX_USER_BC &&
-		    BC_Types[bc_input_id].BC_Name != CAP_REPULSE_BC &&
-		    BC_Types[bc_input_id].BC_Name != CAP_REPULSE_ROLL_BC &&
-		    BC_Types[bc_input_id].BC_Name != CAP_REPULSE_USER_BC &&
-		    BC_Types[bc_input_id].BC_Name != CAP_REPULSE_TABLE_BC &&
-		    BC_Types[bc_input_id].BC_Name != CAP_RECOIL_PRESS_BC &&
-		    BC_Types[bc_input_id].BC_Name != CAPILLARY_TABLE_BC &&
-		    BC_Types[bc_input_id].BC_Name != TENSION_SHEET_BC &&
-		    BC_Types[bc_input_id].BC_Name != SHEAR_TO_SHELL_BC ) {
+		if (bc_desc->i_apply == CROSS_PHASE_DISCONTINUOUS) {
 		  /*
-		   * Do processing specific to CROSS_PHASE_DISCONTINUOUS
-		   * boundary conditions.
+		   * For these boundary conditions, we need to extract
+		   * the correct nodal basis function for these
+		   * discontinuous interpolations. Here we take
+		   * all the "0" basis functions that Baby_Dolphin[pg->imtrx]
+		   * refers to, as the "1" types have been zeroed.
+		   *
+		   *  In other words, the local variable dof for the
+		   *  variable corresponding to the Elem_Blk 1 is always
+		   *  the first degree of freedom at a local node. The
+		   *  lvdof for the variable corresponding to Elem_Blk 2 is
+		   *  always the second degree of freedom for that variable
+		   *  type at the node. The basis function for dofs which
+		   *  are not interpolating dofs are set to zero, previously
+		   *  Therefore, in the loop below, we pick phi_i to
+		   *  be the basis function which is not zeroed out in
+		   *  the current element.
 		   */
-		  if (bc_desc->i_apply == CROSS_PHASE_DISCONTINUOUS) {
-		    /*
-		     * For these boundary conditions, we need to extract
-		     * the correct nodal basis function for these
-		     * discontinuous interpolations. Here we take
-		     * all the "0" basis functions that Baby_Dolphin
-		     * refers to, as the "1" types have been zeroed.
-		     *
-		     *  In other words, the local variable dof for the
-		     *  variable corresponding to the Elem_Blk 1 is always
-		     *  the first degree of freedom at a local node. The
-		     *  lvdof for the variable corresponding to Elem_Blk 2 is
-		     *  always the second degree of freedom for that variable
-		     *  type at the node. The basis function for dofs which
-		     *  are not interpolating dofs are set to zero, previously
-		     *  Therefore, in the loop below, we pick phi_i to
-		     *  be the basis function which is not zeroed out in
-		     *  the current element.
-		     */
-		    ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][ldof_eqn];
-		    mn_first = ei[pg->imtrx]->matID_ledof[ledof];
+                  ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][ldof_eqn];
+                  mn_first = ei[pg->imtrx]->matID_ledof[ledof];
 
-		    if (((Current_EB_ptr->Elem_Blk_Id  +1) % 2) == 0) {
-		      phi_i = bf[eqn]->phi[ldof_eqn];
-		      weight *= phi_i;
-		    } else {
-		      phi_i = bf[eqn]->phi[ldof_eqn+1];
-		      weight *= phi_i;
-		    }
+                  if((BC_Types[bc_input_id].BC_Data_Int[1] && 
+                        Current_EB_ptr->Elem_Blk_Id == 
+                              BC_Types[bc_input_id].BC_Data_Int[1])  ||  
+                      (!BC_Types[bc_input_id].BC_Data_Int[1] &&
+                      ((Current_EB_ptr->Elem_Blk_Id  +1) % 2) == 0))   {
 
-		    if (bc_desc->DV_Index_Default == DVI_MULTI_PHASE_VD) {
-		      if (mn_first != vd->MatID) {
-			ldof_eqn++;
-		      }
-#ifdef DEBUG
-                 
-#endif
-		    }
-
-		    /*
-		     *  TIE Boundary conditions:
-		     *    These strongly integrated Dirichlet boundary
-		     *    conditions get applied on the second degree
-		     *    of freedom at the node.
-		     */
-		    if ((bf[eqn]->interpolation == I_Q2_D ||
-			 bf[eqn]->interpolation == I_Q1_D ||
-			 bf[eqn]->interpolation == I_Q2_D_LSA) &&
-			(bc->BC_Name == CONT_TANG_VEL_BC ||
-			 bc->BC_Name == CONT_NORM_VEL_BC ||
-			 bc->BC_Name == DISCONTINUOUS_VELO_BC ||
-			 bc->BC_Name == VL_EQUIL_BC ||
-			 bc->BC_Name == VL_POLY_BC ||
-			 bc->BC_Name == SDC_STEFANFLOW_BC ||
-			 bc->BC_Name == SDC_KIN_SF_BC ||
-			 bc->BC_Name == T_CONTACT_RESIS_2_BC)) {
-		      ldof_eqn += 1;
-		    }
-
-		  }
-		  /*
-		   *  Handle the case of SINGLE_PHASE boundary conditions and
-		   *  CROSS_PHASE boundary conditions for the phase in which
-		   *  the eqn actually is solved for.
-		   */
-		  else if (bc_desc->i_apply == SINGLE_PHASE ||
-			   pd->e[pg->imtrx][eqn]) {
-		    if (bc->BC_Name == KINEMATIC_PETROV_BC ||
-			bc->BC_Name == VELO_NORMAL_LS_PETROV_BC ||
-			bc->BC_Name == KIN_DISPLACEMENT_PETROV_BC) {
-		      if (pd->Num_Dim != 2) {
-			EH(-1,"KINEMATIC_PETROV or KIN_DISPLACEMENT_PETROV not available in 3D yet");
-		      }
-		      id_side = elem_side_bc->id_side;
-		      i_basis = 1 - id_side%2;
-		      phi_i = bf[eqn]->dphidxi[ldof_eqn][i_basis];
-		      weight *= phi_i;
-		    } else {
-		      phi_i = bf[eqn]->phi[ldof_eqn];
-		      weight *= phi_i;
-		    }
-		  }
-		  /*
-		   *  Handle the case of CROSS_PHASE boundary conditions in the
-		   *  phase in which the eqn isn't solved for.
-		   */
-		  else if (bc_desc->i_apply == CROSS_PHASE) {
-		    /*
-		     *  We are here when the equation type doesn't exist
-		     *  in this material. Find the intepolation from the
-		     *  adjacent material
-		     */
-
-		    for (mn = 0; mn < upd->Num_Mat; mn++) {
-		      if (pd_glob[mn]->e[pg->imtrx][eqn] &&
-			  (eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[0], mn) ||
-			   eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[1], mn)))
-			{
-			  type = pd_glob[mn]->w[pg->imtrx][eqn];
-			  if (bfi[type] == NULL) EH(-1,"Illegal cross basis func");
-			  /* note that here, we don't have the ln_to_dof
-			     array for the adjacent
-			     material - for now assume that ldof_eqn = id */
-			  /* This further means that if I_Q2_D or I_Q1_D
-			     are used for velocity, then we
-			     cannot apply these sorts of BCs
-			     --ADD DIAGNOSTIC  */
-			  phi_i = bfi[type]->phi[id];
-			  weight *= phi_i;
-			}
-		    }
+		    phi_i = bf[eqn]->phi[ldof_eqn];
+		    weight *= phi_i;
 		  } else {
-		    EH(-1,"Illegal bc phase definition");
+		    phi_i = bf[eqn]->phi[ldof_eqn+1];
+		    weight *= phi_i;
 		  }
-		}
 
-		/*
-		 * For strong conditions weight the function by BIG_PENALTY
-		 */
-		if (bc_desc->method == STRONG_INT_SURF ) {
-		  weight *= BIG_PENALTY;
-		}
-		/*
-		 *   Add in the multiplicative constant for corresponding to
-		 *   all boundary conditions, except for certain special
-		 *   cases
-		 */
-		if (bc_desc->method == WEAK_INT_SURF
-		    && bc->BC_Name != PSPG_BC
-		    && bc->BC_Name != VELO_SLIP_SOLID_BC
-		    && bc->BC_Name != ELEC_TRACTION_BC
-		    && bc->BC_Name != QSIDE_LS_BC
-		    && bc->BC_Name != LS_ADC_BC
-		    && bc->BC_Name != SHEAR_TO_SHELL_BC
-		    && bc->BC_Name != POR_LIQ_FLUX_FILL_BC
-		    && bc->BC_Name != DARCY_LUB_BC) {
-		  weight *= pd->etm[pg->imtrx][eqn][(LOG2_BOUNDARY)];
-		}
-
-		/*
-		 * Calculate the position in the local element residual
-		 * vector to put the current contribution
-		 * -> MASS_FRACTION unknowns get stuck at the end of
-		 *    this vector.
-		 */
-		if (eqn == R_MASS) {
-		  ieqn = MAX_PROB_EQN + bc->species_eq;
-		} else {
-		  ieqn = upd->ep[pg->imtrx][eqn];
-		}
-
-		/*
-		 *  Add the current contribution to the local element
-		 *  residual vector
-		 */
-		if (ldof_eqn != -1) {
-		  lec->R[ieqn][ldof_eqn] += weight * fv->sdet * func[p];
-		
-#ifdef DEBUG_BC
-		  if (IFPD == NULL) IFPD = fopen("darcy.txt", "a");
-		  fprintf (IFPD,
-			   "ielem = %d: BC_index = %d, lec->R[%d][%d] += weight"
-			   "* fv->sdet * func[p]: weight = %g, fv->sdet = %g, func[%d] = %g\n",
-			   ei[pg->imtrx]->ielem, bc_input_id, ieqn, ldof_eqn,
-			   weight, fv->sdet, p, func[p]);
-		  fflush(IFPD);
-#endif
-		  /*
-		   *   Add sensitivities into matrix
-		   *  - find index of sensitivity in matrix
-		   *     (if variable is not defined at this node,
-		   *      loop over all dofs in element)
-		   *  - add into matrix
-		   */
-		      
-		  if (af->Assemble_Jacobian && ldof_eqn != -1) {
-		
-		    if (new_way) {
-		      for (w = 0; w < jacCol.Num_lvdesc; w++) {
-			lvdesc = jacCol.Lvdesc_Index[w];
-			tmp = jacCol.JacCol[w] * weight * fv->sdet;
-			/*
-			 *  Find the variable type that corresponds to
-			 *  the local variable description. This is the
-			 *  variable type for the column.
-			 */
-			if (lvdesc < 0 || lvdesc > MAX_LOCAL_VAR_DESC) {
-			  printf("we have an error\n");
-			}
-			var = ei[pg->imtrx]->Lvdesc_to_Var_Type[lvdesc];
-			if (var == MASS_FRACTION) {
-			  pvar = MAX_PROB_VAR + ei[pg->imtrx]->Lvdesc_to_MFSubvar[lvdesc];
-			} else {
-			  pvar = upd->vp[pg->imtrx][var];
-			}
-			/*
-			 *  ieqn = upd->ep[pg->imtrx][eqn] (MF's put high)
-			 *         Variable type of the row
-			 *
-			 *  HKM Note: This sum is over all of the basis
-			 *            functions in an element. However,
-			 *            we know that the only nonzero basis
-			 *            functions will be ones corresponding
-			 *            to nodes on the current side of the
-			 *            element. We should make use of that
-			 *            feature to cut down the amount of work.
-			 */
-			jac_ptr = lec->J[ieqn][pvar][ldof_eqn];
-			phi_ptr = bf[var]->phi;
-			for (jlv = 0; jlv < ei[pg->imtrx]->Lvdesc_Numdof[lvdesc]; jlv++) {
-			  j = ei[pg->imtrx]->Lvdesc_to_lvdof[lvdesc][jlv];
-			  lnn = ei[pg->imtrx]->Lvdesc_to_Lnn[lvdesc][jlv];
-			  q = ei[pg->imtrx]->ln_to_dof[var][lnn];
-			  jac_ptr[j] += tmp * phi_ptr[q];
-			}
-		      }
-	
-		      if (!af->Assemble_LSA_Mass_Matrix) {
-			tmp = weight * fv->sdet;
-			for (w = 0; w < jacCol.Num_lvdof; w++) {
-			  var = jacCol.Lvdof_var_type[w];
-			  pvar = upd->vp[pg->imtrx][var];
-			  j = jacCol.Lvdof_lvdof[w];
-			  lec->J[ieqn][pvar][ldof_eqn][j] +=
-			    tmp * jacCol.Jac_lvdof[w];
-			}
-
-			for (q = 0; q < pd->Num_Dim; q++) {
-			  var = MESH_DISPLACEMENT1 + q;
-			  if (pd->v[pg->imtrx][var]) {
-			    pvar = upd->vp[pg->imtrx][var];
-			    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-			      lec->J[ieqn][pvar][ldof_eqn][j] +=
-				weight * func[p] * fv->dsurfdet_dx[q][j];
-			    }
-			  }
-			}
-		      }
-		    } else {
-		      /* OLD METHOD */
-
-		      /* if mesh displacement is variable,
-		       *  put in this sensitivity first
-		       * ... unless we are computing the mass matrix
-		       * for LSA.  In that case, we don't include
-		       * this first term b/c it doesn't involve any
-		       * primary time derivative variables.
-		       */
-		      if (!af->Assemble_LSA_Mass_Matrix) {
-			for (q = 0; q < pd->Num_Dim; q++) {
-			  var = MESH_DISPLACEMENT1 + q;
-			  pvar = upd->vp[pg->imtrx][var];
-			  if (pvar != -1) {
-			    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-			      lec->J[ieqn][pvar][ldof_eqn][j] +=
-				weight * func[p] * fv->dsurfdet_dx[q][j];
-			    }
-			  }
-			}
-		      }
-			
-		      /* now add in sensitivity of BC function to
-		       * variables
-		       */
-		      for (var=0; var < MAX_VARIABLE_TYPES; var++) {
-			pvar = upd->vp[pg->imtrx][var];
-			if (pvar != -1 &&
-			    (BC_Types[bc_input_id].desc->sens[var] ||	1)) {
-			  if (var != MASS_FRACTION) {
-			    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-			      lec->J[ieqn][pvar] [ldof_eqn][j] +=
-				weight * fv->sdet * d_func[p][var][j];
-			    }
-			  } else {
-			    /* variable type is MASS_FRACTION */
-			    for (w = 0; w < pd->Num_Species_Eqn; w++) {
-			      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-				lec->J[ieqn][MAX_PROB_VAR + w][ldof_eqn][j] +=
-				  weight * fv->sdet *
-				  d_func[p][MAX_VARIABLE_TYPES + w][j];
-			      }
-			    } /* end of loop over species */
-			  } /* end of if MASS_FRACTION */
-			} /* end of variable exists and BC is sensitive to it */
-		      } /* end of var loop over variable types */
-		    } /* End of loop over new way */
-		  } /* end of NEWTON */
-		}
-	      } /* end of if (Res_BC != NULL) - i.e. apply residual at this node */
-	    } /* end of loop over equations that this condition applies to */
-	  } else { /* stress_bc == 1 */
-	    /* Stress BC is handled in different loop so that it is not too invasive to the
-	     * already overloaded loop */
-
-	    /* For a stress BC, we will loop over modes on top of loop over the stress components */
-	    for (imode = 0; imode < vn->modes; imode++) {
-	      for (p = 0; p < bc_desc->vector; p++) {
-		/*
-		 *   Check to see if this BC on this node is
-		 *   applicable (i.e. no other overriding Dirichlet conditions),
-		 *   And, find the global unknown number, index_eq, on which
-		 *   to applying this additive boundary condition, eqn
-		 */
-		index_eq = bc_eqn_index_stress(id, I, bc_input_id, ei[pg->imtrx]->mn,
-					       p, imode, &eqn, &matID_apply, &vd);
-
-		if (index_eq >= 0) {
-		  /*
-		   * Obtain the first local variable degree of freedom
-		   * at the current node, whether or not it actually an
-		   * interpolating degree of freedom
-		   */
-		  ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
+                  if (bc_desc->DV_Index_Default == DVI_MULTI_PHASE_VD) {
+		    if (mn_first != vd->MatID) {
+		      ldof_eqn++;
+                    }
+		  }
 
 		  /*
-		   *   for weakly integrated boundary conditions,
-		   *   weight the function by wt
+		   *  TIE Boundary conditions:
+		   *    These strongly integrated Dirichlet boundary
+		   *    conditions get applied on the second degree
+		   *    of freedom at the node.
 		   */
-		  weight = wt;
+		  if ((bf[eqn]->interpolation == I_Q2_D || 
+		       bf[eqn]->interpolation == I_Q1_D || 
+		       bf[eqn]->interpolation == I_Q2_D_LSA) &&
+		      (bc->BC_Name == CONT_TANG_VEL_BC ||
+		       bc->BC_Name == CONT_NORM_VEL_BC ||
+		       bc->BC_Name == DISCONTINUOUS_VELO_BC ||
+		       bc->BC_Name == VL_EQUIL_BC ||
+		       bc->BC_Name == VL_POLY_BC ||
+		       bc->BC_Name == SDC_STEFANFLOW_BC ||
+		       bc->BC_Name == SDC_KIN_SF_BC ||
+		       bc->BC_Name == LIGHTP_JUMP_BC ||
+		       bc->BC_Name == LIGHTM_JUMP_BC ||  
+		       bc->BC_Name == T_CONTACT_RESIS_2_BC)) {
+		    ldof_eqn += 1;
+		  }
 
-		  /*
-		   *  Handle the case of SINGLE_PHASE boundary conditions
-		   */
-
-		  if (bc_desc->i_apply == SINGLE_PHASE) {
+		}
+		/*
+		 *  Handle the case of SINGLE_PHASE boundary conditions and
+		 *  CROSS_PHASE boundary conditions for the phase in which
+		 *  the eqn actually is solved for.
+		 */
+		else if (bc_desc->i_apply == SINGLE_PHASE || 
+			 pd->e[pg->imtrx][eqn]) {
+  		  if (bc->BC_Name == KINEMATIC_PETROV_BC ||
+  		      bc->BC_Name == VELO_NORMAL_LS_PETROV_BC ||
+  		      bc->BC_Name == KIN_DISPLACEMENT_PETROV_BC) {
+		    if (pd->Num_Dim != 2) {
+ 		      EH(-1,"KINEMATIC_PETROV or KIN_DISPLACEMENT_PETROV not available in 3D yet");
+		    }
+		    id_side = elem_side_bc->id_side;
+		    i_basis = 1 - id_side%2;
+		    phi_i = bf[eqn]->dphidxi[ldof_eqn][i_basis];
+		    weight *= phi_i;
+		  } else {
 		    phi_i = bf[eqn]->phi[ldof_eqn];
 		    weight *= phi_i;
 		  }
-		  else {
-		    EH(-1,"Only SINGLE_PHASE is handled in stress BC implementation");
+		}
+		/*
+		 *  Handle the case of CROSS_PHASE boundary conditions in the
+		 *  phase in which the eqn isn't solved for.
+		 */
+		else if (bc_desc->i_apply == CROSS_PHASE) {
+		  /*
+		   *  We are here when the equation type doesn't exist
+		   *  in this material. Find the intepolation from the
+		   *  adjacent material
+		   */
+
+		  for (mn = 0; mn < upd->Num_Mat; mn++) {
+                    if (pd_glob[mn]->e[pg->imtrx][eqn] &&
+			(eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[0], mn) ||
+			 eb_in_matrl(BC_Types[bc_input_id].BC_Data_Int[1], mn)))
+		      {
+			//type = pd_glob[mn]->w[eqn];
+			//if (bfi[type] == NULL) EH(-1,"Illegal cross basis func");
+			
+			/* note that here, we don't have the ln_to_dof
+			   array for the adjacent 
+			   material - for now assume that ldof_eqn = id */
+			/* This further means that if I_Q2_D or I_Q1_D
+			   are used for velocity, then we
+			   cannot apply these sorts of BCs
+			   --ADD DIAGNOSTIC  */
+			
+			//phi_i = bfi[type]->phi[id];
+			
+			/* DSH 08/2016
+			 * The above was the old way of loading up basis functions for 
+			 * CROSS_PHASE boundary conditions when we are in the adjacent 
+			 * material.  This approach breaks down when considering shells
+			 * mixed with continuum elements.  In either case, bf[eqn] works,
+			 * so I am not sure why the bfi[type] was used in the first place.
+			 */
+			
+			phi_i = bf[eqn]->phi[id];
+			weight *= phi_i;
+		      }
 		  }
+		} else {
+		  EH(-1,"Illegal bc phase definition");
+		}
+	      }
 
-		  /*
-		   * For strong conditions weight the function by BIG_PENALTY
-		   */
-		  if (bc_desc->method == STRONG_INT_SURF ) {
-		    weight *= BIG_PENALTY;
-		  }
+	      /*
+	       * For strong conditions weight the function by BIG_PENALTY
+	       */
+	      if (bc_desc->method == STRONG_INT_SURF ) {
+		weight *= BIG_PENALTY;
+	      }
+	      /*
+	       *   Add in the multiplicative constant for corresponding to
+	       *   all boundary conditions, except for certain special
+	       *   cases
+	       */
+	      if (bc_desc->method == WEAK_INT_SURF
+		  && bc->BC_Name != PSPG_BC
+		  && bc->BC_Name != VELO_SLIP_SOLID_BC
+		  && bc->BC_Name != ELEC_TRACTION_BC 
+		  && bc->BC_Name != QSIDE_LS_BC
+		  && bc->BC_Name != LS_ADC_BC
+		  && bc->BC_Name != SHEAR_TO_SHELL_BC 
+		  && bc->BC_Name != POR_LIQ_FLUX_FILL_BC 
+		  && bc->BC_Name != DARCY_LUB_BC
+		  && bc->BC_Name != SHELL_TFMP_FREE_LIQ_BC
+		  && bc->BC_Name != SHELL_TFMP_NUM_DIFF_BC
+                  && bc->BC_Name != SH_SDET_BC
+                  && bc->BC_Name != SH_MESH2_WEAK_BC
+                  && bc->BC_Name != SHELL_LUBRICATION_OUTFLOW_BC ) {
+		weight *= pd->etm[pg->imtrx][eqn][(LOG2_BOUNDARY)];
+	      }
 
-		  /*
-		   * Determine the position in the local element residual
-		   * vector to put the current contribution
-		   */
-		  ieqn = upd->ep[pg->imtrx][eqn];
+	      /*
+	       * Calculate the position in the local element residual
+	       * vector to put the current contribution
+	       * -> MASS_FRACTION unknowns get stuck at the end of
+	       *    this vector.
+	       */
+	      if (eqn == R_MASS) {
+		ieqn = MAX_PROB_EQN + bc->species_eq;
+	      } else {
+		ieqn = upd->ep[pg->imtrx][eqn];
+	      }
 
-		  /*
-		   *  Add the current contribution to the local element
-		   *  residual vector
-		   */
+	      /*
+	       *  Add the current contribution to the local element
+	       *  residual vector
+	       */
+	      if (ldof_eqn != -1) {
+		lec->R[ieqn][ldof_eqn] += weight * fv->sdet * func[p];
+		
+#ifdef DEBUG_BC
+		if (IFPD == NULL) IFPD = fopen("darcy.txt", "a");
+		fprintf (IFPD,
+			 "ielem = %d: BC_index = %d, lec->R[%d][%d] += weight"
+			 "* fv->sdet * func[p]: weight = %g, fv->sdet = %g, func[%d] = %g\n",
+			 ei[pg->imtrx]->ielem, bc_input_id, ieqn, ldof_eqn,
+			 weight, fv->sdet, p, func[p]);
+		fflush(IFPD);
+#endif
+	        /* 
+	         *   Add sensitivities into matrix
+	         *  - find index of sensitivity in matrix
+	         *     (if variable is not defined at this node,
+	         *      loop over all dofs in element)
+	         *  - add into matrix
+	         */
+		      
+		if (af->Assemble_Jacobian && ldof_eqn != -1) {
+		
+		  if (new_way) {
+		    for (w = 0; w < jacCol.Num_lvdesc; w++) {
+		      lvdesc = jacCol.Lvdesc_Index[w];
+		      tmp = jacCol.JacCol[w] * weight * fv->sdet;
+		      /*
+		       *  Find the variable type that corresponds to 
+		       *  the local variable description. This is the
+		       *  variable type for the column.
+		       */
+		      if (lvdesc < 0 || lvdesc > MAX_LOCAL_VAR_DESC) {
+			printf("we have an error\n");
+		      }
+		      var = ei[pg->imtrx]->Lvdesc_to_Var_Type[lvdesc];
+		      if (var == MASS_FRACTION) {
+			pvar = MAX_PROB_VAR + ei[pg->imtrx]->Lvdesc_to_MFSubvar[lvdesc];
+		      } else {
+			pvar = upd->vp[pg->imtrx][var];
+		      }
+		      /*
+		       *  ieqn = upd->ep[pg->imtrx][eqn] (MF's put high)
+		       *         Variable type of the row
+		       *
+		       *  HKM Note: This sum is over all of the basis
+		       *            functions in an element. However,
+		       *            we know that the only nonzero basis
+		       *            functions will be ones corresponding
+		       *            to nodes on the current side of the
+		       *            element. We should make use of that
+		       *            feature to cut down the amount of work.
+		       */
+		      jac_ptr = lec->J[ieqn][pvar][ldof_eqn];
+		      phi_ptr = bf[var]->phi;
+		      for (jlv = 0; jlv < ei[pg->imtrx]->Lvdesc_Numdof[lvdesc]; jlv++) {
+			j = ei[pg->imtrx]->Lvdesc_to_lvdof[lvdesc][jlv];
+			lnn = ei[pg->imtrx]->Lvdesc_to_Lnn[lvdesc][jlv];
+			q = ei[pg->imtrx]->ln_to_dof[var][lnn];
+			jac_ptr[j] += tmp * phi_ptr[q];
+		      }
+		    }
+	
+		    if (!af->Assemble_LSA_Mass_Matrix) {
+		      tmp = weight * fv->sdet;
+		      for (w = 0; w < jacCol.Num_lvdof; w++) {
+			var = jacCol.Lvdof_var_type[w];
+			pvar = upd->vp[pg->imtrx][var];
+			j = jacCol.Lvdof_lvdof[w];
+			lec->J[ieqn][pvar][ldof_eqn][j] += 
+			  tmp * jacCol.Jac_lvdof[w];
+		      }
 
-		  lec->R[ieqn][ldof_eqn] += weight * fv->sdet * func_stress[imode][p];
-
-		  /*
-		   *   Add sensitivities into matrix
-		   *  - find index of sensitivity in matrix
-		   *     (if variable is not defined at this node,
-		   *      loop over all dofs in element)
-		   *  - add into matrix
-		   */
-
-		  if (af->Assemble_Jacobian && ldof_eqn != -1) {
+		      for (q = 0; q < pd->Num_Dim; q++) {
+			var = MESH_DISPLACEMENT1 + q;
+			if (pd->v[pg->imtrx][var]) {
+			  pvar = upd->vp[pg->imtrx][var];
+			  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+			    lec->J[ieqn][pvar][ldof_eqn][j] +=
+			      weight * func[p] * fv->dsurfdet_dx[q][j];
+			  }
+			}
+		      }
+		    }
+		  } else {
+		    /* OLD METHOD */
 
 		    /* if mesh displacement is variable,
 		     *  put in this sensitivity first
@@ -2421,7 +2484,6 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 		     * this first term b/c it doesn't involve any
 		     * primary time derivative variables.
 		     */
-
 		    if (!af->Assemble_LSA_Mass_Matrix) {
 		      for (q = 0; q < pd->Num_Dim; q++) {
 			var = MESH_DISPLACEMENT1 + q;
@@ -2429,45 +2491,169 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 			if (pvar != -1) {
 			  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 			    lec->J[ieqn][pvar][ldof_eqn][j] +=
-			      weight * func_stress[imode][p] * fv->dsurfdet_dx[q][j];
+			      weight * func[p] * fv->dsurfdet_dx[q][j];
 			  }
 			}
 		      }
 		    }
-
+			
 		    /* now add in sensitivity of BC function to
 		     * variables
 		     */
-
 		    for (var=0; var < MAX_VARIABLE_TYPES; var++) {
 		      pvar = upd->vp[pg->imtrx][var];
-		      if (pvar != -1) {
-
-			/* Case for variable type that is not MASS_FRACTION */
+		      if (pvar != -1 &&
+			  (BC_Types[bc_input_id].desc->sens[var] ||	1)) {
 			if (var != MASS_FRACTION) {
 			  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 			    lec->J[ieqn][pvar] [ldof_eqn][j] +=
-			      weight * fv->sdet * d_func_stress[imode][p][var][j];
+			      weight * fv->sdet * d_func[p][var][j];
 			  }
-			}
-			/* Case for variable type that is MASS_FRACTION */
-			else {
+			} else {
+			  /* variable type is MASS_FRACTION */
 			  for (w = 0; w < pd->Num_Species_Eqn; w++) {
 			    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-			      lec->J[ieqn][MAX_PROB_VAR + w][ldof_eqn][j] +=
-				weight * fv->sdet * d_func_stress[imode][p][MAX_VARIABLE_TYPES + w][j];
+			      lec->J[ieqn][MAX_PROB_VAR + w][ldof_eqn][j] += 
+				weight * fv->sdet *
+				d_func[p][MAX_VARIABLE_TYPES + w][j];
 			    }
-			  }
-			}
-		      }
-		    }
-		  } /* End of if assemble Jacobian */
-		} /* end of if (Res_BC != NULL) - i.e. apply residual at this node */
-	      } /* End of loop over stress components */
-	    } /* End of loop over stress modes */
-	  }
+			  } /* end of loop over species */
+			} /* end of if MASS_FRACTION */
+		      } /* end of variable exists and BC is sensitive to it */
+		    } /* end of var loop over variable types */
+		  } /* End of loop over new way */
+		} /* end of NEWTON */
+	      }
+	    } /* end of if (Res_BC != NULL) - i.e. apply residual at this node */
+	  } /* end of loop over equations that this condition applies to */
+          } /* end of if it is not a stress BC */
 
-	}  /* end for (i=0; i< num_nodes_on_side; i++) */	    
+          /* Stress BC is handled in different loop so that it is not too invasive to the
+           * already overloaded loop */
+          if (stress_bc == 1) {
+
+             /* For a stress BC, we will loop over modes on top of loop over the stress components */
+             for (imode = 0; imode < vn->modes; imode++) {
+                for (p = 0; p < bc_desc->vector; p++) {
+                   /*
+                    *   Check to see if this BC on this node is
+                    *   applicable (i.e. no other overriding Dirichlet conditions),
+                    *   And, find the global unknown number, index_eq, on which
+                    *   to applying this additive boundary condition, eqn
+                    */
+                    index_eq = bc_eqn_index_stress(id, I, bc_input_id, ei[pg->imtrx]->mn,
+                                                   p, imode, &eqn, &matID_apply, &vd);
+
+                    if (index_eq >= 0) {
+                       /*
+                        * Obtain the first local variable degree of freedom
+                        * at the current node, whether or not it actually an
+                        * interpolating degree of freedom
+                        */
+                        ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
+
+                       /*
+                        *   for weakly integrated boundary conditions,
+                        *   weight the function by wt
+                        */
+                        weight = wt;
+
+                       /*
+                        *  Handle the case of SINGLE_PHASE boundary conditions
+                        */
+
+                        if (bc_desc->i_apply == SINGLE_PHASE) {
+                           phi_i = bf[eqn]->phi[ldof_eqn];
+                           weight *= phi_i;
+                        }
+                        else {
+                           EH(-1,"Only SINGLE_PHASE is handled in stress BC implementation");
+                        }
+
+                       /*
+                        * For strong conditions weight the function by BIG_PENALTY
+                        */
+                        if (bc_desc->method == STRONG_INT_SURF ) {
+                           weight *= BIG_PENALTY;
+                        }
+
+                       /*
+                        * Determine the position in the local element residual
+                        * vector to put the current contribution
+                        */
+                        ieqn = upd->ep[pg->imtrx][eqn];
+
+                       /*
+                        *  Add the current contribution to the local element
+                        *  residual vector
+                        */
+
+                        lec->R[ieqn][ldof_eqn] += weight * fv->sdet * func_stress[imode][p];
+
+                       /*
+                        *   Add sensitivities into matrix
+                        *  - find index of sensitivity in matrix
+                        *     (if variable is not defined at this node,
+                        *      loop over all dofs in element)
+                        *  - add into matrix
+                        */
+
+                        if (af->Assemble_Jacobian && ldof_eqn != -1) {
+
+                          /* if mesh displacement is variable,
+                           *  put in this sensitivity first
+                           * ... unless we are computing the mass matrix
+                           * for LSA.  In that case, we don't include
+                           * this first term b/c it doesn't involve any
+                           * primary time derivative variables.
+                           */
+
+                           if (!af->Assemble_LSA_Mass_Matrix) {
+                              for (q = 0; q < pd->Num_Dim; q++) {
+                                  var = MESH_DISPLACEMENT1 + q;
+                                  pvar = upd->vp[pg->imtrx][var];
+                                  if (pvar != -1) {
+                                     for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                                         lec->J[ieqn][pvar][ldof_eqn][j] +=
+                                         weight * func_stress[imode][p] * fv->dsurfdet_dx[q][j];
+                                     }
+                                 }
+                             }
+                           }
+
+                          /* now add in sensitivity of BC function to
+                           * variables
+                           */
+
+                           for (var=0; var < MAX_VARIABLE_TYPES; var++) {
+                               pvar = upd->vp[pg->imtrx][var];
+                               if (pvar != -1) {
+
+                                  /* Case for variable type that is not MASS_FRACTION */
+                                  if (var != MASS_FRACTION) {
+                                     for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                                          lec->J[ieqn][pvar] [ldof_eqn][j] +=
+                                          weight * fv->sdet * d_func_stress[imode][p][var][j];
+                                     }
+                                  }
+                                 /* Case for variable type that is MASS_FRACTION */
+                                  else {
+                                     for (w = 0; w < pd->Num_Species_Eqn; w++) {
+                                         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                                             lec->J[ieqn][MAX_PROB_VAR + w][ldof_eqn][j] +=
+                                             weight * fv->sdet * d_func_stress[imode][p][MAX_VARIABLE_TYPES + w][j];
+                                         }
+                                     }
+                                  }
+                               }
+                           }
+                        } /* End of if assemble Jacobian */
+                    } /* end of if (Res_BC != NULL) - i.e. apply residual at this node */
+                } /* End of loop over stress components */
+             } /* End of loop over stress modes */
+          }/* end of if it is a stress BC */
+
+	}  /* end for (i=0; i< num_nodes_on_side; i++) */
       }  /*End (if INT) (CAPILLARY and KINEMATIC and VELO_NORMAL and VELO_TANGENT . . .) */
     } /*(end for ibc) */
   } /*End for ip = 1,...*/  

@@ -57,19 +57,7 @@ static char rcsid[] =
  * Prototype declarations of functions defined in this file.
  */
 
-#ifdef EXTERN
-#undef EXTERN
-#endif
-
-#define EXTERN /* nothing */
-
 #include "user_bc.h"
-
-#ifdef EXTERN
-#undef EXTERN
-#endif
-
-#define EXTERN extern
 
 /*
  * Prototype declarations of functions not defined in this file.
@@ -83,13 +71,12 @@ static char rcsid[] =
 /*       Functions for solid boundary description                            */
 /*****************************************************************************/
 
-dbl velo_vary_fnc( velo_condition, x1, x2, x3, p, time)
-     const int velo_condition;
-     const dbl x1;
-     const dbl x2;
-     const dbl x3;
-     const dbl p[];
-     const dbl time;
+dbl velo_vary_fnc(const int velo_condition,
+                  const dbl x1,
+                  const dbl x2,
+                  const dbl x3,
+                  const dbl p[],
+                  const dbl time)
 {
   /*  dbl v_max, gap, u, midpt, channel; */
   double f = 0.0;
@@ -223,13 +210,12 @@ dbl velo_vary_fnc( velo_condition, x1, x2, x3, p, time)
    */
 }
 /*****************************************************************************/
-dbl dvelo_vary_fnc_d1( velo_condition, x1, x2, x3, p, time)
-     const int velo_condition;
-     const dbl x1;
-     const dbl x2;
-     const dbl x3;
-     const dbl p[];
-     const dbl time;
+dbl dvelo_vary_fnc_d1(const int velo_condition,
+                      const dbl x1,
+                      const dbl x2,
+                      const dbl x3,
+                      const dbl p[],
+                      const dbl time)
 {
   dbl f = 0.0;
   dbl a2;
@@ -277,13 +263,12 @@ dbl dvelo_vary_fnc_d1( velo_condition, x1, x2, x3, p, time)
    */
 }
 /*****************************************************************************/
-dbl dvelo_vary_fnc_d2( velo_condition, x1, x2, x3, p, time)
-     const int velo_condition;
-     const dbl x1;
-     const dbl x2;
-     const dbl x3;
-     const dbl p[];
-     const dbl time;
+dbl dvelo_vary_fnc_d2(const int velo_condition,
+                      const dbl x1,
+                      const dbl x2,
+                      const dbl x3,
+                      const dbl p[],
+                      const dbl time)
 {
 /* for PI use M_PIE Constant from std.h include file. */
 
@@ -373,13 +358,12 @@ dbl dvelo_vary_fnc_d2( velo_condition, x1, x2, x3, p, time)
 }
 
 /*****************************************************************************/
-dbl dvelo_vary_fnc_d3( velo_condition, x1, x2, x3, p, time)
-     const int velo_condition;
-     const dbl x1;
-     const dbl x2;
-     const dbl x3;
-     const dbl p[];
-     const dbl time;
+dbl dvelo_vary_fnc_d3(const int velo_condition,
+                      const dbl x1,
+                      const dbl x2,
+                      const dbl x3,
+                      const dbl p[],
+                      const dbl time)
 {
 /* for PI use M_PIE Constant from std.h include file. */
   dbl f;
@@ -404,12 +388,7 @@ dbl dvelo_vary_fnc_d3( velo_condition, x1, x2, x3, p, time)
 /*****************************************************************************/
 /*       Functions for solid boundary description                            */
 /*****************************************************************************/
-dbl fnc( x1, x2,  x3, p,  time)
-     const dbl x1;
-     const dbl x2;
-     const dbl x3;
-     const dbl p[];
-     const dbl time;
+dbl fnc( const dbl x1, const dbl x2,  const dbl x3, const dbl p[], const dbl time)
 {
 /* for PI use M_PIE Constant from std.h include file. */
 
@@ -426,12 +405,11 @@ dbl fnc( x1, x2,  x3, p,  time)
 
 }
 /*****************************************************************************/
-dbl dfncd1(x1, x2,  x3, p, time)
-     const dbl x1;
-     const dbl x2;
-     const dbl x3;
-     const dbl p[];
-     const dbl time;
+dbl dfncd1(const dbl x1,
+           const dbl x2,
+           const dbl x3,
+           const dbl p[],
+           const dbl time)
 {
 /* for PI use M_PIE Constant from std.h include file. */
   dbl f=0;
@@ -454,12 +432,11 @@ dbl dfncd1(x1, x2,  x3, p, time)
 
 }
 /*****************************************************************************/
-dbl dfncd2(x1, x2,  x3, p, time)
-     const dbl x1;
-     const dbl x2;
-     const dbl x3;
-     const dbl p[];
-     const dbl time;
+dbl dfncd2(const dbl x1,
+           const dbl x2,
+           const dbl x3,
+           const dbl p[],
+           const dbl time)
 {
 /* for PI use M_PIE Constant from std.h include file. */
   dbl f=0;			/* dfdx2; */
@@ -482,12 +459,7 @@ dbl dfncd2(x1, x2,  x3, p, time)
 
 }
 /*****************************************************************************/
-dbl dfncd3(x1, x2,  x3, p, time)
-     const dbl x1;
-     const dbl x2;
-     const dbl x3;
-     const dbl p[];
-     const dbl time;
+dbl dfncd3(const dbl x1, const dbl x2,  const dbl x3, const dbl p[], const dbl time)
 {
 /* for PI use M_PIE Constant from std.h include file. */
   dbl f=0;
@@ -511,11 +483,10 @@ dbl dfncd3(x1, x2,  x3, p, time)
 /****************************************************************************/
 
 void 
-quser_surf (func, d_func, p, time)
-     double func[DIM];
-     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
-     double p[];  /* parameters to parameterize heat transfer model*/
-     const dbl time;
+quser_surf (double func[DIM],
+            double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+            double p[],  /* parameters to parameterize heat transfer model*/
+            const dbl time)
 /******************************************************************************
 *
 *  Function which calculates the surface integral for user-defined heat 
@@ -650,12 +621,10 @@ yuser_surf(double *func,
 /****************************************************************************/
 
 void 
-uuser_surf (func, d_func, u_bc, time)
-
-     double func[DIM];
-     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
-     double u_bc[];  /* parameters to parameterize heat transfer model*/
-     const dbl time;
+uuser_surf (double func[DIM],
+            double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+            double u_bc[],  /* parameters to parameterize heat transfer model*/
+            const dbl time)
 /******************************************************************************
 *
 *  Function which calculates the surface integral for user-defined velocity
@@ -708,17 +677,35 @@ uuser_surf (func, d_func, u_bc, time)
   
   return;
 } /* END of routine uuser_surf                                              */
+
 /****************************************************************************/
+
+void
+uuser_colloc_surf ( double *func,
+                    double d_func[],
+                    const double u_bc[],  /* parameters to parameterize velocity model*/
+                    const int id,         /* node ID of the collocated surface */
+                    const double time )
+/******************************************************************************
+*
+*  Function which calculates the boundary collocation for user-defined velocity
+*
+******************************************************************************/
+{
+
+/* Comment this out FIRST!!!!! */
+   EH(-1,"No U_USER_COLLOC model implemented");
+
+} /* END of routine uuser_colloc_surf                                       */
+
 
 /****************************************************************************/
 
 void 
-vuser_surf (func, d_func, u_bc, time)
-
-     double func[DIM];
-     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
-     double u_bc[];  /* parameters to parameterize heat transfer model*/
-     const dbl time;
+vuser_surf (double func[DIM],
+            double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+            double u_bc[],  /* parameters to parameterize heat transfer model*/
+            const dbl time)
 /******************************************************************************
 *
 *  Function which calculates the surface integral for user-defined velocity
@@ -743,13 +730,32 @@ vuser_surf (func, d_func, u_bc, time)
 
 /****************************************************************************/
 
-void 
-wuser_surf (func, d_func, u_bc, time)
+void
+vuser_colloc_surf ( double *func,
+                    double d_func[],
+                    const double u_bc[],  /* parameters to parameterize velocity model*/
+                    const int id,         /* node ID of the collocated surface */
+                    const double time )
+/******************************************************************************
+*
+*  Function which calculates the boundary collocation for user-defined velocity
+*
+******************************************************************************/
+{
 
-     double func[DIM];
-     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
-     double u_bc[];  /* parameters to parameterize heat transfer model*/
-     const dbl time;
+/* Comment this out FIRST!!!!! */
+   EH(-1,"No V_USER_COLLOC model implemented");
+
+} /* END of routine vuser_colloc_surf                                       */
+
+/****************************************************************************/
+
+void 
+wuser_surf (
+     double func[DIM],
+     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+     double u_bc[],  /* parameters to parameterize heat transfer model*/
+     const dbl time)
 /******************************************************************************
 *
 *  Function which calculates the surface integral for user-defined velocity
@@ -771,6 +777,24 @@ wuser_surf (func, d_func, u_bc, time)
   return;
 } /* END of routine wuser_surf                                               */
 /*****************************************************************************/
+
+void
+wuser_colloc_surf ( double *func,
+                    double d_func[],
+                    const double u_bc[],  /* parameters to parameterize velocity model*/
+                    const int id,         /* node ID of the collocated surface */
+                    const double time )
+/******************************************************************************
+*
+*  Function which calculates the boundary collocation for user-defined velocity
+*
+******************************************************************************/
+{
+
+/* Comment this out FIRST!!!!! */
+   EH(-1,"No W_USER_COLLOC model implemented");
+
+} /* END of routine vuser_colloc_surf                                       */
 
 /****************************************************************************/
 
@@ -1059,11 +1083,10 @@ mass_flux_user_surf(dbl mass_flux[MAX_CONC],
 /*****************************************************************************/
 
 void
-fn_dot_T_user (func, d_func, u_bc, time)
-     double func[DIM];
-     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
-     const double u_bc[];
-     const dbl time;
+fn_dot_T_user (double func[DIM],
+               double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+               const double u_bc[],
+               const dbl time)
 /******************************************************************************
 *
 *  Function which calculates the pressure variation on a boundary 
@@ -1147,11 +1170,10 @@ fn_dot_T_user (func, d_func, u_bc, time)
 } /* END of routine fn_dot_T_user                                            */
 /*****************************************************************************/
 
-void flow_n_dot_T_user (func, d_func, u_BC, time)
-     double func[DIM];
-     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
-     const double u_BC[];			/* Parameters from input deck */
-     const dbl time;
+void flow_n_dot_T_user (double func[DIM],
+                        double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                        const double u_BC[],			/* Parameters from input deck */
+                        const dbl time)
 /******************************************************************************
 *
 *  Function which calculates the pressure variation on a boundary 

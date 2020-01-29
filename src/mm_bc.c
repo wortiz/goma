@@ -45,11 +45,6 @@
 #define GOMA_MM_BC_C
 #include "goma.h"
 
-
-#ifndef MAX_NODAL_BCS
-#define MAX_NODAL_BCS  35
-#endif
-
 /*
  * These two workhorse variables help get more specific information out
  * to the generic error handler. They're declared here so they may be used
@@ -938,7 +933,9 @@ set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[ ],
     /******************************************************************************/
     /*                              BLOCK 1                                       */
     /*      SURFACE INTEGRAL BOUNDARY CONDITIONS SPECIFIED BY NODE SETS           */
-    /*  WE DO NOT ALLOW THIS TYPE OF INTEGRAL CONDITION !!!!!                     */
+    /*  apply integrated conditions to nodesets with set_up_Point_BC()            */
+    /*  special case: NS surf integral for 1d elements                            */
+    /*  where the surface is the edge node                                        */
     /******************************************************************************/
 
     /* First check to see if this boundary condition is a node set 	      */
@@ -1271,6 +1268,10 @@ set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[ ],
 	BC_Types[ibc].BC_Name == VELO_SLIP_ROT_BC ||
 	BC_Types[ibc].BC_Name == VELO_SLIP_FILL_BC ||
 	BC_Types[ibc].BC_Name == VELO_SLIP_ROT_FILL_BC ||
+	BC_Types[ibc].BC_Name == AIR_FILM_BC ||
+	BC_Types[ibc].BC_Name == AIR_FILM_ROT_BC ||
+	BC_Types[ibc].BC_Name == VELO_SLIP_FLUID_BC ||
+	BC_Types[ibc].BC_Name == VELO_SLIP_ROT_FLUID_BC ||
 	BC_Types[ibc].BC_Name == VELO_STREAMING_BC ) {
       poinbc = BC_Types[ibc].BC_Data_Int[0];
       if (poinbc != 0 && poinbc != -1) {    /*the -1 case is another new
@@ -1278,6 +1279,8 @@ set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[ ],
 					      prs 8/98 */
         /* Set to Flag for node not found */
         inode = -2;
+        /* Change -1 & DCL nset_id case to positive id  */
+        if(poinbc < 0) poinbc = -poinbc;
 
 	for (ins = 0; ins < exo->num_node_sets; ins++) {
 	  if (exo->ns_id[ins] == poinbc) {
@@ -1314,6 +1317,17 @@ set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[ ],
       }
     }
   }
+  for (ibc = 0; ibc < Num_BC; ibc++) {
+    if (BC_Types[ibc].BC_Name == ROLL_FLUID_BC)
+    {
+      for (ibc2 = 0; ibc2 < Num_BC; ibc2++) {
+         if (BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC)
+           {
+            BC_Types[ibc].BC_Data_Int[2] = ibc2;
+           }
+        }
+    }
+  }
 
   /*****************************************************************************/
   /*                              BLOCK 6                                      */
@@ -1344,7 +1358,11 @@ set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[ ],
 	    {
 	      if ( ( BC_Types[ibc2].BC_ID == ibc_id ) && 
 		   ( ( BC_Types[ibc2].BC_Name == VELO_SLIP_BC ) ||
-		     ( BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_BC ) ) )
+		     ( BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_BC ) ||
+		     ( BC_Types[ibc2].BC_Name == VELO_SLIP_FLUID_BC ) ||
+		     ( BC_Types[ibc2].BC_Name == VELO_SLIP_ROT_FLUID_BC ) ||
+		     ( BC_Types[ibc2].BC_Name == AIR_FILM_BC ) ||
+		     ( BC_Types[ibc2].BC_Name == AIR_FILM_ROT_BC ) ) ) 
 		{
 		  /*
 		   * Set integer to BC number of matching SLIP CONDITON
@@ -1464,6 +1482,90 @@ free_Edge_BC ( struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[ ],
 
 }
 	
+
+void
+setup_Point_BC (struct elem_side_bc_struct **First_Elem_Side_BC_Array[ ],
+Exo_DB *exo, Dpi *dpi) {
+  char err_msg[MAX_CHAR_IN_INPUT];
+  //int i;
+  int ibc, ielem, ns_id, ins;
+  int is_ns_g, found_ns_local, found_ns_global;
+  int num_nodes_on_side = 1; // This is the edge of a 1D element
+  //int ipin = 0;
+  int node_list[MDE]; /* Even though exodus is spec'd for up to 3 nodes
+  *                      on a 1d element.
+  * * * * * * * * * * * * * * * * * * */
+  //struct elem_side_bc_struct *this_side_bc = NULL;
+
+  for (ibc = 0; ibc < Num_BC; ibc++) {
+    /* First check to see if this boundary condition is a nodeset         */
+    if (!strcmp(BC_Types[ibc].Set_Type, "NS")) {
+      /* Make sure the condition is Neumann type (necessary?) */
+      //struct Boundary_Condition thisBC;
+      //thisBC = BC_Types[ibc];
+      if (BC_Types[ibc].desc->method == WEAK_INT_SURF ||
+          BC_Types[ibc].desc->method == STRONG_INT_SURF) {
+
+        // This is a Neumann condition that gets applied to a node set
+        // What if the nodeset has more than one node?
+        // Get the NS_ID for this condition
+        ns_id = BC_Types[ibc].BC_ID;
+        // see if I (in the mpi processors sense) have this nodeset
+        ins = in_list(ns_id, 0, exo->num_node_sets,exo->ns_id);
+        // record truth value of having the nodeset in the mesh
+        found_ns_local = (ins > -1);
+
+	      /*
+	       * Take advantage of some limited global information that has
+	       * been cached in dpi to check if some sideset complies. This
+	       * beats doing the MPI_Allreduce(...Logical OR) with the associated
+	       * communications overhead.
+	       */
+
+        #ifdef PARALLEL
+          // check for nodeset in global nodeset list
+	        is_ns_g  = in_list(ns_id, 0, dpi->num_node_sets_global,
+          dpi->ns_id_global);
+
+          if ( is_ns_g > -1) {
+			      found_ns_global = TRUE;
+          } else {
+            found_ns_global = FALSE;
+          }
+
+        #endif
+        #ifndef PARALLEL
+          // if not parallel, local is global
+	        found_ns_global = found_ns_local;
+        #endif
+
+        if ( !found_ns_global ) {
+          sr = sprintf(err_msg, "NS_ID %d for BC (%d) not found",
+          ns_id, ibc+1);
+          EH(-1, err_msg);
+        }
+
+        // Here we need to use setup_Elem_Edge_BC to attach this
+        // BC to all its elements on this processor.
+        // Shouldn't there be only 1 element attached to an 
+        // edge-node BC?
+        if ( found_ns_local ) {
+          node_list[0] = exo->ns_node_list[ins];
+          ielem = exo->node_elem_list[
+                  exo->node_elem_pntr[
+                  exo->ns_node_list[ins]]];
+
+          setup_Elem_BC (&First_Elem_Side_BC_Array[BC_Types[ibc].matrix][ielem],
+				    &BC_Types[ibc],
+				    ibc, num_nodes_on_side,
+				    ielem,
+				    node_list, exo);
+        }
+      }
+    }
+  }
+  return;
+}
 
 void
 set_up_Edge_BC (struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[ ],
@@ -1835,7 +1937,7 @@ set_up_Edge_BC (struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[ ],
 /*****************************************************************************/
 /*****************************************************************************/
 void
-set_up_Embedded_BC ()
+set_up_Embedded_BC (void)
 
      /*****************************************************************
       * this routine creates a list of bc's applied on level
@@ -1915,34 +2017,6 @@ set_up_Embedded_BC ()
   /*     WH(-1,"To add surface tension add 'BC = LS_CAPILLARY LS 0' in the input file.\n"); */
   /*   } */
 }
-/*****************************************************************************/
-
-#if 0
-static int **alloc_bc_list_node(void)
-    
-     /**************************************************************************
-      *
-      * alloc_bc_list_node():
-      *
-      *  This function allocates a vector of pointers to ints of
-      *  length (MAX_VARIABLE_TYPES +  MAX_CONC) and then populates
-      *  those pointers by allocating a vector of ints of length
-      *  MAX_NODAL_BCS. The resulting array looks like an integer
-      *  array of size:
-      *
-      * bc_list_node[MAX_VARIABLE_TYPES +  MAX_CONC][MAX_NODAL_BCS]
-      *
-      *  The elements of the array are initialized to the value of -1.
-      *************************************************************************/
-{
-  int eqn;
-  int **bc_list_node = (int **) alloc_ptr_1(MAX_VARIABLE_TYPES +  MAX_CONC);
-  for (eqn = 0; eqn < (MAX_VARIABLE_TYPES + MAX_CONC); eqn++) {
-    bc_list_node[eqn] = alloc_int_1(MAX_NODAL_BCS, -1);
-  }
-  return bc_list_node;
-}
-#endif
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
@@ -2366,6 +2440,7 @@ initialize_Boundary_Condition (struct Boundary_Condition *bc_ptr)
    * transporting this list across processors.
    */
   bc_ptr->len_u_BC = 0;
+  bc_ptr->max_DFlt = 0;
 
   /*
    * Also, the majority of boundary conditions may rely upon
@@ -2503,7 +2578,6 @@ find_id_side(const int ielem,			/* element index number */
 	sum += shape(0.0, -1.0, 0.0, ielem_type, PSI, id_local_elem_coord[i]);
       if (sum > 0.999) return (1);
       break;
-
     case 1:
       //  Side 1 is next to node number 0 at s = -1 on the left side.
       //  Side 2 is next to node number 1 at s = +1 on the right side. 
@@ -2513,7 +2587,7 @@ find_id_side(const int ielem,			/* element index number */
       for (i = 0, sum = 0.0; i < num_nodes_on_side; i++)
 	sum += shape(-1.0, 0.0, 0.0, ielem_type, PSI, id_local_elem_coord[i]);
       if (sum > 0.999) return (1);
-
+      break;
     } /* END switch ielem_dim */
 
   /* An error condition has occurred, if here */
@@ -2920,6 +2994,12 @@ int exchange_bc_info(void)
     /* check if BC needs special exchange information */
     switch (BC_Types[ibc].BC_Name) {
     case VELO_SLIP_BC:
+    case VELO_SLIP_ROT_BC:
+    case VELO_SLIP_FLUID_BC:
+    case VELO_SLIP_ROT_FLUID_BC:
+    case ROLL_FLUID_BC:
+    case AIR_FILM_BC:
+    case AIR_FILM_ROT_BC:
       exchange_fvelo_slip_bc_info(ibc);
       break;
     default:

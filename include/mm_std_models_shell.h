@@ -19,13 +19,11 @@
 
 #ifdef GOMA_MM_STD_MODELS_SHELL_C
 #define EXTERN
-#
 #endif
 
 #ifndef GOMA_MM_STD_MODELS_SHELL_C
 #define EXTERN extern
 #endif
-
 
 EXTERN double height_function_model /* mm_std_models_shell.c                */
 (dbl *,
@@ -71,6 +69,9 @@ EXTERN double porous_shell_closed_radius_model   /* mm_std_models_shell.c       
 EXTERN double porous_shell_closed_height_model   /* mm_std_models_shell.c          */
 (void);
 
+EXTERN double porous_shell_cross_perm_model     /* mm_std_models_shell.c          */
+(void);
+
 EXTERN void dynamic_contact_angle_model
 (
        double *,
@@ -78,6 +79,13 @@ EXTERN void dynamic_contact_angle_model
        double,
        double *,
        double *
+       );
+
+EXTERN double rolling_pressure
+(
+       double,
+       double*,
+       double
        );
 
 #endif /* GOMA_MM_STD_MODELS_H */

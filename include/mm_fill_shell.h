@@ -39,6 +39,14 @@ EXTERN int assemble_shell_structure
        double xi[DIM],           /* Local stu coordinates */
        const Exo_DB *exo);      /* ExodusII database struct pointer */
 
+EXTERN int assemble_shell_web_structure
+(double time_value,        /* Time */
+       double theta,             /* Time stepping parameter */
+       double delta_t,           /* Time step size */
+       const double wt,          /* Gauss surface point weight */
+       double xi[DIM],           /* Local stu coordinates */
+       const Exo_DB *exo);      /* ExodusII database struct pointer */
+
 EXTERN int assemble_shell_tension
 (double time_value,        /* Time */
        double theta,             /* Time stepping parameter */
@@ -48,6 +56,14 @@ EXTERN int assemble_shell_tension
        const Exo_DB *exo);      /* ExodusII database struct pointer */
 
 EXTERN int assemble_shell_coordinates
+(double time_value,        /* Time */
+       double theta,             /* Time stepping parameter */
+       double delta_t,           /* Time step size */
+       const double wt,          /* Gauss surface point weight */
+       double xi[DIM],           /* Local stu coordinates */
+       const Exo_DB *exo);        /* ExodusII database struct pointer */
+
+EXTERN int assemble_shell_web_coordinates
 (double time_value,        /* Time */
        double theta,             /* Time stepping parameter */
        double delta_t,           /* Time step size */
@@ -304,7 +320,39 @@ EXTERN int assemble_lubrication_power_law
        double [DIM],             /* Local stu coords */
        const Exo_DB * );        /* ExodusII database struct pointer */  
 
+EXTERN int assemble_shell_tfmp
+(double,                   /* Time */
+       double,                   /* theta or tt*/
+       double,                   /* dt */
+       double [DIM],             /* Local stu coords */
+       PG_DATA *,
+       const Exo_DB * );        /* ExodusII database struct pointer */  
+
+EXTERN int assemble_shell_lubrication
+(double,                   /* Time */
+       double,                   /* theta or tt*/
+       double,                   /* dt */
+       double [DIM],             /* Local stu coords */
+       const Exo_DB * );        /* ExodusII database struct pointer */
 
 EXTERN int load_lsi_shell_second
 ( const double );       /* width */
+
+
+EXTERN int assemble_shell_normal
+(double [DIM],             /* Local stu coords */
+       const Exo_DB *exo);      /* ExodusII database struct pointer */
+
+EXTERN int assemble_shell_curvature
+(double [DIM],             /* Local stu coords */
+       const Exo_DB *exo);      /* ExodusII database struct pointer */
+
+EXTERN int assemble_shell_mesh
+(double,                   /* Time */
+       double,                   /* theta or tt*/
+       double,                   /* dt */
+       double [DIM],             /* Local stu coords */
+       const Exo_DB *exo );     /* ExodusII database struct pointer */
+
+
 #endif /* GOMA_MM_FILL_SHELL_H */

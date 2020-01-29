@@ -27,10 +27,36 @@ static char rcsid[] = "$Id: mm_eh.c,v 5.3 2008-01-11 00:47:14 hkmoffa Exp $";
 #include "std.h"
 #include "rf_fem_const.h"
 #include "rf_mp.h"
-#include "mm_eh.h"
 
 #define GOMA_MM_EH_C
+#include "mm_eh.h"
 #include "goma.h"
+
+#ifdef PRINT_STACK_TRACE_ON_EH
+#include <execinfo.h>
+
+/* Obtain a backtrace and print it to stdout. */
+/* https://www.gnu.org/software/libc/manual/html_node/Backtraces.html */
+/* compile with -rdynamic */
+static void
+print_stacktrace(void)
+{
+  void *bt_array[20];
+  size_t size;
+  char **stack_strings;
+
+  size = backtrace(bt_array, 20);
+  stack_strings = backtrace_symbols(bt_array, size);
+
+  printf("Obtained %zd stack frames from Proc %d.\n", size, ProcID);
+
+  for (size_t i = 0; i < size; i++) {
+     printf("%s\n", stack_strings[i]);
+  }
+
+  free (stack_strings);
+}
+#endif
 
 /*
  * These variables are extern and included everywhere else, defined and
@@ -61,6 +87,7 @@ static FILE *log_strm=NULL;
 static char log_filename[MAX_FNL] = DEFAULT_GOMA_LOG_FILENAME;
 #endif
 
+
 /*
  * Global variable helps to put the brakes on a parallel train wreck, but
  * only if you take time to broadcast it...
@@ -75,6 +102,9 @@ eh(const int error_flag, const char *file,
   static char yo[] = "eh";
   if (error_flag == -1) { 
      log_msg("GOMA ends with an error condition.");
+#ifdef PRINT_STACK_TRACE_ON_EH
+    print_stacktrace();
+#endif
 #ifndef PARALLEL
     fprintf(stderr,"ERROR EXIT: %s:%d: %s\n", file, line, message); 
     exit(-1);
@@ -173,10 +203,11 @@ logprintf(const char *format, ... )
     }
   return;
 #else
-  int n;
   time_t now;
   static char time_format[] = "%b %d %T";
   static char time_result[TIME_STRING_SIZE];
+  int n;
+
   static char new_format[1024];
 
   static char old_buffer[1024];	/* For legacy help... */

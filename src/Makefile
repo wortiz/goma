@@ -30,7 +30,7 @@ _MACH =
 
 # Useful for standard goma libary install location
 
-ARCH = rhel6_ompi
+ARCH = rhel6_ompi 
 
 # Goma library path, by default we assume all major non-standard libraries are under
 # the goma library path
@@ -43,7 +43,7 @@ MPI_TOP = /usr/bin/openmpi-2.1.1
 
 # GCC_TOP is the corresponding location of the gcc compilers and libs that are
 # used by the MPI compilers
-GCC_TOP = /usr
+GCC_TOP = /usr/lib64
 
 # PURIFY
 # ------
@@ -115,12 +115,13 @@ DEFINES ?= -Dlinux \
            -DMAX_CONC=4 \
            -DCOUPLED_FILL \
            -DPARALLEL \
+           -DHAVE_STRATIMIKOS \
+           -DHAVE_SPARSE \
            -DEIGEN_SERIAL
 
 # Other defines:
 #          -DCHECKFINITE
 #          -DMAX_CONC=1 \
-#          -DUSE_CGM \
 #          -DEIGEN_SERIAL \
 #          -DEIGEN_PARALLEL \
 #          -DNO_CHEBYSHEV_PLEASE \
@@ -132,13 +133,28 @@ DEFINES ?= -Dlinux \
 #          -DLIBRARY_MODE \
 #          -DUSE_CHEMKIN -DSENKIN_OUTPUT -DDEBUG_HKM \
 
+# Git Version information
+# check for executable
+HAS_GIT := $(shell command -v git 2> /dev/null)
+
+
+
+ifdef HAS_GIT
+	GIT_VERSION=$(shell git describe --dirty --always --tags 2> /dev/null)
+
+ifneq "$(GIT_VERSION)" ""
+	VERSION = -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
+
+endif
+
 # External Libraries
 # ==================
 
 # MPI
 # -----------
 # MPI includes
-GOMA_MPI_INC ?= -isystem $(MPI_TOP)/include
+GOMA_MPI_INC ?= -I $(MPI_TOP)/include
 
 # MPI libraries
 GOMA_MPI_LIB ?= -L$(MPI_TOP)/lib  -lmpi  -lmpi_mpifh
@@ -162,7 +178,7 @@ include $(TRILINOS_TOP)/include/Makefile.export.Trilinos
 TRILINOS_INC_REMOVE_USR_INCLUDE = $(subst -I/usr/include, ,  $(Trilinos_INCLUDE_DIRS) $(Trilinos_TPL_INCLUDE_DIRS))
 TRILINOS_INC ?= $(subst -I, -isystem, $(TRILINOS_INC_REMOVE_USR_INCLUDE))
 TRILINOS_LIB ?= $(Trilinos_LIBRARY_DIRS) $(Trilinos_TPL_LIBRARY_DIRS) \
-		$(Trilinos_LIBRARIES) $(Trilinos_TPL_LIBRARIES)
+$(Trilinos_LIBRARIES) $(Trilinos_TPL_LIBRARIES)
 
 # ARPACK
 # ------
@@ -195,7 +211,7 @@ SPARSE_TOP ?= $(GOMA_LIBS)/sparse
 SPARSE_LIB ?= -L$(SPARSE_TOP)/lib  -lsparse$(_MACH)
 
 # Sparse includes are located in the goma directory
-SPARSE_INC ?=
+SPARSE_INC ?= -I$(SPARSE_TOP)/src
 
 # FORTRAN LIBRARIES
 # -----------------
@@ -224,10 +240,11 @@ INCLUDES = $(GOMA_INC) $(SPARSE_INC) $(TRILINOS_INC) \
 DEBUG_FLAGS ?= -g -gdwarf-2
 
 # All compiler options
-CCFLAGS ?= -O
+CCFLAGS ?= -O2
 
 # C/C++ warning flags
-C_WARN_FLAGS ?= -Wall
+C_WARN_FLAGS ?= -Wall -Wextra -Wno-unused-parameter
+CXX_WARN_FLAGS ?= -Wall -Wextra
 
 # Fortran warning flags
 F_WARN_FLAGS ?=
@@ -236,11 +253,12 @@ F_WARN_FLAGS ?=
 FFLAGS = $(CCFLAGS) $(F_WARN_FLAGS) $(DEFINES) $(INCLUDES)
 
 # C compiler flags
-CFLAGS = -std=gnu99 $(CCFLAGS) $(C_WARN_FLAGS) $(DEFINES) $(INCLUDES)
+CSTD ?= -std=gnu99
+CFLAGS = $(CCFLAGS) $(C_WARN_FLAGS) $(DEFINES) $(VERSION) $(INCLUDES) $(CSTD)
 
 # C++ compiler flags
-CXXSTD ?= 
-CXXFLAGS = $(CCFLAGS) $(C_WARN_FLAGS) $(DEFINES) $(INCLUDES) -Wno-deprecated $(CXXSTD)
+CXXSTD ?= -std=c++11
+CXXFLAGS = $(CCFLAGS) $(CXX_WARN_FLAGS) $(DEFINES) $(INCLUDES) -Wno-deprecated $(CXXSTD)
 
 # linker flags
 LD_EXTRA_FLAGS ?=
@@ -305,17 +323,6 @@ MAIN_SRC= main.c
 MAIN_INC= std.h\
           goma.h
 
-
-# _____ Geometry Model routines "gm_" prefix __________________________________
-
-GM_SRC= gm_cgm_c_interface.C \
-        gm_cgm_util.c
-
-GM_INC= gm_cgm_c_interface.h \
-        gm_cgm_util.h \
-        gm_cgm_typedefs.h
-
-
 # _____ Advanced capabilities routines "ac_" prefix ___________________________
 
 AC_SRC= ac_conti.c\
@@ -366,7 +373,6 @@ RF_SRC= rf_allo.c\
 	rf_solve_segregated.c\
         rf_util.c\
         rf_vars.c\
-	dg_utils.c\
         wr_dpi.c\
         wr_side_data.c\
         wr_soln.c\
@@ -382,11 +388,8 @@ RF_INC= rf_allo.h\
         rf_fill_const.h\
         rf_io.h\
         rf_io_const.h\
-        rf_io_defn.h\
         rf_io_structs.h\
         rf_masks.h\
-        rf_masks_const.h\
-        rf_masks_globs.h\
         rf_mp.h\
         rf_node.h\
         rf_node_const.h\
@@ -398,12 +401,10 @@ RF_INC= rf_allo.h\
         rf_solver_const.h\
         rf_util.h\
         rf_vars_const.h \
-        rf_vars_defn.h\
         rd_dpi.h\
         rd_exo.h\
         rd_mesh.h\
 	rd_pixel_image.h\
-	dg_utils.h\
         wr_dpi.h\
         wr_exo.h\
         wr_side_data.h\
@@ -438,10 +439,7 @@ SL_SRC= sl_lu.c\
         sl_aztecoo_interface.cpp \
         sl_stratimikos_interface.cpp
 
-SL_INC= spConfig.h\
-        spDefs.h\
-        spmatrix.h\
-        sl_aux.h\
+SL_INC= sl_aux.h\
         sl_auxutil.h\
         sl_eggroll.h\
         sl_eggroll_def.h\
@@ -453,7 +451,8 @@ SL_INC= spConfig.h\
         sl_rcm.h \
         sl_epetra_interface.h \
         sl_epetra_util.h \
-        sl_aztecoo_interface.h
+        sl_aztecoo_interface.h \
+        sl_stratimikos_interface.h
 
 
 # _____	Machine dependent routines "md_" prefix _______________________________
@@ -562,7 +561,6 @@ MM_INC=	mm_as.h\
         mm_as_structs.h\
         mm_augc_util.h\
         mm_bc.h\
-        mm_cards.h\
         mm_chemkin.h\
         mm_dil_viscosity.h\
         mm_eh.h\
@@ -609,6 +607,9 @@ MM_INC=	mm_as.h\
         mm_unknown_map.h\
         mm_viscosity.h
 
+SHELL_SRC= shell_tfmp_util.c
+
+SHELL_INC= shell_tfmp_util.h
 
 # _____ User routines "user_" prefix __________________________________________
 
@@ -636,12 +637,12 @@ USER_INC= user_ac.h\
 # _____ Full macros ___________________________________________________________
 
 GOMA_SRC = $(BC_SRC) $(EL_SRC) $(RF_SRC) $(MAIN_SRC) $(SL_SRC) $(MD_SRC) $(MM_SRC)\
-           $(DP_SRC) $(AC_SRC) $(LOCA_SRC) $(GM_SRC) $(BFU_SRC)
+           $(SHELL_SRC) $(DP_SRC) $(AC_SRC) $(LOCA_SRC) $(BFU_SRC) 
 
 BRKFIX_SRC = $(BF_SRC)
 
 GOMA_INCS = $(EL_INC) $(MAIN_INC) $(RF_INC) $(SL_INC) $(MD_INC) $(DP_INC) $(BC_INC)\
-           $(MM_INC) $(USER_INC) $(AC_INC) $(LOCA_INC) $(GM_INC) $(BF_INC)
+           $(MM_INC) $(SHELL_INC) $(USER_INC) $(AC_INC) $(LOCA_INC) $(BF_INC) 
 
 GOMA_INCS := ${addprefix $(INCLUDE_DIR)/, $(GOMA_INCS)}
 

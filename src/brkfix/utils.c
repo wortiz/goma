@@ -19,6 +19,8 @@
  */
 
 #define GOMA_UTILS_C
+#define _XOPEN_SOURCE 500 /* POSIX mkstemp */
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,7 +46,8 @@ static int proc_ident (const void *, const void *);
  * node-node connectivity list.
  */
 
-static char err_msg[MAX_CHAR_ERR_MSG];
+// Larger error message size in case we need to echo a system command with a failure.
+static char err_msg[MAX_CHAR_ERR_MSG*2];
 static Spfrtn sr=0;
 
 /*
@@ -418,14 +421,11 @@ static int
 proc_ident(const void *arg1, 
 	   const void *arg2)
 {
-  int *a;
-  int *b;
-  
+  const int *a = (const int *)arg1;
+  const int *b = (const int *)arg2;
   short proc_a;
   short proc_b;
 
-  a = (int *)arg1;
-  b = (int *)arg2;
 
   if ( *a > keep_len_assignment-1 )
     {
@@ -505,6 +505,7 @@ get_filename_num_procs(const char *basename)
   char fixXXXXXX[] = "/tmp/fileXXXXXX";
   FILE *s;
   int val=-1;
+  int err;
   strcpy(fixXXXXXX,"./fileXXXXXX");
 
   if( mkstemp( fixXXXXXX ) == -1 ) {
@@ -535,7 +536,7 @@ get_filename_num_procs(const char *basename)
    *  Ok, delete the temporary file
    */
   sprintf(string_system_command, "/bin/rm -f %s", fixXXXXXX );
-  int err = system(string_system_command);
+  err = system(string_system_command);
   EH(err, "Error running /bin/rm -f ");
 
   return val;

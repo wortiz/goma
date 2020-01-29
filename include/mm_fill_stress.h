@@ -61,6 +61,7 @@ assemble_stress_log_conf(dbl tt,
 			 dbl vcent[DIM],
 			 dbl dvc_dnode[DIM][MDE]);
 
+
 EXTERN int assemble_stress_level_set
 (dbl ,			/* tt - parm to vary time integration from 
 				 * explicit (tt = 1) to implicit (tt = 0)    */

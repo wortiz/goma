@@ -29,7 +29,7 @@ static char rcsid[] =
 #include <math.h>
 
 /* GOMA include files */
-
+#include "el_elm.h"
 #include "std.h"
 #include "rf_fem_const.h"
 #include "rf_fem.h"
@@ -78,6 +78,7 @@ static char rcsid[] =
 *       NAME			TYPE			CALLED BY
 *  -----------------------------------------------------------------
 *  fvelo_normal_bc                      void
+*  fmesh_etch_bc                        void
 *  sdc_stefan_flow                      void
 *  sdc_stefan_volume_flow               void
 *  mass_flux_surface                  double
@@ -103,8 +104,6 @@ static char rcsid[] =
 *  hydrostatic_n_dot_T                  void
 *  flow_n_dot_T_nobc                    void
 *  flow_n_dot_T_gradv                   void
-*  flow_n_dot_T_segregated              void
-*  press_poisson_segregated             void
 *  PSPG_consistency_bc                  void
 *  fapply_CA                            void
 *  fapply_var_CA                        void
@@ -124,6 +123,7 @@ static char rcsid[] =
 *  fvelo_slip_electrokinetic_bc         void
 *  fvelo_electrokinetic_3d              void
 *  qside_directional                    void
+*  fvelo_airfilm                        void
 *
 ******************************************************************************/
 
@@ -138,6 +138,9 @@ static double slip_coefficient ( const double,
                                  double *,
                                  const double,
                                  const double);
+
+extern FSUB_TYPE dgemv_(char *TRANS, int *M, int *N, double *alpha, double *A, int *LDA,
+                        double *X, int *INCX, double *beta, int *Y, int *INCY);
 
 /* 
  *  Applies end slope nat'l SHEET_ENDSLOPE boundary condition on TENSION_SHEET boundary condition 
@@ -429,9 +432,9 @@ fvelo_normal_bc(double func[DIM],
       for (kdir = 0; kdir < pd->Num_Dim; kdir++)
 	{
 	  var = MESH_DISPLACEMENT1 + kdir;
-	  if (pd->gv[var])
+	  if (pd->v[pg->imtrx][var])
 	    {
-	      for (j = 0; j < ei[pd->mi[var]]->dof[var]; j++)
+	      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
 		{
 		  phi_j = bf[var]->phi[j];
 		  d_func[0][var][j] -= phi_j * fv->snormal[kdir];
@@ -565,8 +568,8 @@ if(lsi->near && 0) fprintf(stderr,"vn_ls %g %g %g %g\n",fv->x[0],penalty,factor,
 
       for (p=0; p<pd->Num_Dim; p++) {
 	var = MESH_DISPLACEMENT1 + p;
-	if (pd->gv[var]) {
-	  for ( j=0; j<ei[pd->mi[var]]->dof[var]; j++) {
+	if (pd->v[pg->imtrx][var]) {
+	  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	    phi_j = bf[var]->phi[j];
 	    d_func[0][var][j] += penalty*(fv->v[kdir] - x_dot[kdir]) * fv->dsnormal_dx[kdir][p][j];
 	    if (TimeIntegration != 0 && p == kdir) {
@@ -578,7 +581,7 @@ if(lsi->near && 0) fprintf(stderr,"vn_ls %g %g %g %g\n",fv->x[0],penalty,factor,
 	      
       var = VELOCITY1 + kdir;
       if (pd->v[pg->imtrx][var]) {
-	for ( j=0; j<ei[pd->mi[var]]->dof[var]; j++) {
+	for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	  phi_j = bf[var]->phi[j];
 	  d_func[0][var][j] += penalty* phi_j * fv->snormal[kdir];
 	}
@@ -586,7 +589,7 @@ if(lsi->near && 0) fprintf(stderr,"vn_ls %g %g %g %g\n",fv->x[0],penalty,factor,
 
       var = PVELOCITY1 + kdir;
       if (pd->v[pg->imtrx][var]) {
-	for ( j=0; j<ei[pd->mi[var]]->dof[var]; j++) {
+	for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	  phi_j = bf[var]->phi[j];
 	  d_func[0][var][j] += penalty*phi_j * fv->snormal[kdir];
 	}
@@ -598,9 +601,9 @@ if(lsi->near && 0) fprintf(stderr,"vn_ls %g %g %g %g\n",fv->x[0],penalty,factor,
       {
       var = ls->var;
       if((type == VELO_NORMAL_LS_BC || type == VELO_NORMAL_LS_PETROV_BC
-           || type == VELO_NORMAL_LS_COLLOC_BC)  && pd->v[pg->imtrx][var] )
+           || VELO_NORMAL_LS_COLLOC_BC)  && pd->v[pg->imtrx][var] )
 	{
-	  for( j=0; j<ei[pd->mi[var]]->dof[var]; j++)
+	  for( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 	    {
 	      d_func[0][var][j] += (fv->v[kdir]-x_dot[kdir])*fv->snormal[kdir]*d_penalty_dF*bf[var]->phi[j];
 	    }
@@ -616,7 +619,101 @@ if(lsi->near && 0) fprintf(stderr,"vn_ls %g %g %g %g\n",fv->x[0],penalty,factor,
 /*****************************************************************************/
 /*****************************************************************************/
 /****************************************************************************/
-void 
+
+void
+fmesh_etch_bc(double *func,
+              double d_func[MAX_VARIABLE_TYPES + MAX_CONC],
+              const int etch_plane,  /* Etch plane */
+              const int id,   /* Local node ID */
+              const dbl x_dot[MAX_PDIM], /* Mesh velocity */
+              const dbl tt,   /* parameter to vary time integration from
+                                 explicit (tt = 1) to implicit (tt = 0) */
+              const dbl dt)   /* current value of the time step */
+     /***********************************************************************
+      *
+      * fmesh_etch_bc():
+      *
+      *  Function which evaluates the expression specifying the
+      *  boundary normal motion  at a quadrature point on a side
+      *  of an element due to etching reaction.
+      *
+      *         func =  - etch_rate + n . xdot
+      *
+      *  The boundary conditions MOVING_PLANE_ETCH_BC
+      *  employ this function. vnormal is typically dictated by current surface
+      *  orientation as well as surface chemistry.
+      *
+      *  Note: this function initially is cloned from fvelo_normal_bc
+      *
+      * Input:
+      *
+      *  etch_plane = specified on the bc card as the first integer
+      *
+      *
+      * Output:
+      *
+      *  func[0] = value of the function mentioned above
+      *  d_func[0][varType][lvardof] =
+      *              Derivate of func[0] wrt
+      *              the variable type, varType, and the local variable
+      *              degree of freedom, lvardof, corresponding to that
+      *              variable type.
+      *
+      *   Author: Kristianto Tjiptowidjojo    (02/27/2017)
+      ********************************************************************/
+{
+  int a, b, w;
+  int dim = pd->Num_Dim;
+  int var;
+
+  double etch_rate = 0.0;
+  double d_etch_rate_d_C[MAX_CONC] = {0.0};
+
+
+  /* Right now we only consider KOH wet etching of silicon at 100 plane */
+  if (etch_plane == 100)
+    {
+     /* Get etch rate */
+     etch_rate = calc_KOH_Si_etch_rate_100(d_etch_rate_d_C);
+    }
+
+  /* Set the residual */
+  for (a = 0; a < dim; a++)
+     {
+      *func += fv->snormal[a] * x_dot[a];
+     }
+  *func -= etch_rate;
+
+    /***** NOW FIND SENSITIVITIES *****/
+
+  /* Mesh sensitivities */
+  for (b = 0; b < dim; b++)
+     {
+      var = MESH_DISPLACEMENT1 + b;
+      for (a = 0; a < dim; a++)
+         {
+          d_func[var] += fv->dsnormal_dx[a][b][id] * x_dot[a];
+          d_func[var] += fv->snormal[a] * (1.0 + 2.0*tt)/dt * delta(a,b);
+         }
+     }
+
+  /* Concentration sensitivities */
+  var = MASS_FRACTION;
+  if (pd->v[pg->imtrx][var])
+    {
+     for (w = 0; w<pd->Num_Species_Eqn; w++)
+        {
+         d_func[MAX_VARIABLE_TYPES + w] -= d_etch_rate_d_C[w];
+        }
+    }
+
+  return;
+} /* END of routine fmesh_etch_bc */
+/*****************************************************************************/
+/*****************************************************************************/
+/****************************************************************************/
+
+void
 fvelo_tangential_ls_bc(double func[DIM],
 		double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
 		const double vtangent, /* vtangent velocity */
@@ -1216,7 +1313,7 @@ mass_flux_surface(JACOBIAN_VAR_DESC_STRUCT *func_jac,
     /*
      * Next, add in the velocity dependencies
      */
-    if (VARIABLE_IN_THE_EB_SOLN_VECTOR(pd, 0, VELOCITY1)) {
+    if (VARIABLE_IN_THE_EB_SOLN_VECTOR(pd, pg->imtrx, VELOCITY1)) {
       for (kdir = 0; kdir < pd->Num_Dim; kdir++) {
 	tmp = fv->snormal[kdir] * mp->density;
 	lvdesc = ei[pg->imtrx]->Lvdesc_First_Var_Type[VELOCITY1 + kdir];
@@ -3083,6 +3180,7 @@ fvelo_slip_bc(double func[MAX_PDIM],
 	      double d_func[MAX_PDIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
 	      double x[],
 	      const int type,    /* whether rotational or not */
+	      const int max_float,    /* Max float number from input file */
               double bc_float[MAX_BC_FLOAT_DATA],
 	      const int dcl_node,/*   node id for DCL  */
 	      const double xsurf[MAX_PDIM], /* coordinates of surface Gauss  *
@@ -3116,7 +3214,9 @@ fvelo_slip_bc(double func[MAX_PDIM],
   int a, j, var, jvar, p, dim;
   double phi_j, vs[MAX_PDIM];
   double slip_dir[MAX_PDIM], vslip[MAX_PDIM], vrel[MAX_PDIM], vrel_dotn;
-  double X_0[3], omega;
+  double X_0[3], omega, velo_avg=0., pgrad=0., thick=0., dthick_dV=0., dthick_dP=0.;
+  int Pflag = TRUE;
+  double pg_factor=1.0, tang_sgn=1.0;
   
   int icount;
   double dist;                  /* distance btw current position and dynamic CL */
@@ -3126,7 +3226,8 @@ fvelo_slip_bc(double func[MAX_PDIM],
   double d_betainv_dF[MDE];
   double sign;
   int tang_slip_only;
-
+  double *phi_j_vector;
+  double mass;
 #define PRESSURE_DEPENDENT_SLIP 0
 #if PRESSURE_DEPENDENT_SLIP
   double vslip_mag;
@@ -3148,13 +3249,13 @@ fvelo_slip_bc(double func[MAX_PDIM],
   vs[1] = vsy;
   vs[2] = vsz;
 
-//  if( TimeIntegration == TRANSIENT && pd->e[pg->imtrx][R_MESH1] )
-//    {
-//      /* Add the mesh motion to the substrate velocity */
-//      vs[0] += fv_dot->x[0];
-//      vs[1] += fv_dot->x[1];
-//      vs[2] += fv_dot->x[2];
-//    }
+  if( TimeIntegration == TRANSIENT && pd->e[pg->imtrx][R_MESH1] )
+    {
+      /* Add the mesh motion to the substrate velocity */
+      vs[0] += fv_dot->x[0];
+      vs[1] += fv_dot->x[1];
+      vs[2] += fv_dot->x[2];
+    }
 
   /* dependence of slip coefficient on pressure and magnitude of slip */
   d_betainv_dvslip_mag = 0.;
@@ -3208,14 +3309,28 @@ fvelo_slip_bc(double func[MAX_PDIM],
      In 3D it spins with omega pointing in z
      direction about x0,y0  */
   /* Note: positive omega is CLOCKWISE */
-  if(type == VELO_SLIP_ROT_BC  ||  type == VELO_SLIP_ROT_FILL_BC )
+  if(type == VELO_SLIP_ROT_BC  ||  type == VELO_SLIP_ROT_FILL_BC || type == VELO_SLIP_ROT_FLUID_BC )
     {
+      double factor = 1.0,current_rad, rad_input = bc_float[5];
       omega = vsx;
       X_0[0] = vsy;
       X_0[1] = vsz;
-      vs[0] = omega * ( fv->x[1] - X_0[1] );
-      vs[1] = - omega * ( fv->x[0] - X_0[0] );
+      if( rad_input > 0)  { 
+        current_rad = sqrt(SQUARE(fv->x[1]-X_0[1])+SQUARE(fv->x[0]-X_0[0]));
+        factor = rad_input/current_rad;
+           }  else   {
+        factor = 1.0;
+              }
+      vs[0] = factor*omega * ( fv->x[1] - X_0[1] );
+      vs[1] = - factor*omega * ( fv->x[0] - X_0[0] );
       vs[2] = 0.;
+      if( TimeIntegration == TRANSIENT && pd->e[pg->imtrx][R_MESH1] )
+          {
+            /* Add the mesh motion to the substrate velocity */
+            vs[0] += fv_dot->x[0];
+            vs[1] += fv_dot->x[1];
+            vs[2] += fv_dot->x[2];
+          }
     } /* if: VELO_SLIP_ROT_BC */
   
   memset(vrel, 0, sizeof(double)*MAX_PDIM);
@@ -3304,7 +3419,17 @@ fvelo_slip_bc(double func[MAX_PDIM],
    ***************************************************************************/
 
 
-  if (alpha != 0.)
+  if (type == VELO_SLIP_FLUID_BC || type == VELO_SLIP_ROT_FLUID_BC)
+    {
+    dist = 0.;
+    for(icount=0; icount < pd->Num_Dim; icount ++)
+       {
+        /* Uses undeformed node position */
+         dist += SQUARE(xsurf[icount]-bc_float[max_float+1+icount]);
+       }
+         dist /= SQUARE(bc_float[6]); 
+    }
+  else if (alpha != 0. )
     {
       if  ( ( type == VELO_SLIP_FILL_BC || type == VELO_SLIP_ROT_FILL_BC ) 
 	    && ls !=NULL )
@@ -3315,13 +3440,12 @@ fvelo_slip_bc(double func[MAX_PDIM],
       else
         {
           /* Coord position in bc_float, from BC_Data_Float */
-          int float_offset = 5;
           dist = 0.;
           for(icount=0; icount < pd->Num_Dim; icount ++)
             {
               /* Uses undeformed node position */
-              dist += (xsurf[icount]-bc_float[icount + float_offset]) *
-                (xsurf[icount]-bc_float[icount + float_offset]);
+              dist += (xsurf[icount]-bc_float[icount + max_float +1]) *
+                (xsurf[icount]-bc_float[icount + max_float +1]);
             }
           dist = sqrt(dist);
         }
@@ -3330,7 +3454,8 @@ fvelo_slip_bc(double func[MAX_PDIM],
     {
       dist    = 1.0;
     }
-  
+
+
   /* for exponentially decaying slip, max out betainv when equivalent to 
    * STRONG IC for no slip
    */
@@ -3373,10 +3498,89 @@ fvelo_slip_bc(double func[MAX_PDIM],
 #endif /* COUPLED_FILL */
     }
 
+  /* quantities specific to FLUID bcs   */
+
+  Pflag = (int)bc_float[7];
+  velo_avg = 0.0;  pgrad=0.;
+  if(type == VELO_SLIP_FLUID_BC || type == VELO_SLIP_ROT_FLUID_BC)
+    {
+     double v_solid=0., res, jac, delta, flow, eps=1.0e-8, viscinv;
+     double jacinv,v_mag=0.;
+     tang_sgn=0.;
+     for (p = 0; p < pd->Num_Dim; p++) 
+        {
+          tang_sgn += fv->stangent[0][p]*vs[p];
+          velo_avg += fv->stangent[0][p]*(vs[p] + fv->v[p]);
+          v_solid += fv->stangent[0][p]*vs[p];
+          v_mag += SQUARE(vs[p]);
+          if(Pflag)
+             {
+              pgrad += fv->stangent[0][p]*fv->grad_P[p];
+	     }
+        }
+     v_mag = sqrt(v_mag);
+     tang_sgn = v_solid/v_mag;
+     tang_sgn = (double)SGN(v_solid/v_mag);
+     velo_avg *= 0.5;
+   /* sometimes the tangent/normals flip causing havoc....*/
+     if(v_solid < 0)
+	{
+         WH(-1,"fvelo_slip: normals and tangents have flipped! - try CONTACT_LINE model\n");
+         velo_avg *= tang_sgn;
+         v_solid *= tang_sgn;
+         pgrad *= tang_sgn;
+	}
+#if 1
+         if(dist < 10.0)
+             {pg_factor = 1.0-exp(-dist);  }
+         else
+             {pg_factor = 1.0;}
+#else
+         if(dist < 1.0)
+             {pg_factor = 0.0;}
+         else if(dist < 2.0)
+             {pg_factor = (dist-1.0);}
+         else
+             {pg_factor = 1.0;}
+#endif
+     pgrad *= pg_factor;
+
+     flow = MAX(0.,bc_float[4]*v_solid);
+     viscinv = 1./bc_float[0];
+     thick = flow/velo_avg;
+     j=0;
+     do {
+         res = -CUBE(thick)*viscinv*pgrad/12. + thick*velo_avg - flow;
+         jac = -0.25*SQUARE(thick)*viscinv*pgrad + velo_avg;
+         jacinv = 1.0/jac;
+         delta = -res*jacinv;
+         thick += delta;
+         j++;
+        } while(fabs(delta) > eps && j<20);
+     if(thick > DBL_SMALL)
+	{
+          betainv = bc_float[0]/thick;
+          dthick_dV = -0.5*jacinv;     /*  1/h*derivative  */
+          dthick_dP = CUBE(thick)*viscinv/12.*jacinv;
+	}  else	{
+          betainv = LITTLE_PENALTY;
+	}
+#if 0
+fprintf(stderr,"slip %d %g %g %g %g\n",Pflag,fv->x[0],thick,flow/v_solid,velo_avg);
+fprintf(stderr,"more %g %g %g %g\n",res,jac,betainv, dthick_dV);
+#endif
+    }
   /* Calculate the residual contribution. */
   for ( p=0 ; p < pd->Num_Dim ; p++ )
+       {
+        func[p] += betainv * vslip[p];
+       }
+  if(Pflag && (type == VELO_SLIP_FLUID_BC || type == VELO_SLIP_ROT_FLUID_BC))
     {
-      func[p] += betainv * vslip[p];
+       for ( p=0 ; p < pd->Num_Dim ; p++ )
+           {
+             func[p] += 0.5*thick*pg_factor*fv->grad_P[p];
+           }
     }
 
   /*
@@ -3408,28 +3612,70 @@ fvelo_slip_bc(double func[MAX_PDIM],
 	      }
 	  }
       }
+  if((type == VELO_SLIP_FLUID_BC || type == VELO_SLIP_ROT_FLUID_BC) )
+    {
+    for (jvar=0; jvar<pd->Num_Dim; jvar++)
+      {
+	var = VELOCITY1 + jvar;
+	if (pd->v[pg->imtrx][var])
+	  {
+	    for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	      {
+		phi_j = bf[var]->phi[j];
+	        d_func[jvar][var][j] += -betainv*dthick_dV*tang_sgn*fv->stangent[0][jvar]*vslip[jvar]*phi_j;
+/* don't think we need -- seems OK 4-12-2017 */
+	        if(Pflag) d_func[jvar][var][j] += 0.5*thick*dthick_dV*
+                     tang_sgn*fv->stangent[0][jvar]*pg_factor*fv->grad_P[jvar]*phi_j;
+	      }
+	  }
+       }
 
-//    if (TimeIntegration == TRANSIENT && pd->e[pg->imtrx][R_MESH1]) {
-//      // Time derivative gets taken out for these two types, so we
-//      // must eliminate jac terms in these two cases
-//      if (type != VELO_SLIP_ROT_BC  &&  type != VELO_SLIP_ROT_FILL_BC ) {
-//	// Dependence on the mesh time derivatives
-//	// Loop over the mesh vector
-//	mass = (1.+2.*tt) / dt;
-//	for (jvar = 0; jvar < ei[pg->imtrx]->ielem_dim; jvar++) {
-//	  var = MESH_DISPLACEMENT1 + jvar;
-//	  if (pd->v[pg->imtrx][var]) {
-//	    // Get a pointer for the basis functions for mesh displacements
-//	    phi_j_vector = bf[var]->phi;
-//	    // Loop over the mesh unknowns
-//	    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-//	      phi_j = phi_j_vector[j];
-//	      d_func[jvar][var][j] += betainv * mass * phi_j;
-//	    }
-//	  }
-//	}
-//      }
-//    }
+/* Mesh motion Jacobian entries   */
+	for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
+	  {
+	    var = MESH_DISPLACEMENT1 + jvar;
+	    if (pd->v[pg->imtrx][var])
+	      {
+		for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+		  {
+		    for (p = 0; p < pd->Num_Dim; p++)
+		      {
+	               d_func[p][var][j] += -betainv*dthick_dV*vslip[p]
+                                *tang_sgn*fv->dstangent_dx[0][p][jvar][j];
+	                   if(Pflag) 
+                            {
+                             d_func[p][var][j] += 0.5*thick*dthick_dV*pg_factor*fv->grad_P[p]*tang_sgn*fv->dstangent_dx[0][p][jvar][j];
+		             d_func[p][var][j] += 0.5*pg_factor*fv->grad_P[p]*dthick_dP*tang_sgn*fv->dstangent_dx[0][p][jvar][j];
+		             d_func[p][var][j] += 0.5*pg_factor*fv->d_grad_P_dmesh[p][jvar][j]*thick;
+		             d_func[p][var][j] += vslip[p]*dthick_dP*tang_sgn*fv->dstangent_dx[0][p][jvar][j]*(-betainv);
+                            }
+		      }
+		  }
+	      }
+	  }
+     }
+
+    if (TimeIntegration == TRANSIENT && pd->e[pg->imtrx][R_MESH1]) {
+      // Time derivative gets taken out for these two types, so we 
+      // must eliminate jac terms in these two cases
+      if (type != VELO_SLIP_ROT_BC  &&  type != VELO_SLIP_ROT_FILL_BC ) {
+	// Dependence on the mesh time derivatives
+	// Loop over the mesh vector
+	mass = (1.+2.*tt) / dt;
+	for (jvar = 0; jvar < ei[pg->imtrx]->ielem_dim; jvar++) {
+	  var = MESH_DISPLACEMENT1 + jvar;
+	  if (pd->v[pg->imtrx][var]) {
+	    // Get a pointer for the basis functions for mesh displacements
+	    phi_j_vector = bf[var]->phi;
+	    // Loop over the mesh unknowns
+	    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+	      phi_j = phi_j_vector[j];
+	      d_func[jvar][var][j] += betainv * mass * phi_j;
+	    }
+	  }
+	}
+      }
+    }
   
     for (jvar=0; jvar<pd->Num_Dim; jvar++)
       {
@@ -3461,6 +3707,19 @@ fvelo_slip_bc(double func[MAX_PDIM],
 		d_func[p][var][j] += d_betainv_dP * vslip[p] * phi_j;
 	      }
 	  }
+        if(Pflag && (type == VELO_SLIP_FLUID_BC || type == VELO_SLIP_ROT_FLUID_BC) )
+          {
+	   for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) 
+	      {
+	       for (p = 0; p < pd->Num_Dim; p++) 
+	          {
+	            phi_j = bf[var]->grad_phi[j][p];
+		    d_func[p][var][j] += 0.5*thick* phi_j;
+		    d_func[p][var][j] += 0.5*pg_factor*fv->grad_P[p]*dthick_dP*tang_sgn*fv->stangent[0][p]*phi_j;
+		    d_func[p][var][j] += vslip[p]*(-betainv)*dthick_dP*tang_sgn*fv->stangent[0][p]*phi_j;
+	          }
+	      }
+          }
       }
 
 #ifdef COUPLED_FILL
@@ -3573,6 +3832,172 @@ fvelo_slip_bc(double func[MAX_PDIM],
 
 } /* END of routine fvelo_slip_bc  */
 
+void
+fvelo_slip_power_bc(double func[MAX_PDIM],
+		    double d_func[MAX_PDIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+		    const int type,    /* whether rotational or not */
+		    const int max_float,    /* Max float number from input file */
+		    double bc_float[MAX_BC_FLOAT_DATA],
+		    const double tt,   /* parameter in time stepping alg           */
+		    const double dt)   /* current time step value                  */
+
+     /*************************************************************************
+      *
+      *   n . T = beta * ( t . (v - vs) )^m
+      *
+      *   Where t is a tangent in the wall direction
+      *
+      ************************************************************************/
+{
+  double beta = bc_float[0];   /* Navier slip coefficient from input deck */
+  /* velocity components of solid surface on
+   * which slip condition is applied */
+  double vsx = bc_float[1];
+  double vsy = bc_float[2];
+  double vsz = bc_float[3];
+  double expon = bc_float[4];
+  int j, var, jvar, p;
+  double phi_j, vs[MAX_PDIM];
+  double betainv;		/* inverse of slip coefficient */
+  double vslip[MAX_PDIM];
+  double tangent_dot_vslip = 0.0;
+  double tangent[MAX_PDIM];
+
+  if(af->Assemble_LSA_Mass_Matrix)
+    return;
+
+  vs[0] = vsx;
+  vs[1] = vsy;
+  vs[2] = vsz;
+
+  int constant_tangent = FALSE;
+
+  if (max_float == 8)
+    {
+      tangent[0] = bc_float[5];
+      tangent[1] = bc_float[6];
+      tangent[2] = bc_float[7];
+      constant_tangent = TRUE;
+    }
+  else if (pd->Num_Dim == 3 && type == VELO_SLIP_POWER_BC)
+    {
+      EH(-1, "Must provide constant tangent for VELO_SLIP_POWER");
+    }
+  else
+    {
+      tangent[0] = fv->stangent[0][0];
+      tangent[1] = fv->stangent[0][1];
+      tangent[2] = 0.0;
+    }
+
+  if (beta != 0.)
+    {
+      betainv = 1./beta;
+    }
+  else
+    {
+      betainv = 0.;
+    }
+
+
+  memset(vslip, 0, sizeof(double)*MAX_PDIM);
+  for (p = 0; p < pd->Num_Dim; p++)
+    {
+      vslip[p] = (fv->v[p] - vs[p]);
+    }
+
+  /* Calculate the residual contribution. */
+  for ( p=0 ; p < pd->Num_Dim ; p++ )
+    {
+      tangent_dot_vslip += tangent[p] * vslip[p];
+    }
+
+  double tdotv_power = pow(tangent_dot_vslip, expon);
+
+  if (type == VELO_SLIP_POWER_BC)
+    {
+      // tangential compoment only
+      func[0] = -betainv * tdotv_power;
+
+      if (af->Assemble_Jacobian)
+        {
+
+          for (jvar=0; jvar<pd->Num_Dim; jvar++)
+            {
+              var = VELOCITY1 + jvar;
+              if (pd->v[pg->imtrx][var])
+                {
+                  for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+                    {
+                      phi_j = bf[var]->phi[j];
+
+                      /* Main dependence of the velocity on velocity unknowns */
+                      if (fabs(tangent_dot_vslip) > 1e-15)
+                        {
+                          d_func[0][var][j] += -betainv * expon * tangent[jvar] * phi_j * tdotv_power / tangent_dot_vslip;
+                        }
+                    }
+                }
+            }
+
+          /* Mesh motion Jacobian entries   */
+          if (constant_tangent == FALSE)
+            {
+              for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
+                {
+                  var = MESH_DISPLACEMENT1 + jvar;
+                  if (pd->v[pg->imtrx][var])
+                    {
+                      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+                        {
+                          for (p = 0; p < pd->Num_Dim; p++)
+                            {
+                              if (fabs(tangent_dot_vslip) > 0)
+                                {
+                                  d_func[0][var][j] += -betainv * expon * fv->dstangent_dx[0][p][jvar][j] * vslip[p] * tdotv_power / tangent_dot_vslip;;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+  else if (type == VELO_SLIP_POWER_CARD_BC)
+    {
+      double vslip_expon[MAX_PDIM];
+      for (p = 0; p < VIM; p++)
+        {
+          vslip_expon[p] = pow(vslip[p], expon);
+          func[p] = -betainv * vslip_expon[p];
+        }
+      if (af->Assemble_Jacobian)
+        {
+          for (jvar=0; jvar<pd->Num_Dim; jvar++)
+            {
+              var = VELOCITY1 + jvar;
+              if (pd->v[pg->imtrx][var])
+                {
+                  for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+                    {
+                      phi_j = bf[var]->phi[j];
+                      /* Main dependence of the velocity on velocity unknowns */
+                      if (fabs(vslip[jvar]) > 0)
+                        {
+                          d_func[jvar][var][j] += -betainv * expon * phi_j * vslip_expon[jvar] / vslip[jvar];
+                        }
+                    }
+                }
+            }
+        }
+    }
+  else
+    {
+      EH(-1, "Unknown type for fvelo_slip_power_bc");
+    }
+
+  return;
+}
 /**
  * Exchanges coordinates for the reference node needed for calculation
  * in fvelo_slip_bc()
@@ -3590,9 +4015,10 @@ exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC */)
   /* if velo slip has */
   int velo_slip_root = 0;
   /* Offset for where to place coordinates in BC_Data_Float */
-  int float_offset = 5;
+  int float_offset;
   double node_coord[pd->Num_Dim]; /* temporary buffer for node coordinates */
 
+  float_offset = BC_Types[ibc].max_DFlt+1;
   /* Skip this if calculation is not needed */
   if (BC_Types[ibc].BC_Data_Int[0] == -1 || BC_Types[ibc].BC_Data_Int[0] == 0) {
     return 0;
@@ -3613,7 +4039,7 @@ exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC */)
 #endif /* #ifdef PARALLEL */
 
   if (ProcID == velo_slip_root) {
-    int node = BC_Types[ibc].BC_Data_Int[0];
+    int node = abs(BC_Types[ibc].BC_Data_Int[0]);
     /* find coordinate position of reference node */
     for (i = 0; i < pd->Num_Dim; i++) {
       node_coord[i] = Coor[i][node];
@@ -3632,110 +4058,324 @@ exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC */)
 #endif
 
   /* set BC_Data_Float values */
+if(1 || BC_Types[ibc].BC_Name != ROLL_FLUID_BC)  {
   for (i = 0; i < pd->Num_Dim; i++) {
     BC_Types[ibc].BC_Data_Float[float_offset + i] = node_coord[i];
   }
+}	else	{
+  for (i = 0; i < pd->Num_Dim; i++) {
+    BC_Types[ibc].u_BC[float_offset + i] = node_coord[i];
+  }
+
+fprintf(stderr,"exchange %d %g %g\n",ibc,node_coord[0],node_coord[1]);
+}
   return 0;
 }
 
 /****************************************************************************/
-/****************************************************************************/
-/****************************************************************************/
+/***************************************************************************/
 
-void
-fvelo_slip_ls_heaviside(double func[MAX_PDIM],
-			double d_func[MAX_PDIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-			double width,
-			double beta_negative,
-			double beta_positive,
-			const double vsx,      /* velocity components of solid  */
-			const double vsy,	/* surface on which slip condition   */
-			const double vsz,	/* is applied           */
-			const double tt,
-			const double dt)
+void 
+fvelo_airfilm_bc(double func[MAX_PDIM],
+	      double d_func[MAX_PDIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+	      double x[],
+	      const int type,    /* whether rotational or not */
+              double bc_float[MAX_BC_FLOAT_DATA],
+	      const int dcl_node,/*   node id for DCL  */
+	      const double xsurf[MAX_PDIM], /* coordinates of surface Gauss  *
+					     * point, i.e. current position  */
+	      const double tt,   /* parameter in time stepping alg           */
+	      const double dt)   /* current time step value                  */
+     
+     /*************************************************************************
+      *
+      *  Function which evaluates a "slip-like" velocity boundary condition 
+      *  except that it mimics an entrained air film
+      *
+      *            Author: R. B. Secor    (10/2/2015)
+      *            Revised: 
+      ************************************************************************/
 {
-  int j, var, jvar, p;
-  double phi_j, vs[MAX_PDIM] ;
-  double beta, betainv;
-  double d_beta_dF[MDE];
-  /************************* EXECUTION BEGINS *******************************/
-
+  double gas_mu = bc_float[0];   /* Navier slip coefficient from input deck */
+  /* velocity components of solid surface on
+   * which slip condition is applied */
+  double vsx = bc_float[1];
+  double vsy = bc_float[2];
+  double vsz = bc_float[3];
+  double gas_flow = bc_float[4];
+  int j, var, jvar, p, dim;
+  double phi_j, vs[MAX_PDIM];
+  double vnet[MAX_PDIM], vrel[MAX_PDIM];
+  double X_0[3], omega;
+  
+  double vnet_mag, gradP_mag;		/* inverse of slip coefficient */
+	
   if(af->Assemble_LSA_Mass_Matrix)
     return;
 
-
-  load_lsi( width );
-#ifdef COUPLED_FILL
-  if ( af->Assemble_Jacobian )
-     {
-      load_lsi_derivs();
-      memset(d_beta_dF,0,MDE*sizeof(double));
-     }
-#endif /* COUPLED_FILL */
-//   dbl gamma[DIM][DIM];
-  
-//   /**
-//      compute gammadot, viscosity
-//   **/
-//   for ( int i=0; i<VIM; i++)
-//     {
-//       for ( int j=0; j<VIM; j++)
-//   	{
-//   	  gamma[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
-//   	}
-//     }
-
-  //mu = viscosity(gn, gamma, d_mu);
-
-  level_set_property(beta_negative, beta_positive, width, &beta, d_beta_dF);
-  // betainv = mu/beta;
-  betainv = 1/beta;
+  dim = pd->Num_Dim;
 
   vs[0] = vsx;
   vs[1] = vsy;
   vs[2] = vsz;
 
-  if (af->Assemble_Jacobian)
+  if( TimeIntegration == TRANSIENT && pd->e[pg->imtrx][R_MESH1] )
     {
-      for (jvar=0; jvar<pd->Num_Dim; jvar++)
-	{
-	  var = VELOCITY1 + jvar;
-	  if (pd->v[pg->imtrx][var])
-	    {
-	      for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
-		{
-		  phi_j = bf[var]->phi[j];
-                  d_func[jvar][var][j] += (-betainv)*(phi_j);
-		}
-	    }
-
-	}
-
-      var = LS;
-      if( pd->v[pg->imtrx][var])
-	{
-	  for(p=0; p<pd->Num_Dim; p++)
-	    {
-	      for( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-		{
-		  phi_j = bf[var]->phi[j];
-
-		  d_func[p][var][j] += (d_beta_dF[j]/beta/beta)*( fv->v[p] - vs[p] );
-		  //d_func[p][var][j] += (d_beta_dF[j])*( fv->v[p] - vs[p] );
-		}
-	    }
-	}
-    }	/* end of of Assemble Jacobian		*/
-
-
-  /* Calculate the residual contribution	*/
-  for (p=0; p<pd->Num_Dim; p++)
-    {
-      func[p] += (-betainv) * (fv->v[p] - vs[p]);
+      /* Add the mesh motion to the substrate velocity */
+      vs[0] += fv_dot->x[0];
+      vs[1] += fv_dot->x[1];
+      vs[2] += fv_dot->x[2];
     }
 
-}
-/****************************************************************************/
+  /*
+   *   Redefine the Substrate velocity from scratch
+   *   for rotational velocity, if needed. 
+   *   HKM -> Note I have not put in x_dot into these equations
+   *          even though it might be needed here.
+   */
+  /* NB This is really specified on for 2D
+     In 3D it spins with omega pointing in z
+     direction about x0,y0  */
+  /* Note: positive omega is CLOCKWISE */
+  if(type == AIR_FILM_ROT_BC )
+    {
+      omega = vsx;
+      X_0[0] = vsy;
+      X_0[1] = vsz;
+      vs[0] = omega * ( fv->x[1] - X_0[1] );
+      vs[1] = - omega * ( fv->x[0] - X_0[0] );
+      vs[2] = 0.;
+    } /* if: AIR_FILM_ROT_BC */
+  
+  memset(vrel, 0, sizeof(double)*MAX_PDIM);
+  memset(vnet, 0, sizeof(double)*MAX_PDIM);
+  vnet_mag = 0.;  gradP_mag = 0. ;
+  for (p = 0; p < dim; p++) 
+    {
+      vrel[p] = (vs[p] - fv->v[p]);
+      vnet[p] = (vs[p] + fv->v[p]);
+      vnet_mag += vnet[p];
+      gradP_mag += fv->grad_P[p];
+    }
+
+  /* Calculate the residual contribution. */
+  /*  Drop through special cases for the solution of 
+ *    the air film thickness  */
+  if(  gradP_mag < DBL_SMALL)
+     {
+         if(fabs(gas_flow) < DBL_SMALL)
+             {
+               for ( p=0 ; p < dim ; p++ )
+                   { func[p] += gas_mu*vrel[p]; }
+               if (af->Assemble_Jacobian) {
+      
+                  for (jvar=0; jvar<dim; jvar++)
+                    {
+	              var = VELOCITY1 + jvar;
+	              if (pd->v[pg->imtrx][var])
+	                {
+	                 for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	                   {
+		            phi_j = bf[var]->phi[j];
+		            d_func[jvar][var][j] += (-gas_mu) * phi_j;
+	                    }
+	                 }
+                     }
+                   }
+             }	else	{
+               for ( p=0 ; p < dim ; p++ )
+                   { func[p] += gas_mu*vrel[p]*vnet[p]/gas_flow; }
+               if (af->Assemble_Jacobian) {
+      
+                  for (jvar=0; jvar<dim; jvar++)
+                    {
+	              var = VELOCITY1 + jvar;
+	              if (pd->v[pg->imtrx][var])
+	                {
+	                 for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	                   {
+		            phi_j = bf[var]->phi[j];
+		            for (p=0; p<dim; p++)
+		              {
+		               d_func[p][var][j] += (gas_mu/gas_flow)*(vrel[p]-vnet[p])* phi_j;
+                              }
+	                    }
+	                 }
+                     }
+                   }
+             }
+     }
+  else if( vnet_mag < DBL_SMALL )
+     {
+         if(fabs(gas_flow) < DBL_SMALL)
+             {
+               for ( p=0 ; p < dim ; p++ )
+                   { func[p] += gas_mu*vrel[p]; }
+               if (af->Assemble_Jacobian) {
+      
+                  for (jvar=0; jvar<dim; jvar++)
+                    {
+	              var = VELOCITY1 + jvar;
+	              if (pd->v[pg->imtrx][var])
+	                {
+	                 for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	                   {
+		            phi_j = bf[var]->phi[j];
+		            d_func[jvar][var][j] += (-gas_mu) * phi_j;
+	                    }
+	                 }
+                     }
+                   }
+             }	else	{
+               for ( p=0 ; p < dim ; p++ )
+                   { 
+                     func[p] += pow(1.5*gas_mu*gas_flow*SQUARE(fv->grad_P[p]),1./3.)
+                            +vrel[p]*pow(fv->grad_P[p]*SQUARE(gas_mu)/12./gas_flow,1./3.); 
+                   }
+               if (af->Assemble_Jacobian) {
+      
+                  for (jvar=0; jvar<dim; jvar++)
+                    {
+	              var = VELOCITY1 + jvar;
+	              if (pd->v[pg->imtrx][var])
+	                {
+	                 for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	                   {
+		            phi_j = bf[var]->phi[j];
+		            for (p=0; p<dim; p++)
+		              {
+		               d_func[p][var][j] += 
+                                    pow(fv->grad_P[p]*SQUARE(gas_mu)/12./gas_flow,1./3.)* (-phi_j);
+                              }
+	                    }
+	                 }
+                     }
+                   var = PRESSURE;
+                   if (pd->v[pg->imtrx][var])
+                     {
+	              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) 
+	                {
+	                 phi_j = bf[var]->phi[j];
+	                 for (p = 0; p < dim; p++) 
+	                   {
+		            d_func[p][var][j] += (2./3.*pow(1.5*gas_mu*gas_flow/fv->grad_P[p],1./3.)
+                                      +1./3.*vrel[p]*pow(SQUARE(gas_mu)/12./gas_flow,1./3.))*bf[var]->grad_phi[j][p]; 
+	                   }
+	                }
+                      }
+                   for (jvar=0; jvar<dim; jvar++)
+	             {
+	              var = MESH_DISPLACEMENT1 + jvar;
+                      if (pd->v[pg->imtrx][var])
+                        {
+	                 for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) 
+	                   {
+	                    phi_j = bf[var]->phi[j];
+	                    for (p = 0; p < dim; p++) 
+	                      {
+		               d_func[p][var][j] += (2./3.*pow(1.5*gas_mu*gas_flow/fv->grad_P[p],1./3.)
+                                      +1./3.*vrel[p]*pow(SQUARE(gas_mu)/12./gas_flow,1./3.))
+                                      * fv->d_grad_P_dmesh[p][jvar][j]; 
+	                      }
+	                   }
+                        }
+                     }
+                   }
+             }
+     }
+  else if(fabs(gas_flow) < DBL_SMALL)
+     {
+         if(vnet_mag < DBL_SMALL)
+             {
+               for ( p=0 ; p < dim ; p++ )
+                   { func[p] += gas_mu*vrel[p]; }
+               if (af->Assemble_Jacobian) {
+      
+                  for (jvar=0; jvar<dim; jvar++)
+                    {
+	              var = VELOCITY1 + jvar;
+	              if (pd->v[pg->imtrx][var])
+	                {
+	                 for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	                   {
+		            phi_j = bf[var]->phi[j];
+		            d_func[jvar][var][j] += (-gas_mu) * phi_j;
+	                    }
+	                 }
+                     }
+                   }
+             }	else	{
+               for ( p=0 ; p < dim ; p++ )
+                   { 
+                     func[p] += sqrt(gas_mu*fabs(fv->grad_P[p]/vnet[p])*
+                             (9*SQUARE(vnet[p])+SQUARE(vrel[p]))/6); 
+                   }
+               if (af->Assemble_Jacobian) {
+      
+                  for (jvar=0; jvar<dim; jvar++)
+                    {
+	              var = VELOCITY1 + jvar;
+	              if (pd->v[pg->imtrx][var])
+	                {
+	                 for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	                   {
+		            phi_j = bf[var]->phi[j];
+		            for (p=0; p<dim; p++)
+		              {
+		               d_func[p][var][j] += 
+                                    sqrt(gas_mu*fabs(fv->grad_P[p]))*
+                                   phi_j*(18.*vnet[p]*vrel[p]-SQUARE(vrel[p])+9*SQUARE(vnet[p]))
+                                   /(6*SQUARE(vrel[p]))*0.5*
+                                    sqrt(6*vnet[p]/(9*SQUARE(vnet[p])+SQUARE(vrel[p])));
+                              }
+	                    }
+	                 }
+                     }
+                   var = PRESSURE;
+                   if (pd->v[pg->imtrx][var])
+                     {
+	              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) 
+	                {
+	                 phi_j = bf[var]->phi[j];
+	                 for (p = 0; p < dim; p++) 
+	                   {
+		            d_func[p][var][j] +=  
+                                  sqrt(gas_mu/vnet[p]*(9*SQUARE(vnet[p])+SQUARE(vrel[p]))/6)
+                                  *0.5/sqrt(fabs(fv->grad_P[p]))*bf[var]->grad_phi[j][p]; 
+	                   }
+	                }
+                      }
+                   for (jvar=0; jvar<dim; jvar++)
+	             {
+	              var = MESH_DISPLACEMENT1 + jvar;
+                      if (pd->v[pg->imtrx][var])
+                        {
+	                 for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) 
+	                   {
+	                    phi_j = bf[var]->phi[j];
+	                    for (p = 0; p < dim; p++) 
+	                      {
+		               d_func[p][var][j] +=  
+                                  sqrt(gas_mu/vnet[p]*(9*SQUARE(vnet[p])+SQUARE(vrel[p]))/6)
+                                  *0.5/sqrt(fabs(fv->grad_P[p]))*fv->d_grad_P_dmesh[p][jvar][j]; 
+	                      }
+	                   }
+                        }
+                     }
+                   }
+             }
+     }
+  else     /*  General Solution */
+     {
+      for ( p=0 ; p < dim ; p++ )
+          {
+             func[p] += gas_mu*vrel[p]*vnet[p]/gas_flow;
+          }
+     }
+
+  return;
+
+} /* END of routine fvelo_airfilm_bc  */
 /****************************************************************************/
 /****************************************************************************/
 
@@ -3810,7 +4450,17 @@ fvelo_slip_level(double func[MAX_PDIM],
     }
 
   /* compute stress tensor and its derivatives */
-  if( type == VELO_SLIP_LEVEL_SIC_BC) fluid_stress( Pi, d_Pi );
+  if( type == VELO_SLIP_LEVEL_SIC_BC) 
+    {
+      if(vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
+        {
+          fluid_stress_conf( Pi, d_Pi);
+        }
+      else
+        {
+          fluid_stress( Pi, d_Pi );
+        }
+    }
 
   if (af->Assemble_Jacobian) 
     {
@@ -4068,6 +4718,51 @@ load_surface_tension (
 	    }
 	  }
 	}
+      else if(mp->SurfaceTensionModel == GIBBS_ISOTHERM)
+	{
+         double temp;
+         int w;
+         /* get temperature  */
+          if ( pd->e[pg->imtrx][TEMPERATURE] )
+             {temp = fv->T;}
+          else
+             {temp = upd->Process_Temperature;}
+
+	  for(p=0; p<DIM; p++) {
+	    for(j=0; j<ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+	      dsigma_dx[p][j] = 0.;
+	    }
+	  }
+          mp->surface_tension = mp->u_surface_tension[0]*
+              pow((mp->u_surface_tension[1]-temp)/
+                  (mp->u_surface_tension[1]-mp->reference[TEMPERATURE])
+                   ,mp->u_surface_tension[2]);		         
+          mp->d_surface_tension[TEMPERATURE] = mp->u_surface_tension[0]*
+              pow((mp->u_surface_tension[1]-temp)/
+                  (mp->u_surface_tension[1]-mp->reference[TEMPERATURE])
+                  ,mp->u_surface_tension[2]-1.)
+                  *(-mp->u_surface_tension[2]/
+                  (mp->u_surface_tension[1]-mp->reference[TEMPERATURE]));		         
+							 
+          if( mp->len_u_surface_tension > 3 && pd->Num_Species_Eqn > 0)
+             {
+             for(w=0 ; w<pd->Num_Species_Eqn ; w++)
+             {
+             if( fv->c[w] < mp->u_surface_tension[5+3*w])
+               {
+                  mp->surface_tension -= mp->u_surface_tension[3+3*w]*
+                        log(1.0+fv->c[w]/mp->u_surface_tension[4+3*w]);
+                  mp->d_surface_tension[MAX_VARIABLE_TYPES+w] =
+                        -mp->u_surface_tension[3+3*w]
+                        /(fv->c[w]+mp->u_surface_tension[4+3*w]);
+               }  else   {
+                  mp->surface_tension -= mp->u_surface_tension[3+3*w]*
+                               log(1.0+mp->u_surface_tension[5+3*w]/
+                               mp->u_surface_tension[4+3*w]);
+               }
+             }
+             }
+	}
       else
 	{
 	  EH(-1, "Surface tension model not defined" );
@@ -4197,7 +4892,7 @@ elec_surf_stress(double cfunc[MDE][DIM],
 	  I    = Proc_Elem_Connect[iconnect_ptr + id];
 	  ldof = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 	  
-	  /* Dolphin[pg->imtrx][node][variable] = dof */
+	  /* Dolphin[node][variable] = dof */
 	  /* if(Dolphin[pg->imtrx][I][VELOCITY1] > 0) */
 	  if(ldof >= 0)
 	    {
@@ -4473,8 +5168,14 @@ sheet_tension ( double cfunc[MDE][DIM],
         }
     }
 
-
-  fluid_stress( Pi, &d_Pi );
+    if(vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
+      {
+        fluid_stress_conf( Pi, &d_Pi);
+      }
+    else  
+      {
+        fluid_stress( Pi, &d_Pi );
+      }
 
   HL = 0.0;
   memset( dHL_dv, 0, sizeof(double)*DIM*MDE);
@@ -4795,13 +5496,13 @@ fn_dot_T(double cfunc[MDE][DIM],
     }
   
   eqn = VELOCITY1;
-  if(pd->gv[eqn]) 
+  if(pd->v[pg->imtrx][eqn]) 
     {
       for (i = 0; i < (int) elem_side_bc->num_nodes_on_side; i++) 
 	{
 	  id = (int) elem_side_bc->local_elem_node_id[i];
 	  I = Proc_Elem_Connect[iconnect_ptr + id];
-	  ldof  = ei[pd->mi[eqn]]->ln_to_first_dof[eqn][id];
+	  ldof  = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 	  
 	  /* Calculate the residual contribution from surface gradient of basis function */
 	  if (ldof >= 0 )
@@ -4949,14 +5650,17 @@ apply_repulsion (double cfunc[MDE][DIM],
 void 
 apply_repulsion_roll (double cfunc[MDE][DIM],
 		 double d_cfunc[MDE][DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                 double x[],   /* solution vector*/
 		 const double roll_rad, /* roll radius */
 	         const double origin[3],	/* roll axis origin (x,y,z) */
 	         const double dir_angle[3],	/* axis direction angles */
+		 const double omega, /* roll rotation rate  */
 		 const double hscale, /* repulsion length scale */
 	         const double repexp,	/* repulsive force exponent */
 	         const double P_rep,	/* repulsion coefficient */
-		 const double betainv, /* inverse slip coefficient  */
-		 const double omega, /* roll rotation rate  */
+		 const double gas_visc, /* inverse slip coefficient  */
+                 const double exp_scale,      /* DCL exculsion zone scale   */
+                 const int dcl_node,            /* DCL NS id  */
 		 struct elem_side_bc_struct *elem_side_bc,
 		 const int iconnect_ptr)
   
@@ -4976,16 +5680,22 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
     double d_dist[DIM];                /* distance derivatives  */  
     double dist=1e12;		/* squared distance from surface to wall     */
     double factor;
-    double coord[3], axis_pt[3], rad_dir[3], v_dir[3], v_roll[3], t, R;
+    double coord[3]={0,0,0};
+    double axis_pt[3], rad_dir[3], v_dir[3], v_roll[3], t, R;
     double force = 0.0, d_force = 0.0, inv_slip = 0.0, d_inv_slip = 0.0;
-    double t_veloc[2], dt_veloc_dx[2][MAX_PDIM][MAX_PDIM][MDE];
+    double sheara = 0., d_sheara = 0., shearb = 0., d_shearb = 0.;
+    double t_veloc[2]={0,0}, dt_veloc_dx[2][MAX_PDIM][MAX_PDIM][MDE];
+    double n_veloc=0, dn_veloc_dx[MAX_PDIM][MAX_PDIM][MDE];
+    double dsheara_dx[MAX_PDIM][MAX_PDIM][MDE],dshearb_dx[MAX_PDIM][MAX_PDIM][MDE];
+    double dcl_dist, mod_factor=1.,point[3]={0,0,0};
+    int nsp,k;
 
   int j, i, id, var, a, eqn, I, ldof;
 
 /***************************** EXECUTION BEGINS ******************************/
 /* if pr is 0. => we don't want free surface/wall repulsion and just
    ensure that dist and dist2 are nonzero so nothing bad happens */
-  if (P_rep == 0 && betainv == 0) return;
+  if (P_rep == 0 && gas_visc == 0) return;
 
   eqn = VELOCITY1;
     if(af->Assemble_LSA_Mass_Matrix)
@@ -5042,16 +5752,45 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
      v_roll[1] =  omega*roll_rad*v_dir[1];
      v_roll[2] =  omega*roll_rad*v_dir[2];
 
+/* DCL exclusion zone  */
+      if(dcl_node != -1)
+          {
+          nsp = match_nsid(dcl_node);
+          k = Proc_NS_List[Proc_NS_Pointers[nsp]];
+          for (j = 0; j < Proc_NS_Count[nsp]; j++)
+             {
+               k = Proc_NS_List[Proc_NS_Pointers[nsp]+j];
+               i = Index_Solution (k, MESH_DISPLACEMENT1, 0, 0, -1, pg->imtrx);
+               EH(i, "Could not resolve index_solution.");
+               for(a=0 ; a<dim ; a++)
+                  {
+                   point[a] = Coor[a][k] + x[i+a];
+                  }
+             }
+           dcl_dist = sqrt(SQUARE(coord[0]-point[0])
+                          +SQUARE(coord[1]-point[1])
+                          +SQUARE(coord[2]-point[2]));
+           }  else      {
+           dcl_dist = 0.;
+           WH(-1,"No DCL node for CAP_REPULSE_TABLE....\n");
+           }
+/*  modifying function for DCL  */
+           mod_factor = 1. - exp(-dcl_dist/exp_scale);
+
 /*  repulsion function  */
-           force = -P_rep/pow(dist/hscale, repexp); 
-           d_force = P_rep*repexp/pow(dist/hscale, repexp+1)/hscale;
+           force = -P_rep*mod_factor/pow(dist/hscale, repexp); 
+           d_force = P_rep*mod_factor*repexp/pow(dist/hscale, repexp+1)/hscale;
 /*  slip velocity function function  */
-           inv_slip = -betainv/pow(dist/hscale, repexp); 
-           d_inv_slip = betainv*repexp/pow(dist/hscale, repexp+1)/hscale;
+           inv_slip = -gas_visc*mod_factor/pow(dist/hscale, repexp); 
+           d_inv_slip = gas_visc*mod_factor*repexp/pow(dist/hscale, repexp+1)/hscale;
       t_veloc[0] = t_veloc[1] = 0.;
       for (a=0; a<ei[pg->imtrx]->ielem_dim; a++)
 	{  
          t_veloc[0] += fv->stangent[0][a]*(fv->v[a] - v_roll[a]);
+         n_veloc += fv->snormal[a]*(fv->v[a]-v_roll[a]);
+         sheara += 0.5*dist*d_force*d_dist[a]*fv->stangent[0][a];
+         d_sheara += 0.5*fv->stangent[0][a]*(d_force*d_dist[a]-d_force*(repexp+1.)*SQUARE(hscale));
+
 	  for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
 	    {
 	      var = MESH_DISPLACEMENT1 + jvar;
@@ -5060,6 +5799,9 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
 		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
                      {
          dt_veloc_dx[0][a][jvar][j] = fv->dstangent_dx[0][a][jvar][j]*(fv->v[a] - v_roll[a]);
+         dn_veloc_dx[a][jvar][j] = fv->dsnormal_dx[a][jvar][j]*(fv->v[a]-v_roll[a]);
+         dn_veloc_dx[a][jvar][j] = 0.;
+         dsheara_dx[a][jvar][j] = 0.5*dist*d_force*d_dist[a]*fv->dstangent_dx[0][a][jvar][j];
                      }
                 }
              }
@@ -5069,6 +5811,9 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
       for (a=0; a<ei[pg->imtrx]->ielem_dim; a++)
 	{  
          t_veloc[1] += fv->stangent[1][a]*(fv->v[a] - v_roll[a]);
+         shearb += 0.5*dist*d_force*d_dist[a]*fv->stangent[1][a];
+         d_shearb += 0.5*fv->stangent[1][a]*(d_force*d_dist[a]-d_force*(repexp+1.)*SQUARE(hscale));
+
 	  for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
 	    {
 	      var = MESH_DISPLACEMENT1 + jvar;
@@ -5077,6 +5822,7 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
 		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
                      {
          dt_veloc_dx[1][a][jvar][j] = fv->dstangent_dx[1][a][jvar][j]*(fv->v[a] - v_roll[a]);
+         dshearb_dx[a][jvar][j] = 0.5*dist*d_force*d_dist[a]*fv->dstangent_dx[1][a][jvar][j];
                      }
                 }
              }
@@ -5089,7 +5835,7 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
 	id = (int) elem_side_bc->local_elem_node_id[i];
 	I = Proc_Elem_Connect[iconnect_ptr + id];
 	ldof  = ei[pg->imtrx]->ln_to_dof[eqn][id];
-        if (Dolphin[pg->imtrx][I][VELOCITY1] > 0 ) {
+	if (Dolphin[pg->imtrx][I][VELOCITY1] > 0 ) {
 	  
 	  /* 
 	   *  Evaluate sensitivity to displacements d()/dx 
@@ -5104,24 +5850,25 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
 		      for (a=0; a<ei[pg->imtrx]->ielem_dim; a++)
 			{
 			  
-			  d_cfunc[ldof][a][var][j] += (force * fv->dsnormal_dx[a][jvar][j] 
-						     + d_force * fv->snormal[a]
-						     * d_dist[jvar] * bf[var]->phi[j]
-						     )
-			    * bf[eqn]->phi[ldof]; 
-			  d_cfunc[ldof][a][var][j] +=
-                                (t_veloc[0]*inv_slip * fv->dstangent_dx[0][a][jvar][j] 
-				          + t_veloc[0]*d_inv_slip * fv->stangent[0][a]
-						     * d_dist[jvar] * bf[var]->phi[j]
-			+ inv_slip*fv->stangent[0][a]*dt_veloc_dx[0][a][jvar][j]) 
-			    * bf[eqn]->phi[ldof]; 
-			  if( dim == 3) d_cfunc[ldof][a][var][j] +=
-                                (t_veloc[1]*inv_slip * fv->dstangent_dx[1][a][jvar][j] 
-				     + t_veloc[1]*d_inv_slip * fv->stangent[1][a]
-						     * d_dist[jvar] * bf[var]->phi[j]
-			+ inv_slip*fv->stangent[1][a]*dt_veloc_dx[1][a][jvar][j]) 
-			    * bf[eqn]->phi[ldof]; 
-			  
+                          d_cfunc[ldof][a][var][j] +=
+                                (n_veloc*force * fv->dsnormal_dx[a][jvar][j]
+                                +(n_veloc*d_force+force*dn_veloc_dx[a][jvar][j])
+                                *fv->snormal[a]*d_dist[jvar]*bf[var]->phi[j])
+                                * bf[eqn]->phi[ldof];
+                          d_cfunc[ldof][a][var][j] +=
+                         ((t_veloc[0]*inv_slip+sheara) * fv->dstangent_dx[0][a][jvar][j]
+                                + (t_veloc[0]*d_inv_slip+d_sheara) * fv->stangent[0][a]
+                                * d_dist[jvar] * bf[var]->phi[j]
+                                +fv->stangent[0][a]*(inv_slip*dt_veloc_dx[0][a][jvar][j]
+                                +dsheara_dx[a][jvar][j]))
+                                * bf[eqn]->phi[ldof];
+                           if( dim == 3) d_cfunc[ldof][a][var][j] +=
+                                   ((t_veloc[1]*inv_slip+shearb) * fv->dstangent_dx[1][a][jvar][j]
+                                   + (t_veloc[1]*d_inv_slip+d_shearb) * fv->stangent[1][a]
+                                   * d_dist[jvar] * bf[var]->phi[j]
+                                   +fv->stangent[1][a]*(inv_slip*dt_veloc_dx[1][a][jvar][j]
+                                     +dshearb_dx[a][jvar][j]))
+                                     * bf[eqn]->phi[ldof];
 			}
 		    }
 		}
@@ -5132,13 +5879,15 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
 	  for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
 	    {
 	      var = VELOCITY1 + jvar;
-	      if (pd->v[var]) 
+	      if (pd->v[pg->imtrx][var]) 
 		{
 		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 		    {
 		      for (a=0; a<ei[pg->imtrx]->ielem_dim; a++)
 			{
-			  
+                          d_cfunc[ldof][a][var][j] +=
+                                   fv->snormal[jvar]*bf[var]->phi[j]*
+                                   force*fv->snormal[a]*bf[eqn]->phi[ldof];
 			  d_cfunc[ldof][a][var][j] += 
                                    fv->stangent[0][jvar]*bf[var]->phi[j]*
                                    inv_slip * fv->stangent[0][a]*bf[eqn]->phi[ldof]; 
@@ -5164,21 +5913,21 @@ apply_repulsion_roll (double cfunc[MDE][DIM],
       
       for (a=0; a<ei[pg->imtrx]->ielem_dim; a++)
 	{  
-	  cfunc[ldof][a] += force * fv->snormal[a] * bf[eqn]->phi[ldof]; 
-	  cfunc[ldof][a] += inv_slip * fv->stangent[0][a]*t_veloc[0]*bf[eqn]->phi[ldof]; 
+          cfunc[ldof][a] += force * n_veloc*fv->snormal[a] * bf[eqn]->phi[ldof];
+          cfunc[ldof][a] += (inv_slip*t_veloc[0] + sheara ) * fv->stangent[0][a]*bf[eqn]->phi[ldof];
 	}
       if( dim == 3)
       {
       for (a=0; a<ei[pg->imtrx]->ielem_dim; a++)
 	{  
-	  cfunc[ldof][a] += inv_slip * fv->stangent[1][a]*t_veloc[1]*bf[eqn]->phi[ldof]; 
+          cfunc[ldof][a] += (inv_slip*t_veloc[1] + shearb) * fv->stangent[1][a]*bf[eqn]->phi[ldof];
 	}
       }
     }
     
   } /* end of for (i = 0; i < (int) elem_side_bc->num_nodes_on_side */
 
-} /* END of routine apply_repulsion                                          */
+} /* END of routine apply_repulsion_roll                                          */
 /*****************************************************************************/
 
 void 
@@ -5256,7 +6005,7 @@ apply_repulsion_user (double cfunc[MDE][DIM],
 	  for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
 	    {
 	      var = MESH_DISPLACEMENT1 + jvar;
-	      if (pd->v[var]) 
+	      if (pd->v[pg->imtrx][var]) 
 		{
 		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
                      {
@@ -5273,7 +6022,7 @@ apply_repulsion_user (double cfunc[MDE][DIM],
 	  for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
 	    {
 	      var = MESH_DISPLACEMENT1 + jvar;
-	      if (pd->v[var]) 
+	      if (pd->v[pg->imtrx][var]) 
 		{
 		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
                      {
@@ -5290,7 +6039,7 @@ apply_repulsion_user (double cfunc[MDE][DIM],
 	id = (int) elem_side_bc->local_elem_node_id[i];
 	I = Proc_Elem_Connect[iconnect_ptr + id];
 	ldof  = ei[pg->imtrx]->ln_to_dof[eqn][id];
-        if (Dolphin[pg->imtrx][I][VELOCITY1] > 0 ) {
+	if (Dolphin[pg->imtrx][I][VELOCITY1] > 0 ) {
 	  
 	  /* 
 	   *  Evaluate sensitivity to displacements d()/dx 
@@ -5298,7 +6047,7 @@ apply_repulsion_user (double cfunc[MDE][DIM],
 	  for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
 	    {
 	      var = MESH_DISPLACEMENT1 + jvar;
-	      if (pd->v[var]) 
+	      if (pd->v[pg->imtrx][var]) 
 		{
 		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 		    {
@@ -5333,7 +6082,7 @@ apply_repulsion_user (double cfunc[MDE][DIM],
 	  for (jvar=0; jvar<ei[pg->imtrx]->ielem_dim; jvar++)
 	    {
 	      var = VELOCITY1 + jvar;
-	      if (pd->v[var]) 
+	      if (pd->v[pg->imtrx][var]) 
 		{
 		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 		    {
@@ -5911,7 +6660,7 @@ flow_n_dot_T_var_density(double func[DIM],
     press = rho*(f[0]*fv->x[0] + f[1]*fv->x[1] + f[2]*fv->x[2]) + a;
     for (jvar = 0; jvar < ei[pg->imtrx]->ielem_dim; jvar++) {
       var = MESH_DISPLACEMENT1 + jvar;                                             //Jacobian wrt mesh displacement
-      if (pd->v[var]) {
+      if (pd->v[pg->imtrx][var]) {
 	for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 	  for (p = 0; p < pd->Num_Dim; p++) {
             d_func[p][var][j] -= rho*f[jvar]*bf[var]->phi[j]*fv->snormal[p];       //dx term
@@ -6068,7 +6817,14 @@ flow_n_dot_T_nobc(double func[DIM],
   if(iflag == -1) fv->P = pdatum;
 
   /* compute stress tensor and its derivatives */
-  fluid_stress( Pi, d_Pi );
+  if(vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
+    {
+      fluid_stress_conf( Pi, d_Pi);
+    }
+  else  
+    {
+      fluid_stress( Pi, d_Pi );
+    }
 
   /* now is the time to clean up, so, if using the datum for pressure, fix fv->P
    */
@@ -6103,6 +6859,22 @@ flow_n_dot_T_nobc(double func[DIM],
 		  for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
 		    {
 		      d_func[p][var][j] += fv->snormal[q]*d_Pi->nn[p][q][j];
+		    }
+		}
+	    }
+	}
+
+      var = RESTIME;
+      if (pd->v[pg->imtrx][var] )
+	{
+
+	  for (p=0; p<pd->Num_Dim; p++)
+	    {
+	      for (q=0; q<pd->Num_Dim; q++)
+		{
+		  for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+		    {
+		      d_func[p][var][j] += fv->snormal[q]*d_Pi->degrade[p][q][j];
 		    }
 		}
 	    }
@@ -6239,7 +7011,8 @@ flow_n_dot_T_nobc(double func[DIM],
 	    }
 	}
 
-      if ( pd->v[pg->imtrx][POLYMER_STRESS11] && (vn->evssModel == EVSS_F) )
+      if ( pd->v[pg->imtrx][POLYMER_STRESS11] && (vn->evssModel == EVSS_F || vn->evssModel == LOG_CONF
+				       || vn->evssModel == EVSS_GRADV || vn->evssModel == LOG_CONF_GRADV) )
 	{
 	  for (p=0; p<pd->Num_Dim; p++)
 	    {
@@ -6417,6 +7190,138 @@ if(iflag != -1)
 		}
 
 } /* END of routine flow_n_dot_T_gradv                                      */
+/*****************************************************************************/
+
+/* FLOW_GRADV_SIC Strongly integrated condition */
+void
+flow_n_dot_T_gradv_sic(double func[DIM],
+		   double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+		   const double pdatum, /* pressure datum from input card */
+		   const int iflag)  /* -1 to use pdatum, otherwise use P  */
+
+/****************************************************************************
+*
+*  Function which uses the fully-developed fluid stresses
+*		 in the fluid stress bcs
+*
+*****************************************************************************/
+{
+  int i, j, var, p, q;
+  int a, b;
+
+  /*
+   * Variables for vicosity and derivative
+   */
+  dbl gamma[DIM][DIM];
+  dbl mu;
+  VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;  /* viscosity dependence */
+  VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
+
+  if(af->Assemble_LSA_Mass_Matrix)
+    return;
+
+  /**
+	compute gammadot, viscosity
+   **/
+  for ( i=0; i<VIM; i++)
+    {
+      for ( j=0; j<VIM; j++)
+	{
+	  gamma[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+	}
+    }
+
+  mu = viscosity(gn, gamma, d_mu);
+  if (af->Assemble_Jacobian)
+    {
+
+
+      var = TEMPERATURE;
+      if (pd->v[pg->imtrx][var] )
+	{
+	  for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	    {
+	      for (p=0; p<pd->Num_Dim; p++)
+		{
+		  for (q=0; q<pd->Num_Dim; q++)
+		    {
+		      d_func[p][var][j] += fv->snormal[q]*d_mu->T[j]*fv->grad_v[p][q];
+		    }
+		}
+	    }
+	}
+
+      if(iflag != -1)
+	{
+	  var = PRESSURE;
+	  if (pd->v[pg->imtrx][var] )
+	    {
+	      for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+		{
+		  for (p=0; p<pd->Num_Dim; p++)
+		    {
+		      d_func[p][var][j] += 0.;
+		    }
+		}
+	    }
+	}
+
+      if (pd->v[pg->imtrx][VELOCITY1] )
+	{
+	  for ( a=0; a<VIM; a++)
+	    {
+	      var = VELOCITY1+a;
+	      for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+		{
+		  for (p=0; p<pd->Num_Dim; p++)
+		    {
+		      for (q=0; q<pd->Num_Dim; q++)
+			{
+			  d_func[p][var][j] += fv->snormal[q]*(mu*bf[var]->grad_phi_e[j][a][p][q]
+							       + fv->grad_v[p][q] * d_mu->v[a][j]);
+			}
+		    }
+		}
+	    }
+	}
+      if (pd->v[pg->imtrx][MESH_DISPLACEMENT1] )
+	{
+	  for ( b=0; b<VIM; b++)
+	    {
+	      var = MESH_DISPLACEMENT1+b;
+	      for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
+                {
+		  for (p=0; p<pd->Num_Dim; p++)
+		    {
+		      d_func[p][var][j] += 0.;
+
+		      for (q=0; q<pd->Num_Dim; q++)
+			{
+			  d_func[p][var][j] += fv->snormal[q]*(mu*fv->d_grad_v_dmesh[p][q][b][j]
+							       + fv->grad_v[p][q] * d_mu->X[b][j])
+			    + fv->dsnormal_dx[q][b][j]*mu*fv->grad_v[p][q];
+			}
+		    }
+		}
+            }
+	}
+
+
+
+
+    }  /*  end of if Assemble_Jacobian  */
+
+   /*  load in stresses */
+
+  for (p=0; p<pd->Num_Dim; p++)
+    {
+      for (q=0; q<pd->Num_Dim; q++)
+	{
+	  func[p] += fv->snormal[q]*mu*fv->grad_v[p][q];
+	}
+    }
+
+} /* END of routine flow_n_dot_T_gradv_sic                                   */
 /*****************************************************************************/
 
 void
@@ -6992,6 +7897,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   int v_s[MAX_MODES][DIM][DIM];
   int inv_v_s [DIM][DIM];
   int dim = pd->Num_Dim;
+  int logc_gradv = 0;
 
   dbl grad_v[DIM][DIM];    /* Velocity gradient based on velocity - discontinuous across element */
   dbl gamma[DIM][DIM];     /* Shear-rate tensor based on velocity */
@@ -7054,6 +7960,11 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
   memset( R1, 0, sizeof(double)*DIM*DIM);
   memset( eig_values, 0, sizeof(double)*DIM);
 
+  if(vn->evssModel == LOG_CONF_GRADV)
+    {
+      logc_gradv = 1;
+    }
+  
   /*
    * Load up Field variables...
    */
@@ -7131,7 +8042,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
 
       //Giesekus mobility parameter
       alpha = ve[mode]->alpha;
-
+     
       //Polymer time constant
       if(ve[mode]->time_constModel == CONSTANT)
         {
@@ -7144,11 +8055,11 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
 
       if(VIM==2)
         {
-          compute_exp_s(s, exp_s, eig_values, R1);
+          compute_exp_s(s, exp_s, eig_values, R1); 
         }
       else
 	{
-	  EH(-1, "Log-conformation tensor tested only for 2D.");
+	  EH(-1, "Log-conformation tensor tested only for 2D.");	  
 	}
 
       // Decompose velocity gradient
@@ -7171,33 +8082,40 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
             }
         }
 
-      for(i=0; i<VIM; i++)
-        {
-          for(j=0; j<VIM; j++)
+      for(i=0; i<VIM; i++) 
+        {    
+          for(j=0; j<VIM; j++) 
             {
-              Rt_dot_gradv[i][j] = 0.;
-              for(w=0; w<VIM; w++)
+              Rt_dot_gradv[i][j] = 0.;  
+              for(w=0; w<VIM; w++) 
                 {
-                  Rt_dot_gradv[i][j] += R1_T[i][w] * gt[w][j];
+		  if(logc_gradv)
+		    {
+		      Rt_dot_gradv[i][j] += R1_T[i][w] * grad_v[j][w];
+		    }
+		  else
+		    {
+		      Rt_dot_gradv[i][j] += R1_T[i][w] * gt[w][j];
+		    }
                 }
             }
-        }
+        }     
 
-      for(i=0; i<VIM; i++)
-        {
-          for(j=0; j<VIM; j++)
+      for(i=0; i<VIM; i++) 
+        {    
+          for(j=0; j<VIM; j++) 
             {
               M1[i][j] = 0.;
-              for(w=0; w<VIM; w++)
+              for(w=0; w<VIM; w++) 
                 {
                   M1[i][j] += Rt_dot_gradv[i][w] * R1[w][j];
                 }
             }
-        }
+        }  
 
       //Predetermine advective terms
-      trace = eig_values[0]+eig_values[1];
-
+      trace = eig_values[0]+eig_values[1]; 
+      
       //PTT exponent
       eps  = ve[mode]->eps;
 
@@ -7286,6 +8204,7 @@ stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
      } /* End of loop over modes */
 }/* END of routine stress_no_v_dot_gradS_logc                                 */
 
+
 void
 PSPG_consistency_bc (double *func,
 		     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
@@ -7293,7 +8212,7 @@ PSPG_consistency_bc (double *func,
 		     const dbl time, /* current time  */
 		     const dbl dt, /* time step size */
 		     const dbl tt, /* time step parameter */
-		     const PG_DATA *pg_data)  /* global velocity norm */
+		     const PG_DATA *pg_data)
 /******************************************************************************
 *
 *  Function which calculates the missing pressure stabilization terms 
@@ -7302,7 +8221,6 @@ PSPG_consistency_bc (double *func,
 ******************************************************************************/
      
 {
-  
 /* Local variables */
   
   int j, var, a, b, q, p;
@@ -7338,8 +8256,11 @@ PSPG_consistency_bc (double *func,
 
   dbl h_elem;
   dbl rho;
-  dbl Re;
+  int pspg_local = 0;
+  int pspg_global = 0;
   dbl tau_pspg = 0;
+  dbl d_tau_pspg_dv[DIM][MDE];
+  dbl d_tau_pspg_dX[DIM][MDE];
 
   dbl f[DIM];				/* Body force. */
   MOMENTUM_SOURCE_DEPENDENCE_STRUCT df_struct;  /* Body force dependence */
@@ -7359,26 +8280,38 @@ PSPG_consistency_bc (double *func,
   dbl d_div_tau_p_dy[DIM][MAX_CONC][MDE];      /* derivative wrt concentration */
   dbl d_div_tau_p_dv[DIM][DIM][MDE];           /* derivative wrt velocity */
   dbl d_div_tau_p_dmesh[DIM][DIM][MDE];        /* derivative wrt mesh */
-  dbl d_div_tau_p_dvd[DIM][DIM][MDE];          /* derivative wrt vorticity dir */
   dbl d_div_tau_p_dp[DIM][MDE];                /* derivative wrt pressure dir */
+
   stress_eqn_pointer(v_s);
 
-  const dbl h_elem_avg = pg_data->h_elem_avg;
-  const dbl *hsquared = pg_data->hsquared;      	/* element size information for PSPG         */
-  const dbl U_norm = pg_data->U_norm;	                /* global velocity norm for PSPG calcs       */
-  const dbl mu_avg = pg_data->mu_avg;	                /* element viscosity for PSPG calculations   */
-  const dbl rho_avg = pg_data->rho_avg;                 /* element density for PSPG calculations   */
-  const dbl *v_avg = pg_data->v_avg;
+  double h_elem_avg = pg_data->h_elem_avg;
+  double mu_avg = pg_data->mu_avg;
+  double U_norm = pg_data->U_norm;
   
-
-  dbl d_tau_pspg_dX[DIM][MDE];
-  dbl d_tau_pspg_dv[DIM][MDE];
-
   wim   = dim;
 
   if(pd->CoordinateSystem == SWIRLING ||
-     pd->CoordinateSystem == PROJECTED_CARTESIAN)
+     pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+     pd->CoordinateSystem == CARTESIAN_2pt5D)
     wim = wim+1;
+
+    /* This is the flag for the standard global PSPG */
+  if(PSPG == 1)
+    {
+      pspg_global = TRUE;
+      pspg_local = FALSE;
+    }
+  /* This is the flag for the standard local PSPG */
+  else if(PSPG == 2)
+    {
+      pspg_global = FALSE;
+      pspg_local = TRUE;
+    }
+  else
+    {
+      return;
+    }
+
 
 /*  h_elem = 0.;
   for ( p=0; p<dim; p++)
@@ -7396,28 +8329,10 @@ PSPG_consistency_bc (double *func,
   
   /* Now calculate the element Reynolds number based on a global 
      norm of the velocity */
-  
-  Re = rho * U_norm * h_elem / (2.0 * mu_avg);
 
+  memset( d_tau_pspg_dv, 0, sizeof(double) * DIM*MDE);
+  memset( d_tau_pspg_dX, 0, sizeof(double) * DIM*MDE);
 
-  int pspg_global;
-  int pspg_local;
-  if(PSPG == 1)
-    {
-      pspg_global = TRUE;
-      pspg_local = FALSE;
-    }
-  /* This is the flag for the standard local PSPG */
-  else if(PSPG == 2)
-    {
-      pspg_global = FALSE;
-      pspg_local = TRUE;
-    }
-  else
-    {
-      return;
-    }
-  
   if(pspg_global)
     {
 
@@ -7425,128 +8340,80 @@ PSPG_consistency_bc (double *func,
        * norm of the velocity and determine tau_pspg discretely from Re
        * The global version has no Jacobian dependencies
        */
-      Re = rho * U_norm * h_elem / (2.0 * mu_avg);
+      double Re = rho * U_norm * h_elem / (2.0 * mu_avg);
 
       if (Re <= 3.0)
-        {
-          tau_pspg = PS_scaling * h_elem * h_elem / (12.0 * mu_avg);
-        }
+	{
+	  tau_pspg = PS_scaling * h_elem * h_elem / (12.0 * mu_avg);
+	}
       else if (Re > 3.0)
-        {
-          tau_pspg = PS_scaling * h_elem / (2.0 * rho * U_norm);
-        }
+	{
+	  tau_pspg = PS_scaling * h_elem / (2.0 * rho * U_norm);
+	}
     }
   else if (pspg_local)
     {
       double hh_siz = 0.;
       for ( p=0; p<dim; p++)
-        {
-          hh_siz += hsquared[p];
-        }
+	{
+	  hh_siz += pg_data->hsquared[p];
+	}
       // Average value of h**2 in the element
       hh_siz = hh_siz/ ((double )dim);
 
       // Average value of v**2 in the element
       double vv_speed = 0.0;
       for ( a=0; a<wim; a++)
-        {
-          vv_speed += v_avg[a]*v_avg[a];
-        }
+	{
+	  vv_speed += pg_data->v_avg[a]*pg_data->v_avg[a];
+	}
 
-      if ((mp->DensityModel == CONSTANT) && ((gn->ConstitutiveEquation == NEWTONIAN) && (mp->ViscosityModel == CONSTANT)))
-        {
+      double rho_avg = pg_data->rho_avg;
+      double mu_avg = pg_data->mu_avg;
 
-            // Use vv_speed and hh_siz for tau_pspg, note it has a continuous dependence on Re
-            double tau_pspg1 = rho_avg*rho_avg*vv_speed/hh_siz + (9.0*mu_avg*mu_avg)/(hh_siz*hh_siz);
-            if (  pd->TimeIntegration != STEADY)
-              {
-                tau_pspg1 += 4.0/(dt*dt);
-              }
-            tau_pspg = PS_scaling/(rho_avg*sqrt(tau_pspg1));
+      // Use vv_speed and hh_siz for tau_pspg, note it has a continuous dependence on Re
+      double tau_pspg1 = rho_avg*rho_avg*vv_speed/hh_siz + (9.0*mu_avg*mu_avg)/(hh_siz*hh_siz);
+      if (  pd->TimeIntegration != STEADY)
+	{
+	  tau_pspg1 += 4.0/(dt*dt);
+	}
+      tau_pspg = PS_scaling/sqrt(tau_pspg1);
 
-            // tau_pspg derivatives wrt v from vv_speed
-            if (pd->v[pg->imtrx][VELOCITY1] )
-              {
-                for ( b=0; b<dim; b++)
-                  {
-                    var = VELOCITY1+b;
-                    if ( pd->v[pg->imtrx][var] )
-                      {
-                        for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-                          {
-                            d_tau_pspg_dv[b][j] = -tau_pspg/tau_pspg1;
-                            d_tau_pspg_dv[b][j] *= rho_avg*rho_avg/hh_siz * v_avg[b]*pg_data->dv_dnode[b][j];
-                          }
-                      }
-                  }
-              }
+      // tau_pspg derivatives wrt v from vv_speed
+      if (pd->v[pg->imtrx][VELOCITY1] )
+	{
+	  for ( b=0; b<dim; b++)
+	    {
+	      var = VELOCITY1+b;
+	      if ( pd->v[pg->imtrx][var] )
+		{
+		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+		    {
+		      d_tau_pspg_dv[b][j] = -tau_pspg/tau_pspg1;
+		      d_tau_pspg_dv[b][j] *= rho_avg*rho_avg/hh_siz * pg_data->v_avg[b]*pg_data->dv_dnode[b][j];
+		    }
+		}
+	    }
+	}
 
-            // tau_pspg derivatives wrt mesh from hh_siz
-            if (pd->v[pg->imtrx][MESH_DISPLACEMENT1] )
-              {
-                for ( b=0; b<dim; b++)
-                  {
-                    var = MESH_DISPLACEMENT1+b;
-                    if ( pd->v[pg->imtrx][var] )
-                      {
-                        for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-                          {
-                            d_tau_pspg_dX[b][j] = tau_pspg/tau_pspg1;
-                            d_tau_pspg_dX[b][j] *= (rho_avg*rho_avg*vv_speed + 18.0*mu_avg*mu_avg/hh_siz) / (hh_siz*hh_siz);
-                            d_tau_pspg_dX[b][j] *= pg_data->hhv[b][b]*pg_data->dhv_dxnode[b][j]/((double)dim);
+      // tau_pspg derivatives wrt mesh from hh_siz
+      if (pd->v[pg->imtrx][MESH_DISPLACEMENT1] )
+	{
+	  for ( b=0; b<dim; b++)
+	    {
+	      var = MESH_DISPLACEMENT1+b;
+	      if ( pd->v[pg->imtrx][var] )
+		{
+		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+		    {
+		      d_tau_pspg_dX[b][j] = tau_pspg/tau_pspg1;
+		      d_tau_pspg_dX[b][j] *= (rho_avg*rho_avg*vv_speed + 18.0*mu_avg*mu_avg/hh_siz) / (hh_siz*hh_siz);
+		      d_tau_pspg_dX[b][j] *= pg_data->hhv[b][b]*pg_data->dhv_dxnode[b][j]/((double)dim);
 
-                          }
-                      }
-                  }
-              }
-        }
-      else
-        {
-          double rho = pg_data->rho_avg;
-          double mu = pg_data->mu_avg;
-          // Use vv_speed and hh_siz for tau_pspg, note it has a continuous dependence on Re
-          double tau_pspg1 = vv_speed/hh_siz + (9.0*mu/rho)/(hh_siz*hh_siz);
-          if (  pd->TimeIntegration != STEADY)
-            {
-              tau_pspg1 += 4.0/(dt*dt);
-            }
-          tau_pspg = PS_scaling/(rho*sqrt(tau_pspg1));
-
-          // tau_pspg derivatives wrt v from vv_speed
-          if (pd->v[pg->imtrx][VELOCITY1] )
-            {
-              for ( b=0; b<dim; b++)
-                {
-                  var = VELOCITY1+b;
-                  if ( pd->v[pg->imtrx][var] )
-                    {
-                      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-                        {
-                          d_tau_pspg_dv[b][j] = -tau_pspg/tau_pspg1;
-                          d_tau_pspg_dv[b][j] *= 1/hh_siz * v_avg[b]*pg_data->dv_dnode[b][j];
-                        }
-                    }
-                }
-            }
-
-          // tau_pspg derivatives wrt mesh from hh_siz
-          if (pd->v[pg->imtrx][MESH_DISPLACEMENT1] )
-            {
-              for ( b=0; b<dim; b++)
-                {
-                  var = MESH_DISPLACEMENT1+b;
-                  if ( pd->v[pg->imtrx][var] )
-                    {
-                      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-                        {
-                          d_tau_pspg_dX[b][j] = tau_pspg/tau_pspg1;
-                          d_tau_pspg_dX[b][j] *= (vv_speed + 18.0*(mu/rho)/hh_siz) / (hh_siz*hh_siz);
-                          d_tau_pspg_dX[b][j] *= pg_data->hhv[b][b]*pg_data->dhv_dxnode[b][j]/((double)dim);
-                        }
-                    }
-                }
-            }
-        }
+		    }
+		}
+	    }
+	}
     }
   
   /* load up shearrate tensor based on velocity */
@@ -7606,13 +8473,12 @@ PSPG_consistency_bc (double *func,
   memset( d_div_tau_p_dy, 0, sizeof(double) * DIM*MAX_CONC*MDE);
   memset( d_div_tau_p_dv, 0, sizeof(double) * DIM*DIM*MDE);
   memset( d_div_tau_p_dmesh, 0, sizeof(double) * DIM*DIM*MDE);
-  memset( d_div_tau_p_dvd, 0, sizeof(double) * DIM*DIM*MDE);
   memset( d_div_tau_p_dp, 0, sizeof(double) * DIM*MDE);
   if( cr->MassFluxModel == DM_SUSPENSION_BALANCE && PSPG)
     {
       /* This is the divergence of the particle stress  */
   divergence_particle_stress(div_tau_p, d_div_tau_p_dgd, d_div_tau_p_dy,
-				   d_div_tau_p_dv, d_div_tau_p_dmesh, d_div_tau_p_dvd, 
+                                   d_div_tau_p_dv, d_div_tau_p_dmesh,
 				   d_div_tau_p_dp, w); 
     }
 
@@ -7653,10 +8519,6 @@ PSPG_consistency_bc (double *func,
 	      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 		d_func[0][var][j] += tau_pspg * bf[var]->phi[j] * rho *
 		    pd->etm[pg->imtrx][meqn][(LOG2_MASS)] * fv->snormal[a];
-		for (int b = 0; b < pd->Num_Dim; b++)
-		{
-		  d_func[0][var][j] += d_tau_pspg_dv[a][j]*momentum_residual[b] * fv->snormal[b];
-		}
 	      }
 	    }
 	  }
@@ -7669,8 +8531,7 @@ PSPG_consistency_bc (double *func,
 		  {
 		    meqn = R_MOMENTUM1 + b;
 		    d_func[0][var][j] -= rho * bf[var]->phi[j] * fv->grad_v[a][b] 
-		      * pd->etm[pg->imtrx][meqn][(LOG2_ADVECTION)] * fv->snormal[b] * tau_pspg
-			+ momentum_residual[b] * fv->snormal[b] * d_tau_pspg_dX[a][j];
+		      * pd->etm[pg->imtrx][meqn][(LOG2_ADVECTION)] * fv->snormal[b] * tau_pspg;
 		  }
 	}
       return;
@@ -7730,11 +8591,8 @@ PSPG_consistency_bc (double *func,
 			tau_pspg * (mass + diffusion + advection_a + source_a) * fv->snormal[a];
 		    }
 
-		  d_func[0][var][j] += pressure_stabilization;
-		  for (int p = 0; p < pd->Num_Dim; p++)
-		    {
-		      d_func[0][var][j] += d_tau_pspg_dv[b][j]* momentum_residual[p] * fv->snormal[p];
-		    }
+		  d_func[0][var][j] += pressure_stabilization
+		      + d_tau_pspg_dv[b][j] * momentum_residual[a] * fv->snormal[a];
 		}
 	    }
 	}
@@ -7991,11 +8849,8 @@ PSPG_consistency_bc (double *func,
 			    + (advection_a + source_a + pressure + stress + velocity_gradient) * fv->snormal[a];
 			}
 		    }
-		  d_func[0][var][j] += tau_pspg*pressure_stabilization;
-		  for (int p = 0; p < pd->Num_Dim; p++)
-		    {
-		      d_func[0][var][j] += d_tau_pspg_dX[b][j]* momentum_residual[p] * fv->snormal[p];
-		    }
+		  d_func[0][var][j] += tau_pspg*pressure_stabilization
+		      + d_tau_pspg_dX[b][j] * momentum_residual[a] * fv->snormal[a];
 		}
 	    }
 	}
@@ -8480,7 +9335,7 @@ evaluate_gibbs_criterion(
      
 {
   int p;
-  dbl actual_angle, dot_prod, pos[3] = {0,0,0};
+  dbl actual_angle, dot_prod, pos[3];
   
 /***************************** EXECUTION BEGINS ******************************/
 
@@ -8491,7 +9346,7 @@ evaluate_gibbs_criterion(
   pos[1] = y_pos - fv->x[1];
   if(pd->Num_Dim == 3)
     {
-      pos[2] += x_pos - fv->x[2];
+      pos[2] = x_pos - fv->x[2];
     }
   
   /* 2D only for now */
@@ -8770,8 +9625,10 @@ void fapply_moving_CA_sinh(
  const double wall_velocity,
  const double theta_max_degrees,
  const double dewet_input,
+ const double dcl_shearrate,
  const int bc_type,	/*  bc identifier	*/
- double dwall_velo_dx[MAX_PDIM][MDE])
+ double dwall_velo_dx[MAX_PDIM][MDE],
+ const int local_node)
 {
   int j, var, p, q, w;
 
@@ -8779,9 +9636,9 @@ void fapply_moving_CA_sinh(
   double dsstangent_qpj = 0.0;
 
   double sign;
-  double dnnddpj;
-  double dvmesh_ddpj;
-  double dv_ddpj = 0.0;
+  double dnnddpj, dnn_ss_ddpj;
+  double dvmesh_ddpj, dvmesh_ss_ddpj;
+  double dv_ddpj = 0.0, dv_ss_ddpj = 0.0;
   double costheta;
   
   const double t_relax = relaxation_time;
@@ -8796,9 +9653,9 @@ void fapply_moving_CA_sinh(
   double v_mesh, v_mesh_dt;
 
 /*  Hoffman correlation variables	*/
-  double ca_no, g_sca = 0.0, g_dca = 0.0;
+  double ca_no = 0.0, g_sca = 0.0, g_dca = 0.0;
 #ifdef NEW_HOFFMAN_FCN_PLEASE
-  double g_deriv;
+  double g_deriv, g_deriv_ss;
   double hoff_C=0.012874005, hoff_N=2.80906762, hoff_F=0.7093681;
   double hoff_M=1.253351327, hoff_R=9.614608063;
   double hoff_D=velocity_pre_exponential*M_PIE/180.0;
@@ -8807,7 +9664,7 @@ void fapply_moving_CA_sinh(
   int iter, iter_max=20;
   double eps_tol=1.0e-12;
 #endif
-  double liq_visc = 0.0, gamma[DIM][DIM];
+  double liq_visc = 0.0, gamma[VIM][VIM];
   VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;  /* viscosity dependence */
   VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
 
@@ -8833,12 +9690,12 @@ void fapply_moving_CA_sinh(
 /* Shikhmurzaev wetting parameters	*/
   double rhs = 0.0, rhs_den = 0.0, rhs_num = 0.0, veloc0 = 0.0, veloc0max;
   double drhs_ddpj, drhs_den_ddpj, drhs_num_ddpj, dveloc0_ddpj;
+  double drhs_ss_ddpj, drhs_den_ss_ddpj, drhs_num_ss_ddpj, dveloc0_ss_ddpj;
   double theta_max = 0.0, costhetamax = 0.0, sinthetamax = 0.0, dewet = 0.0;
   const double shik_max_factor = 1.01;
 /*  const double wall_sign = (TimeIntegration == STEADY) ? 1 : -1;  */
 /* disabling this sign change for now - doesn't seem necessary*/
-  const double wall_sign = (TimeIntegration == STEADY) ? 1 : 1;  
-
+  const double wall_sign = (TimeIntegration == STEADY) ? 1 : 1;   
 
   /*
    * What's the cosine of the current instantaneous contact angle, the
@@ -8854,7 +9711,7 @@ void fapply_moving_CA_sinh(
 	{
 	case VELO_THETA_COX_BC:
 	reciprocal_slip = 1./velocity_pre_exponential;
-        /* fall through */
+	/* fall through */
 	case VELO_THETA_SHIK_BC:
   	theta_max = M_PIE*theta_max_degrees/180.;
 	thetaeq = equilibrium_contact_angle * (M_PIE/180);
@@ -8884,14 +9741,24 @@ void fapply_moving_CA_sinh(
 
   if( bc_type == VELO_THETA_COX_BC || bc_type == VELO_THETA_HOFFMAN_BC )
 	{
+         if( dcl_shearrate > 0)
+           {
+             memset( gamma, 0, sizeof(double)*VIM*VIM);
+	     gamma[0][1] = gamma[1][0] = dcl_shearrate;
+             fv->T = mp->reference[TEMPERATURE];
+             liq_visc = viscosity(gn, gamma, NULL);
+           }
+         else
+           {
          for ( p=0; p<VIM; p++)
             {
                 for ( q=0; q<VIM; q++)
                     {
-                     gamma[p][q] = fv->grad_v[p][q] + fv->grad_v[q][p];
+                     gamma[p][q] = fv->grad_v[p][q] + fv->grad_v[q][p]; 
                     }
+            }
+            liq_visc = viscosity(gn, gamma, d_mu);
            }
-          liq_visc = viscosity(gn, gamma, d_mu);
 	}
 
   /*
@@ -8930,7 +9797,7 @@ void fapply_moving_CA_sinh(
                       g_dca = hoff_C*hoff_R/pow(hoff_D,hoff_M)
                             *(1.0+hoff_M/hoff_D*(theta-theta_max+hoff_D));
                      }
-       		if(!finite(g_dca)) { g_dca = SGN(g_dca)*BIG_PENALTY; }
+       		if(!isfinite(g_dca)) { g_dca = SGN(g_dca)*BIG_PENALTY; }
 #else
 		ca_no = 1.0E+06; iter = 0; eps=10.*eps_tol;
 		while (iter <= iter_max && fabs(eps) > eps_tol)
@@ -8952,7 +9819,7 @@ void fapply_moving_CA_sinh(
 			eps = -(ca_no - 1.31*pow(ca_no,0.99)*A_dca-A_dca)/
 					(1.-1.31*0.99*A_dca/pow(ca_no,0.01));
 			ca_no += eps;
-			if(!finite(ca_no))
+			if(!isfinite(ca_no))
 			    {
 				ca_no = eps = DBL_MAX/10.;
 			    }
@@ -9090,12 +9957,16 @@ void fapply_moving_CA_sinh(
    *          v - t.dxdt = 0
    */
 
+#ifdef ALE_DCA_INFO_PLEASE
+if ( af->Assemble_Jacobian ) 
+fprintf(stderr,"v_wetting: %g v_mesh: %g dvmdt: %g DCA: %g\n",v,v_mesh, v_mesh_dt,acos(costheta)*180/M_PIE);
+#endif
 #if 0
-fprintf(stderr,"\nwall_v x_dot  %g %g %g \n",wall_sign*wall_velocity,x_dot[0],x_dot[1]);
-fprintf(stderr,"cos sin CA#  %g %g %g \n",costheta, sintheta, ca_no);
-fprintf(stderr,"v_wetting v_mesh DCA  %g %g %g %g\n",v,v_mesh, v_mesh_dt,acos(costheta)*180/M_PIE);
-fprintf(stderr,"dewet sign  %g %g %g\n",dewet, sign, wall_sign);
-fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
+fprintf(stderr,"fs_normal: %g %g ss_normal: %g %g\n",fsnormal[0],fsnormal[1],ssnormal[0],ssnormal[1]);
+fprintf(stderr,"\nwall_v: %g  x_dot: %g %g \n",wall_sign*wall_velocity,x_dot[0],x_dot[1]);
+fprintf(stderr,"cos: %g  sin: %g  CA#:  %g \n",costheta, sintheta, ca_no);
+fprintf(stderr,"dewet %g sign  %g wall_sign %g\n",dewet, sign, wall_sign);
+fprintf(stderr,"velocity  %g v_mesh %g dvmdt: %g node: %d\n",v,v_mesh,v_mesh_dt,local_node);
 #endif
 
   if ( pd->Num_Dim != 1) 
@@ -9127,11 +9998,13 @@ fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
 	  for (j=0; j<ei[pg->imtrx]->dof[var]; j++)
 	    {
 	      dnnddpj = 0;
+	      dnn_ss_ddpj = 0;
 	      dvmesh_ddpj = 0;
+	      dvmesh_ss_ddpj = 0;
 	      for (q=0; q<pd->Num_Dim; q++)
 		{
-		  dnnddpj += ( dfsnormal_dx[q][p][j]*ssnormal[q] +
-			       dssnormal_dx[q][p][j]*fsnormal[q] );
+		  dnnddpj += dfsnormal_dx[q][p][j]*ssnormal[q];
+		  dnn_ss_ddpj += dssnormal_dx[q][p][j]*fsnormal[q];
 		  
 		  /*
 		   * d(sstangent[q])/d_d[p][j] = +/- d(ssnormal[D-q])/d_d[p][j]
@@ -9149,15 +10022,19 @@ fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
 		      dsstangent_qpj = dssnormal_dx[0][p][j];
 		      break;
 		    case 2:
-		      dsstangent_qpj = dssnormal_dx[2][p][j];		      
+/*		      dsstangent_qpj = dssnormal_dx[2][p][j];		      */
+		      dsstangent_qpj = 0.0;
 		      break;
 		    }
 
-   		  if ( TimeIntegration != 0 )
+   		  if ( TimeIntegration == TRANSIENT )
  		  	{
-		  	dvmesh_ddpj += sign * ( dsstangent_qpj*x_dot[q]+ 
-						sstangent[q]*(1.+2.*tt) 
-				   * delta(p,q) * (bf[var]->phi[j])/dt );
+                        if(j == local_node)	{
+		  	dvmesh_ddpj += sign * sstangent[q]*(1.+2.*tt) 
+				   * delta(p,q) * (bf[var]->phi[j])/dt;
+		               }
+		  	dvmesh_ss_ddpj += sign * dsstangent_qpj*x_dot[q];
+		  	dvmesh_ss_ddpj -= t_relax*sign * dsstangent_qpj*fv_dot->v[q]; 
 	   	  	}
 			else
 			{
@@ -9170,35 +10047,53 @@ fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
 			case VELO_THETA_TPL_BC:
 	      			dv_ddpj = dewet*v0 * cosh((costhetaeq - costheta)*g)
 					 * g * (-dnnddpj) * factor;
+	      			dv_ss_ddpj = dewet*v0*cosh((costhetaeq-costheta)*g)
+					 * g * (-dnn_ss_ddpj) * factor;
 				break;
 			case VELO_THETA_HOFFMAN_BC:
 #ifdef NEW_HOFFMAN_FCN_PLEASE
                                 dv_ddpj = factor*dewet*g/liq_visc;
+                                dv_ss_ddpj = dv_ddpj;
                                 if(theta < hoff_F*theta_max)
                                      {
                         g_deriv = hoff_C*hoff_N*pow(theta,hoff_N-1.)
                                       /(-sintheta)*(dnnddpj);
+                        g_deriv_ss = hoff_C*hoff_N*pow(theta,hoff_N-1.)
+                                      /(-sintheta)*(dnn_ss_ddpj);
                                      }
                                 else if(theta < theta_max-hoff_D)
                                      {
                         g_deriv = hoff_C*hoff_R*hoff_M
                            /pow(theta_max-theta,hoff_M+1.)/(-sintheta)*(dnnddpj);
+                        g_deriv_ss = hoff_C*hoff_R*hoff_M
+                           /pow(theta_max-theta,hoff_M+1.)/(-sintheta)*(dnn_ss_ddpj);
                                      }
                                 else 
                                      {
                         g_deriv = hoff_C*hoff_R*hoff_M/pow(hoff_D,hoff_M+1.0)
                            /(-sintheta)*dnnddpj;
+                        g_deriv_ss = hoff_C*hoff_R*hoff_M/pow(hoff_D,hoff_M+1.0)
+                           /(-sintheta)*dnn_ss_ddpj;
                                      }
-       			if(!finite(g_deriv)) { g_deriv = SGN(g_deriv)*BIG_PENALTY; }
+       			if(!isfinite(g_deriv)) { g_deriv = SGN(g_deriv)*BIG_PENALTY; }
+       			if(!isfinite(g_deriv_ss)) { g_deriv_ss = SGN(g_deriv_ss)*BIG_PENALTY; }
                         	dv_ddpj *= g_deriv;
+                        	dv_ss_ddpj *= g_deriv_ss;
 #else
 	      			dv_ddpj = factor*dewet*g/liq_visc * 
 					(1.+1.31*pow(g_dca,0.99))/
 				(1.-1.31*0.99*A_dca/pow(g_dca,0.01))*
 				pow(A_dca,0.294)*(-4.)*dnnddpj/ (0.706*2*5.16
 					*(3.-costheta)*(1.+costheta));
+	      			dv_ss_ddpj = factor*dewet*g/liq_visc * 
+					(1.+1.31*pow(g_dca,0.99))/
+				(1.-1.31*0.99*A_dca/pow(g_dca,0.01))*
+				pow(A_dca,0.294)*(-4.)*dnn_ss_ddpj/ (0.706*2*5.16
+					*(3.-costheta)*(1.+costheta));
 #endif
 				dv_ddpj += factor*dewet*(g_dca-g_sca)*g
+					*(-d_mu->X[p][j]/SQUARE(liq_visc));
+				dv_ss_ddpj += factor*dewet*(g_dca-g_sca)*g
 					*(-d_mu->X[p][j]/SQUARE(liq_visc));
 				break;
 			case VELO_THETA_COX_BC:
@@ -9207,24 +10102,40 @@ fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
 					(q_inner/f_sca - q_outer/f_dca);
 	      			dv_ddpj = factor*dewet*g/liq_visc * 
 					(1./(f_dca*(-sintheta))*dnnddpj)/f_den;
+	      			dv_ss_ddpj = factor*dewet*g/liq_visc * 
+					(1./(f_dca*(-sintheta))*dnn_ss_ddpj)/f_den;
 				break;
 			case VELO_THETA_SHIK_BC:
 				dveloc0_ddpj = dnnddpj*(SQUARE(theta) + 
 					theta*sintheta*costheta-2*SQUARE(sintheta))/
 					(SQUARE(sintheta*costheta)-
 					2*theta*sintheta*costheta+SQUARE(theta));
+				dveloc0_ss_ddpj = dnn_ss_ddpj*(SQUARE(theta) + 
+					theta*sintheta*costheta-2*SQUARE(sintheta))/
+					(SQUARE(sintheta*costheta)-
+					2*theta*sintheta*costheta+SQUARE(theta));
 				drhs_num_ddpj = -dnnddpj;
+				drhs_num_ss_ddpj = -dnn_ss_ddpj;
 				drhs_den_ddpj = (v0-1)*dveloc0_ddpj + dnnddpj;
+				drhs_den_ss_ddpj = (v0-1)*dveloc0_ss_ddpj + dnn_ss_ddpj;
 				if(theta_max > theta_max_degrees*M_PIE/180.)
+				  {
 					drhs_den_ddpj *= (1.-1./shik_max_factor);
+					drhs_den_ss_ddpj *= (1.-1./shik_max_factor);
+				  }
 				drhs_ddpj = (rhs_den*drhs_num_ddpj 
 					- rhs_num*drhs_den_ddpj)/SQUARE(rhs_den);
+				drhs_ss_ddpj = (rhs_den*drhs_num_ss_ddpj 
+					- rhs_num*drhs_den_ss_ddpj)/SQUARE(rhs_den);
 	      			dv_ddpj = factor*0.5*sqrt(g*v0)*(1-0.5*rhs)
 						*drhs_ddpj/pow(1+rhs,1.5);
+	      			dv_ss_ddpj = factor*0.5*sqrt(g*v0)*(1-0.5*rhs)
+						*drhs_ss_ddpj/pow(1+rhs,1.5);
 				break;
 			}
 
 	      d_func[0][var][j] += BIG_PENALTY * ( dv_ddpj - dvmesh_ddpj);
+	      d_func_ss[0][var][j] += BIG_PENALTY * ( dv_ss_ddpj - dvmesh_ss_ddpj);
 	    }
 	}
     }
@@ -9262,9 +10173,12 @@ fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
 				break;
 			}
 		d_func[0][var][j] += BIG_PENALTY * dv_ddpj;
+		d_func_ss[0][var][j] += BIG_PENALTY * dv_ddpj;  
    		  if ( TimeIntegration != 0 )
  		  	{
 		d_func[0][var][j] += BIG_PENALTY*t_relax*sign * 
+                           (sstangent[p]*(1.+2.*tt)*bf[var]->phi[j]/dt );
+		d_func_ss[0][var][j] += BIG_PENALTY*t_relax*sign * 
                            (sstangent[p]*(1.+2.*tt)*bf[var]->phi[j]/dt );
 	   	  	}
 	    }
@@ -9304,6 +10218,7 @@ fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
 				break;
 			}
 		d_func[0][var][j] += BIG_PENALTY * dv_ddpj;
+		d_func_ss[0][var][j] += BIG_PENALTY * dv_ddpj; 
 	      }
 	  }
 
@@ -9343,6 +10258,7 @@ fprintf(stderr,"velocity  %g %g %g\n",v,v_mesh,v_mesh_dt);
 				break;
 			}
 		     d_func[0][MAX_VARIABLE_TYPES + w][j] += BIG_PENALTY*dv_ddpj;
+		     d_func_ss[0][MAX_VARIABLE_TYPES + w][j] += BIG_PENALTY*dv_ddpj; 
 		    }
 		}
 	    }
@@ -9428,7 +10344,9 @@ fapply_ST(
 
 	     if(pd->CoordinateSystem == CYLINDRICAL ||
                 pd->CoordinateSystem == SWIRLING ||
-		pd->CoordinateSystem == PROJECTED_CARTESIAN) {
+		pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+		pd->CoordinateSystem == CARTESIAN_2pt5D) 
+              {
 	       var = MESH_DISPLACEMENT2;
 	       if (pd->v[pg->imtrx][var])
 		 {
@@ -10878,7 +11796,17 @@ apply_sharp_wetting_velocity(double func[MAX_PDIM],
 	}
     }
   /* compute stress tensor and its derivatives */
-  if( include_stress)  fluid_stress( Pi, d_Pi );
+  if( include_stress)  
+    {
+      if(vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
+        {
+          fluid_stress_conf( Pi, d_Pi);
+        }
+      else  
+        {
+          fluid_stress( Pi, d_Pi );
+        }
+    }
 
   for( a=0; a<dim; a++)
     {
@@ -13143,6 +14071,7 @@ q_velo_slip_bc(double func[MAX_PDIM],
   /* use fvelo_slip to evaluate slip and derivatives */
   fvelo_slip_bc(slip_stress, d_slip_stress, x, 
                 (int) BC_Types[ibc].BC_Name,
+                (int) BC_Types[ibc].max_DFlt,
                 BC_Types[ibc].BC_Data_Float,
                 (int) BC_Types[ibc].BC_Data_Int[0],
                 xsurf, tt, dt);
@@ -13392,7 +14321,7 @@ acoustic_plane_transmission(double func[DIM],
     return;
 
   if(bc_type == APR_PLANE_TRANS_BC || bc_type == API_PLANE_TRANS_BC )
-		imped_inv = 1./bdy_impedance/sqrt(cos(2.*bdy_absorption));
+		imped_inv = 1./bdy_impedance;
   if(bc_type == APR_VELOCITY_BC || bc_type == API_VELOCITY_BC )
 			normal_velo = bdy_impedance;
 
@@ -13410,14 +14339,14 @@ acoustic_plane_transmission(double func[DIM],
 	{
 	  for( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 	    {
-		  d_func[0][var][j] = imped_inv * bf[var]->phi[j]*cos(bdy_absorption);
+		  d_func[0][var][j] = imped_inv * bf[var]->phi[j];
 	    }
 	}
       	if ( pd->v[pg->imtrx][conj_var] )
 	{
 	  for( j=0; j<ei[pg->imtrx]->dof[conj_var]; j++)
 	    {
-		  d_func[0][conj_var][j] = imped_inv * bf[var]->phi[j]*sin(bdy_absorption);
+		  d_func[0][conj_var][j] = imped_inv * bf[var]->phi[j]*bdy_absorption;
 	    }
 	}
 	break;
@@ -13426,14 +14355,14 @@ acoustic_plane_transmission(double func[DIM],
 	{
 	  for( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 	    {
-		  d_func[0][var][j] = -imped_inv * bf[var]->phi[j]*cos(bdy_absorption);
+		  d_func[0][var][j] = -imped_inv * bf[var]->phi[j];
 	    }
 	}
       	if ( pd->v[pg->imtrx][conj_var] )
 	{
 	  for( j=0; j<ei[pg->imtrx]->dof[conj_var]; j++)
 	    {
-		  d_func[0][conj_var][j] = imped_inv * bf[var]->phi[j]*sin(bdy_absorption);
+		  d_func[0][conj_var][j] = -imped_inv * bf[var]->phi[j]*bdy_absorption;
 	    }
 	}
 	break;
@@ -13445,13 +14374,13 @@ acoustic_plane_transmission(double func[DIM],
     switch (bc_type) {
 	case APR_PLANE_TRANS_BC:
   		*func = imped_inv *
-  			((fv->api-2.*bdy_incident_imag)*cos(bdy_absorption)
-                         +(fv->apr-2.*bdy_incident_real)*sin(bdy_absorption));
+  			((fv->api-2.*bdy_incident_imag)
+                         -bdy_absorption*(fv->apr-2.*bdy_incident_real));
 		break;
 	case API_PLANE_TRANS_BC:
   		*func = imped_inv *
-  			(-(fv->apr-2.*bdy_incident_real)*cos(bdy_absorption)
-                         +(fv->api-2.*bdy_incident_imag)*sin(bdy_absorption));
+  			(-(fv->apr-2.*bdy_incident_real)
+                         -bdy_absorption*(fv->api-2.*bdy_incident_imag));
 		break;
 	case APR_VELOCITY_BC:
 		if( blk_id == -1 || blk_id == ei[pg->imtrx]->elem_blk_id) *func = -normal_velo;
@@ -13576,9 +14505,9 @@ acoustic_nobc_surf(double func[DIM],
 } /* END of routine acoustic_nobc_surf                                                */
 /****************************************************************************/
 /******************************************************************************/
-double 
+double
 calculate_vapor_cool ( const double p[],
-		       double d_evap_loss, 
+                       double *d_evap_loss,
                        double time )
 
 /*******************************************************************************
@@ -13633,16 +14562,15 @@ calculate_vapor_cool ( const double p[],
   /* evaporization related quantities */
   if (theta < 0.) 
     {
-      theta=0.;
       evap_loss   = 0.;
-      // d_evap_loss = 0.;
+      *d_evap_loss = 0.;
     } 
   else 
     {
       evap_loss = q_scale*( vapor_c0 + vapor_c1 * theta + vapor_c2 * pow(theta,2.0) 
 			    + vapor_c3 * pow(theta,3.0));                         
-      /* d_evap_loss =  q_scale*(vapor_c1 + 2.* vapor_c2 * theta +
-			      3.* vapor_c3 * pow(theta,2.0)); */
+      *d_evap_loss =  q_scale*(vapor_c1 + 2.* vapor_c2 * theta +
+			      3.* vapor_c3 * pow(theta,2.0));
     }
 
   return(evap_loss);
@@ -13671,7 +14599,7 @@ q_vapor ( double func[DIM],
   theta   = fv->T-T_boil;
 
   /* Lets CALCULATE LASER VAPOR HEAT LOSS  RARR */
-  qvaporloss=calculate_vapor_cool(p,d_evap_loss,time);
+  qvaporloss=calculate_vapor_cool(p,&d_evap_loss,time);
 
   /* Evaluate sensitivity to temperature  */  
   var=TEMPERATURE;
@@ -13934,10 +14862,10 @@ calculate_laser_flux ( const double p[],
 	    {
 	      q_laserpow = qlaser0+(q_laserpow-qlaser0)*(time-(t_deltpk+ispot*t_spot))/(t_deltst-t_deltpk);
 	    }
-	  // if (time >= (t_deltst+ispot*t_spot) && time < (t_cutoff+ispot*t_spot))
-	  //   {
-	  //     q_laserpow = q_laserpow;
-	  //   }
+	  if (time >= (t_deltst+ispot*t_spot) && time < (t_cutoff+ispot*t_spot))
+	    {
+	      q_laserpow = q_laserpow;
+	    }
 	  if (time >= (t_cutoff+ispot*t_spot) && time < (t_tapper+ispot*t_spot))
 	    {
 	      q_laserpow = q_laserpow+(base_qlaser-q_laserpow)*(time-(t_cutoff+ispot*t_spot))/(t_tapper-t_cutoff);
@@ -13964,10 +14892,10 @@ calculate_laser_flux ( const double p[],
 	{
 	  q_laserpow = qlaser0+(q_laserpow-qlaser0)*(time-t_deltpk)/(t_deltst-t_deltpk);
 	}
-  //     if (time >= t_deltst )
-	// {
-	//   q_laserpow = q_laserpow;
-	// }
+      if (time >= t_deltst )
+	{
+	  q_laserpow = q_laserpow;
+	}
     }
   else if(sw_trv_spt>1.9 && sw_trv_spt<2.1)
     { /* sinusoidal traveling weld */
@@ -14505,7 +15433,14 @@ shear_to_shell ( double cfunc[MDE][DIM],
   
   detJ = 1.0;
 
-  fluid_stress( Pi, &d_Pi );
+  if(vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
+    {
+      fluid_stress_conf( Pi, &d_Pi);
+    }
+  else  
+    {
+      fluid_stress( Pi, &d_Pi );
+    }
 
   TL = 0.0;
   memset( dTL_dv, 0, sizeof(double)*DIM*MDE);
@@ -15098,9 +16033,11 @@ qside_light_jump(double func[DIM],
   double other_refindex;			/* Refractive Index */
   CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct; 
   CONDUCTIVITY_DEPENDENCE_STRUCT *d_n = &d_n_struct;
+  CONDUCTIVITY_DEPENDENCE_STRUCT *d_n_other = &d_n_struct;
 
   double mucos_tran_dn, Grefl_dn, Rrefl_dn, Xrefl_dn, Yrefl_dn;
   MATRL_PROP_STRUCT *mp_2;
+  MATRL_PROP_STRUCT *mp_1;
   
 /***************************** EXECUTION BEGINS *******************************/
   dim   = pd->Num_Dim;
@@ -15119,21 +16056,28 @@ qside_light_jump(double func[DIM],
       EH(-1,"LIGHT_JUMP has incorrect material ids");
     }
 
+  mp_1 = mp_glob[Current_EB_ptr->Elem_Blk_Id-1];
+  mp = mp_1;
+  load_matrl_statevector(mp_1);
+  load_properties(mp_1, time);
   light_absorption( d_alpha, time );
   refindex = refractive_index( d_n, time );
 /*other mp */
   if(sign_int == -1)
-       { mp_2 = mp_glob[ID_mat_2];}
+       { mp_2 = mp_glob[ID_mat_2-1];}
   else
-       { mp_2 = mp_glob[ID_mat_1];}
-  if (mp_2 != mp) {
+       { mp_2 = mp_glob[ID_mat_1-1];}
+  if (mp_2 != mp_1) {
+        mp = mp_2;
         load_matrl_statevector(mp_2);
 	load_properties(mp_2, time);
         }
-  other_refindex = refractive_index( d_n, time );
+  other_refindex = refractive_index( d_n_other, time );
+fprintf(stderr,"refractive index %g %g %d %d %d %d\n",refindex, other_refindex, bc_type, ID_mat_1, ID_mat_2, sign_int);
 /*reset material*/
-  load_matrl_statevector(mp);
-  load_properties(mp, time);
+  mp = mp_1;
+  load_matrl_statevector(mp_1);
+  load_properties(mp_1, time);
 
   direction = svect[0]*fv->snormal[0]+svect[1]*fv->snormal[1]+svect[2]*fv->snormal[2];
   refratio = other_refindex/refindex;
@@ -15186,43 +16130,65 @@ qside_light_jump(double func[DIM],
   Yrefl_dn = SQUARE(other_refindex/refindex)*(-Xrefl_dn-2*(1.0-Xrefl)/refindex);
 
 
+fprintf(stderr,"mu mut Xrefl Yrefl %g %g %g %g \n",mucos,mucos_tran,Xrefl,Yrefl);
+fprintf(stderr,"coords %g %g  \n",fv->x[0],fv->x[1]);
+fprintf(stderr,"dofs elem %d %d %d\n",ei[pg->imtrx]->dof[LIGHT_INTP],ei[pg->imtrx]->dof[LIGHT_INTM],ei[pg->imtrx]->ielem);
+for(j=0 ; j<ei[pg->imtrx]->dof[LIGHT_INTP] ; j++)	{
+fprintf(stderr,"vars %d %g %g %g\n",j, *esp->poynt[0][j],*esp->poynt[1][j],bf[LIGHT_INTP]->phi[j]);
+}
+fprintf(stderr,"light intensity %g %g %g \n",fv->poynt[0],fv->poynt[1],*func);
 /* Calculate the residual contribution					     */
   
-  if(bc_type == LIGHTP_JUMP_BC)
+  if(bc_type == LIGHTP_JUMP_BC || bc_type == LIGHTP_JUMP_2_BC)
   	{ eqn = LIGHT_INTP;  eqn_alt = LIGHT_INTM;
+      	if ( pd->v[pg->imtrx][eqn] )
+	{
 	  if(sign_int == -1)
 		{ *func += fv->poynt[0] - Xrefl*fv->poynt[1]; }
 	  else
 		{ *func -= Yrefl*fv->poynt[0]; }
 	}
-  else if(bc_type == LIGHTM_JUMP_BC)
+	}
+  else if(bc_type == LIGHTM_JUMP_BC || bc_type == LIGHTM_JUMP_2_BC)
   	{ eqn = LIGHT_INTM; eqn_alt = LIGHT_INTP;
+      	if ( pd->v[pg->imtrx][eqn] )
+	{
 	  if(sign_int == -1)
 		{ *func += fv->poynt[1] - Xrefl*fv->poynt[0]; }
 	  else
 		{ *func -= Yrefl*fv->poynt[1]; }
-	  }
+	}
+	}
   else
 	{EH(-1,"invalid light transmission bc\n");}
+fprintf(stderr,"light intensity %g %g %g \n",fv->poynt[0],fv->poynt[1],*func);
 
   if (af->Assemble_Jacobian)
     {
-      	if ( pd->v[eqn] )
+      	if ( pd->v[pg->imtrx][eqn] )
 	{
+      	  if ( sign_int == -1)
+	  {
 	  for( j=0; j<ei[pg->imtrx]->dof[eqn]; j++)
 	    {
-		  d_func[0][eqn][j] =  bf[eqn]->phi[j];
+		  d_func[0][eqn][j] +=  bf[eqn]->phi[j];
 	    }
+          }  else  {
+	  for( j=0; j<ei[pg->imtrx]->dof[eqn]; j++)
+	    {
+		  d_func[0][eqn][j] +=  -Yrefl*bf[eqn]->phi[j];
+	    }
+          }
 	}
-      	if ( pd->v[eqn_alt] )
+      	if ( pd->v[pg->imtrx][eqn_alt] && sign_int == -1 )
 	{
 	  for( j=0; j<ei[pg->imtrx]->dof[eqn_alt]; j++)
 	    {
-		  d_func[0][eqn_alt][j] =  -Xrefl*bf[eqn_alt]->phi[j];
+		  d_func[0][eqn_alt][j] +=  -Xrefl*bf[eqn_alt]->phi[j];
 	    }
 	}
 	  var = TEMPERATURE;
-	  if ( pd->v[var] )
+	  if ( pd->v[pg->imtrx][var] )
 	    {
 	      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 		{
@@ -15233,7 +16199,7 @@ qside_light_jump(double func[DIM],
 	  for ( b=0; b<dim; b++)
 	    {
 	      var = MESH_DISPLACEMENT1+b;
-	      if ( pd->v[var] )
+	      if ( pd->v[pg->imtrx][var] )
 		{
 		  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 		    {
@@ -15243,7 +16209,7 @@ qside_light_jump(double func[DIM],
                  }
               }
 	  var = MASS_FRACTION;
-	  if ( pd->e[eqn] && pd->v[var] )
+	  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
 	    {
 	      for ( w=0; w<pd->Num_Species_Eqn; w++)
 		{
@@ -15256,44 +16222,5 @@ qside_light_jump(double func[DIM],
              }
     }
 
-}
-
-void
-ls_wall_angle_bc(double func[DIM],
-                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                const double angle) /* angle in radians */
-{
-  int j, kdir, var, p;
-  const double cos_angle = cos(angle);
-
-  /* Calculate the residual contribution	*/
-  func[0] = -cos_angle;
-  for (kdir = 0; kdir < pd->Num_Dim; kdir++)
-    {
-      func[0] += fv->grad_F[kdir] * fv->snormal[kdir];
-    }
-
-  if (af->Assemble_Jacobian) {
-
-    for (kdir=0; kdir<pd->Num_Dim; kdir++) {
-
-      for (p=0; p<pd->Num_Dim; p++) {
-        var = MESH_DISPLACEMENT1 + p;
-        if (pd->gv[var]) {
-          for ( j=0; j<ei[pd->mi[var]]->dof[var]; j++) {
-            d_func[0][var][j] += fv->grad_F[kdir] * fv->dsnormal_dx[kdir][p][j] +
-                fv->d_grad_F_dmesh[kdir][p][j] * fv->snormal[kdir];
-          }
-        }
-      }
-
-      var = FILL;
-      if (pd->v[pg->imtrx][var]) {
-        for ( j=0; j<ei[pd->mi[var]]->dof[var]; j++) {
-          d_func[0][var][j] += bf[var]->grad_phi[j][kdir] * fv->snormal[kdir];
-        }
-      }
-    } /* for: kdir */
-  } /* end of if Assemble_Jacobian */
 }
 /****************************************************************************/

@@ -70,7 +70,7 @@ struct Material_Properties
 			    * >= 0, and consistent across all processors,
 			    * unique, and equal to the index into the global
 			    * array of Material property structures */
-  CK_NAME Material_Name;   /* Character string name for the material */
+  char Material_Name[MAX_MATLNAME];   /* Character string name for the material */
   int Num_Matrl_Elem_Blk;  /* Number of element blocks comprising this 
                             * material                                     */
 			      
@@ -162,6 +162,8 @@ struct Material_Properties
   int thermal_conductivity_tableid;
   int Ewt_funcModel;
   dbl Ewt_func;
+  int Rst_funcModel;
+  dbl Rst_func;
   int thermal_cond_external_field;
 
   dbl electrical_conductivity;	/* Yeah, you could make this a tensor... */
@@ -204,6 +206,9 @@ struct Material_Properties
   int wave_numberModel;	     /* CONSTANT */
   int wave_number_tableid;
 
+  dbl acoustic_ksquared_sign;     /* Sign of wavenumber squared -- captures imaginary wavenumbers */
+  int Ksquared_SignModel;	     /* CONSTANT */
+
   dbl acoustic_absorption;
   dbl d_acoustic_absorption[MAX_VARIABLE_TYPES + MAX_CONC];
   int len_u_acoustic_absorption;
@@ -224,6 +229,13 @@ struct Material_Properties
   dbl *u_light_absorption;
   int Light_AbsorptionModel;
   int light_absorption_tableid;
+ 
+  dbl extinction_index;
+  dbl d_extinction_index[MAX_VARIABLE_TYPES + MAX_CONC];
+  int len_u_extinction_index;
+  dbl *u_extinction_index;
+  int Extinction_IndexModel;
+  int extinction_index_tableid;
  
   int VoltageFormulation;   /* Used to select k for potential equation
                              * Permittivity or conductivity (default) */
@@ -289,6 +301,7 @@ struct Material_Properties
                                    * also in this structure. */
   PROPERTYJAC_STRUCT *DensityJac; /* When necessary, this includes the derivatives
                                    * of the density wrt the state variables */
+  int SBM_Length_enabled;
 
   int DensityModel;                             /* Model type: for types, see mm_mp_const.h  */
   int len_u_density;                            /* Constants for user-defined density model*/
@@ -391,15 +404,19 @@ struct Material_Properties
   int GamDiffType[MAX_CONC]  ;
   int MuDiffType[MAX_CONC]  ;
   int GravDiffType[MAX_CONC]  ;
+  int SBM_Type[MAX_CONC]  ;
   int FickDiffType[MAX_CONC]  ;
   int CurvDiffType[MAX_CONC]  ;
   int QTensorDiffType[MAX_CONC] ;
+  int NSCoeffType[MAX_CONC] ;
   int len_u_gadiffusivity[MAX_CONC];            /*this is currently defined for MPI*/ 
   int len_u_mdiffusivity[MAX_CONC];             /*this is currently defined for MPI*/ 
   int len_u_fdiffusivity[MAX_CONC];             
-  int len_u_gdiffusivity[MAX_CONC];             /*this is currently defined for MPI*/ 
+  int len_u_gdiffusivity[MAX_CONC];             /*this is currently defined for MPI*/
+  int len_SBM_Lengths2[MAX_CONC];             /*this is currently defined for MPI*/ 
   int len_u_cdiffusivity[MAX_CONC];             /*this is currently defined for MPI*/ 
-  int len_u_qdiffusivity[MAX_CONC];             /*this is currently defined for MPI*/ 
+  int len_u_qdiffusivity[MAX_CONC];             /*this is currently defined for MPI*/
+  int len_u_nscoeff[MAX_CONC] ;
 
   dbl gam_diffusivity[MAX_CONC] ;               /* Kc from shear-gradient term */
   dbl *u_gadiffusivity[MAX_CONC] ;              
@@ -407,8 +424,12 @@ struct Material_Properties
   dbl *u_mdiffusivity[MAX_CONC] ;               
   dbl f_diffusivity[MAX_CONC] ;                 /* normal Fickian diffusion term */
   dbl *u_fdiffusivity[MAX_CONC] ;
-  dbl g_diffusivity[MAX_CONC] ;                 /* hindered settling function */ 
-  dbl *u_gdiffusivity[MAX_CONC] ;               /*this is currently defined for MPI*/ 
+  dbl g_diffusivity[MAX_CONC] ;                 /* hindered settling function */
+  dbl SBM_Lengths[MAX_CONC] ;                 /* hindered settling function */
+  dbl NSCoeff[MAX_CONC] ;
+  dbl *u_nscoeff[MAX_CONC] ;
+  dbl *u_gdiffusivity[MAX_CONC] ;               /*this is currently defined for MPI*/
+  dbl *SBM_Lengths2[MAX_CONC] ;               /*this is currently defined for MPI*/ 
   dbl cur_diffusivity[MAX_CONC] ;              /* curvature induced migration term */ 
   dbl *u_cdiffusivity[MAX_CONC] ;             
   dbl q_diffusivity[MAX_CONC][DIM] ;	/* Q tensor diffusion components. */ 
@@ -424,6 +445,8 @@ struct Material_Properties
 
   int RefConcnModel[MAX_CONC];
   dbl reference_concn[MAX_CONC];
+  dbl *u_reference_concn[MAX_CONC];
+  int len_u_reference_concn[MAX_CONC];
 
 
   int AdvectiveScalingModel[MAX_CONC];
@@ -525,6 +548,7 @@ struct Material_Properties
   int len_u_rel_liq_perm;
   dbl *u_rel_liq_perm;
   dbl d_rel_liq_perm[MAX_VARIABLE_TYPES + MAX_CONC + MAX_PMV];
+  int rel_liq_perm_external_field_index;
 
   dbl saturation;
   int SaturationModel;
@@ -665,6 +689,7 @@ struct Material_Properties
   dbl *u_heightU_function_constants;
   int HeightUFunctionModel;
   int heightU_ext_field_index;
+  int heightU_function_constants_tableid;
 
   dbl heightL;
   dbl d_heightL[MAX_VARIABLE_TYPES + MAX_CONC];
@@ -711,7 +736,6 @@ struct Material_Properties
   dbl lubmomsource[DIM];
   dbl d_lubmomsource[DIM][MAX_VARIABLE_TYPES + MAX_CONC];
   int len_lubmomsource;
-  dbl *u_lubmomsource_function_constants;
   int LubMomSourceModel;
 
   dbl FilmEvap;
@@ -872,6 +896,56 @@ struct Material_Properties
   dbl d_Inertia_coefficient[MAX_VARIABLE_TYPES + MAX_CONC];
   int InertiaCoefficientModel;
 
+  // TFMP structure for material properties function constants
+  int tfmp_density_model;
+  int len_tfmp_density_const;
+  dbl *tfmp_density_const;
+
+  int tfmp_viscosity_model;
+  int len_tfmp_viscosity_const;
+  dbl *tfmp_viscosity_const;
+
+  // TFMP indicators for the stabilizing diffusivity corrector
+  int tfmp_diff_model;
+  int len_tfmp_diff_const;
+  dbl *tfmp_diff_const;
+
+  // TFMP variables for wt function application
+  int tfmp_wt_model;
+  int tfmp_wt_len;
+  dbl tfmp_wt_const;
+
+  int tfmp_mass_lump;
+  int tfmp_clipping;
+  dbl tfmp_clip_strength;
+
+  int tfmp_rel_perm_model;
+  int len_tfmp_rel_perm_const;
+  dbl *tfmp_rel_perm_const;
+
+  int tfmp_dissolution_model;
+  int len_tfmp_dissolution_const;
+  dbl *tfmp_dissolution_const;
+
+  int tfmp_drop_lattice_model;
+  int len_tfmp_drop_lattice_const;
+  dbl *tfmp_drop_lattice_const;
+
+  /* Properties for Fixed Deformable Roller
+  CTPM "coupled two-phase membrane"
+  */
+
+  int shell_tangent_model;
+  int len_shell_tangent_seed_vec_const;
+  dbl *shell_tangent_seed_vec_const;
+
+  int shell_moment_tensor_model;
+
+  // Elastohydrodynamic Lubrication
+  int ehl_gap_model;
+  int ehl_normal_method;
+  int ehl_integration_kind;
+
   int table_index;
 
   
@@ -962,6 +1036,10 @@ struct Generalized_Newtonian
   int DilViscModel;
   //! This is the constant used for the dilational viscosity 
   dbl DilVisc0;
+  dbl thixo_factor;
+  int thixoModel;
+  int len_u_thixo;
+  dbl *u_thixo_factor;
 };
 typedef struct Generalized_Newtonian GEN_NEWT_STRUCT;
 
@@ -1068,7 +1146,18 @@ struct Elastic_Constitutive
   dbl *u_bend_stiffness;
   dbl d_bend_stiffness[MAX_VARIABLE_TYPES + MAX_CONC];
 
+  dbl exten_stiffness;
+  int exten_stiffness_model;
+  int len_u_exten_stiffness;
+  dbl *u_exten_stiffness;
+  dbl d_exten_stiffness[MAX_VARIABLE_TYPES + MAX_CONC];
+
   dbl poisson;
+  int poisson_model;
+  int len_u_poisson;
+  dbl *u_poisson;
+  dbl d_poisson[MAX_VARIABLE_TYPES + MAX_CONC];
+
   dbl Strss_fr_sol_vol_frac;
 
   dbl v_mesh_sfs[DIM];
@@ -1208,13 +1297,22 @@ struct Second_LS_Phase_Properties
   int lightabsorptionmask[2];
   dbl lightabsorption_phase[MAX_PHASE_FUNC];
   
+  int ExtinctionIndexModel;
+  dbl extinctionindex;
+  int extinctionindexmask[2];
+  dbl extinctionindex_phase[MAX_PHASE_FUNC];
+
   int SpeciesSourceModel[MAX_CONC];
   dbl speciessource[MAX_CONC];
-  int speciessourcemask[2][MAX_CONC];;
+  int speciessourcemask[2][MAX_CONC];
   dbl speciessource_phase[MAX_PHASE_FUNC][MAX_CONC];
   int use_species_source_width[MAX_CONC];
   dbl species_source_width[MAX_CONC];
 
+  int FlowingLiquidViscosityModel;
+  dbl FlowingLiquid_viscosity;
+  int FlowingLiquid_viscositymask[2];
+  dbl FlowingLiquid_viscosity_phase[MAX_PHASE_FUNC];
 
 };
 

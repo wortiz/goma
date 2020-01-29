@@ -128,9 +128,13 @@ EXTERN int divergence_particle_stress /* mm_std_models.c                     */
        dbl [DIM][MAX_CONC][MDE],/* derivative wrt concentration */
        dbl [DIM][DIM][MDE],     /* derivative wrt velocity */
        dbl [DIM][DIM][MDE],     /* derivative wrt mesh */
-       dbl [DIM][DIM][MDE],     /* derivative wrt vorticity direction */
        dbl [DIM][MDE],          /* derivative wrt pressure */
        int );	                /* species number */
+
+EXTERN void rotate_tensor (double [DIM][DIM],              /* mm_std_models.c, A           */
+			   double [DIM][DIM],              /* A_prime (rotated tensor)     */
+		           double [DIM][DIM],              /* R (orthogonal matrix)        */
+			   int);                  /* dir = 0 or dir = 1, rotation direction */
 
 EXTERN int antoine_psat		/* mm_std_models.c                           */
 (int ,			/* species_no                                */
@@ -159,6 +163,11 @@ EXTERN int molten_glass_viscosity /* mm_std_models.c                         */
 (dbl *,			/* vis - Base FLOWING LIQUID VISCOSITY       */
        dbl [MDE],		/* dvis_dT - temperature dependence.         */
        dbl *);			/* param  - parameter list                   */
+
+EXTERN int epoxy_flowing_liquid_viscosity /* mm_std_models.c                     */
+(dbl *,			          /* vis - Base FLOWING LIQUID VISCOSITY */
+       VISCOSITY_DEPENDENCE_STRUCT *,     /* vis sensitivity.                    */
+       dbl *);			          /* param  - parameter list             */
 
 EXTERN int electrode_species_source /* mm_std_models.c                       */
 (int ,			/* species_no - Current species number       */
@@ -244,5 +253,7 @@ EXTERN int assemble_bond_evolution /* mm_std_models.c */
 				 * explicit (tt = 1) to implicit (tt = 0) */
        double );		/* dt - current time step size */
 
+EXTERN double calc_KOH_Si_etch_rate_100 /* mm_std_models.c */
+( double [MAX_CONC] );        /* Sensitivities of etch rate w.r.t. concentration */
 
 #endif /* GOMA_MM_STD_MODELS_H */

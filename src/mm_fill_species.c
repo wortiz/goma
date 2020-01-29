@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-#include <float.h>
 
 /* GOMA include files */
 
@@ -46,7 +45,7 @@
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
 #include "mm_as.h"
-#include "mm_fill_population.h"
+
 #include "mm_eh.h"
 
 #ifdef USE_CHEMKIN
@@ -58,9 +57,10 @@
 #include "mm_mp.h"
 
 #include "mm_fill_terms.h"
-#include "mm_fill_species.h"
+#include "mm_fill_population.h"
 
 #define GOMA_MM_FILL_SPECIES_C
+#include "mm_fill_species.h"
 #include "sl_aux.h"
 #include "goma.h"
 
@@ -114,7 +114,6 @@
 *******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
-
 
 /* assemble_mass_transport() -- assemble terms (Residual &| Jacobian) for mass
  *                              conservation eqns
@@ -190,13 +189,14 @@
  *    flux.
  */
 
-int assemble_mass_transport(
-    double time, /* present time valuel; KSC             */
-    double tt,   /* parameter to vary time integration from
-                  * explicit (tt = 1) to implicit (tt = 0) */
-    double dt,   /* current time step size */
-    PG_DATA *pg_data) {
-  int var, ii, pvar, ledof;
+int 
+assemble_mass_transport(double time, /* present time valuel; KSC             */
+			double tt, /* parameter to vary time integration from 
+				    * explicit (tt = 1) to implicit (tt = 0) */
+			double dt, /* current time step size */
+                        PG_DATA *pg_data)
+{
+  int var, ii,  pvar, ledof;
   const int eqn = R_MASS;
   const int dim = pd->Num_Dim;
   int p, b, q, w, w1, i, j, status, c;
@@ -230,32 +230,33 @@ int assemble_mass_transport(
    */
   int coeff_rho_nonunity = FALSE;
   dbl coeff_rho;
-  dbl rho; /* Density. */
-  dbl sumxm = 0.0, sumrm, epsilon = 0.0, small_c = 0.0, sumxdot, sumxdotm;
-  dbl sumdxdot, sumdxdotm, sumxms;
-  dbl psum, sumflux, sumfluxm;
-  dbl psum1, psum2, psum3, psum4, sumdflux, sumdfluxm, dmdx;
-  dbl sumdrm, factor;
+  dbl rho;				/* Density. */
+  dbl sumxm = 0.0, sumrm, epsilon = 0.0, small_c = 0.0, sumxdot, sumxdotm;  
+  dbl sumdxdot, sumdxdotm, sumxms;  
+  dbl psum, sumflux, sumfluxm;  
+  dbl psum1, psum2, psum3, psum4, sumdflux, sumdfluxm, dmdx;  
+  dbl sumdrm, factor;  
   dbl sumx;
-  int num_species;
-  DENSITY_DEPENDENCE_STRUCT d_rho_struct; /* density dependence */
+  int num_species;  
+  DENSITY_DEPENDENCE_STRUCT d_rho_struct;  /* density dependence */
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
 
-  dbl M[MAX_CONC]; /* species molecular weight */
-  dbl x[MAX_CONC]; /* mole fraction */
+  dbl M[MAX_CONC];            /* species molecular weight */ 
+  dbl x[MAX_CONC];            /* mole fraction */
 
   struct Species_Conservation_Terms s_terms;
+  memset(&s_terms, 0, sizeof(struct Species_Conservation_Terms));
 
-  dbl mass; /* For terms and their derivatives */
+  dbl mass;		         	/* For terms and their derivatives */
 
-  dbl advection; /* For terms and their derivatives */
+  dbl advection;			/* For terms and their derivatives */
   dbl advection_a, advection_b, advection_c, advection_d, advection_e,
       advection_f;
   dbl diffusion;
   dbl diff_a, diff_b, diff_c, source;
 
   /*
-   * Galerkin weighting functions for i-th energy residuals
+   * Galerkin weighting functions for i-th energy residuals 
    * and some of their derivatives...
    */
 
@@ -263,14 +264,14 @@ int assemble_mass_transport(
   dbl grad_phi_i[DIM];
 
   /*
-   * Petrov-Galerkin weighting functions for i-th residuals
+   * Petrov-Galerkin weighting functions for i-th residuals 
    * and some of their derivatives...
    */
 
-  dbl wt_func;
+  dbl wt_func = 0;
 
   /* SUPG variables */
-  dbl supg = 0;
+  dbl supg=0, d_wt_func = 0;
 
   /*
    * Interpolation functions for variables and some of their derivatives.
@@ -278,23 +279,23 @@ int assemble_mass_transport(
 
   dbl phi_j;
 
-  dbl h3; /* Product of all 3 scale factors used for */
-  /* volume integrals in this coordinate system*/
-  dbl dh3dmesh_bj; /* Mesh derivative of same. */
+  dbl h3;			/* Product of all 3 scale factors used for */
+				/* volume integrals in this coordinate system*/
+  dbl dh3dmesh_bj;		/* Mesh derivative of same. */
 
   dbl det_J;
 
-  dbl d_det_J_dmeshbj;        /* for specified (b,j) mesh dof */
-  dbl dgrad_phi_i_dmesh[DIM]; /* ditto.  */
+  dbl d_det_J_dmeshbj;			/* for specified (b,j) mesh dof */
+  dbl dgrad_phi_i_dmesh[DIM];		/* ditto.  */
   dbl wt;
   int err;
   int v_g[DIM][DIM];
   int taylor_galerkin[MAX_CONC];
-  int species = -1; /* Which "w" is the particle phase ... */
+  int species = -1;             /* Which "w" is the particle phase ... */
   status = 0;
 
   /*initialize grad_phi_i */
-  for (i = 0; i < DIM; i++) {
+  for (i=0; i<DIM; i++) {
     grad_phi_i[i] = 0;
   }
 
@@ -302,39 +303,45 @@ int assemble_mass_transport(
    * Unpack variables from structures for local convenience...
    */
 
+
+
   /*
    * Bail out fast if there's nothing to do...
    */
 
-  if (!pd->e[pg->imtrx][eqn]) {
-    return (status);
-  }
+  if ( ! pd->e[pg->imtrx][eqn] )
+    {
+      return(status);
+    }
 
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    taylor_galerkin[w] = mp->SpeciesTimeIntegration[w];
-  }
+  for ( w=0; w<pd->Num_Species_Eqn; w++)
+    {
+      taylor_galerkin[w] =mp->SpeciesTimeIntegration[w]; 
+    }
 
-  wt = fv->wt; /* Gauss point weight. */
+  wt = fv->wt;				/* Gauss point weight. */
 
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  det_J = bf[eqn]->detJ;		/* Really, ought to be mesh eqn. */
 
-  h3 = fv->h3; /* Differential volume element. */
+  h3 = fv->h3;			        /* Differential volume element. */
 
-  num_species = pd->Num_Species;
+  num_species = pd->Num_Species;  
 
-  for (j = 0; j < num_species; j++) {
-    M[j] = mp->molecular_weight[j];
-  }
+  for (j=0; j<num_species; j++)  
+     {
+      M[j] = mp->molecular_weight[j];
+     }
 
   sumx = 0.;
-  for (j = 0; j < num_species - 1; j++) {
-    x[j] = fv->c[j];
-    sumx += x[j];
-  }
-  x[num_species - 1] = 1. - sumx;
+  for (j=0; j<num_species-1; j++) 
+     {
+      x[j] = fv->c[j];
+      sumx += x[j];
+     }
+  x[num_species-1] = 1. - sumx;
 
   /* MMH
-   * For species transport in the SUSPENSION_PM model, there is one
+   * For species transport in the SUSPENSION_PM model, there is one 
    * species that represents the particles.  There may be other species
    * involved, though, and they care about the "averaged" density, which
    * is the fluid density here.
@@ -343,15 +350,19 @@ int assemble_mass_transport(
    * this function calls seem to be able to figure out the correct
    * density on their own...
    */
-  rho = density(d_rho, time);
+  rho  = density(d_rho, time);
 
-  if (mp->Spwt_funcModel == GALERKIN) {
-    supg = 0.;
-  } else if (mp->Spwt_funcModel == SUPG) {
-    supg = mp->Spwt_func;
-  }
 
-  /* end Petrov-Galerkin addition */
+  SUPG_terms supg_terms;
+
+  if( mp->Spwt_funcModel == GALERKIN)
+    {
+      supg = 0.;
+    }
+  else if( mp->Spwt_funcModel == SUPG)
+    {
+      supg = mp->Spwt_func;
+    }
 
   /************************************************************************/
   /*                       START OF SPECIES ASSEMBLE                      */
@@ -362,85 +373,29 @@ int assemble_mass_transport(
    */
   zero_structure(&s_terms, sizeof(struct Species_Conservation_Terms), 1);
 
-  /*  if (mp->PorousMediaType == CONTINUOUS)
-      { */
-  /*
-   * ---------------------------------------------------------------------
-   * ----- Calculate the capacity, flux, convection, and source terms for
-   *       a continuous medium
-   * ---------------------------------------------------------------------
-   */
-  err = get_continuous_species_terms(&s_terms, time, tt, dt, pg_data->hsquared);
-  EH(err, "problem in getting the species terms");
-
-  /*  } */ /* end of if CONTINUOUS */
-
-  double sspg = mp->SpSSPG_func;
-
-  for (w = 0; w < pd->Num_Species_Eqn; w++) {
-    SUPG_terms supg_terms;
-    double diffusivity = 0;
-    if (mp->DiffusivityModel[w] == CONSTANT) {
-      diffusivity =  mp->diffusivity[w];
-    }
-    supg_tau(&supg_terms, dim,  diffusivity, pg_data, dt, 0, eqn);
-
-    dbl k_dc = 0;
-    dbl d_k_dc[MDE] = {0};
-    if (mp->SpYZbeta_funcModel != YZBETA_NONE) {
-      dbl strong_residual = 0;
-      strong_residual = fv_dot_old->c[w];
-      for (int p = 0; p < VIM; p++) {
-        strong_residual += fv->v[p] * fv_old->grad_c[w][p];
-      }
-      //strong_residual -= s_terms.MassSource[w];
-      dbl h_elem = 0;
-      for (int a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
-        h_elem += pg_data->hsquared[a];
-      }
-      /* This is the size of the element */
-      h_elem = sqrt(h_elem  / ((double)ei[pg->imtrx]->ielem_dim));
-
-      dbl inner = 0;
-      for (int i = 0; i < dim; i++) {
-        inner += fv_old->grad_c[w][i] * fv_old->grad_c[w][i];
-      }
-
-      dbl yzbeta = 0;
-
-
-
-      dbl dc2 = fabs(strong_residual) * h_elem * h_elem * 0.25;
-
-      dbl dc1 = dc2;
-      if (ls != NULL && fabs(fv->F) < (0.5*ls->Length_Scale)) {
-        dbl inv_sqrt_inner = (1 / sqrt(inner + 1e-12));
-        dc1 = fabs(strong_residual) * inv_sqrt_inner * h_elem * 0.5;
-      }
-      //dc1 = fmin(supg_terms.supg_tau,dc1);//0.5*(dc1 + dc2);
-      yzbeta = fmin(supg_terms.supg_tau, 0.5*(dc1 + dc2));//0.5*(dc1 + dc2);
-      for (int k = 0; k <  ei[pg->imtrx]->dof[eqn]; k++) {
-        d_k_dc[k] = 0;
-      }
-
-      k_dc = yzbeta;
-    }
-
-    /*
-     * Residuals_________________________________________________________________
-     */
-    if (af->Assemble_Residual) {
-      var = MASS_FRACTION;
+/*  if (mp->PorousMediaType == CONTINUOUS)
+    { */
       /*
-       *  Store the species eqn type (which is keyed to the Variable
-       *  type in a temporary variable).
+       * ---------------------------------------------------------------------
+       * ----- Calculate the capacity, flux, convection, and source terms for
+       *       a continuous medium 
+       * ---------------------------------------------------------------------
        */
-      species_eqn_type = mp->Species_Var_Type;
+      err = get_continuous_species_terms(&s_terms, time, tt, dt, pg_data->hsquared);
+      EH(err,"problem in getting the species terms");
+      
+/*    } */   /* end of if CONTINUOUS */
 
-      /*
-       *   START loop over species equations. The outer loop is over
-       *   the species number
-       */
+  for ( w=0; w<pd->Num_Species_Eqn; w++)
+    {
+
+      if (supg != 0.) {
+        dbl D = 1e-6;
+        if (mp->DiffusivityModel[w] == CONSTANT) {
+          D = mp->diffusivity[w];
+        }
+        get_supg_tau(&supg_terms, dim, D, pg_data);
+      }
 
       double Heaviside = 1;
 
@@ -454,1193 +409,1365 @@ int assemble_mass_transport(
         }
       }
 
-      /*
-       *  Calculate the coef_rho term based upon the value of
-       *  species_eqn_type.
-       *     This coefficient indicates whether the time and advection
-       *     term should be multipled by the density or maybe the
-       *     concentration.
-       */
-      coeff_rho = 1.0;
-      coeff_rho_nonunity = FALSE;
-      if ((species_eqn_type == SPECIES_MASS_FRACTION) ||
-          (species_eqn_type == SPECIES_MOLE_FRACTION)) {
-        coeff_rho = rho;
-        coeff_rho_nonunity = TRUE;
-      }
-
-      if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-          mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 3/19/01  */
-      {
-        sumxm = 0.;
-        for (j = 0; j < num_species; j++) {
-          sumxm += x[j] * M[j];
-        }
-        if (mp->PorosityModel == CONSTANT) {
-          epsilon = mp->porosity;
-        } else if (mp->PorosityModel == THERMAL_BATTERY) {
-          epsilon = mp->u_porosity[0];
-        } else {
-          EH(-1, "invalid porosity model");
-        }
-        /*  rho = density(d_rho); /\*  RSL 6/22/02  *\/ */ /* not sure why we
-                                                              are calling
-                                                              density again, so
-                                                              I commented this
-                                                              out -RRR*/
-        small_c = rho / sumxm;
-        coeff_rho = small_c; /*  RSL 9/27/01  */
-      }
 
       /*
-       *  Loop over the degrees of freedom in the element corresponding
-       *  to species unknowns. These are at different nodes in the
-       *  element, usually. However, there can be more than one set
-       *  of degrees of freedom at each node. Note, this
-       *  step doesn't depend upon the species equation number, so
-       *  we might think about exchanging the order of the loops!
+       * Residuals_________________________________________________________________
        */
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-
-        /* only use Petrov Galerkin on advective term - if required */
-
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
-          /*
-           *  Here is where we figure out whether the row is to placed in
-           *  the normal spot (e.g., ii = i), or whether a boundary condition
-           *  require that the volumetric contribution be stuck in another
-           *  ldof pertaining to the same variable type.
-           */
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
-
-          phi_i = bf[eqn]->phi[i];
-
-          wt_func = phi_i;
-          /* add Petrov-Galerkin terms as necessary */
-          if (supg != 0.0) {
-            for (p = 0; p < dim; p++) {
-              wt_func += supg * supg_terms.supg_tau * fv->v[p] * bf[eqn]->grad_phi[i][p];
-            }
-          }
-
-          if (sspg != 0.0) {
-            wt_func += sspg * ((1 + dim) * phi_i - 1);
-          }
-
-          mass = 0.;
-          if (pd->TimeIntegration != STEADY) {
-            if (pd->e[pg->imtrx][eqn] & T_MASS) {
-              mass = coeff_rho * s_terms.Y_dot[w];
-
-              if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                  mp->SpeciesSourceModel[w] ==
-                      ION_REACTIONS) /*  RSL 3/19/01  */
-              {
-                mass = s_terms.Y_dot[w];
-                sumxdot = 0.0;
-                sumxdotm = 0.0;
-                for (j = 0; j < num_species - 1; j++) {
-                  sumxdotm += s_terms.Y_dot[j] * M[j];
-                  sumxdot += s_terms.Y_dot[j];
-                }
-                sumxdotm -= sumxdot * M[num_species - 1];
-                mass -= x[w] * sumxdotm / sumxm;
-                mass *= (epsilon * small_c);
-              }
-
-              mass *= -wt_func * h3 * det_J * wt;
-              mass *= pd->etm[pg->imtrx][eqn][LOG2_MASS];
-            }
-          }
-
-          /*
-           *   Advection is velocity times gradient of the species unknown
-           *   variable, possibly multiplied by a density or total
-           *   concentration, depending upon the species variable
-           *   type.
-           */
-          advection = 0.0;
-          if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-            advection_a = 0.0;
-            for (p = 0; p < VIM; p++) {
-              advection_a += s_terms.conv_flux[w][p];
-            }
-
-            if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 3/19/01  */
-            {
-              psum = 0.;
-              for (p = 0; p < VIM; p++) {
-                sumflux = 0.;
-                sumfluxm = 0.;
-                for (j = 0; j < num_species - 1; j++) {
-                  sumfluxm += s_terms.conv_flux[j][p] * M[j];
-                  sumflux += s_terms.conv_flux[j][p];
-                }
-                sumfluxm -= sumflux * M[num_species - 1];
-                psum += sumfluxm;
-              }
-              advection_a -= x[w] * psum / sumxm;
-              advection_a *= small_c;
-              advection_a *= (-wt_func);
-            } else {
-              advection_a *= -coeff_rho * wt_func;
-            }
-
-            advection_b = 0.;
-            if (taylor_galerkin[w]) {
-              for (p = 0; p < VIM; p++) {
-                advection_b += s_terms.taylor_flux[w][p];
-              }
-              advection_b *= -coeff_rho * s_terms.taylor_flux_wt[i] * dt / 2.;
-            }
-            advection = advection_a + advection_b;
-            advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] * det_J *
-                         h3 * wt * mp->AdvectiveScaling[w];
-          }
-
-          /*
-           * the diffusion term contains all the fluxes that are in
-           * a divergence in the mass conservation equation and are
-           * integrated by parts in finite elements
-           *   Units of s_terms.diff_flux:
-           *      SPECIES_MASS_FRACTION:    gm cm-2 sec-1
-           *      SPECIES_MOLE_FRACTION:    mol cm-2 sec-1
-           */
-          diffusion = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-            for (p = 0; p < VIM; p++) {
-              grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
-            }
-
-            for (p = 0; p < VIM; p++) {
-              diffusion += grad_phi_i[p] * s_terms.diff_flux[w][p];
-            }
-
-            if ((mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                 mp->SpeciesSourceModel[w] == ION_REACTIONS) &&
-                cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) /*  RSL 3/19/01  */
-            {
-              diffusion *= small_c;
-            }
-
-            diffusion *= h3 * det_J * wt;
-            diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-          }
-
-          dbl discontinuity_capturing = 0;
-          for (p = 0; p < VIM; p++) {
-            discontinuity_capturing += k_dc * fv->grad_c[w][p] * grad_phi_i[p];
-          }
-          discontinuity_capturing *= -h3 * det_J * wt;
-          /*
-           * HKM -> Note the addition of a species molecular weight
-           *        term is currently done in the source term
-           *        calculation section of the code
-           *   Units ofs_terms.MassSource:
-           *      SPECIES_MASS_FRACTION:    gm cm-3 sec-1
-           *      SPECIES_MOLE_FRACTION:    mol cm-3 sec-1
-           */
-          source = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-            source = s_terms.MassSource[w];
-
-            if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 3/19/01  */
-            {
-              sumrm = 0.;
-              for (j = 0; j < num_species; j++) {
-                sumrm += s_terms.MassSource[j] * M[j];
-              }
-              source -= x[w] * sumrm / sumxm;
-            }
-
-            source *= wt_func * h3 * det_J * wt;
-            source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-          }
-
-          /*
-           *  Sum up all of the individual contributions and store it
-           *  in the local element residual vector.
-           */
-          lec->R[MAX_PROB_VAR + w][ii] +=
-              Heaviside * (mass + advection) + source + diffusion + discontinuity_capturing;
-
-        } /* if active_dofs */
-
-      } /* end of loop over equations */
-    }   /* end of assemble residuals */
-
-    /*
-     * Jacobian terms...
-     */
-
-    if (af->Assemble_Jacobian) {
-      /*
-       *         START loop over the rows corresponding to difference
-       *	 species conservation equations
-       *             w = row Species ktype
-       *             i = node (i.e., dof) where species conservation
-       *                 equation is located.
-       */
-      /*
-       *  Store the species eqn type (which is keyed to the Variable
-       *  type in a temporary variable).
-       */
-      species_eqn_type = mp->Species_Var_Type;
-
-      double Heaviside = 1;
-
-      if (ls != NULL) {
-        if (mp->SpeciesOnlyDiffusion[w] == DIFF_POSITIVE) {
-          load_lsi(ls->Length_Scale);
-          Heaviside = 1 - lsi->H;
-        } else if (mp->SpeciesOnlyDiffusion[w] == DIFF_NEGATIVE) {
-          load_lsi(ls->Length_Scale);
-          Heaviside = lsi->H;
-        }
-      }
-
-      /*
-       *  Calculate the coef_rho term based upon the value of
-       *  species_eqn_type.
-       *     This coefficient indicates whether the time and advection
-       *     term should be multipled by the density or maybe the
-       *     concentration.
-       */
-      coeff_rho = 1.0;
-      coeff_rho_nonunity = FALSE;
-      if ((species_eqn_type == SPECIES_MASS_FRACTION) ||
-          (species_eqn_type == SPECIES_MOLE_FRACTION)) {
-        coeff_rho = rho;
-        coeff_rho_nonunity = TRUE;
-      }
-
-      if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-          mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 3/19/01  */
-      {
-        sumxm = 0.0;
-        for (j = 0; j < num_species; j++) {
-          sumxm += x[j] * M[j];
-        }
-        if (mp->PorosityModel == CONSTANT) {
-          epsilon = mp->porosity;
-        } else if (mp->PorosityModel == THERMAL_BATTERY) {
-          epsilon = mp->u_porosity[0];
-        } else {
-          EH(-1, "invalid porosity model");
-        }
-        /*        rho = density(d_rho); /\*  RSL 6/22/02  *\/ */
-        small_c = rho / sumxm;
-        coeff_rho = small_c; /*  RSL 9/27/01  */
-      }
-
-      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
-
-        wt_func = bf[eqn]->phi[i];
-        /* add Petrov-Galerkin terms as necessary */
-        if (supg != 0.0) {
-          for (p = 0; p < dim; p++) {
-            wt_func += supg * supg_terms.supg_tau * fv->v[p] * bf[eqn]->grad_phi[i][p];
-          }
-        }
-
-        if (sspg != 0.0) {
-          wt_func += sspg * ((1 + dim) * bf[eqn]->phi[i] - 1);
-        }
-
-        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
-          /*
-           *  Here is where we figure out whether the row is to placed in
-           *  the normal spot (e.g., ii = i), or whether a boundary condition
-           *  require that the volumetric contribution be stuck in another
-           *  ldof pertaining to the same variable type.
-           */
-          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
-          phi_i = bf[eqn]->phi[i];
-
-          /*
-           * Set up some preliminaries that are needed for the (a,i)
-           * equation for bunches of (b,j) column variables...
-           */
-
-          for (p = 0; p < VIM; p++) {
-            grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
-          }
-
-          /*
-           * J_s_c derivative of residual pieces w.r.t. the species
-           *       unknowns
-           */
+      if ( af->Assemble_Residual )
+        {
           var = MASS_FRACTION;
-          if (pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var]) {
-            for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                phi_j = bf[var]->phi[j];
-
-                mass = 0.;
-                if (pd->TimeIntegration != STEADY) {
-                  if (pd->e[pg->imtrx][eqn] & T_MASS) {
-                    /*
-                     * HKM -
-                     *  Added dependence of rho on the species unknowns here.
-                     */
-                    mass = coeff_rho * s_terms.d_Y_dot_dc[w][w1][j];
-                    if (coeff_rho_nonunity) {
-                      mass += d_rho->C[w1][j] * s_terms.Y_dot[w];
-                    }
-
-                    if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                        mp->SpeciesSourceModel[w] ==
-                            ION_REACTIONS) /*  RSL 3/19/01  */
-                    {
-                      sumxdot = 0.;
-                      sumxdotm = 0.;
-                      sumdxdot = 0.;
-                      sumdxdotm = 0.;
-                      for (b = 0; b < num_species - 1; b++) {
-                        sumxdot += s_terms.Y_dot[b];
-                        sumxdotm += s_terms.Y_dot[b] * M[b];
-                        sumdxdot += s_terms.d_Y_dot_dc[b][w1][j];
-                        sumdxdotm += s_terms.d_Y_dot_dc[b][w1][j] * M[b];
-                      }
-                      sumxdotm -= sumxdot * M[num_species - 1];
-                      sumdxdotm -= sumdxdot * M[num_species - 1];
-                      sumxms = sumxm * sumxm;
-                      mass = x[w] * d_rho->C[w1][j] / sumxms;
-                      mass -= 2. * (M[w1] - M[num_species - 1]) * phi_j * rho *
-                              x[w] / (sumxms * sumxm);
-                      if (w == w1)
-                        mass += rho * phi_j / sumxms;
-                      mass *= (-sumxdotm);
-                      mass += s_terms.Y_dot[w] * d_rho->C[w1][j] / sumxm;
-                      mass += rho * s_terms.d_Y_dot_dc[w][w1][j] / sumxm;
-                      mass -= rho * s_terms.Y_dot[w] *
-                              (M[w1] - M[num_species - 1]) * phi_j / sumxms;
-                      mass -= rho * x[w] * sumdxdotm / sumxms;
-                      mass *= epsilon;
-                    }
-                    mass *= -wt_func * h3 * det_J * wt;
-                    mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-                  }
-                }
-
-                advection = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-                  advection_a = 0.;
-                  for (p = 0; p < VIM; p++) {
-                    advection_a +=
-                        coeff_rho * s_terms.d_conv_flux_dc[w][p][w1][j];
-                    if (coeff_rho_nonunity) {
-                      advection_a += d_rho->C[w1][j] * s_terms.conv_flux[w][p];
-                    }
-                  }
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 3/19/01  */
-                  {
-                    psum1 = 0.;
-                    psum2 = 0.;
-                    psum3 = 0.;
-                    psum4 = 0.;
-                    for (p = 0; p < VIM; p++) {
-                      psum1 += s_terms.conv_flux[w][p];
-                      psum2 += s_terms.d_conv_flux_dc[w][p][w1][j];
-                      sumflux = 0.;
-                      sumfluxm = 0.;
-                      sumdflux = 0.;
-                      sumdfluxm = 0.;
-                      for (b = 0; b < num_species - 1; b++) {
-                        sumflux += s_terms.conv_flux[b][p];
-                        sumfluxm += s_terms.conv_flux[b][p] * M[b];
-                        sumdflux += s_terms.d_conv_flux_dc[b][p][w1][j];
-                        sumdfluxm += s_terms.d_conv_flux_dc[b][p][w1][j] * M[b];
-                      }
-                      sumfluxm -= sumflux * M[num_species - 1];
-                      sumdfluxm -= sumdflux * M[num_species - 1];
-                      psum3 += sumdfluxm;
-                      psum4 += sumfluxm;
-                    }
-                    sumxms = sumxm * sumxm;
-                    advection_a = x[w] * d_rho->C[w1][j] / sumxms;
-                    dmdx = (M[w1] - M[num_species - 1]) * phi_j;
-                    advection_a -= 2. * dmdx * rho * x[w] / (sumxms * sumxm);
-                    if (w == w1)
-                      advection_a += rho * phi_j / sumxms;
-                    advection_a *= (-psum4);
-                    advection_a += psum1 * d_rho->C[w1][j] / sumxm;
-                    advection_a += rho * psum2 / sumxm;
-                    advection_a -= rho * psum1 * dmdx / sumxms;
-                    advection_a -= rho * x[w] * psum3 / sumxms;
-                  }
-
-                  advection_a *= -wt_func;
-
-                  advection_b = 0.;
-                  if (taylor_galerkin[w]) {
-                    for (p = 0; p < VIM; p++) {
-                      advection_b +=
-                          coeff_rho * s_terms.d_taylor_flux_dc[w][p][w1][j];
-                      if (coeff_rho_nonunity) {
-                        advection_b +=
-                            d_rho->C[w1][j] * s_terms.conv_flux[w][p];
-                      }
-                    }
-                    advection_b *= -s_terms.taylor_flux_wt[i] * dt / 2.;
-                  }
-
-                  advection = advection_a + advection_b;
-                  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] * h3 *
-                               det_J * wt * mp->AdvectiveScaling[w];
-                }
-
-                diffusion = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
-                    diffusion +=
-                        grad_phi_i[p] * s_terms.d_diff_flux_dc[w][p][w1][j];
-                  }
-
-                  if ((mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                       mp->SpeciesSourceModel[w] == ION_REACTIONS) &&
-                      cr->MassFluxModel ==
-                          STEFAN_MAXWELL_VOLUME) /*  RSL 3/19/01  */
-                  {
-                    diffusion *= small_c;
-                  }
-
-                  diffusion *= h3 * det_J * wt;
-                  diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-                }
-
-                dbl discontinuity_capturing = 0;
-                for (p = 0; p < VIM; p++) {
-                  discontinuity_capturing += k_dc * bf[eqn]->grad_phi[j][p] * grad_phi_i[p];
-                  discontinuity_capturing += d_k_dc[j] * fv->grad_c[w][p] * grad_phi_i[p];
-                }
-                discontinuity_capturing *= -h3 * det_J * wt;
-
-                source = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                  source += s_terms.d_MassSource_dc[w][w1][j];
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 3/19/01  */
-                  {
-                    sumrm = 0.;
-                    sumdrm = 0.;
-                    for (b = 0; b < num_species; b++) {
-                      sumrm += s_terms.MassSource[b] * M[b];
-                      sumdrm += s_terms.d_MassSource_dc[b][w1][j] * M[b];
-                    }
-                    source -= x[w] * sumdrm / sumxm;
-                    factor = -x[w] * (M[w1] - M[num_species - 1]) / sumxm;
-                    if (w == w1)
-                      factor += 1.;
-                    source -= sumrm * phi_j * factor / sumxm;
-                  }
-
-                  source *= wt_func;
-                  source *= h3 * det_J * wt;
-                  source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-                }
-
-                lec->J[MAX_PROB_VAR + w][MAX_PROB_VAR + w1][ii][j] +=
-                    Heaviside * (mass + advection) + source + diffusion + discontinuity_capturing;
-              }
-            }
-          }
-
-          /* MMH
-           * J_s_v  sensitivity of species equation w.r.t. velocity
-           *
-           * NOTE: If DensityModel == SUSPENSION_PM && w == species
-           * then this is really J_s_pv.
+          /*
+           *  Store the species eqn type (which is keyed to the Variable
+           *  type in a temporary variable).
            */
-          for (b = 0; b < dim; b++) {
-            /* MMH */
-            if (mp->DensityModel == SUSPENSION_PM && w == species)
-              var = PVELOCITY1 + b;
-            else
-              var = VELOCITY1 + b;
-            if (pd->v[pg->imtrx][var]) {
-              pvar = upd->vp[pg->imtrx][var];
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                phi_j = bf[var]->phi[j];
-                dbl d_wt_func = 0;
-                if (supg != 0.) {
-                  for (p = 0; p < dim; p++) {
-                    d_wt_func += supg * supg_terms.d_supg_tau_dv[p][j] * fv->v[p] *
-                                 bf[eqn]->grad_phi[i][p];
-                  }
-                }
-
-                mass = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_MASS) {
-                  mass = coeff_rho * s_terms.Y_dot[w];
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 3/19/01  */
-                  {
-                    mass = s_terms.Y_dot[w];
-                    sumxdot = 0.0;
-                    sumxdotm = 0.0;
-                    for (j = 0; j < num_species - 1; j++) {
-                      sumxdotm += s_terms.Y_dot[j] * M[j];
-                      sumxdot += s_terms.Y_dot[j];
-                    }
-                    sumxdotm -= sumxdot * M[num_species - 1];
-                    mass -= x[w] * sumxdotm / sumxm;
-                    mass *= (epsilon * small_c);
-                  }
-
-                  mass *= -d_wt_func * h3 * det_J * wt;
-                  mass *= pd->etm[pg->imtrx][eqn][LOG2_MASS];
-                }
-
-                advection = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-                  advection_a =
-                      -wt_func * coeff_rho * s_terms.d_conv_flux_dv[w][b][b][j];
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 3/19/01  */
-                  {
-                    sumdflux = 0.;
-                    sumdfluxm = 0.;
-                    for (q = 0; q < num_species - 1; q++) {
-                      sumdflux += s_terms.d_conv_flux_dv[q][b][b][j];
-                      sumdfluxm += s_terms.d_conv_flux_dv[q][b][b][j] * M[q];
-                    }
-                    sumdfluxm -= sumdflux * M[num_species - 1];
-                    advection_a = -x[w] * sumdfluxm / sumxm;
-                    advection_a += s_terms.d_conv_flux_dv[w][b][b][j];
-                    advection_a *= small_c;
-                    advection_a *= (-wt_func);
-                  }
-
-                  advection_b = 0.;
-                  if (supg != 0.) {
-                    for (p = 0; p < dim; p++) {
-                      advection_b += coeff_rho * s_terms.conv_flux[w][p];
-                    }
-
-                    advection_b *= -d_wt_func;
-                  }
-
-                  advection_c = 0.;
-                  if (taylor_galerkin[w]) {
-                    for (p = 0; p < VIM; p++) {
-                      advection_c += s_terms.taylor_flux[w][p];
-                    }
-                    advection_c *= -coeff_rho *
-                                       s_terms.d_taylor_flux_wt_dv[i][b][j] *
-                                       dt / 2. -
-                                   s_terms.taylor_flux_wt[i] * dt / 2. *
-                                       s_terms.d_taylor_flux_dv[w][b][b][j];
-                  }
-
-                  advection = advection_a + advection_b + advection_c;
-                  advection *= det_J * h3 * wt;
-                  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] *
-                               mp->AdvectiveScaling[w];
-                }
-
-                diffusion = 0.;
-
-                if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
-                    diffusion +=
-                        grad_phi_i[p] * s_terms.d_diff_flux_dv[w][p][b][j];
-                  }
-                  diffusion *=
-                      h3 * det_J * wt * pd->etm[pg->imtrx][eqn][LOG2_DIFFUSION];
-                }
-
-                source = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                  source += wt_func * s_terms.d_MassSource_dv[w][b][j];
-                  source += d_wt_func * s_terms.MassSource[w];
-                  source *= h3 * det_J * wt;
-                  source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-                }
-
-                lec->J[MAX_PROB_VAR + w][pvar][ii][j] +=
-                    advection + diffusion + source;
-              }
-            }
-          }
+          species_eqn_type = mp->Species_Var_Type;
 
           /*
-           * J_s_vd  sensitivity of species equation w.r.t. vorticity direction
-           *
+           *   START loop over species equations. The outer loop is over
+           *   the species number
            */
-          for (b = 0; b < dim; b++) {
-            var = VORT_DIR1 + b;
-            if (pd->v[pg->imtrx][var]) {
-              pvar = upd->vp[pg->imtrx][var];
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                phi_j = bf[var]->phi[j];
 
-                diffusion = 0.;
+	  /*
+	   *  Calculate the coef_rho term based upon the value of
+	   *  species_eqn_type.
+	   *     This coefficient indicates whether the time and advection
+	   *     term should be multipled by the density or maybe the
+	   *     concentration. 
+	   */
+	  coeff_rho = 1.0;
+	  coeff_rho_nonunity = FALSE;
+	  if ((species_eqn_type == SPECIES_MASS_FRACTION) ||
+	      (species_eqn_type == SPECIES_MOLE_FRACTION)) {
+	    coeff_rho = rho;
+	    coeff_rho_nonunity = TRUE;
+	  }
 
-                if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
-                    diffusion +=
-                        grad_phi_i[p] * s_terms.d_diff_flux_dvd[w][p][b][j];
-                  }
-                  diffusion *=
-                      h3 * det_J * wt * pd->etm[pg->imtrx][eqn][LOG2_DIFFUSION];
-                }
+          if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+              mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+	     {
+	      sumxm = 0.;
+	      for (j=0; j<num_species; j++)
+	         {
+	          sumxm += x[j] * M[j];
+	         }
+	      if (mp->PorosityModel == CONSTANT)
+	         {
+	          epsilon = mp->porosity;
+	         }
+	      else if (mp->PorosityModel == THERMAL_BATTERY)
+	         {
+	          epsilon = mp->u_porosity[0];
+	         }
+	      else
+	         {
+	          EH(-1, "invalid porosity model");
+	         }
+	      /*  rho = density(d_rho); /\*  RSL 6/22/02  *\/ */ /* not sure why we are calling density again, so I commented this out -RRR*/
+	      small_c = rho/sumxm;
+              coeff_rho = small_c; /*  RSL 9/27/01  */
+	     }
+		  
+	  /*
+	   *  Loop over the degrees of freedom in the element corresponding
+	   *  to species unknowns. These are at different nodes in the
+	   *  element, usually. However, there can be more than one set
+	   *  of degrees of freedom at each node. Note, this
+	   *  step doesn't depend upon the species equation number, so
+	   *  we might think about exchanging the order of the loops!
+	   */
+	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+	    ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+	    if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+	      /*
+	       *  Here is where we figure out whether the row is to placed in
+	       *  the normal spot (e.g., ii = i), or whether a boundary condition
+	       *  require that the volumetric contribution be stuck in another
+	       *  ldof pertaining to the same variable type.
+	       */
+	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-                lec->J[MAX_PROB_VAR + w][pvar][ii][j] += diffusion;
-              }
-            }
-          }
+		  phi_i = bf[eqn]->phi[i];
 
+		  /* only use Petrov Galerkin on advective term - if required */
+		  wt_func = phi_i;
+		  /* add Petrov-Galerkin terms as necessary */
+		  if (supg != 0.0)
+		    {
+		      for(p=0; p<dim; p++)
+			{
+                          wt_func += supg * supg_terms.supg_tau * fv->v[p] * bf[eqn]->grad_phi[i][p];
+			}
+		    }
+
+		  mass = 0.;
+		  if ( pd->TimeIntegration != STEADY )
+		    {
+		      if ( pd->e[pg->imtrx][eqn] & T_MASS ) {
+			  mass = coeff_rho * s_terms.Y_dot[w];
+
+                          if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                              mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+			  {
+			    mass = s_terms.Y_dot[w];
+			    sumxdot = 0.0;
+			    sumxdotm = 0.0;
+			    for (j = 0; j < num_species - 1; j++) {
+			      sumxdotm += s_terms.Y_dot[j] * M[j];
+			      sumxdot  += s_terms.Y_dot[j];
+			    }
+			    sumxdotm -= sumxdot * M[num_species-1];
+			    mass -= x[w]*sumxdotm/sumxm;
+			    mass *= (epsilon*small_c);
+			  }
+
+			  mass *= - wt_func * h3 * det_J * wt;
+			  mass *= pd->etm[pg->imtrx][eqn][LOG2_MASS];
+			}
+		    }
+		  
+
+		  
+		  /*
+		   *   Advection is velocity times gradient of the species unknown
+		   *   variable, possibly multiplied by a density or total
+		   *   concentration, depending upon the species variable
+		   *   type.
+		   */
+		  advection = 0.0;
+		  if ( pd->e[pg->imtrx][eqn] & T_ADVECTION )
+		    {
+		      advection_a = 0.0;
+		      for ( p=0; p<VIM; p++)
+			{
+			  advection_a += s_terms.conv_flux[w][p];
+			}
+
+                      if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                          mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+		         {
+		          psum = 0.;
+		          for ( p=0; p<VIM; p++)
+		             {
+		              sumflux = 0.;
+		              sumfluxm = 0.;
+		              for (j=0; j<num_species-1; j++)
+		                 {
+		                  sumfluxm += s_terms.conv_flux[j][p] * M[j];
+		                  sumflux  += s_terms.conv_flux[j][p];
+		                 }
+		              sumfluxm -= sumflux * M[num_species-1];
+		              psum += sumfluxm;
+		             }
+		          advection_a -= x[w]*psum/sumxm;
+		          advection_a *= small_c;
+		          advection_a *= (-wt_func);
+		         }
+		      else
+		         {
+		          advection_a *= - coeff_rho * wt_func;
+		         }
+
+		      advection_b = 0.;
+		      if(taylor_galerkin[w])
+			{
+			  for ( p=0; p<VIM; p++)
+			    {
+			      advection_b += s_terms.taylor_flux[w][p];
+			    }
+			  advection_b *= - coeff_rho * s_terms.taylor_flux_wt[i]*dt/2.;
+			}
+		      advection = advection_a + advection_b;
+		      advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] * det_J * h3 * wt 
+		       	           * mp->AdvectiveScaling[w];
+		    }
+		  
+		  /*
+		   * the diffusion term contains all the fluxes that are in
+		   * a divergence in the mass conservation equation and are 
+		   * integrated by parts in finite elements
+		   *   Units of s_terms.diff_flux:
+		   *      SPECIES_MASS_FRACTION:    gm cm-2 sec-1
+		   *      SPECIES_MOLE_FRACTION:    mol cm-2 sec-1
+		   */
+		  diffusion = 0.;
+		  if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+		    {
+		      for ( p=0; p<VIM; p++)
+			{
+			  grad_phi_i[p] = bf[eqn]->grad_phi[i] [p];
+			}
+		      
+		      for ( p=0; p<VIM; p++)
+			{
+			  diffusion += grad_phi_i[p] * s_terms.diff_flux[w][p];
+			}
+
+                      if ((mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                           mp->SpeciesSourceModel[w]  == ION_REACTIONS)  &&
+                          cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) /*  RSL 3/19/01  */
+		         {
+		          diffusion *= small_c;
+		         }
+
+		      diffusion *= h3 * det_J * wt;
+		      diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+		    }
+		  /*
+		   * HKM -> Note the addition of a species molecular weight
+		   *        term is currently done in the source term
+		   *        calculation section of the code
+		   *   Units ofs_terms.MassSource:
+		   *      SPECIES_MASS_FRACTION:    gm cm-3 sec-1
+		   *      SPECIES_MOLE_FRACTION:    mol cm-3 sec-1
+		   */
+		  source = 0.;
+		  if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+		    {
+		      source = s_terms.MassSource[w];
+
+                      if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                          mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+		         {
+		          sumrm = 0.;
+		          for (j=0; j<num_species; j++)
+		             {
+		              sumrm += s_terms.MassSource[j] * M[j];
+		             }
+		          source -= x[w]*sumrm/sumxm;
+		         }
+
+		      source *= wt_func * h3 * det_J * wt;
+		      source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+		    }
+
+                   /*
+		   *  Sum up all of the individual contributions and store it
+		   *  in the local element residual vector.
+		   */
+                  lec->R[MAX_PROB_VAR + w][ii] +=
+                        Heaviside*(mass + advection) +  diffusion + source;
+		  
+		}   /* if active_dofs */
+	      
+	    } /* end of loop over equations */
+        } /* end of assemble residuals */
+  
+
+      /*
+       * Jacobian terms...
+       */
+
+      if ( af->Assemble_Jacobian )
+        {
           /*
-           * J_s_d  sensitivity of species equation w.r.t. mesh displacement
+           *         START loop over the rows corresponding to difference
+           *	 species conservation equations
+           *             w = row Species ktype
+           *             i = node (i.e., dof) where species conservation
+           *                 equation is located.
            */
-          for (b = 0; b < dim; b++) {
-            var = MESH_DISPLACEMENT1 + b;
-            if (pd->v[pg->imtrx][var]) {
-              pvar = upd->vp[pg->imtrx][var];
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                phi_j = bf[var]->phi[j];
-
-                d_det_J_dmeshbj = bf[var]->d_det_J_dm[b][j];
-
-                dh3dmesh_bj = fv->dh3dq[b] * bf[var]->phi[j];
-
-                dbl d_wt_func = 0;
-                if (supg != 0.) {
-                  for (p = 0; p < dim; p++) {
-                    d_wt_func += supg * supg_terms.supg_tau * fv->v[p] * bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
-                    d_wt_func += supg * supg_terms.d_supg_tau_dX[b][j] * fv->v[p] * bf[eqn]->grad_phi[i][p];
-                  }
-                }
-
-                mass = 0.;
-                if (pd->TimeIntegration != STEADY) {
-                  if (pd->e[pg->imtrx][eqn] & T_MASS) {
-                    mass = coeff_rho * s_terms.Y_dot[w];
-
-                    if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                        mp->SpeciesSourceModel[w] ==
-                            ION_REACTIONS) /*  RSL 9/27/01  */
-                    {
-                      mass = s_terms.Y_dot[w];
-                      sumxdot = 0.;
-                      sumxdotm = 0.;
-                      for (q = 0; q < num_species - 1; q++) {
-                        sumxdotm += s_terms.Y_dot[q] * M[q];
-                        sumxdot += s_terms.Y_dot[q];
-                      }
-                      sumxdotm -= sumxdot * M[num_species - 1];
-                      mass -= x[w] * sumxdotm / sumxm;
-                      mass *= (epsilon * small_c);
-                    }
-
-                    mass *= -((wt_func *
-                              (h3 * d_det_J_dmeshbj + dh3dmesh_bj * det_J)) + d_wt_func * (h3*det_J)) * wt;
-                    mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-                  }
-                }
-
-                advection = 0.;
-
-                if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-                  /*
-                   * Two parts:
-                   *
-                   *	Int( (v- xdot).d(Vc)/dmesh h3 |Jv| )
-                   *	Int( v.Vc d(h3|Jv|)/dmesh )
-                   */
-                  advection_a = 0.;
-
-                  for (p = 0; p < VIM; p++) {
-                    advection_a += s_terms.d_conv_flux_dmesh[w][p][b][j];
-                  }
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 9/27/01  */
-                  {
-                    psum = 0.;
-                    for (p = 0; p < VIM; p++) {
-                      sumdflux = 0.;
-                      sumdfluxm = 0.;
-                      for (q = 0; q < num_species - 1; q++) {
-                        sumdfluxm +=
-                            s_terms.d_conv_flux_dmesh[q][p][b][j] * M[q];
-                        sumdflux += s_terms.d_conv_flux_dmesh[q][p][b][j];
-                      }
-                      sumdfluxm -= sumdflux * M[num_species - 1];
-                      psum += sumdfluxm;
-                    }
-                    advection_a -= x[w] * psum / sumxm;
-                    advection_a *= -small_c * wt_func * h3 * det_J * wt;
-                  } else {
-                    advection_a *= -coeff_rho * wt_func * h3 * det_J * wt;
-                  }
-
-                  advection_b = 0.;
-
-                  for (p = 0; p < VIM; p++) {
-                    advection_b += s_terms.conv_flux[w][p];
-                  }
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 9/27/01  */
-                  {
-                    psum = 0.;
-                    for (p = 0; p < VIM; p++) {
-                      sumflux = 0.;
-                      sumfluxm = 0.;
-                      for (q = 0; q < num_species - 1; q++) {
-                        sumfluxm += s_terms.conv_flux[q][p] * M[q];
-                        sumflux += s_terms.conv_flux[q][p];
-                      }
-                      sumfluxm -= sumflux * M[num_species - 1];
-                      psum += sumfluxm;
-                    }
-                    advection_b -= x[w] * psum / sumxm;
-                    advection_b *= -small_c * wt_func;
-                  } else {
-                    advection_b *= -coeff_rho * wt_func;
-                  }
-
-                  if (taylor_galerkin[w]) {
-                    advection_c = 0.;
-                    for (p = 0; p < VIM; p++) {
-                      advection_c += s_terms.taylor_flux[w][p];
-                      ;
-                    }
-                    advection_c *=
-                        -coeff_rho * s_terms.taylor_flux_wt[i] * dt / 2.;
-                    advection_b += advection_c;
-                  }
-
-                  advection_b *=
-                      (h3 * d_det_J_dmeshbj + dh3dmesh_bj * det_J) * wt;
-
-                  advection_f = 0.;
-                  if (supg != 0.) {
-                    for (p = 0; p < dim; p++) {
-                      advection_f += s_terms.conv_flux[w][p];
-                    }
-                    advection_f *= -d_wt_func * coeff_rho * h3 * det_J * wt;
-                  }
-
-                  advection_d = 0.;
-                  if (taylor_galerkin[w]) {
-                    advection_e = 0.;
-                    for (p = 0; p < VIM; p++) {
-                      advection_d += s_terms.d_taylor_flux_dmesh[w][p][b][j];
-                      advection_e += s_terms.taylor_flux[w][p];
-                    }
-
-                    advection_d *=
-                        -coeff_rho * s_terms.taylor_flux_wt[i] * dt / 2.;
-                    advection_d += -coeff_rho * advection_e *
-                                   s_terms.d_taylor_flux_wt_dmesh[i][b][j] *
-                                   dt / 2.;
-
-                    advection_d *= h3 * det_J * wt;
-                  }
-
-                  advection =
-                      advection_a + advection_f + advection_b + advection_d;
-
-                  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] *
-                               mp->AdvectiveScaling[w];
-                }
-
-                diffusion = 0.;
-
-                if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                  /*
-                   * Three parts:
-                   *  diff_a = Int(d(grad_phi_i)/dmesh.q h3 |Jv|)
-                   *  diff_b = Int(grad_phi_i.d(q)/dmesh h3 |Jv|)
-                   *  diff_c = Int(grad_phi_i.q d(h3 |Jv|)/dmesh)
-                   */
-
-                  diff_a = 0.;
-
-                  for (p = 0; p < VIM; p++) {
-                    dgrad_phi_i_dmesh[p] =
-                        bf[eqn]->d_grad_phi_dmesh[i][p][b][j];
-
-                    diff_a += dgrad_phi_i_dmesh[p] * s_terms.diff_flux[w][p];
-                  }
-
-                  diff_a *= h3 * det_J * wt;
-
-                  diff_b = 0.;
-                  for (p = 0; p < VIM; p++) {
-                    diff_b += bf[eqn]->grad_phi[i][p] *
-                              s_terms.d_diff_flux_dmesh[w][p][b][j];
-                  }
-                  diff_b *= h3 * det_J * wt;
-
-                  diff_c = 0.;
-                  for (p = 0; p < VIM; p++) {
-                    diff_c += bf[eqn]->grad_phi[i][p] * s_terms.diff_flux[w][p];
-                  }
-                  diff_c *= (h3 * d_det_J_dmeshbj + dh3dmesh_bj * det_J) * wt;
-
-                  diffusion = diff_a + diff_b + diff_c;
-
-                  if ((mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                       mp->SpeciesSourceModel[w] == ION_REACTIONS) &&
-                      cr->MassFluxModel ==
-                          STEFAN_MAXWELL_VOLUME) /*  RSL 9/27/01  */
-                  {
-                    diffusion *= small_c;
-                  }
-
-                  diffusion *= pd->etm[pg->imtrx][eqn][LOG2_DIFFUSION];
-                }
-
-                source = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                  source += s_terms.MassSource[w];
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 9/27/01  */
-                  {
-                    sumrm = 0.;
-                    for (q = 0; q < num_species; q++) {
-                      sumrm += s_terms.MassSource[q] * M[q];
-                    }
-                    source -= x[w] * sumrm / sumxm;
-                  }
-
-                  source *=
-                      (wt_func * (h3 * d_det_J_dmeshbj + dh3dmesh_bj * det_J) + d_wt_func * h3 * det_J) * wt;
-                  source += s_terms.d_MassSource_dmesh[w][b][j] * det_J * h3 *
-                            wt * phi_i;
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 9/27/01  */
-                  {
-                    sumrm = 0.;
-                    for (q = 0; q < num_species; q++) {
-                      sumrm += s_terms.d_MassSource_dmesh[q][b][j] * M[q];
-                    }
-                    sumrm *= (-x[w] / sumxm);
-                    source += sumrm * det_J * h3 * wt * phi_i;
-                  }
-
-                  source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
-                }
-
-                lec->J[MAX_PROB_VAR + w][pvar][ii][j] +=
-                    mass + advection + diffusion + source;
-              }
-            }
-          }
-
           /*
-           * J_s_T  sensitivity of species equation w.r.t. temperature
+           *  Store the species eqn type (which is keyed to the Variable
+           *  type in a temporary variable).
            */
-          var = TEMPERATURE;
-          if (pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var]) {
-            pvar = upd->vp[pg->imtrx][var];
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              phi_j = bf[var]->phi[j];
+          species_eqn_type = mp->Species_Var_Type;
+      
 
-              /*
-               * HKM -
-               *    Added in the density dependence on temperature into
-               *    the time derivative term
-               */
-              mass = 0.0;
-              if (pd->TimeIntegration != STEADY) {
-                if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-                  if (coeff_rho_nonunity) {
-                    mass = d_rho->T[j] * s_terms.Y_dot[w];
-                    mass *= -phi_i * h3 * det_J * wt;
-                    mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-                  }
-                }
-              }
+	  /*
+	   *  Calculate the coef_rho term based upon the value of
+	   *  species_eqn_type.
+	   *     This coefficient indicates whether the time and advection
+	   *     term should be multipled by the density or maybe the
+	   *     concentration. 
+	   */
+	  coeff_rho = 1.0;
+	  coeff_rho_nonunity = FALSE;
+	  if ((species_eqn_type == SPECIES_MASS_FRACTION) ||
+	      (species_eqn_type == SPECIES_MOLE_FRACTION)) {
+	    coeff_rho = rho;
+	    coeff_rho_nonunity = TRUE;	    
+	  }
 
-              advection = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-                for (p = 0; p < VIM; p++) {
-                  advection += coeff_rho * s_terms.d_conv_flux_dT[w][p][j];
-                  if (coeff_rho_nonunity) {
-                    advection += d_rho->T[j] * s_terms.conv_flux[w][p];
-                  }
-                }
-                advection *= -wt_func;
+          if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+              mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+	     {
+	      sumxm = 0.0;
+	      for (j=0; j<num_species; j++)
+	         {
+	          sumxm += x[j] * M[j];
+	         }
+	      if (mp->PorosityModel == CONSTANT)
+	         {
+	          epsilon = mp->porosity;
+	         }
+	      else if (mp->PorosityModel == THERMAL_BATTERY)
+	         {
+	          epsilon = mp->u_porosity[0];
+	         }
+	      else
+	         {  
+	          EH(-1, "invalid porosity model");
+	         }
+       /*        rho = density(d_rho); /\*  RSL 6/22/02  *\/ */
+              small_c = rho/sumxm;
+              coeff_rho = small_c; /*  RSL 9/27/01  */
+	     }
+	  
+	  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+	    ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+	    if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+	      /*
+	       *  Here is where we figure out whether the row is to placed in
+	       *  the normal spot (e.g., ii = i), or whether a boundary condition
+	       *  require that the volumetric contribution be stuck in another
+	       *  ldof pertaining to the same variable type.
+	       */
+	      ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];		  
+	      phi_i = bf[eqn]->phi[i];
+	
+		  wt_func = bf[eqn]->phi[i];
+		  /* add Petrov-Galerkin terms as necessary */
+		  if(supg!=0.0)
+		    {
+		      for(p=0; p<dim; p++)
+			{
+                          wt_func += supg * supg_terms.supg_tau * fv->v[p] * bf[eqn]->grad_phi[i][p];
+			}
+		    }
+		  /*
+		   * Set up some preliminaries that are needed for the (a,i)
+		   * equation for bunches of (b,j) column variables...
+		   */
+		  
+		  for ( p=0; p<VIM; p++)
+		    {
+		      grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
+		    }
+		  
+		  /* 
+		   * J_s_c derivative of residual pieces w.r.t. the species
+		   *       unknowns
+		   */
+		  var = MASS_FRACTION;
+		  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
+		    {
+		      for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
+			{
+			  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			    {
+			      phi_j = bf[var]->phi[j];	      
+			      
+			      mass = 0.;
+			      if ( pd->TimeIntegration != STEADY )
+				{
+				  if ( pd->e[pg->imtrx][eqn] & T_MASS )
+				  {
+				    /*
+				     * HKM -
+				     *  Added dependence of rho on the species unknowns here.
+				     */
+				    mass  = coeff_rho * s_terms.d_Y_dot_dc[w][w1][j];
+				    if (coeff_rho_nonunity) {
+				      mass += d_rho->C[w1][j] * s_terms.Y_dot[w];
+				    }
 
-                if (taylor_galerkin[w]) {
-                  advection_a = 0.;
-                  for (p = 0; p < VIM; p++) {
-                    advection_a += coeff_rho * s_terms.taylor_flux[w][p];
-                    if (coeff_rho_nonunity) {
-                      advection += d_rho->T[j] * s_terms.conv_flux[w][p];
-                    }
-                  }
-                  advection *= -advection_a *
-                                   s_terms.d_taylor_flux_wt_dT[i][j] * dt / 2. -
-                               s_terms.taylor_flux_wt[i] * dt / 2. *
-                                   s_terms.d_taylor_flux_dT[w][b][j];
-                }
+                                    if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                        mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+				       {
+				        sumxdot = 0.;
+				        sumxdotm = 0.;
+				        sumdxdot = 0.;
+				        sumdxdotm = 0.;
+				        for (b=0; b<num_species-1; b++)
+				           {
+				            sumxdot  += s_terms.Y_dot[b];
+				            sumxdotm += s_terms.Y_dot[b] * M[b];
+				            sumdxdot  += s_terms.d_Y_dot_dc[b][w1][j];
+				            sumdxdotm += s_terms.d_Y_dot_dc[b][w1][j] * M[b];
+				           }
+				        sumxdotm -= sumxdot * M[num_species-1];
+				        sumdxdotm -= sumdxdot * M[num_species-1];
+				        sumxms = sumxm*sumxm;
+				        mass = x[w]*d_rho->C[w1][j]/sumxms;
+				        mass -= 2.*(M[w1] - M[num_species-1])*phi_j*
+				                rho*x[w]/(sumxms*sumxm);
+				        if (w == w1) mass += rho*phi_j/sumxms;
+				        mass *= (-sumxdotm);
+				        mass += s_terms.Y_dot[w]*d_rho->C[w1][j]/sumxm;
+				        mass += rho*s_terms.d_Y_dot_dc[w][w1][j]/sumxm;
+				        mass -= rho*s_terms.Y_dot[w]*
+				                (M[w1] - M[num_species-1])*phi_j/sumxms;
+				        mass -= rho*x[w]*sumdxdotm/sumxms;
+				        mass *= epsilon;
+				       }
+				    mass *= - wt_func * h3 * det_J * wt;
+				    mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+				  }
+				}
+			      
+			      advection = 0.;
+			      if ( pd->e[pg->imtrx][eqn] & T_ADVECTION )
+				{
+				  advection_a = 0.;
+				  for ( p=0; p<VIM; p++)
+				    {
+				      advection_a += coeff_rho * s_terms.d_conv_flux_dc[w][p][w1][j];
+				      if (coeff_rho_nonunity) {
+				        advection_a += d_rho->C[w1][j] * s_terms.conv_flux[w][p];
+				      }
+				    }
+				  
+                                  if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                      mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+				     {
+				      psum1 = 0.;
+				      psum2 = 0.;
+				      psum3 = 0.;
+				      psum4 = 0.;
+				      for ( p=0; p<VIM; p++)
+				         {
+				          psum1 += s_terms.conv_flux[w][p];
+				          psum2 += s_terms.d_conv_flux_dc[w][p][w1][j];
+				          sumflux = 0.;
+				          sumfluxm = 0.;
+				          sumdflux = 0.;
+				          sumdfluxm = 0.;
+				          for (b=0; b<num_species-1; b++)
+				             {
+				              sumflux += s_terms.conv_flux[b][p];
+				              sumfluxm += s_terms.conv_flux[b][p] * M[b];
+				              sumdflux += s_terms.d_conv_flux_dc[b][p][w1][j];
+				              sumdfluxm += s_terms.d_conv_flux_dc[b][p][w1][j] * M[b];
+				             }
+				          sumfluxm -= sumflux * M[num_species-1];
+				          sumdfluxm -= sumdflux * M[num_species-1];
+				          psum3 += sumdfluxm;
+				          psum4 += sumfluxm;
+				         }
+				      sumxms = sumxm*sumxm;
+				      advection_a = x[w]*d_rho->C[w1][j]/sumxms;
+				      dmdx = (M[w1] - M[num_species-1])*phi_j;
+				      advection_a -= 2.*dmdx*rho*x[w]/(sumxms*sumxm);
+				      if (w == w1) advection_a += rho*phi_j/sumxms;
+				      advection_a *= (-psum4);
+				      advection_a += psum1*d_rho->C[w1][j]/sumxm;
+				      advection_a += rho*psum2/sumxm;
+				      advection_a -= rho*psum1*dmdx/sumxms;
+				      advection_a -= rho*x[w]*psum3/sumxms;
+				     }
+				  
+				  advection_a *= - wt_func;
 
-                advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] * h3 *
-                             det_J * wt * mp->AdvectiveScaling[w];
-              }
+				  advection_b = 0.;
+				  if (taylor_galerkin[w])
+				    {
+				      for ( p=0; p<VIM; p++) {
+					advection_b += coeff_rho * s_terms.d_taylor_flux_dc[w][p][w1][j];
+					if (coeff_rho_nonunity) {
+					  advection_b += d_rho->C[w1][j] * s_terms.conv_flux[w][p];
+					}
+				      }
+				      advection_b *= -  s_terms.taylor_flux_wt[i]*dt/2.;
+				    }
+				  
+				  advection = advection_a + advection_b;  
+				  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)]* h3 * det_J * wt
+				    * mp->AdvectiveScaling[w];
+				}
+			      
+			      diffusion = 0.;
+			      if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+				{
+				  for ( p=0; p<VIM; p++)
+				    {
+				      diffusion += grad_phi_i[p]
+					* s_terms.d_diff_flux_dc[w][p] [w1][j];
+				    }
 
-              diffusion = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                for (p = 0; p < VIM; p++) {
-                  diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dT[w][p][j];
-                }
-                diffusion *= h3 * det_J * wt;
-                diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-              }
+                                  if ((mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                       mp->SpeciesSourceModel[w]  == ION_REACTIONS)  &&
+                                      cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) /*  RSL 3/19/01  */
+				     {
+				      diffusion *= small_c;
+				     }
+				  
+				  diffusion *= h3 * det_J * wt;
+				  diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+				}	  
+			      
+			      source = 0.;
+			      if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+				{
+				  source += s_terms.d_MassSource_dc[w][w1][j];
 
-              source = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                source += s_terms.d_MassSource_dT[w][j];
+                                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
+                                      mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+				     {
+				      sumrm = 0.;
+				      sumdrm = 0.;
+				      for (b=0; b<num_species; b++)
+				         {
+				          sumrm += s_terms.MassSource[b] * M[b];
+				          sumdrm += s_terms.d_MassSource_dc[b][w1][j] * M[b];
+				         }
+				      source -= x[w]*sumdrm/sumxm;
+				      factor = -x[w]*(M[w1] - M[num_species-1])/sumxm;
+				      if (w == w1) factor += 1.;
+				      source -= sumrm*phi_j*factor/sumxm;
+				     }
 
-                if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                    mp->SpeciesSourceModel[w] ==
-                        ION_REACTIONS) /*  RSL 3/19/01  */
+				  source *= wt_func;
+				  source *= h3 * det_J * wt;
+				  source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+				}
+			      
+                              lec->J[MAX_PROB_VAR + w][MAX_PROB_VAR + w1][ii][j] +=
+                                    Heaviside*(mass + advection) + diffusion + source;
+			    }
+			}
+		    }
+		  
+		  /* MMH
+		   * J_s_v  sensitivity of species equation w.r.t. velocity
+		   *
+		   * NOTE: If DensityModel == SUSPENSION_PM && w == species 
+		   * then this is really J_s_pv.  
+		   */
+		  for ( b=0; b<dim; b++)
+		    {
+		      /* MMH */
+		      if(mp->DensityModel == SUSPENSION_PM &&
+			 w==species)
+			var = PVELOCITY1+b;
+		      else
+			var = VELOCITY1+b;
+		      if ( pd->v[pg->imtrx][var] )
+			{
+			  pvar = upd->vp[pg->imtrx][var];
+			  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			    {
+			      phi_j = bf[var]->phi[j];	
+
+			      d_wt_func = 0.;
+
+                              if(supg != 0.)
+                                {
+                                  d_wt_func = supg * supg_terms.supg_tau * phi_j * bf[eqn]->grad_phi[i][b];
+                                  for( p=0; p<dim; p++ )
+                                    {
+                                      d_wt_func += supg * supg_terms.d_supg_tau_dv[b][j] * fv->v[p]* bf[eqn]->grad_phi[i][p];
+                                    }
+                                }
+			      
+			      mass = 0.;
+
+			      if ( (supg != 0.0) && (pd->e[pg->imtrx][eqn] & T_MASS) ) {
+				  mass = coeff_rho * s_terms.Y_dot[w];
+
+				  if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+				      mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+				  {
+				    mass = s_terms.Y_dot[w];
+				    sumxdot = 0.0;
+				    sumxdotm = 0.0;
+				    for (j = 0; j < num_species - 1; j++) {
+				      sumxdotm += s_terms.Y_dot[j] * M[j];
+				      sumxdot  += s_terms.Y_dot[j];
+				    }
+				    sumxdotm -= sumxdot * M[num_species-1];
+				    mass -= x[w]*sumxdotm/sumxm;
+				    mass *= (epsilon*small_c);
+				  }
+
+				  mass *= - d_wt_func * h3 * det_J * wt;
+				  mass *= pd->etm[pg->imtrx][eqn][LOG2_MASS];
+				}
+			      
+			      advection = 0.;
+			      if ( pd->e[pg->imtrx][eqn] & T_ADVECTION )
+				{
+				  advection_a =  -wt_func * coeff_rho * s_terms.d_conv_flux_dv[w][b] [b][j];
+
+                                  if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                      mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+				     {
+				      sumdflux = 0.;
+				      sumdfluxm = 0.;
+				      for (q=0; q<num_species-1; q++)
+				         {
+				          sumdflux += s_terms.d_conv_flux_dv[q][b][b][j];
+				          sumdfluxm += s_terms.d_conv_flux_dv[q][b][b][j] * M[q];
+				         }
+				      sumdfluxm -= sumdflux * M[num_species-1];
+				      advection_a = -x[w]*sumdfluxm/sumxm;
+				      advection_a += s_terms.d_conv_flux_dv[w][b][b][j];
+				      advection_a *= small_c;
+				      advection_a *= (-wt_func);
+				     }
+
+				  advection_b = 0.;
+				  if(supg!=0.)
+				    {				      
+				      for(p=0;p<dim;p++)
+					{
+					  advection_b +=  coeff_rho * s_terms.conv_flux[w][p];
+					}
+				      
+				      advection_b *=  -d_wt_func;
+				    }
+				  
+				  advection_c = 0.;
+				  if(taylor_galerkin[w])
+				    {
+				      for ( p=0; p<VIM; p++)
+					{
+					  advection_c += s_terms.taylor_flux[w][p];
+					}
+				      advection_c *= - coeff_rho * s_terms.d_taylor_flux_wt_dv[i] [b][j]*dt/2.
+					-s_terms.taylor_flux_wt[i]*dt/2. 
+					* s_terms.d_taylor_flux_dv[w][b] [b][j];
+				    }
+				  
+				  advection = advection_a + advection_b + advection_c;
+				  advection *= det_J * h3 * wt;
+				  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)]
+				    * mp->AdvectiveScaling[w];
+				}
+			      
+			      diffusion = 0.;
+			      
+			      if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+				{
+				  for ( p=0; p<VIM; p++)
+				    {
+				      diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dv[w][p][b][j];
+				    }
+				  diffusion *= h3 * det_J * wt * pd->etm[pg->imtrx][eqn][LOG2_DIFFUSION]; 
+				}
+			      
+			      source = 0.;
+			      if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+				{
+				  source += wt_func * s_terms.d_MassSource_dv[w][b][j];
+				  source *= h3 * det_J * wt;
+				  source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+
+				  double source_b = 0;
+				  if (supg != 0)
+				    {
+				      source_b = s_terms.MassSource[w];
+
+				      if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+					  mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+					 {
+					  sumrm = 0.;
+					  for (j=0; j<num_species; j++)
+					     {
+					      sumrm += s_terms.MassSource[j] * M[j];
+					     }
+					  source_b -= x[w]*sumrm/sumxm;
+					 }
+
+				      source_b *= d_wt_func * h3 * det_J * wt;
+				      source_b *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+				    }
+				}
+			      
+			      lec->J[MAX_PROB_VAR + w][pvar][ii][j] += 
+                                Heaviside*advection+ diffusion + source;
+			      
+			    }
+			}
+		    }
+		  
+		  /* 
+		   * J_s_vd  sensitivity of species equation w.r.t. vorticity direction
+		   *
+		   */
+		  for ( b=0; b<dim; b++)
+		    {
+		      var = VORT_DIR1+b;
+		      if ( pd->v[pg->imtrx][var] )
+			{
+			  pvar = upd->vp[pg->imtrx][var];
+			  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			    {
+			      phi_j = bf[var]->phi[j];	
+			      
+			      diffusion = 0.;
+			      
+			      if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+				{
+				  for ( p=0; p<VIM; p++)
+				    {
+				      diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dvd[w][p][b][j];
+				    }
+				  diffusion *= h3 * det_J * wt * pd->etm[pg->imtrx][eqn][LOG2_DIFFUSION]; 
+				}
+			      
+			      lec->J[MAX_PROB_VAR + w][pvar][ii][j] += 
+				diffusion;
+			      
+			    }
+			}
+		    }
+
+		  /*
+		   * J_s_d  sensitivity of species equation w.r.t. mesh displacement
+		   */
+		  for ( b=0; b<dim; b++)
+		    {
+		      var = MESH_DISPLACEMENT1+b;
+		      if ( pd->v[pg->imtrx][var] )
+			{
+			  pvar = upd->vp[pg->imtrx][var];
+			  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			    {
+			      phi_j = bf[var]->phi[j];	      
+			      
+			      d_det_J_dmeshbj = bf[var]->d_det_J_dm[b][j];
+			      
+			      dh3dmesh_bj = fv->dh3dq[b] * bf[var]->phi[j];
+			      
+
+                              d_wt_func = 0.;
+
+                              if(supg != 0.)
+                                {
+                                  for( p=0; p<dim; p++ )
+                                    {
+                                      d_wt_func += supg *
+                                        (supg_terms.d_supg_tau_dX[b][j] * fv->v[p] * bf[eqn]->grad_phi[i][p]
+                                         + supg_terms.supg_tau * fv->v[p] * bf[eqn]->d_grad_phi_dmesh[i][p][b][j]);
+                                    }
+                                }
+			      
+			      mass = 0.;
+			      if ( pd->TimeIntegration != STEADY )
+				{
+				  if ( pd->e[pg->imtrx][eqn] & T_MASS )
+				    {
+				      mass  = coeff_rho * s_terms.Y_dot[w];
+
+                                      if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS
+ ||
+                                          mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 9/27/01  */
+                                         {
+                                          mass = s_terms.Y_dot[w];
+                                          sumxdot = 0.;
+                                          sumxdotm = 0.;
+                                          for (q=0; q<num_species-1; q++)
+                                             {
+                                              sumxdotm += s_terms.Y_dot[q] * M[q];
+                                              sumxdot  += s_terms.Y_dot[q];
+                                             }
+                                          sumxdotm -= sumxdot * M[num_species-1];
+                                          mass -= x[w]*sumxdotm/sumxm;
+                                          mass *= (epsilon*small_c);
+                                         }
+
+                                      mass *= - (d_wt_func * h3 * det_J + wt_func *
+					( h3 * d_det_J_dmeshbj 
+                                          + dh3dmesh_bj * det_J )) * wt;
+				      mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+				    }
+				}
+			      
+			      advection = 0.;
+			      
+			      if ( pd->e[pg->imtrx][eqn] & T_ADVECTION )
+				{
+				  /*
+				   * Two parts:
+				   *
+				   *	Int( (v- xdot).d(Vc)/dmesh h3 |Jv| )
+				   *	Int( v.Vc d(h3|Jv|)/dmesh )
+				   */
+				  advection_a = 0.;
+				  
+				  for ( p=0; p<VIM; p++)
+				    {
+				      advection_a += s_terms.d_conv_flux_dmesh[w][p] [b][j];
+				    }
+
+                                  if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                      mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 9/27/01  */
+                                     {
+                                      psum = 0.;
+                                      for ( p=0; p<VIM; p++)
+                                         {
+                                          sumdflux = 0.;
+                                          sumdfluxm = 0.;
+                                          for (q=0; q<num_species-1; q++)
+                                             {
+                                              sumdfluxm += s_terms.d_conv_flux_dmesh[q][p]
+ [b][j] * M[q];
+                                              sumdflux  += s_terms.d_conv_flux_dmesh[q][p]
+ [b][j];
+                                             }
+                                          sumdfluxm -= sumdflux * M[num_species-1];
+                                          psum += sumdfluxm;
+                                         }
+                                      advection_a -= x[w]*psum/sumxm;
+                                      advection_a *= - small_c * wt_func * h3 * det_J * wt
+;
+                                     }
+                                  else
+                                     {
+                                      advection_a *= - coeff_rho * wt_func * h3 * det_J *wt;
+                                     }
+				  
+				  advection_b = 0.;
+				  
+				  for ( p=0; p<VIM; p++)
+				    {
+				      advection_b += s_terms.conv_flux[w][p];
+				    }
+
+                                  if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                      mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 9/27/01  */
+                                     {
+                                      psum = 0.;
+                                      for ( p=0; p<VIM; p++)
+                                         {
+                                          sumflux = 0.;
+                                          sumfluxm = 0.;
+                                          for (q=0; q<num_species-1; q++)
+                                             {
+                                              sumfluxm += s_terms.conv_flux[q][p] * M[q];
+                                              sumflux  += s_terms.conv_flux[q][p];
+                                             }
+                                          sumfluxm -= sumflux * M[num_species-1];
+                                          psum += sumfluxm;
+                                         }
+                                      advection_b -= x[w]*psum/sumxm;
+                                      advection_b *= - small_c * wt_func;
+                                     }
+                                  else
+                                     {
+                                      advection_b *= - coeff_rho * wt_func;
+                                     }
+
+				  if(taylor_galerkin[w])
+				    {
+				      advection_c = 0.;
+				      for ( p=0; p<VIM; p++)
+					{
+                                          advection_c += s_terms.taylor_flux[w][p];
+					}
+				      advection_c *= - coeff_rho * s_terms.taylor_flux_wt[i]*dt/2.;
+				      advection_b += advection_c;
+				    }
+				  
+				  advection_b *= ( h3 * d_det_J_dmeshbj 
+						   +dh3dmesh_bj * det_J) * wt;
+				  
+				  advection_f = 0.;
+				  if(supg != 0.)
+				    {
+				      for( p=0; p<dim; p++ )
+					{ 
+					  advection_f += s_terms.conv_flux[w][p];
+					}
+				      advection_f *= -d_wt_func * coeff_rho * h3 * det_J * wt;
+				    }
+				  
+				  advection_d = 0.;
+				  if(taylor_galerkin[w])
+				    {
+				      advection_e = 0.;
+				      for ( p=0; p<VIM; p++)
+					{
+					  advection_d += s_terms.d_taylor_flux_dmesh[w][p] [b][j];
+					  advection_e += s_terms.taylor_flux[w][p];
+					}
+				      
+				      advection_d *= - coeff_rho * s_terms.taylor_flux_wt[i]*dt/2.;
+				      advection_d += - coeff_rho * advection_e *
+					               s_terms.d_taylor_flux_wt_dmesh[i] [b][j]*dt/2.;
+				      
+				      advection_d *= h3 * det_J * wt;
+				    }
+				  
+				  advection = advection_a + advection_f
+				            + advection_b + advection_d;
+				  
+				  advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)]
+				    * mp->AdvectiveScaling[w];
+				}
+			      
+			      
+			      diffusion = 0.;
+			      
+			      if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+				{
+				  /*
+				   * Three parts:
+				   *  diff_a = Int(d(grad_phi_i)/dmesh.q h3 |Jv|)
+				   *  diff_b = Int(grad_phi_i.d(q)/dmesh h3 |Jv|)
+				   *  diff_c = Int(grad_phi_i.q d(h3 |Jv|)/dmesh)
+				   */
+				  
+				  diff_a = 0.;
+				  
+				  for ( p=0; p<VIM; p++)
+				    {
+				      dgrad_phi_i_dmesh[p]
+					= bf[eqn]->d_grad_phi_dmesh[i][p] [b][j];
+				      
+				      diff_a += dgrad_phi_i_dmesh[p] * s_terms.diff_flux[w][p];
+				    }
+				  
+				  diff_a *= h3 * det_J * wt;
+				  
+				  diff_b = 0.;
+				  for ( p=0; p<VIM; p++)
+				    {
+				      diff_b += bf[eqn]->grad_phi[i] [p]* 
+					s_terms.d_diff_flux_dmesh[w][p] [b][j];
+				    }
+				  diff_b *= h3 * det_J * wt;
+				  
+				  diff_c = 0.;
+				  for ( p=0; p<VIM; p++)
+				    {
+				      diff_c +=
+					bf[eqn]->grad_phi[i] [p] 
+					* s_terms.diff_flux[w][p];
+				    }
+				  diff_c *= ( h3 * d_det_J_dmeshbj 
+					      + dh3dmesh_bj * det_J ) * wt;
+				  
+				  
+				  diffusion = diff_a + diff_b + diff_c;
+
+                                  if ((mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                       mp->SpeciesSourceModel[w]  == ION_REACTIONS)  &&
+                                      cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) /*  RSL 9/27/01  */
+                                     {
+                                      diffusion *= small_c;
+                                     }
+
+				  diffusion *= pd->etm[pg->imtrx][eqn][LOG2_DIFFUSION];
+				}
+			      
+			      source = 0.;
+			      if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+				{
+				  source += s_terms.MassSource[w];
+
+                                  if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                      mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 9/27/01  */
+                                     {
+                                      sumrm = 0.;
+                                      for (q=0; q<num_species; q++)
+                                         {
+                                          sumrm += s_terms.MassSource[q] * M[q];
+                                         }
+                                      source -= x[w]*sumrm/sumxm;
+                                     }
+
+                                  source *= (d_wt_func * h3 * det_J + wt_func * ( h3 * d_det_J_dmeshbj + dh3dmesh_bj * det_J ))
+                                    * wt;
+				  source += s_terms.d_MassSource_dmesh[w][b][j]*det_J*h3*wt*wt_func;
+
+                                  if (mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                      mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 9/27/01  */
+                                     {
+                                      sumrm = 0.;
+                                      for (q=0; q<num_species; q++)
+                                         {
+                                          sumrm += s_terms.d_MassSource_dmesh[q][b][j] * M[q];
+                                         }
+                                      sumrm *= (-x[w]/sumxm);
+                                      source += sumrm*det_J*h3*wt*wt_func;
+                                     }
+
+				  source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+				}
+			      
+                              lec->J[MAX_PROB_VAR + w][pvar][ii][j] +=
+                                    Heaviside*(mass + advection) + diffusion + source;
+			    }
+			}
+		    }
+		  
+		  
+		  /*
+		   * J_s_T  sensitivity of species equation w.r.t. temperature
+		   */
+		  var = TEMPERATURE;
+		  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  phi_j = bf[var]->phi[j];	      
+
+			  /*
+			   * HKM -
+			   *    Added in the density dependence on temperature into
+			   *    the time derivative term
+			   */
+			  mass = 0.0;
+			  if (pd->TimeIntegration != STEADY) {
+			    if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+			      if (coeff_rho_nonunity) {
+				mass = d_rho->T[j] * s_terms.Y_dot[w];
+				mass *= - wt_func * h3 * det_J * wt;
+				mass *= pd->etm[pg->imtrx][eqn] [(LOG2_MASS)];
+			      }
+			    }
+			  }
+			  
+			  advection = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_ADVECTION )
+			    {
+			      for ( p=0; p<VIM; p++)
+				{
+				  advection += coeff_rho * s_terms.d_conv_flux_dT[w][p] [j];
+				  if (coeff_rho_nonunity) {
+				    advection += d_rho->T[j] * s_terms.conv_flux[w][p];
+				  }
+				}
+			      advection *= - wt_func;
+			      
+			      if(taylor_galerkin[w])
+				{
+				  advection_a = 0.;
+				  for ( p=0; p<VIM; p++) {
+				    advection_a += coeff_rho * s_terms.taylor_flux[w][p];
+				    if (coeff_rho_nonunity) {
+				      advection += d_rho->T[j] * s_terms.conv_flux[w][p];
+				    }
+				  }
+				  advection *= -advection_a *s_terms.d_taylor_flux_wt_dT[i] [j]*dt/2.
+				    -s_terms.taylor_flux_wt[i]*dt/2. * s_terms.d_taylor_flux_dT[w][b] [j];
+				}
+			      
+			      advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] * h3 * det_J * wt
+				* mp->AdvectiveScaling[w];
+			    }
+			  
+			  diffusion = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+			    {
+			      for ( p=0; p<VIM; p++)
+				{
+				  diffusion += grad_phi_i[p]
+				    * s_terms.d_diff_flux_dT[w][p] [j];
+				}
+			      diffusion *= h3 * det_J * wt;
+			      diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+			    }
+			  
+			  source = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+			    {
+			      source += s_terms.d_MassSource_dT[w][j];
+
+                              if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
+                                  mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 3/19/01  */
+			         {
+			          sumdrm = 0.;
+			          for (w1=0; w1<num_species; w1++)
+			             {
+			              sumdrm += s_terms.d_MassSource_dT[w1][j] * M[w1];
+			             }
+			          source -= x[w]*sumdrm/sumxm;
+			         }
+
+			      source *= det_J*h3*wt*wt_func;
+			      source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+                            }
+
+                            lec->J[MAX_PROB_VAR + w][pvar][ii][j] += Heaviside*(mass + advection) + diffusion + source;
+			}		/* for(j) .... */
+		    }			/* if ( e[eqn], v[var]) .... */	      
+		  var = LIGHT_INTP;
+		  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  phi_j = bf[var]->phi[j];	      
+			  source = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+			    {
+			      source += s_terms.d_MassSource_dI[w][j];
+			      source *= det_J*h3*wt*wt_func;
+			      source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+			    }
+			  
+			  lec->J[MAX_PROB_VAR + w][pvar][ii][j] += source;
+			}		/* for(j) .... */
+		    }			/* if ( e[eqn], v[var]) .... */	      
+		  var = LIGHT_INTM;
+		  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  phi_j = bf[var]->phi[j];	      
+			  source = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+			    {
+			      source += s_terms.d_MassSource_dI[w][j];
+			      source *= det_J*h3*wt*wt_func;
+			      source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+			    }
+			  
+			  lec->J[MAX_PROB_VAR + w][pvar][ii][j] += source;
+			}		/* for(j) .... */
+		    }			/* if ( e[eqn], v[var]) .... */	      
+		  var = LIGHT_INTD;
+		  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  phi_j = bf[var]->phi[j];	      
+			  source = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+			    {
+			      source += s_terms.d_MassSource_dI[w][j];
+			      source *= det_J*h3*wt*wt_func;
+			      source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+			    }
+			  
+			  lec->J[MAX_PROB_VAR + w][pvar][ii][j] += source;
+			}		/* for(j) .... */
+		    }			/* if ( e[eqn], v[var]) .... */	      
+		  
+		  
+		  /*
+		   * J_s_V  sensitivity of species equation w.r.t. voltage -- RSL 4/4/00
+		   */
+               if ( cr->MassFluxModel != FICKIAN_CHARGED) 
                 {
-                  sumdrm = 0.;
-                  for (w1 = 0; w1 < num_species; w1++) {
-                    sumdrm += s_terms.d_MassSource_dT[w1][j] * M[w1];
-                  }
-                  source -= x[w] * sumdrm / sumxm;
+		  var = VOLTAGE;
+		  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  phi_j = bf[var]->phi[j];	      
+
+			  mass = 0.0;
+			  
+			  advection = 0.;
+			  
+			  diffusion = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+			    {
+			      for ( p=0; p<VIM; p++)
+				{
+				  diffusion += grad_phi_i[p]
+				    * s_terms.d_diff_flux_dV[w][p] [j];
+				}
+		  				  
+                                  if ((mp->SpeciesSourceModel[w]  == ELECTRODE_KINETICS ||
+                                       mp->SpeciesSourceModel[w]  == ION_REACTIONS)  &&
+                                      cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) /*  RSL 3/19/01  */
+				     {
+				      diffusion *= small_c;
+				     }
+				  
+			      diffusion *= h3 * det_J * wt;
+			      diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+			    }
+			  
+			  source = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_SOURCE )
+			    {
+			      source += s_terms.d_MassSource_dV[w][j];
+
+                              if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
+                                  mp->SpeciesSourceModel[w] == ION_REACTIONS) /*  RSL 3/19/01  */
+			         {
+			          sumdrm = 0.;
+			          for (w1=0; w1<num_species; w1++)
+			             {
+			              sumdrm += s_terms.d_MassSource_dV[w1][j] * M[w1];
+			             }
+			          source -= x[w]*sumdrm/sumxm;
+			         }
+
+			      source *= det_J*h3*wt*wt_func;
+			      source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+                            }
+
+                            lec->J[MAX_PROB_VAR + w][pvar][ii][j] += Heaviside * (mass + advection) + diffusion + source;
+			}  /* end of loop over j */
+		    }  /* end of var = VOLTAGE */
                 }
 
-                source *= det_J * h3 * wt * phi_i;
-                source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
-              }
+	       /*  KSC: 9/9/00
+	        * J_s_V  sensitivity of species equation w.r.t. electrical potential for 
+                * the case of Fickian diffusion of charged species  
+	        */
+               else if ( cr->MassFluxModel == FICKIAN_CHARGED) 
+                {
+		  var = VOLTAGE;
+		  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  diffusion = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+			    {
+			      for ( p=0; p<VIM; p++)
+				{
+				  diffusion += grad_phi_i[p]
+				    * s_terms.d_diff_flux_dV[w][p] [j];
+				}
+			      diffusion *= h3 * det_J * wt;
+			      diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+			    }
+			  
+			  lec->J[MAX_PROB_VAR + w][pvar][ii][j] += diffusion;
+			}		/* for(j) .... */
+		    }			/* if ( e[eqn], v[var]) .... */	      
+                }                       /* if cr->MassFluxModel == FICKIAN_CHARGED ...  */   
 
-              lec->J[MAX_PROB_VAR + w][pvar][ii][j] +=
-                  mass + advection + diffusion + source;
-            } /* for(j) .... */
-          }   /* if ( e[eqn], v[var]) .... */
+		  /*
+		   * Jacobian with respect to pressure
+		   */
+		  var = PRESSURE; 
+		  if ( pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var] )
+		    {
+		      pvar = upd->vp[pg->imtrx][var];
+		      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+			{
+			  phi_j = bf[var]->phi[j];	      
+			  /*
+			   *  HKM - 
+			   *   Right now, the density does not depend on pressure. We could
+			   *   easily add it in here
+			   */
+			  mass = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_MASS )
+			    {
+			      mass += coeff_rho * s_terms.d_Y_dot_dP[w] [j];
+			      mass *= - wt_func * det_J * h3 * wt;
+			      mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+			    }
+			  
+			  diffusion = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+			    {
+			      for ( p=0; p<VIM; p++)
+				{
+				  diffusion += grad_phi_i[p]
+				    * s_terms.d_diff_flux_dP[w][p] [j];
+				}
+			      diffusion *= h3 * det_J * wt;
+			      diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+			    }
+			  
+			  /* Advection is velocity times gradient of 
+			     mass (or volume) fraction */
+			  advection = 0.;
+			  if ( pd->e[pg->imtrx][eqn] & T_ADVECTION )
+			    {
+			      for ( p=0; p<VIM; p++)
+				{
+				  advection += rho * s_terms.d_conv_flux_dP[w][p] [j];
+				}
+			      advection *= - wt_func ;
+			      
+			      advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)]* det_J * h3 * wt
+				* mp->AdvectiveScaling[w];
+			    }
+			  
+                          lec->J[MAX_PROB_VAR + w][pvar][ii][j] += Heaviside * advection + diffusion + mass;
+			}		/* for(j) .... */
+		    }			/* if ( e[eqn], v[var]) .... */
+		  
+		  /*
+		   * J_s_SH:
+		   *      Dependence of the species continuity equation on the Shear Rate
+		   *      inpendent unknown.
+		   */
+		  
+		  if ( cr->MassFluxModel == HYDRODYNAMIC || cr->MassFluxModel == DM_SUSPENSION_BALANCE ) /* These terms only appear for this model */
+		    {
+		      var = SHEAR_RATE;
+		      if ( pd->v[pg->imtrx][var])
+			{
+			  pvar = upd->vp[pg->imtrx][var];
+			  for( j=0;  j<ei[pg->imtrx]->dof[var] ; j++)
+			    {
+			      diffusion = 0.0;
+			      if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+				for ( p=0; p<VIM; p++)
+				  {
+				    diffusion += grad_phi_i[p]
+				      * s_terms.d_diff_flux_dSH[w][p][j];
+				  }
+			      diffusion *= h3 * det_J * wt;
+			      diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+			      
+			      lec->J[MAX_PROB_VAR + w][pvar][ii][j] += diffusion;
+			      
+			    } /* for (j) .. J_s_SH */
+			}/* if (pd) */
+		    } /* if( cr) */ 
 
-          /*
-           * J_s_V  sensitivity of species equation w.r.t. voltage -- RSL 4/4/00
-           */
-          if (cr->MassFluxModel != FICKIAN_CHARGED) {
-            var = VOLTAGE;
-            if (pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var]) {
-              pvar = upd->vp[pg->imtrx][var];
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                phi_j = bf[var]->phi[j];
+		  /*
+		   * J_s_G:
+		   *      Dependence of the species continuity equation on the velocity gradient
+		   *      tensor unknowns.
+		   */
+		   /* These terms only appear for this model */
+		  if ( cr->MassFluxModel == DM_SUSPENSION_BALANCE )
+		    {
+		      v_g[0][0] = VELOCITY_GRADIENT11;
+		      v_g[0][1] = VELOCITY_GRADIENT12;
+		      v_g[1][0] = VELOCITY_GRADIENT21;
+		      v_g[1][1] = VELOCITY_GRADIENT22;
+		      v_g[0][2] = VELOCITY_GRADIENT13;
+		      v_g[1][2] = VELOCITY_GRADIENT23;
+		      v_g[2][0] = VELOCITY_GRADIENT31;
+		      v_g[2][1] = VELOCITY_GRADIENT32; 
+		      v_g[2][2] = VELOCITY_GRADIENT33; 
 
-                mass = 0.0;
+		      for ( b=0; b<VIM; b++)
+			{
+			  for ( c=0; c<VIM; c++)
+			    {
+			      var = v_g[b][c];		      
+			      if ( pd->v[pg->imtrx][var])
+				{
+				  pvar = upd->vp[pg->imtrx][var];
+				  for( j=0;  j<ei[pg->imtrx]->dof[var] ; j++)
+				    {
+				      diffusion = 0.0;
+				      if ( pd->e[pg->imtrx][eqn] & T_DIFFUSION )
+					for ( p=0; p<VIM; p++)
+					  {
+					    diffusion += grad_phi_i[p]
+					      * s_terms.d_diff_flux_dG[w][p][b][c][j];
+					  }
+				      diffusion *= h3 * det_J * wt;
+				      diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+				      
+				      lec->J[MAX_PROB_VAR + w][pvar][ii][j] += diffusion;
+				    }
+				}
+			    }
+			}
+		    } /*if ( cr->MassFluxModel == DM_SUSPENSION_BALANCE ) */
+			      
 
-                advection = 0.;
-
-                diffusion = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
-                    diffusion +=
-                        grad_phi_i[p] * s_terms.d_diff_flux_dV[w][p][j];
-                  }
-
-                  if ((mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                       mp->SpeciesSourceModel[w] == ION_REACTIONS) &&
-                      cr->MassFluxModel ==
-                          STEFAN_MAXWELL_VOLUME) /*  RSL 3/19/01  */
-                  {
-                    diffusion *= small_c;
-                  }
-
-                  diffusion *= h3 * det_J * wt;
-                  diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-                }
-
-                source = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                  source += s_terms.d_MassSource_dV[w][j];
-
-                  if (mp->SpeciesSourceModel[w] == ELECTRODE_KINETICS ||
-                      mp->SpeciesSourceModel[w] ==
-                          ION_REACTIONS) /*  RSL 3/19/01  */
-                  {
-                    sumdrm = 0.;
-                    for (w1 = 0; w1 < num_species; w1++) {
-                      sumdrm += s_terms.d_MassSource_dV[w1][j] * M[w1];
-                    }
-                    source -= x[w] * sumdrm / sumxm;
-                  }
-
-                  source *= det_J * h3 * wt * phi_i;
-                  source *= pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
-                }
-
-                lec->J[MAX_PROB_VAR + w][pvar][ii][j] +=
-                    mass + advection + diffusion + source;
-              } /* end of loop over j */
-            }   /* end of var = VOLTAGE */
-          }
-
-          /*  KSC: 9/9/00
-           * J_s_V  sensitivity of species equation w.r.t. electrical potential
-           * for the case of Fickian diffusion of charged species
-           */
-          else if (cr->MassFluxModel == FICKIAN_CHARGED) {
-            var = VOLTAGE;
-            if (pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var]) {
-              pvar = upd->vp[pg->imtrx][var];
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                diffusion = 0.;
-                if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < VIM; p++) {
-                    diffusion +=
-                        grad_phi_i[p] * s_terms.d_diff_flux_dV[w][p][j];
-                  }
-                  diffusion *= h3 * det_J * wt;
-                  diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-                }
-
-                lec->J[MAX_PROB_VAR + w][pvar][ii][j] += diffusion;
-              } /* for(j) .... */
-            }   /* if ( e[eqn], v[var]) .... */
-          }     /* if cr->MassFluxModel == FICKIAN_CHARGED ...  */
-
-          /*
-           * Jacobian with respect to pressure
-           */
-          var = PRESSURE;
-          if (pd->e[pg->imtrx][eqn] && pd->v[pg->imtrx][var]) {
-            pvar = upd->vp[pg->imtrx][var];
-            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              phi_j = bf[var]->phi[j];
-              /*
-               *  HKM -
-               *   Right now, the density does not depend on pressure. We could
-               *   easily add it in here
-               */
-              mass = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_MASS) {
-                mass += coeff_rho * s_terms.d_Y_dot_dP[w][j];
-                mass *= -phi_i * det_J * h3 * wt;
-                mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-              }
-
-              diffusion = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                for (p = 0; p < VIM; p++) {
-                  diffusion += grad_phi_i[p] * s_terms.d_diff_flux_dP[w][p][j];
-                }
-                diffusion *= h3 * det_J * wt;
-                diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-              }
-
-              /* Advection is velocity times gradient of
-                 mass (or volume) fraction */
-              advection = 0.;
-              if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-                for (p = 0; p < VIM; p++) {
-                  advection += rho * s_terms.d_conv_flux_dP[w][p][j];
-                }
-                advection *= -wt_func;
-
-                advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)] * det_J *
-                             h3 * wt * mp->AdvectiveScaling[w];
-              }
-
-              lec->J[MAX_PROB_VAR + w][pvar][ii][j] +=
-                  advection + diffusion + mass;
-            } /* for(j) .... */
-          }   /* if ( e[eqn], v[var]) .... */
-
-          /*
-           * J_s_SH:
-           *      Dependence of the species continuity equation on the Shear
-           * Rate inpendent unknown.
-           */
-
-          if (cr->MassFluxModel == HYDRODYNAMIC ||
-              cr->MassFluxModel ==
-                  DM_SUSPENSION_BALANCE) /* These terms only appear for this
-                                            model */
-          {
-            var = SHEAR_RATE;
-            if (pd->v[pg->imtrx][var]) {
-              pvar = upd->vp[pg->imtrx][var];
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                diffusion = 0.0;
-                if (pd->e[pg->imtrx][eqn] & T_DIFFUSION)
-                  for (p = 0; p < VIM; p++) {
-                    diffusion +=
-                        grad_phi_i[p] * s_terms.d_diff_flux_dSH[w][p][j];
-                  }
-                diffusion *= h3 * det_J * wt;
-                diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-
-                lec->J[MAX_PROB_VAR + w][pvar][ii][j] += diffusion;
-
-              } /* for (j) .. J_s_SH */
-            }   /* if (pd) */
-          }     /* if( cr) */
-
-          /*
-           * J_s_G:
-           *      Dependence of the species continuity equation on the velocity
-           * gradient tensor unknowns.
-           */
-          /* These terms only appear for this model */
-          if (cr->MassFluxModel == DM_SUSPENSION_BALANCE) {
-            v_g[0][0] = VELOCITY_GRADIENT11;
-            v_g[0][1] = VELOCITY_GRADIENT12;
-            v_g[1][0] = VELOCITY_GRADIENT21;
-            v_g[1][1] = VELOCITY_GRADIENT22;
-            v_g[0][2] = VELOCITY_GRADIENT13;
-            v_g[1][2] = VELOCITY_GRADIENT23;
-            v_g[2][0] = VELOCITY_GRADIENT31;
-            v_g[2][1] = VELOCITY_GRADIENT32;
-            v_g[2][2] = VELOCITY_GRADIENT33;
-
-            for (b = 0; b < VIM; b++) {
-              for (c = 0; c < VIM; c++) {
-                var = v_g[b][c];
-                if (pd->v[pg->imtrx][var]) {
-                  pvar = upd->vp[pg->imtrx][var];
-                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                    diffusion = 0.0;
-                    if (pd->e[pg->imtrx][eqn] & T_DIFFUSION)
-                      for (p = 0; p < VIM; p++) {
-                        diffusion += grad_phi_i[p] *
-                                     s_terms.d_diff_flux_dG[w][p][b][c][j];
-                      }
-                    diffusion *= h3 * det_J * wt;
-                    diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-
-                    lec->J[MAX_PROB_VAR + w][pvar][ii][j] += diffusion;
-                  }
-                }
-              }
-            }
-          } /*if ( cr->MassFluxModel == DM_SUSPENSION_BALANCE ) */
-
-        } /* if active_dofs */
-      }   /* for (i) .... */
-    }     /* if ( assemble Jacobian ) */
-  }       /* for (w) ... */
-  return (status);
-
+		}     /* if active_dofs */
+            }				/* for (i) .... */
+        }					/* if ( assemble Jacobian ) */
+    }				/* for (w) ... */
+  
+  return(status);
+  
 } /* end of assemble_mass_transport */
 /*****************************************************************************/
 /*****************************************************************************/
@@ -3438,8 +3565,8 @@ flory_huggins(double func[],
   double chi[MAX_CONC][MAX_CONC]; /* chi is the binary interaction parameter*/
   double mw_last=0, dmdv=0; /* Molecular weight of non-condensable and conversion factor */
 
-  memset(prod, 0, MAX_CONC*sizeof(double));
-  memset(y_mass, 0, MAX_CONC*sizeof(double));
+  memset(y_mass, 0, sizeof(double)*MAX_CONC);
+  memset(prod, 0, sizeof(double)*MAX_CONC);
 
   if(af->Assemble_LSA_Mass_Matrix)
     return;
@@ -4452,6 +4579,168 @@ mass_flux_surf_user_bc(double func[DIM],
     } /* End of if Assemble_Jacobian */
   return;
 } /* END of routine mass_flux_surf_user_bc                                   */
+
+/*****************************************************************************/
+/****************************************************************************/
+
+void
+mass_flux_surf_etch(double func[DIM],
+                    double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                    const int wspec,
+                    const int etch_plane,
+                    const double time,
+                    const double dt,
+                    const double tt )
+
+/******************************************************************************
+*
+*  Function which calculates the surface integral for mass flux resulting from
+*  etching reaction
+*
+*  Right now, it only handles KOH wet etching on crystalline silicon surface plane 100
+*  It also assumes a species ordering as follows:
+*                   0: H2O - water
+*                   1: KOH - potassium hydroxide
+*                   2: H2 - hydrogen
+*                   3: Silicon hydroxyl byproducts
+*
+*  Flux units are given in CGS
+*
+*  Functions called:
+*  calc_KOH_Si_etch_rate_100  -- calculates etch rate based on local concentration
+*
+*  Kristianto Tjiptowidjojo (5/2017)
+*  ----------------------------------------------------------------------------
+*
+******************************************************************************/
+{
+
+  int j_id, w1;
+  int kdir, var;
+  int err = 0;
+  int dim = pd->Num_Dim;
+  double phi_j;
+
+  double mass_flux[MAX_CONC] = {0.0};
+  double d_mass_flux[MAX_CONC][MAX_VARIABLE_TYPES + MAX_CONC] = {{0.0}};
+
+  struct Species_Conservation_Terms s_terms;
+  /* Use fake values for this since we do not need the SUPG term */
+  double h[DIM] = {1.0, 1.0, 1.0};
+
+  double etch_rate = 0.0;
+  double d_etch_rate_d_C[MAX_CONC] = {0.0};
+
+  /* Bulk density of crystalline silicon (g/cm^3) */
+  double rho_bulk_Si = 2.3290;
+
+  /* Molecular weight in mole/g */
+  double MW_H2O = 18.01528;
+  double MW_OH = 17.008;
+  double MW_Si = 28.0855;
+  double MW_H2 = (2.0 * 1.00794);
+  double MW_SiO2OH2 = (28.0855 + 2.0*15.9994 + 2.0*17.008);
+
+  /*
+   *  Initialize the Species_Conservation_Terms temporary structure
+   *  before filling it up
+   */
+  zero_structure(&s_terms, sizeof(struct Species_Conservation_Terms), 1);
+  err = get_continuous_species_terms(&s_terms, time, tt, dt, h);
+  EH(err, "get_continuous_species_terms");
+
+ /* Right now it only handles KOH wet etching on plane 100 of crystalline silicon*/
+  if (etch_plane == 100)
+    {
+     /* Get etch rate */
+     etch_rate = calc_KOH_Si_etch_rate_100(d_etch_rate_d_C);
+
+     /* Export it to mass_flux array, depending on their stochiometric coefficient */
+     switch (wspec)
+       {
+        case 0: /* Water */
+           mass_flux[wspec] = 2.0 * rho_bulk_Si/MW_Si * MW_H2O * etch_rate;
+           break;
+
+        case 1: /* OH */
+           mass_flux[wspec] = 2.0 * rho_bulk_Si/MW_Si * MW_OH * etch_rate;
+           break;
+
+        case 2: /* H2 */
+           mass_flux[wspec] = -2.0 * rho_bulk_Si/MW_Si * MW_H2 * etch_rate;
+           break;
+
+        case 3: /* SiO2OH2 */
+           mass_flux[wspec] = -1.0 * rho_bulk_Si/MW_Si * MW_SiO2OH2 * etch_rate;
+           break;
+       }
+
+     /* Export sensitivity of mass flux array */
+     switch (wspec)
+       {
+        case 0: /* Water */
+           d_mass_flux[wspec][MAX_VARIABLE_TYPES+0] = 2.0 * rho_bulk_Si/MW_Si * MW_H2O * d_etch_rate_d_C[0];
+           d_mass_flux[wspec][MAX_VARIABLE_TYPES+1] = 2.0 * rho_bulk_Si/MW_Si * MW_H2O * d_etch_rate_d_C[1];
+           break;
+
+        case 1: /* KOH */
+           d_mass_flux[wspec][MAX_VARIABLE_TYPES+0] = 2.0 * rho_bulk_Si/MW_Si * MW_OH * d_etch_rate_d_C[0];
+           d_mass_flux[wspec][MAX_VARIABLE_TYPES+1] = 2.0 * rho_bulk_Si/MW_Si * MW_OH * d_etch_rate_d_C[1];
+           break;
+
+        case 2: /* H2 */
+           d_mass_flux[wspec][MAX_VARIABLE_TYPES+0] = -2.0 * rho_bulk_Si/MW_Si * MW_H2 * d_etch_rate_d_C[0];
+           d_mass_flux[wspec][MAX_VARIABLE_TYPES+1] = -2.0 * rho_bulk_Si/MW_Si * MW_H2 * d_etch_rate_d_C[1];
+           break;
+
+        case 3: /* SiO2OH2 */
+           d_mass_flux[wspec][MAX_VARIABLE_TYPES+0] = -1.0 * rho_bulk_Si/MW_Si * MW_SiO2OH2 * d_etch_rate_d_C[0];
+           d_mass_flux[wspec][MAX_VARIABLE_TYPES+1] = -1.0 * rho_bulk_Si/MW_Si * MW_SiO2OH2 * d_etch_rate_d_C[1];
+           break;
+       }
+
+     d_mass_flux[wspec][MAX_VARIABLE_TYPES+2] = 0.0;
+     d_mass_flux[wspec][MAX_VARIABLE_TYPES+3] = 0.0;
+    }
+
+
+  /* Load up func and d_func and return to apply_integrated BC */
+
+  if (af->Assemble_Residual )
+    {
+     for (kdir = 0; kdir < dim; kdir++)
+        {
+          *func += s_terms.diff_flux[wspec][kdir] * fv->snormal[kdir];
+        }
+
+     *func -= mass_flux[wspec];
+    }
+
+  if (af->Assemble_Jacobian )
+    {
+      /* sum the contributions to the global stiffness matrix  for Species*/
+
+      /*
+       * J_s_c
+       */
+      var=MASS_FRACTION;
+      for (j_id = 0; j_id < ei[pg->imtrx]->dof[var]; j_id++) {
+	phi_j = bf[var]->phi[j_id];
+	for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++ )
+	  {
+           for (kdir = 0; kdir < dim; kdir++)
+              {
+               d_func[0][MAX_VARIABLE_TYPES + w1][j_id] +=
+               s_terms.d_diff_flux_dc[wspec][kdir] [w1][j_id] * fv->snormal[kdir];
+              }
+	   d_func[0][MAX_VARIABLE_TYPES + w1][j_id] -=
+	   d_mass_flux[wspec][MAX_VARIABLE_TYPES + w1] * phi_j;
+	  }
+      }
+ 
+    } /* End of if Assemble_Jacobian */
+  return;
+} /* END of routine mass_flux_surf_etch_bc                                   */
 
 /*****************************************************************************/
 /****************************************************************************/
@@ -6165,17 +6454,18 @@ mass_flux_equil_mtc(dbl mass_flux[MAX_CONC],
      double bottom, prod2, sum_C;
      double chi[MAX_CONC][MAX_CONC]; /* chi is the binary interaction parameter*/
      double mw_last=0; /* Molecular weight of non-condensable and conversion factor */
-
-     memset(prod, 0, MAX_CONC*sizeof(double));
      
      if (MAX_CONC < 3) {
        EH(-1, "mass_flux_equil_mtc expects MAX_CONC >= 3");
        return;
      }
+     memset(prod, 0, sizeof(double)*MAX_CONC);
 
 /***************************** EXECUTION BEGINS *******************************/
 
-     for( j=0; j<pd->Num_Species_Eqn; j++  ) C[j] = fv->c[j];
+  /* Insure concentration are positive */
+     for( j=0; j<pd->Num_Species_Eqn; j++  ) y_mass[j] = MAX(DBL_SMALL,y_mass[j]);
+     for( j=0; j<pd->Num_Species_Eqn; j++  ) C[j] = y_mass[j];
 
   /* Nonideal VP Calculations based on either ANTOINE or RIEDEL models */
 
@@ -6541,14 +6831,15 @@ mtc_chilton_coburn(dbl *mtc,
      double cp_gas;			/* heat capacity (cal/g/deg K)   */
      double diff_gas;			/* solvent diffusivity in gas    */
      double visc_gas;			/* gas viscosity (p.)    */
-     double T_film;
+     double T_film,T_liquid;
      double temp1, temp2;
      int w;
      double convF, convF_dc[MAX_CONC],convF_dT;
 
 /*  Assuming temperature is in degrees K  */
  
-	T_film = 0.5*(fv->T + T_gas);	
+	T_liquid = MAX(DBL_SMALL,fv->T);
+	T_film = 0.5*(T_liquid + T_gas);	
 #if 0
 if(T_gas < 0 || T_gas > 1000)
 	{
@@ -6614,7 +6905,6 @@ if(T_gas < 0 || T_gas > 1000)
 	temp2 = rho_gas*cp_gas*82.05*T_film;
  	*mtc = htc*mp->molecular_weight[wspec]*temp1/temp2;
  	*mtc = *mtc/convF;
-/*fprintf(stderr,"chilton-coburn %g %g %g\n",*mtc,convF,mp->density);*/
  
 /*  Due to sensitivity problems only compute explicit temperature derivs  */
  	d_mtc[TEMPERATURE] = -0.5*htc*mp->molecular_weight[wspec]*
@@ -6735,6 +7025,7 @@ act_coeff(dbl lngamma[MAX_CONC], dbl dlngamma_dC[MAX_CONC][MAX_CONC],
       memset(df1_dc, 0,sizeof(double)*MAX_CONC*MAX_CONC);
       memset(df2_dc, 0,sizeof(double)*MAX_CONC*MAX_CONC);
       memset(df3_dc, 0,sizeof(double)*MAX_CONC*MAX_CONC);
+      memset(dv_dw, 0,sizeof(double)*MAX_CONC*MAX_CONC);
       memset(d2f1_dc2, 0,sizeof(double)*MAX_CONC*MAX_CONC*MAX_CONC);
       memset(d2f2_dc2, 0,sizeof(double)*MAX_CONC*MAX_CONC*MAX_CONC);
       memset(d2f3_dc2, 0,sizeof(double)*MAX_CONC*MAX_CONC*MAX_CONC);
@@ -7328,17 +7619,18 @@ compute_leak_velocity(double *vnorm,
 *  kinematic boundary condition n.(v -vs)=0
 */
 {
-  int i, j;
+  int i, j, p, q;
   int var;
-  int w, wspec;
+  int w, wspec, w1, w2;
   int num_comp;
+  int add_fluxes = FALSE;
   double StoiCoef[MAX_CONC];
-  double mass_tran_coeff,Y_c;
+  double mass_tran_coeff,Y_c, density_tot;
   double nu, k, beta, alphaa, alphac, V = 0.0, U0, T = 0.0, nd;
   double M_solid, rho_solid, molar_volume;
   double ai0, H, cref, n;
   double k1, E1, kn1, En1, c_H2S, c_O2;
-  double xbulk;
+  double xbulk, d_xbulk_dC[MAX_CONC];
   double vnormal, phi_j;
 
   int mode;
@@ -7347,6 +7639,9 @@ compute_leak_velocity(double *vnorm,
   double activity[MAX_CONC];
   double dact_dC[MAX_CONC][MAX_CONC];
   double psat[MAX_CONC], dpsatdt[MAX_CONC];
+  PROPERTYJAC_STRUCT *densityJac = NULL;
+  propertyJac_realloc(&densityJac, mp->Num_Species+1);
+
 
   /* local contributions of boundary condition to residual and jacobian */
 
@@ -7364,18 +7659,41 @@ compute_leak_velocity(double *vnorm,
   memset(d_vnorm->F, 0, sizeof(dbl)*MDE);
   memset(d_vnorm->X, 0, sizeof(dbl)*DIM*MDE);
 
-  /* Expand function use to include KIN_CHEM BC */
   
 
-  if ( bc != NULL && bc->BC_Name == KIN_CHEM_BC ) {
+  for (i=0; i < pd->Num_Species_Eqn; i++) 
+      { StoiCoef[i] = 1.0; }
+  /* Expand function use to include KIN_CHEM BC */
+  if ( bc != NULL && bc->BC_Name == KIN_CHEM_BC ) 
+    {
     num_comp = bc->len_u_BC;
-    for (i=0; i < num_comp; i++) {
-      StoiCoef[i] = bc->u_BC[i]; }
-  }
-  else {
-    for (i=0; i < MAX_CONC; i++) {
-      StoiCoef[i] = 1.0; }
-  }
+    for (i=0; i < num_comp; i++) 
+      { StoiCoef[i] = bc->u_BC[i]; }
+    }
+
+/* convert mass flux to volume flux depending on Species Formulation */
+ density_tot = calc_density(mp, TRUE, densityJac, 0.0);
+ switch(mp->Species_Var_Type)   {
+    case SPECIES_UNDEFINED_FORM:
+    case SPECIES_MASS_FRACTION:
+         for (i=0; i < MAX_CONC; i++) 
+              { StoiCoef[i] *= density_tot*mp->specific_volume[i]; }
+/* Probably need a d_StoiCoef_dC[][] for FRACTION formulations  */
+          break;
+    case SPECIES_MOLE_FRACTION:
+    case SPECIES_VOL_FRACTION:
+          EH(-1, "Volume conversion not done for that Species Formulation");
+          break;
+    case SPECIES_CONCENTRATION:
+         for (i=0; i < MAX_CONC; i++) 
+              { StoiCoef[i] *= mp->molar_volume[i]; }
+         break;   
+    case SPECIES_DENSITY:
+    default:
+         for (i=0; i < MAX_CONC; i++) 
+              { StoiCoef[i] *= mp->specific_volume[i]; }
+         break;
+    }
 
   /* call routine to calculate surface flux of this component and it's 
    * sensitivity to all variable types 
@@ -7384,7 +7702,36 @@ compute_leak_velocity(double *vnorm,
   /* Calculate flux contribution of bulk component */
   xbulk = 1.;
   if (pd->v[pg->imtrx][MASS_FRACTION])
-    for (w=0; w<pd->Num_Species_Eqn; w++) xbulk -= fv->c[w];
+    {
+        switch(mp->Species_Var_Type)   {
+        case SPECIES_UNDEFINED_FORM:
+        case SPECIES_MASS_FRACTION:
+           for (w=0; w<pd->Num_Species_Eqn; w++) 
+              { xbulk -= fv->c[w]; d_xbulk_dC[w] = -1.0; }
+           break;
+        case SPECIES_MOLE_FRACTION:
+        case SPECIES_VOL_FRACTION:
+           EH(-1, "BC mass fraction conversion not done for that Species Formulation");
+           break;
+        case SPECIES_CONCENTRATION:
+           for (w=0; w<pd->Num_Species_Eqn; w++) 
+              {
+               xbulk -= fv->c[w]*mp->molecular_weight[w]/density_tot;
+               d_xbulk_dC[w] = -mp->molecular_weight[w]*
+        (1.0/density_tot+fv->c[w]*mp->d_density[MAX_VARIABLE_TYPES+w]/SQUARE(density_tot));
+              }
+           break;   
+        case SPECIES_DENSITY:
+        default:
+           for (w=0; w<pd->Num_Species_Eqn; w++) 
+              {
+               xbulk -= fv->c[w]/density_tot;
+               d_xbulk_dC[w] = -(1.0/density_tot
+                      +fv->c[w]*mp->d_density[MAX_VARIABLE_TYPES+w]/SQUARE(density_tot));
+              }
+           break;
+         }
+    }
   
   /* Calculate volume flux of bulk component through surface */
   mass_tran_coeff = bc->BC_Data_Float[0];
@@ -7397,14 +7744,17 @@ compute_leak_velocity(double *vnorm,
 	for (w=0; w<pd->Num_Species_Eqn; w++) {
 	  for (j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	    phi_j = bf[var]->phi[j];
-	    d_vnorm->C[w][j] = -mass_tran_coeff * phi_j;
+	    d_vnorm->C[w][j] = -mp->specific_volume[pd->Num_Species_Eqn]*
+                  mass_tran_coeff*(density_tot * d_xbulk_dC[w]
+                    +mp->d_density[MAX_VARIABLE_TYPES+w]*xbulk)*phi_j;
 	  }
 	}
       }
   }
-  vnormal += mass_tran_coeff * ( xbulk - Y_c );
+  vnormal += density_tot*mp->specific_volume[pd->Num_Species_Eqn]*
+                  mass_tran_coeff * ( xbulk - Y_c );
 
-  
+  add_fluxes = (fluxbc == NULL);
   while ( fluxbc != NULL )
     {
       
@@ -7435,23 +7785,6 @@ compute_leak_velocity(double *vnorm,
  				fluxbc->BC_Data_Float[0],
  				fluxbc->BC_Data_Float[4]);
  		}
-              switch(mp->Species_Var_Type)   {
-        /*           case SPECIES_MASS_FRACTION:
-                     break;
-                   case SPECIES_CONCENTRATION:
-	             mtc = mtc*mp->molar_volume[wspec];
-	             d_mtc[TEMPERATURE] *= mp->molar_volume[wspec];
-    	             for (w=0; w<pd->Num_Species_Eqn; w++) 
-	      		d_mtc[MAX_VARIABLE_TYPES+w] *= mp->molar_volume[wspec];
-                     break;   */
-                   case SPECIES_DENSITY:
-                   default:
-	             mtc = mtc*mp->specific_volume[wspec];
-	             d_mtc[TEMPERATURE] *= mp->specific_volume[wspec];
-    	             for (w=0; w<pd->Num_Species_Eqn; w++) 
-	      		d_mtc[MAX_VARIABLE_TYPES+w] *= mp->specific_volume[wspec];
-                     break;
-                    }
 		  
 	      /* Nonideal VP Calculations based on either ANTOINE or RIEDEL models */
 	      
@@ -7470,12 +7803,16 @@ compute_leak_velocity(double *vnorm,
 		}
 		  
 	      /* Calculate mole flux of other components through surface */
+	      mtc *= StoiCoef[wspec];
+	      d_mtc[TEMPERATURE] *= StoiCoef[wspec];
+    	      for (w=0; w<pd->Num_Species_Eqn; w++) 
+	          d_mtc[MAX_VARIABLE_TYPES+w] *= StoiCoef[wspec];
 	      mass_flux_equil_mtc (mp->mass_flux,mp->d_mass_flux, activity, dact_dC, 
 				   fv->c, mode, amb_pres, wspec, mtc, d_mtc, Y_inf);
 		  
 	      A = mp->vapor_pressure[wspec]/amb_pres;
 	      driving_force -=  A*activity[wspec];
-	      vnormal += mp->mass_flux[wspec] * StoiCoef[wspec];
+	      vnormal += mp->mass_flux[wspec] ;
 /* This was causing compiler warnings: probably due to C[w] which should have been C[w][j]  */
     	      var = MASS_FRACTION;
     	      if (pd->v[pg->imtrx][var])
@@ -7486,8 +7823,7 @@ compute_leak_velocity(double *vnorm,
 			{
 	    		phi_j = bf[var]->phi[j];
 			d_vnorm->C[w][j] += 
-				mp->d_mass_flux[wspec][MAX_VARIABLE_TYPES+w]
-				*StoiCoef[wspec]*phi_j;
+				mp->d_mass_flux[wspec][MAX_VARIABLE_TYPES+w]*phi_j;
 			}
 	      	   }
 		}
@@ -7498,7 +7834,7 @@ compute_leak_velocity(double *vnorm,
                   for (j=0; j<ei[pg->imtrx]->dof[var]; j++) 
 		  {
                     phi_j = bf[var]->phi[j];
-                    d_vnorm->T[j] += StoiCoef[wspec] * mp->d_mass_flux[wspec][TEMPERATURE] * phi_j;
+                    d_vnorm->T[j] += mp->d_mass_flux[wspec][TEMPERATURE] * phi_j;
                   }
                 }
 	    }
@@ -7780,8 +8116,7 @@ compute_leak_velocity(double *vnorm,
 
       else if (!strcmp(fluxbc->desc->name1,"YFLUX_SULFIDATION")) 
 	{
-         if(fluxbc->BC_Data_Int[2] != ANNIHILATION_ELECTRONEUTRALITY && 
-            fluxbc->BC_Data_Int[2] != ANNIHILATION_ELECTRONEUTRALITY   )
+         if(fluxbc->BC_Data_Int[2] != ANNIHILATION_ELECTRONEUTRALITY)
           {
 	   if (pd->v[pg->imtrx][MASS_FRACTION])
 	    {
@@ -7940,7 +8275,134 @@ compute_leak_velocity(double *vnorm,
       else fluxbc = BC_Types + fluxbc->BC_Data_Int[1];
 
     } /*while ( fluxbc != NULL ) */
-    
+
+    if(add_fluxes)
+      {
+      for (p = 0; p < VIM; p++) {
+	if ( cr->MassFluxModel == FICKIAN  ||
+	     cr->MassFluxModel == STEFAN_MAXWELL  ||
+	     cr->MassFluxModel == STEFAN_MAXWELL_CHARGED  ||
+	     cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ) 
+	{
+	  if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+	  for (w=0; w<pd->Num_Species_Eqn; w++)
+	  {
+	    vnormal -= fv->snormal[p]*mp->diffusivity[w]*fv->grad_c[w][p]*StoiCoef[w];
+	  }
+	}
+	else if ( cr->MassFluxModel == GENERALIZED_FICKIAN)
+	{
+	  if ( Generalized_Diffusivity() )  EH( -1, "Error in Diffusivity.");
+	  for (w=0; w<pd->Num_Species_Eqn; w++)
+	  {
+	    for (w1=0; w1<pd->Num_Species_Eqn; w1++)
+	    {
+	      vnormal -= fv->snormal[p]*mp->diffusivity_gen_fick[w][w1]
+		  * fv->grad_c[w1][p]*StoiCoef[w];
+	    }
+	  }
+	}
+	else  if ( cr->MassFluxModel == DARCY )
+	{ /* diffusion induced convection is zero */
+	}
+	else
+	{
+	  EH( -1, "Unimplemented mass flux constitutive relation.");
+	}
+      }
+      if ( af->Assemble_Jacobian && d_vnorm != NULL )
+      {
+	for (p=0; p<VIM; p++)
+	{
+	  var = MESH_DISPLACEMENT1;
+	  if (pd->v[pg->imtrx][var])
+	  {
+	    for (q=0; q<VIM; q++)
+	    {
+	      for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
+	      {
+		if ( cr->MassFluxModel == FICKIAN )
+		{
+		  if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+				      
+		  for (w=0; w<pd->Num_Species_Eqn; w++)
+		  {
+		    d_vnorm->X[q][i] -= fv->snormal[p]*mp->diffusivity[w] *
+			fv->d_grad_c_dmesh[p][w] [q][i]*StoiCoef[w];
+		    d_vnorm->X[q][i] -= fv->dsnormal_dx[p][q][i]*mp->diffusivity[w] *
+			fv->grad_c[w][p]*StoiCoef[w];
+		  }
+		}
+	        else if ( cr->MassFluxModel == GENERALIZED_FICKIAN)
+	        {
+	          if ( Generalized_Diffusivity() )  EH( -1, "Error in Diffusivity.");
+	          for (w=0; w<pd->Num_Species_Eqn; w++)
+	          {
+	           for (w1=0; w1<pd->Num_Species_Eqn; w1++)
+	             {
+		         d_vnorm->X[q][i] -= fv->snormal[p]*
+                               mp->diffusivity_gen_fick[w][w1] *
+                                fv->d_grad_c_dmesh[p][w1] [q][i]*StoiCoef[w];
+		         d_vnorm->X[q][i] -= fv->dsnormal_dx[p][q][i]*
+                               mp->diffusivity_gen_fick[w][w1] *
+                                fv->grad_c[w1][p]*StoiCoef[w];
+	             }
+	          }
+	        }
+	      }
+	    }
+	  }
+	  
+	  var = MASS_FRACTION;
+	  if (pd->v[pg->imtrx][var])
+	  {
+	    if ( cr->MassFluxModel == FICKIAN ||
+		 cr->MassFluxModel == STEFAN_MAXWELL ||
+		 cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
+		 cr->MassFluxModel == STEFAN_MAXWELL_VOLUME )
+	    {
+	      if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+
+	      for (w=0; w<pd->Num_Species_Eqn; w++)
+	      {
+		for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
+		{
+		  d_vnorm->C[w][i] -=  fv->snormal[p]*StoiCoef[w]*
+		      mp->diffusivity[w] * bf[var]->grad_phi[i][p];
+		  for (w1=0; w1<pd->Num_Species_Eqn; w1++)
+		  {
+		    d_vnorm->C[w][i] -= fv->snormal[p]*
+			mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1] 
+			* fv->grad_c[w][p]*StoiCoef[w] ;
+		  }
+		}
+	      }
+	    }
+	    else if ( 0 && cr->MassFluxModel == GENERALIZED_FICKIAN)
+	    {
+	     if ( Generalized_Diffusivity() )  EH( -1, "Error in Diffusivity.");
+	     for (w=0; w<pd->Num_Species_Eqn; w++)
+	     {
+	      for (w1=0; w1<pd->Num_Species_Eqn; w1++)
+	       {
+		for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
+		{
+		  d_vnorm->C[w][i] -=  fv->snormal[p]*StoiCoef[w]*
+		      mp->diffusivity_gen_fick[w][w1] * bf[var]->grad_phi[i][p];
+	        for (w2=0; w2<pd->Num_Species_Eqn; w2++)
+	         {
+		 d_vnorm->C[w][i] -= fv->snormal[p]*StoiCoef[w]*
+			mp->d_diffusivity_gf[w][w2][MAX_VARIABLE_TYPES + w1] 
+			* fv->grad_c[w2][p] ;  
+	         }
+	        }
+	       }
+	     }
+	    }
+	  }
+	} /* end of loop over vconv directions */
+      } /* end of if Assemble Jacobian */
+    }
   *vnorm = vnormal;
 
 }
@@ -9310,7 +9772,7 @@ get_convection_velocity(double vconv[DIM], /*Calculated convection velocity */
 			double dt,
 			double tt)
 {
-  int dim, p, q, b, var, i, w, w1, imtrx, mesh_inertia_and_disp_on=0;
+  int dim, p, q, b, var, i, w, w1;
   double volsolid, volsolid_old;
   
   dim = pd->Num_Dim;
@@ -9337,13 +9799,10 @@ get_convection_velocity(double vconv[DIM], /*Calculated convection velocity */
       vconv[p] = fv->v[p];
       if (pd->TimeIntegration != STEADY) {
 	vconv_old[p] = fv_old->v[p];
-	for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-	  {
-	    if (pd->v[imtrx][R_MESH1]) { 
-	      vconv[p]     -= fv_dot->x[p];
-	      vconv_old[p] -= fv_dot_old->x[p];
-	    }
-	  }
+	if (pd->v[pg->imtrx][R_MESH1]) { 
+	  vconv[p]     -= fv_dot->x[p];
+	  vconv_old[p] -= fv_dot_old->x[p];
+	}
       } else {
         vconv_old[p] = 0.;
       }
@@ -9400,162 +9859,168 @@ get_convection_velocity(double vconv[DIM], /*Calculated convection velocity */
 
        /* calculate (sum diffusion flux)/solid volume frac. and it's derivatives 
 	*  v_solvent_flux  */
-       for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
+
+       if (pd->v[pg->imtrx][MASS_FRACTION])   
+	 /* if no solvents - then no convective velocity */
 	 {
-	   if (pd->v[imtrx][MASS_FRACTION])   
-	     /* if no solvents - then no convective velocity */
+	   /* calculate volume fraction of solids and total diffusion flux */
+        switch (mp->Species_Var_Type)
+                {
+                case SPECIES_DENSITY:
+	                volsolid = 1.;
+	                volsolid_old = 1.;
+                        for(w=0 ; w<pd->Num_Species_Eqn ; w++)
+	                   {
+	                    volsolid -= MAX(fv->c[w],0)*mp->specific_volume[w];
+	                    if ( pd->TimeIntegration != STEADY )
+		             volsolid_old -= fv_old->c[w]*mp->specific_volume[w];
+	                   }
+                        break;
+                case SPECIES_CONCENTRATION:
+	                volsolid = 1.;
+	                volsolid_old = 1.;
+                        for(w=0 ; w<pd->Num_Species_Eqn ; w++)
+	                   {
+	                    volsolid -= fv->c[w]*mp->molar_volume[w];
+	                    if ( pd->TimeIntegration != STEADY )
+		             volsolid_old -= fv_old->c[w]*mp->molar_volume[w];
+	                   }
+                        break;
+                default:
+	                volsolid = 1.;
+	                volsolid_old = 1.;
+                        for(w=0 ; w<pd->Num_Species_Eqn ; w++)
+	                   {
+	                    volsolid -= fv->c[w];
+	                    if ( pd->TimeIntegration != STEADY )
+		                     volsolid_old -= fv_old->c[w];
+	                   }
+                        break;
+                }
+   if( volsolid <= 0)
+        {
+	double volso=1.0;
+        fprintf(stderr,"nonvolatile fraction %g %g %g %g\n",
+                        volsolid,fv->x[0],fv->x[1],fv->x[2]);
+        for(w=0 ; w<pd->Num_Species_Eqn ; w++)
 	     {
-	       /* calculate volume fraction of solids and total diffusion flux */
-	       switch (mp->Species_Var_Type)
-		 {
-		 case SPECIES_DENSITY:
-		   volsolid = 1.;
-		   volsolid_old = 1.;
-		   for(w=0 ; w<pd->Num_Species_Eqn ; w++)
-		     {
-		       volsolid -= fv->c[w]*mp->specific_volume[w];
-		       if ( pd->TimeIntegration != STEADY )
-			 volsolid_old -= fv_old->c[w]*mp->specific_volume[w];
-		     }
-		   break;
-		 case SPECIES_CONCENTRATION:
-		   volsolid = 1.;
-		   volsolid_old = 1.;
-		   for(w=0 ; w<pd->Num_Species_Eqn ; w++)
-		     {
-		       volsolid -= fv->c[w]*mp->molar_volume[w];
-		       if ( pd->TimeIntegration != STEADY )
-			 volsolid_old -= fv_old->c[w]*mp->molar_volume[w];
-		     }
-		   break;
-		 default:
-		   volsolid = 1.;
-		   volsolid_old = 1.;
-		   for(w=0 ; w<pd->Num_Species_Eqn ; w++)
-		     {
-		       volsolid -= fv->c[w];
-		       if ( pd->TimeIntegration != STEADY )
-			 volsolid_old -= fv_old->c[w];
-		     }
-		   break;
-		 }
-	       if( volsolid <= 0)
-		 {
-		   fprintf(stderr,"nonvolatile fraction %g %g \n",volsolid,fv->c[0]);
-		   WH(-1,"negative nonvolatile volume fraction");
-		 }
+	      volso -= fv->c[w]*mp->specific_volume[w];
+              fprintf(stderr,"spec %d %g %g %g\n",w,fv->c[w],
+                                mp->specific_volume[w],volso);
+             }
+        WH(-1,"negative nonvolatile volume fraction");
+        }
 
-	       for (p = 0; p < VIM; p++) {
-		 vconv[p] = 0.;
-		 vconv_old[p] = 0.;
-		 if ( cr->MassFluxModel == FICKIAN  ||
-		      cr->MassFluxModel == STEFAN_MAXWELL  ||
-		      cr->MassFluxModel == STEFAN_MAXWELL_CHARGED  ||
-		      cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ) /* Last modified; KSC: 9/98  and  RSL 6/29/00  */
-		   {
-		     if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
-		     /* Get diffusivity and derivatives */
+      for (p = 0; p < VIM; p++) {
+	vconv[p] = 0.;
+	vconv_old[p] = 0.;
+	if ( cr->MassFluxModel == FICKIAN  ||
+	     cr->MassFluxModel == STEFAN_MAXWELL  ||
+	     cr->MassFluxModel == STEFAN_MAXWELL_CHARGED  ||
+	     cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ) /* Last modified; KSC: 9/98  and  RSL 6/29/00  */
+	{
+	  if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+	  /* Get diffusivity and derivatives */
 
-		     for (w=0; w<pd->Num_Species_Eqn; w++)
-		       {
-			 vconv[p] -= mp->diffusivity[w] * fv->grad_c[w][p];
-			 if ( pd->TimeIntegration != STEADY )
-			   vconv_old[p] -= mp->diffusivity[w] * fv_old->grad_c[w][p];
-		       }
-		   }
-		 else if ( cr->MassFluxModel == GENERALIZED_FICKIAN)
-		   {
-		     /* diffusion induced convection */
-		     if ( Generalized_Diffusivity() )  EH( -1, "Error in Diffusivity.");
-		     for (w=0; w<pd->Num_Species_Eqn; w++)
-		       {
-			 for (w1=0; w1<pd->Num_Species_Eqn; w1++)
-			   {
-			     vconv[p] -= mp->diffusivity_gen_fick[w][w1]
-			       * fv->grad_c[w1][p];
-			   }
-			 if ( pd->TimeIntegration != STEADY ) {
-			   for (w1=0; w1<pd->Num_Species_Eqn; w1++)
-			     {
-			       vconv_old[p] -= mp->diffusivity_gen_fick[w][w1]
-				 * fv_old->grad_c[w1][p];
-			     }
-			 }
-		       }
-		   }
-		 else  if ( cr->MassFluxModel == DARCY )
-		   { /* diffusion induced convection is zero */
-		   }
-		 else
-		   {
-		     EH( -1, "Unimplemented mass flux constitutive relation.");
-		   }
-	       }
+	  for (w=0; w<pd->Num_Species_Eqn; w++)
+	  {
+	    vconv[p] -= mp->diffusivity[w] * fv->grad_c[w][p];
+	    if ( pd->TimeIntegration != STEADY )
+		vconv_old[p] -= mp->diffusivity[w] * fv_old->grad_c[w][p];
+	  }
+	}
+	else if ( cr->MassFluxModel == GENERALIZED_FICKIAN)
+	{
+	  /* diffusion induced convection */
+	  if ( Generalized_Diffusivity() )  EH( -1, "Error in Diffusivity.");
+	  for (w=0; w<pd->Num_Species_Eqn; w++)
+	  {
+	    for (w1=0; w1<pd->Num_Species_Eqn; w1++)
+	    {
+	      vconv[p] -= mp->diffusivity_gen_fick[w][w1]
+		  * fv->grad_c[w1][p];
+	    }
+	    if ( pd->TimeIntegration != STEADY ) {
+	      for (w1=0; w1<pd->Num_Species_Eqn; w1++)
+	      {
+		vconv_old[p] -= mp->diffusivity_gen_fick[w][w1]
+		    * fv_old->grad_c[w1][p];
+	      }
+	    }
+	  }
+	}
+	else  if ( cr->MassFluxModel == DARCY )
+	{ /* diffusion induced convection is zero */
+	}
+	else
+	{
+	  EH( -1, "Unimplemented mass flux constitutive relation.");
+	}
+      }
 	   
-	       for (p=0; p<VIM; p++)
-		 {
-		   vconv[p] /= volsolid;
-		   if ( pd->TimeIntegration != STEADY )
-		     vconv_old[p] /= volsolid_old;
-		 }
-	       if ( af->Assemble_Jacobian && d_vconv != NULL )
-		 {
-		   for (p=0; p<dim; p++)
-		     {
-		       var = MESH_DISPLACEMENT1;
-		       if (pd->v[pg->imtrx][var])
-			 {
-			   for (q=0; q<dim; q++)
-			     {
-			       for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
-				 {
-				   if ( cr->MassFluxModel == FICKIAN )
-				     {
-				       if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+      for (p=0; p<VIM; p++)
+      {
+	vconv[p] /= volsolid;
+	if ( pd->TimeIntegration != STEADY )
+	    vconv_old[p] /= volsolid_old;
+      }
+      if ( af->Assemble_Jacobian && d_vconv != NULL )
+      {
+	for (p=0; p<dim; p++)
+	{
+	  var = MESH_DISPLACEMENT1;
+	  if (pd->v[pg->imtrx][var])
+	  {
+	    for (q=0; q<dim; q++)
+	    {
+	      for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
+	      {
+		if ( cr->MassFluxModel == FICKIAN )
+		{
+		  if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
 				      
-				       for (w=0; w<pd->Num_Species_Eqn; w++)
-					 {
-					   d_vconv->X[p][q][i] -= mp->diffusivity[w] *
-					     fv->d_grad_c_dmesh[p][w] [q][i] / volsolid;
-					 }
-				     }
-				 }
-			     }
-			 }
+		  for (w=0; w<pd->Num_Species_Eqn; w++)
+		  {
+		    d_vconv->X[p][q][i] -= mp->diffusivity[w] *
+			fv->d_grad_c_dmesh[p][w] [q][i] / volsolid;
+		  }
+		}
+	      }
+	    }
+	  }
 	  
-		       var = MASS_FRACTION;
-		       if (pd->v[pg->imtrx][var])
-			 {
-			   if ( cr->MassFluxModel == FICKIAN ||
-				cr->MassFluxModel == STEFAN_MAXWELL ||
-				cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
-				cr->MassFluxModel == STEFAN_MAXWELL_VOLUME )
-			     {
-			       if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+	  var = MASS_FRACTION;
+	  if (pd->v[pg->imtrx][var])
+	  {
+	    if ( cr->MassFluxModel == FICKIAN ||
+		 cr->MassFluxModel == STEFAN_MAXWELL ||
+		 cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
+		 cr->MassFluxModel == STEFAN_MAXWELL_VOLUME )
+	    {
+	      if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
 
-			       for (w=0; w<pd->Num_Species_Eqn; w++)
-				 {
-				   for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
-				     {
-				       d_vconv->C[p][w][i] -=
-					 mp->diffusivity[w] * bf[var]->grad_phi[i][p]
-					 / volsolid;
-				       for (w1=0; w1<pd->Num_Species_Eqn; w1++)
-					 {
-					   d_vconv->C[p][w][i] -= (
-								   mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1] 
-								   * fv->grad_c[w][p] 
-								   + mp->diffusivity[w] *fv->grad_c[w][p] / volsolid )
-					     * bf[var]->phi[i] / volsolid;
-					 }
-				     }
-				 }
-			     }
-			 }
-		     } /* end of loop over vconv directions */
-		 } /* end of if Assemble Jacobian */
-	     } /* end of if MASS_FRACTION */
-	 } // for imtrx
+	      for (w=0; w<pd->Num_Species_Eqn; w++)
+	      {
+		for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
+		{
+		  d_vconv->C[p][w][i] -=
+		      mp->diffusivity[w] * bf[var]->grad_phi[i][p]
+		      / volsolid;
+		  for (w1=0; w1<pd->Num_Species_Eqn; w1++)
+		  {
+		    d_vconv->C[p][w][i] -= (
+			mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1] 
+			* fv->grad_c[w][p] 
+			+ mp->diffusivity[w] *fv->grad_c[w][p] / volsolid )
+			* bf[var]->phi[i] / volsolid;
+		  }
+		}
+	      }
+	    }
+	  }
+	} /* end of loop over vconv directions */
+      } /* end of if Assemble Jacobian */
+    } /* end of if MASS_FRACTION */
        
        /*
 	* Add in convection due to motion of Stress Free State - Pseudo Lagrangian Convection 
@@ -9585,14 +10050,7 @@ get_convection_velocity(double vconv[DIM], /*Calculated convection velocity */
 	    * Velocity of solid in lab coordinates is the velocity of the stress free state
 	    * dotted into the deformation gradient tensor
 	    */
-	   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-	     {
-	       if(pd->v[imtrx][MESH_DISPLACEMENT1])
-		 {
-		   mesh_inertia_and_disp_on = 1;
-		 }
-	     }
-	   if (!mesh_inertia_and_disp_on)
+	   if (! pd->v[pg->imtrx][MESH_DISPLACEMENT1])
 	     {
 	       for (p=0; p < dim; p++)
 		 {
@@ -9692,10 +10150,11 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
   int taylor_galerkin[MAX_CONC];
   int explicit[MAX_CONC]; /* move to input deck asap */
 
-  int species, imtrx, imtrx2;			/* Species number for the particle phase. */
+  int species;			/* Species number for the particle phase. */
   int wim   = pd->Num_Dim;    /* wim is the number of velocity unknowns */
   if(pd->CoordinateSystem == SWIRLING ||
-     pd->CoordinateSystem == PROJECTED_CARTESIAN)
+     pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+     pd->CoordinateSystem == CARTESIAN_2pt5D)
     wim = wim+1;
 
   if (mp->DensityModel == SUSPENSION_PM)
@@ -9887,36 +10346,30 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
 	      c_old=1./2.;
 	    }
 	  eqn = R_MASS;
-	  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
+	  if(explicit[w])
 	    {
-	      if(pd->e[imtrx][eqn])
+	      for ( j=0; j<ei[pg->imtrx]->dof[eqn]; j++)
 		{
-		  if(explicit[w])
+		  st->taylor_flux_wt[j] = 0.;
+		  for ( a=0; a<VIM; a++)
 		    {
-		      for ( j=0; j<ei[imtrx]->dof[eqn]; j++)
-			{
-			  st->taylor_flux_wt[j] = 0.;
-			  for ( a=0; a<VIM; a++)
-			    {
-			      st->taylor_flux_wt[j]+= conv_old[a] * bf[eqn]->grad_phi[j] [a] ;
-			    }
-			}
-		    }
-		  else
-		    {
-		      for ( j=0; j<ei[imtrx]->dof[eqn]; j++)
-			{
-			  st->taylor_flux_wt[j] = 0.;
-			  for ( a=0; a<VIM; a++)
-			    {
-			      st->taylor_flux_wt[j]+= conv[a] * bf[eqn]->grad_phi[j] [a] ;
-			    }
-			}
+		      st->taylor_flux_wt[j]+= conv_old[a] * bf[eqn]->grad_phi[j] [a] ;
 		    }
 		}
-	    } // for imtrx
-	} // if taylor_galerkin
-    }  // for Num_Species
+	    }
+	  else
+	    {
+	      for ( j=0; j<ei[pg->imtrx]->dof[eqn]; j++)
+		{
+		  st->taylor_flux_wt[j] = 0.;
+		  for ( a=0; a<VIM; a++)
+		    {
+		      st->taylor_flux_wt[j]+= conv[a] * bf[eqn]->grad_phi[j] [a] ;
+		    }
+		}
+	    }
+	}
+    }
 
   /*
    *  Loop over each species equation, entering the source term
@@ -10078,7 +10531,7 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
 
     /* this is called in the interior nodes */
 
-    err = foam_species_source( mp->u_species_source[0]);
+	err = foam_species_source( mp->u_species_source[0]);
 
     for ( w=0; w<pd->Num_Species_Eqn; w++)  {
 	st->MassSource[w]= mp->species_source[w];
@@ -10183,39 +10636,45 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
       else if(mp->SpeciesSourceModel[w] == PHOTO_CURING )
       {
        double intensity=0;
-       double k_prop=0, k_term=0, k_inh=0, free_rad;
-       double *param,s,dsdC[MAX_CONC],dsdT;
+       double k_prop=0, k_term=0, k_inh=0, free_rad, d_free_rad_dI;
+       double *param,s,dsdC[MAX_CONC],dsdT,dsdI,Conc[MAX_CONC];
        int model_bit, num_mon, O2_spec=-1, rad_spec=-1, init_spec = 0;
+       double k_propX=1, k_propT=0, k_propX_num=0, k_propX_den=0;
+       double intensity_cgs = 2.998e+10*8.85e-12/200.0;
+       double dbl_small = 1.0e-15, Xconv_denom=0, sum_init=0;
+       double Xconv=0.0, Xconv_init=0.0, sum_mon=0;
+       double dXdC[MAX_CONC] = {0.0};
 
        param = mp->u_species_source[w];
        model_bit = ((int)param[0]);
        s = 0;       
-       dsdT = 0;   
+       dsdT = 0;  dsdI = 0;  d_free_rad_dI = 0;
        for(a=0; a<MAX_CONC; a++) dsdC[a]=0.;  
 
-       for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-	 {
-	   if(pd->e[imtrx][R_LIGHT_INTP])
-	     {
-	       intensity = fv->poynt[0];
-	       for (imtrx2 = 0; imtrx2 < upd->Total_Num_Matrices; imtrx2++) 
-		 {
-		   if(pd->e[imtrx2][R_LIGHT_INTM])
-		     { intensity += fv->poynt[1];}
-		   if(pd->e[imtrx2][R_LIGHT_INTD])
-		     { intensity += fv->poynt[2];}
-		 }
-	       intensity *= mp->u_species_source[init_spec][1];
-	       intensity = MAX(intensity,0.0);
-	     }   
-	   else if(pd->e[imtrx][R_ACOUS_PREAL])
-	     {
-	       intensity = mp->u_species_source[init_spec][1]*
-		 (SQUARE(fv->apr)+SQUARE(fv->api));
-	     } 
-	   else
-	     { WH(-1,"No Intensity field found in PHOTO_CURING\n"); }
-	 }
+       if(pd->e[pg->imtrx][R_LIGHT_INTP])
+         {
+         intensity = fv->poynt[0];
+         if(pd->e[pg->imtrx][R_LIGHT_INTM])
+          { intensity += fv->poynt[1];}
+         if(pd->e[pg->imtrx][R_LIGHT_INTD])
+          { intensity += fv->poynt[2];}
+         intensity *= mp->u_species_source[init_spec][1];
+         intensity = MAX(intensity,0.0);
+         }   
+       else if(pd->e[pg->imtrx][R_ACOUS_PREAL])
+         {
+         intensity = mp->u_species_source[init_spec][1]*
+                     intensity_cgs*
+                     (SQUARE(fv->apr)+SQUARE(fv->api));
+         } 
+       else
+        { WH(-1,"No Intensity field found in PHOTO_CURING\n"); }
+
+      /* insure concentrations are positive  */
+	for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
+	    {
+	     Conc[w1] = MAX(dbl_small,fv->c[w1]);
+	    }
 
       /*  free radical concentration  */
 	num_mon = model_bit>>2;
@@ -10223,7 +10682,7 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
             {
 	    O2_spec = init_spec + num_mon +2;
 	    rad_spec = O2_spec + 1;
-            free_rad = fv->c[rad_spec];
+            free_rad = Conc[rad_spec];
             k_term = mp->u_species_source[rad_spec][1]*
                      exp(-mp->u_species_source[rad_spec][2]*
                      (1./fv->T - 1./mp->u_species_source[rad_spec][3]));
@@ -10237,9 +10696,13 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
             k_inh = mp->u_species_source[O2_spec][1]*
                     exp(-mp->u_species_source[O2_spec][2]*
                     (1./fv->T - 1./mp->u_species_source[O2_spec][3]));
-            free_rad = sqrt(SQUARE(k_inh*fv->c[O2_spec])/4.+
-                mp->u_species_source[init_spec+1][2]*intensity*fv->c[init_spec])
-                - k_inh*fv->c[O2_spec]/2.;
+            free_rad = sqrt(SQUARE(k_inh*Conc[O2_spec])/4.+
+                mp->u_species_source[init_spec+1][2]*intensity*Conc[init_spec])
+                - k_inh*Conc[O2_spec]/2.;
+            d_free_rad_dI += 0.5*mp->u_species_source[init_spec+1][2]
+                             *Conc[init_spec]
+                  /sqrt(SQUARE(k_inh*Conc[O2_spec])/4.+
+                mp->u_species_source[init_spec+1][2]*intensity*Conc[init_spec]);
             }
        else if( model_bit & 2)
             {
@@ -10247,98 +10710,151 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
             k_term = mp->u_species_source[rad_spec][1]*
                      exp(-mp->u_species_source[rad_spec][2]*
                      (1./fv->T - 1./mp->u_species_source[rad_spec][3]));
-            free_rad = fv->c[rad_spec];
+            free_rad = Conc[rad_spec];
             }
        else
             {
             free_rad = sqrt(mp->u_species_source[init_spec+1][2]*
-                       intensity*fv->c[init_spec]);
+                       intensity*Conc[init_spec]);
+            if(free_rad > 0){
+            d_free_rad_dI += mp->u_species_source[init_spec+1][2]*
+                            Conc[init_spec]/free_rad;
+                  }
             }
+
+       switch(mp->Species_Var_Type)   {
+           case SPECIES_DENSITY:
+                for ( w1=init_spec+2; w1<init_spec+2+num_mon; w1++)
+	            { 
+                     Xconv += fv->external_field[w1]/mp->molecular_weight[w1]/mp->specific_volume[w1];
+                     sum_mon += Conc[w1]/mp->molecular_weight[w1];
+                     dXdC[w1] = -1.0/mp->molecular_weight[w1];
+                     Xconv_init +=  mp->u_reference_concn[w1][1]/mp->molecular_weight[w1]/mp->specific_volume[w1];
+                     sum_init += mp->u_reference_concn[w1][0]/mp->molecular_weight[w1];
+                    }
+                break;
+           case SPECIES_CONCENTRATION:
+                for ( w1=init_spec+2; w1<init_spec+2+num_mon; w1++)
+	            { 
+                     Xconv += fv->external_field[w1]/mp->specific_volume[w1];
+                     sum_mon += Conc[w1];
+                     dXdC[w1] = -1.0;
+                     Xconv_init += mp->u_reference_concn[w1][1]/mp->specific_volume[w1];
+                     sum_init += mp->u_reference_concn[w1][0];
+                    }
+                break;
+           default:
+                EH(-1,"invalid Species Type for PHOTO_CURING\n");
+           }
+       Xconv *= mp->specific_volume[pd->Num_Species_Eqn];
+       Xconv_init *= mp->specific_volume[pd->Num_Species_Eqn];
+       Xconv_denom = Xconv + sum_mon;
+       Xconv /= Xconv_denom;
+       Xconv = MAX(dbl_small,Xconv);
+       Xconv = MIN(1.0-dbl_small,Xconv);
+       Xconv_init /= (Xconv_init + sum_init);
+       for ( w1=init_spec+2; w1<init_spec+2+num_mon; w1++)
+            { dXdC[w1] *= Xconv/Xconv_denom; }
+        if(Xconv <= dbl_small || Xconv >= (1.0-dbl_small) )
+            { memset( dXdC, 0, sizeof(double) * MAX_CONC); }
 
        if(w == init_spec) 
          {
-            s = -fv->c[w]*intensity;
+            s = -Conc[w]*intensity;
             dsdC[w] = -intensity;
+            dsdI = -Conc[w];
          }
        else if(w == init_spec + 1)
          {
-            s = param[2]*fv->c[init_spec]*intensity;
+            s = param[2]*Conc[init_spec]*intensity;
             dsdC[init_spec] = param[2]*intensity;
+            dsdI = param[2]*Conc[init_spec];
           }
        else if(w > init_spec+1 && w <= init_spec+num_mon+1)
          {
             k_prop = param[1]*exp(-param[2]*(1./fv->T - 1./param[3]));
-            s = -k_prop*fv->c[w]*free_rad;
-            dsdC[w] = -k_prop*free_rad;
-            dsdT = -fv->c[w]*free_rad*k_prop*param[2]/SQUARE(fv->T);
+            k_propX_num = (1.0-param[4])*(1.-Xconv)+param[4]*(1.0-Xconv_init);
+            k_propX_den = k_propX_num - (1.0-param[4])*(1.-Xconv)*log((1.-Xconv)/(1.0-Xconv_init));
+            k_propX = SQUARE(k_propX_num)/k_propX_den;
+            k_propT = k_prop*k_propX;
+            s = -k_propT*Conc[w]*free_rad;
+            dsdC[w] = dXdC[w]*(param[4]-1.0)*k_propX*(2./k_propX_num
+                          +log((1.-Xconv)/(1.0-Xconv_init))/k_propX_den);
+            dsdC[w] *= k_prop*Conc[w]*free_rad;
+            dsdC[w] += -k_propT*free_rad;
+            dsdT = -Conc[w]*free_rad*k_propT*param[2]/SQUARE(fv->T);
+            dsdI += -k_propT*Conc[w]*d_free_rad_dI;
 	  if( (model_bit & 1)  && (model_bit & 2))
             {
-            dsdC[rad_spec] = -k_prop*fv->c[w];
+            dsdC[rad_spec] = -k_propT*Conc[w];
             } 
           else if( model_bit & 1)
             {
-            dsdC[O2_spec] = -k_prop*fv->c[w]*(SQUARE(k_inh/2.)*fv->c[O2_spec]/
-                       sqrt(SQUARE(k_inh*fv->c[O2_spec])/4.+
-                mp->u_species_source[init_spec+1][2]*intensity*fv->c[init_spec])
+            dsdC[O2_spec] = -k_propT*Conc[w]*(SQUARE(k_inh/2.)*Conc[O2_spec]/
+                       sqrt(SQUARE(k_inh*Conc[O2_spec])/4.+
+                mp->u_species_source[init_spec+1][2]*intensity*Conc[init_spec])
                        -k_inh/2.);
-            dsdC[init_spec] = -k_prop*fv->c[w]*0.5*
+            dsdC[init_spec] = -k_propT*Conc[w]*0.5*
                        (mp->u_species_source[init_spec+1][2]*intensity/
-                       sqrt(SQUARE(k_inh*fv->c[O2_spec])/4.+
-                mp->u_species_source[init_spec+1][2]*intensity*fv->c[init_spec]));
+                       sqrt(SQUARE(k_inh*Conc[O2_spec])/4.+
+                mp->u_species_source[init_spec+1][2]*intensity*Conc[init_spec]));
             }
           else if( model_bit & 2)
             {
-            dsdC[rad_spec] = -k_prop*fv->c[w];
+            dsdC[rad_spec] = -k_propT*Conc[w];
             }
           else
             {
-            dsdC[init_spec] = -k_prop*fv->c[w]*
+            dsdC[init_spec] = -k_propT*Conc[w]*
                        (sqrt(mp->u_species_source[init_spec+1][2]*intensity/
-                       fv->c[init_spec])/2.);
+                       Conc[init_spec])/2.);
             }
           }
        else if(w == O2_spec && (model_bit & 1))
          {
-            s = -k_inh*fv->c[w]*free_rad;
-            dsdT = -fv->c[w]*free_rad*k_inh*param[2]/SQUARE(fv->T);
+            s = -k_inh*Conc[w]*free_rad;
+            dsdT = -Conc[w]*free_rad*k_inh*param[2]/SQUARE(fv->T);
+            dsdI += -k_inh*Conc[w]*d_free_rad_dI;
 	  if( model_bit & 2)
             {
             dsdC[w] = -k_inh*free_rad;
-            dsdC[rad_spec] = -k_inh*fv->c[w];
+            dsdC[rad_spec] = -k_inh*Conc[w];
             } 
           else 
             {
-            dsdC[w] = -k_inh*free_rad-k_inh*fv->c[w]*(SQUARE(k_inh/2.)*fv->c[w]/
-                       sqrt(SQUARE(k_inh*fv->c[w])/4.+
-                mp->u_species_source[init_spec+1][2]*intensity*fv->c[init_spec])
+            dsdC[w] = -k_inh*free_rad-k_inh*Conc[w]*(SQUARE(k_inh/2.)*Conc[w]/
+                       sqrt(SQUARE(k_inh*Conc[w])/4.+
+                mp->u_species_source[init_spec+1][2]*intensity*Conc[init_spec])
                        -k_inh/2.);
-            dsdC[init_spec] = -k_inh*fv->c[w]*0.5*intensity*
+            dsdC[init_spec] = -k_inh*Conc[w]*0.5*intensity*
                        mp->u_species_source[init_spec+1][2]/
-                       sqrt(SQUARE(k_inh*fv->c[O2_spec])/4.+
-           mp->u_species_source[init_spec+1][2]*intensity*fv->c[init_spec]);
+                       sqrt(SQUARE(k_inh*Conc[O2_spec])/4.+
+           mp->u_species_source[init_spec+1][2]*intensity*Conc[init_spec]);
             }
           }
        else if(w == rad_spec && (model_bit & 2))
          {
 	  if( model_bit & 1 )
             {
-	    s = mp->u_species_source[init_spec+1][2]*fv->c[init_spec]*intensity
-                  -k_term*SQUARE(fv->c[w])
-                  -k_inh*fv->c[O2_spec]*fv->c[w];
+	    s = mp->u_species_source[init_spec+1][2]*Conc[init_spec]*intensity
+                  -k_term*SQUARE(Conc[w])
+                  -k_inh*Conc[O2_spec]*Conc[w];
             dsdC[init_spec] = mp->u_species_source[init_spec+1][2]*intensity;
-            dsdC[O2_spec] = -k_inh*fv->c[w];
-            dsdC[w] = -k_term*2*fv->c[w]-k_inh*fv->c[O2_spec];
-            dsdT = - SQUARE(fv->c[w])*k_term*param[2]/SQUARE(fv->T)
-                           -fv->c[O2_spec]*fv->c[w]*k_inh*
+            dsdC[O2_spec] = -k_inh*Conc[w];
+            dsdC[w] = -k_term*2*Conc[w]-k_inh*Conc[O2_spec];
+            dsdT = - SQUARE(Conc[w])*k_term*param[2]/SQUARE(fv->T)
+                           -Conc[O2_spec]*Conc[w]*k_inh*
                             mp->u_species_source[O2_spec][2]/SQUARE(fv->T);
+	    dsdI = mp->u_species_source[init_spec+1][2]*Conc[init_spec];
             } 
           else 
             {
-	    s = mp->u_species_source[init_spec+1][2]*fv->c[init_spec]*intensity
-                  -k_term*SQUARE(fv->c[w]);
+	    s = mp->u_species_source[init_spec+1][2]*Conc[init_spec]*intensity
+                  -k_term*SQUARE(Conc[w]);
             dsdC[init_spec] = mp->u_species_source[init_spec+1][2]*intensity;
             dsdC[rad_spec] = -k_term*free_rad*2.;
-            dsdT = - SQUARE(fv->c[w])*k_term*param[2]/SQUARE(fv->T);
+            dsdT = - SQUARE(Conc[w])*k_term*param[2]/SQUARE(fv->T);
+	    dsdI = mp->u_species_source[init_spec+1][2]*Conc[init_spec];
             }
           }
         else
@@ -10369,6 +10885,53 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
 	      {
 		st->d_MassSource_dc[w][w1] [j]=dsdC[w1]*bf[var]->phi[j];
 	      }
+	    }
+	  }
+	  var = LIGHT_INTP;
+	  if(pd->v[pg->imtrx][var])
+	  {
+	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	    {
+	      st->d_MassSource_dI[w][j]= dsdI*bf[var]->phi[j]
+                         *mp->u_species_source[init_spec][1];
+	    }
+	  }
+	  var = LIGHT_INTM;
+	  if(pd->v[pg->imtrx][var])
+	  {
+	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	    {
+	      st->d_MassSource_dI[w][j]= dsdI*bf[var]->phi[j]
+                         *mp->u_species_source[init_spec][1];
+	    }
+	  }
+	  var = LIGHT_INTD;
+	  if(pd->v[pg->imtrx][var])
+	  {
+	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	    {
+	      st->d_MassSource_dI[w][j]= dsdI*bf[var]->phi[j]
+                         *mp->u_species_source[init_spec][1];
+	    }
+	  }
+	  var = ACOUS_PREAL;
+	  if(pd->v[pg->imtrx][var])
+	  {
+	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	    {
+	      st->d_MassSource_dI[w][j]= dsdI*bf[var]->phi[j]
+                    *intensity_cgs*mp->u_species_source[init_spec][1]
+                    *2.*fv->apr;
+	    }
+	  }
+	  var = ACOUS_PIMAG;
+	  if(pd->v[pg->imtrx][var])
+	  {
+	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	    {
+	      st->d_MassSource_dI[w][j]= dsdI*bf[var]->phi[j]
+                    *intensity_cgs*mp->u_species_source[init_spec][1]
+                    *2.*fv->api;
 	    }
 	  }
 
@@ -10434,172 +10997,6 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
 	    
 	  }
       }
-      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_RXN)
-	{
-	  err = foam_pmdi10_rxn_species_source(w, mp->u_species_source[w], tt, dt);
-	  st->MassSource[w] =  mp->species_source[w];
-
-	  if ( af->Assemble_Jacobian )
-	    {
-
-	      var = MASS_FRACTION;
-	      if (pd->v[pg->imtrx][MASS_FRACTION] )
-		{
-		  // Just include the diagonal contribution here
-		  var_offset = MAX_VARIABLE_TYPES + w;
-		  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-		    {
-		      st->d_MassSource_dc[w][w][j] = mp->d_species_source[var_offset]
-			*bf[var]->phi[j];
-		    }
-		}
-
-	      var = TEMPERATURE;
-	      if (pd->v[pg->imtrx][var])
-		{
-		  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-		    {
-		      st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
-		    }
-		}
-	    }
-	}
-      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_H2O)
-	{
-	  for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
-	    {
-	      var_offset = MAX_VARIABLE_TYPES + w1;
-	      mp->d_species_source[var_offset] = 0.0;
-	    }
-
-	  err = foam_pmdi10_h2o_species_source(w, mp->u_species_source[w], time, tt, dt);
-	  st->MassSource[w] =  mp->species_source[w];
-
-	  if ( af->Assemble_Jacobian )
-	    {
-
-	      var = MASS_FRACTION;
-	      if (pd->v[pg->imtrx][MASS_FRACTION] )
-		{
-		  for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
-		    {
-		      var_offset = MAX_VARIABLE_TYPES + w1;
-		      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-			{
-			  st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset]
-			    *bf[var]->phi[j];
-			}
-		    }
-		}
-
-	      var = TEMPERATURE;
-	      if (pd->v[pg->imtrx][var])
-		{
-		  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-		    {
-		      st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
-		    }
-		}
-	    }
-	}
-      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_CO2)
-	{
-	  err = foam_pmdi10_co2_species_source(w, mp->u_species_source[w], time, tt, dt);
-	  st->MassSource[w] =  mp->species_source[w];
-
-	  if ( af->Assemble_Jacobian )
-	    {
-
-	      var = MASS_FRACTION;
-	      if (pd->v[pg->imtrx][MASS_FRACTION] )
-		{
-		  for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
-		    {
-		      var_offset = MAX_VARIABLE_TYPES + w1;
-		      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-			{
-			  st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset]
-			    *bf[var]->phi[j];
-			}
-		    }
-		}
-
-	      var = TEMPERATURE;
-	      if (pd->v[pg->imtrx][var])
-		{
-		  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-		    {
-		      st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
-		    }
-		}
-	    }
-	}
-      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_CO2_LIQ)
-	{
-	  err = foam_pmdi10_co2_liq_species_source(w, st, mp->u_species_source[w], time, tt, dt);
-
-      st->MassSource[w] =  mp->species_source[w];
-
-      if ( af->Assemble_Jacobian )
-        {
-
-          var = MASS_FRACTION;
-          if (pd->v[pg->imtrx][MASS_FRACTION] )
-        {
-          for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
-            {
-              var_offset = MAX_VARIABLE_TYPES + w1;
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-            {
-              st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset]
-                *bf[var]->phi[j];
-            }
-            }
-        }
-
-          var = TEMPERATURE;
-          if (pd->v[pg->imtrx][var])
-        {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-            {
-              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
-            }
-        }
-        }
-	}
-      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_CO2_GAS)
-	{
-	  err = foam_pmdi10_co2_gas_species_source(w, st, mp->u_species_source[w], time, tt, dt);
-
-      st->MassSource[w] =  mp->species_source[w];
-
-      if ( af->Assemble_Jacobian )
-        {
-
-          var = MASS_FRACTION;
-          if (pd->v[pg->imtrx][MASS_FRACTION] )
-        {
-          for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
-            {
-              var_offset = MAX_VARIABLE_TYPES + w1;
-              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-            {
-              st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset]
-                *bf[var]->phi[j];
-            }
-            }
-        }
-
-          var = TEMPERATURE;
-          if (pd->v[pg->imtrx][var])
-        {
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
-            {
-              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
-            }
-        }
-        }
-	}
       else if (mp->SpeciesSourceModel[w]  == EPOXY_DEA )
       {
 	err = epoxy_dea_species_source(w, mp->u_species_source[w]);
@@ -10752,17 +11149,183 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
       }
 
       else if (mp->SpeciesSourceModel[w] == FOAM_PBE_WATER) {
-	foam_pbe_conversion_water(st, time, tt, dt);
+        foam_pbe_conversion_water(st, time, tt, dt);
       } else if (mp->SpeciesSourceModel[w] == FOAM_PBE_OH) {
-	foam_pbe_conversion_OH(st, time, tt, dt);
+        foam_pbe_conversion_OH(st, time, tt, dt);
       } else if (mp->SpeciesSourceModel[w] == FOAM_PBE_BA_G) {
-	foam_pbe_ba_gas_source(st, time, tt, dt);
+        foam_pbe_ba_gas_source(st, time, tt, dt);
       } else if (mp->SpeciesSourceModel[w] == FOAM_PBE_BA_L) {
-	foam_pbe_ba_liquid_source(st, time, tt, dt);
+        foam_pbe_ba_liquid_source(st, time, tt, dt);
       } else if (mp->SpeciesSourceModel[w] == FOAM_PBE_CO2_G) {
-	foam_pbe_co2_gas_source(st, time, tt, dt);
+        foam_pbe_co2_gas_source(st, time, tt, dt);
       } else if (mp->SpeciesSourceModel[w] == FOAM_PBE_CO2_L) {
-	foam_pbe_co2_liquid_source(st, time, tt, dt);
+        foam_pbe_co2_liquid_source(st, time, tt, dt);
+      }
+      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_RXN)
+      {
+        err = foam_pmdi10_rxn_species_source(w, mp->u_species_source[w], tt, dt);
+        st->MassSource[w] =  mp->species_source[w];
+
+        if ( af->Assemble_Jacobian )
+        {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION] )
+          {
+            // Just include the diagonal contribution here
+            var_offset = MAX_VARIABLE_TYPES + w;
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+            {
+              st->d_MassSource_dc[w][w][j] = mp->d_species_source[var_offset]
+                                             *bf[var]->phi[j];
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var])
+          {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+            {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
+      }
+      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_H2O)
+      {
+        for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
+        {
+          var_offset = MAX_VARIABLE_TYPES + w1;
+          mp->d_species_source[var_offset] = 0.0;
+        }
+
+        err = foam_pmdi10_h2o_species_source(w, mp->u_species_source[w], time, tt, dt);
+        st->MassSource[w] =  mp->species_source[w];
+
+        if ( af->Assemble_Jacobian )
+        {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION] )
+          {
+            for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
+            {
+              var_offset = MAX_VARIABLE_TYPES + w1;
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+              {
+                st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset]
+                                                *bf[var]->phi[j];
+              }
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var])
+          {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+            {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
+      }
+      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_CO2)
+      {
+        err = foam_pmdi10_co2_species_source(w, mp->u_species_source[w], time, tt, dt);
+        st->MassSource[w] =  mp->species_source[w];
+
+        if ( af->Assemble_Jacobian )
+        {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION] )
+          {
+            for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
+            {
+              var_offset = MAX_VARIABLE_TYPES + w1;
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+              {
+                st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset]
+                                                *bf[var]->phi[j];
+              }
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var])
+          {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+            {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
+      }
+      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_CO2_LIQ)
+      {
+        err = foam_pmdi10_co2_liq_species_source(w, st, mp->u_species_source[w], time, tt, dt);
+
+        st->MassSource[w] =  mp->species_source[w];
+
+        if ( af->Assemble_Jacobian )
+        {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION] )
+          {
+            for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
+            {
+              var_offset = MAX_VARIABLE_TYPES + w1;
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+              {
+                st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset]
+                                                *bf[var]->phi[j];
+              }
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var])
+          {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+            {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
+      }
+      else if (mp->SpeciesSourceModel[w]  == FOAM_PMDI_10_CO2_GAS)
+      {
+        err = foam_pmdi10_co2_gas_species_source(w, st, mp->u_species_source[w], time, tt, dt);
+
+        st->MassSource[w] =  mp->species_source[w];
+
+        if ( af->Assemble_Jacobian )
+        {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION] )
+          {
+            for ( w1=0; w1<pd->Num_Species_Eqn; w1++)
+            {
+              var_offset = MAX_VARIABLE_TYPES + w1;
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+              {
+                st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset]
+                                                *bf[var]->phi[j];
+              }
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var])
+          {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+            {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
       }
 
 
@@ -10773,7 +11336,6 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
 	 *  the initial memset of st - hopefully!
 	 */
       }
-
 
       else if (mp->SpeciesSourceModel[w]  == ION_REACTIONS) /*  RSL 6/6/02  */
          ; /*  this just prevents an error message from being printed  */
@@ -10796,7 +11358,7 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
 	printf("species source model = %d\n", mp->SpeciesSourceModel[w]);
 	EH(-1,"Unrecognized species source model");
       }
-	
+
       if( ls != NULL ) ls_modulate_speciessource ( w,  st );
 
     }
@@ -10832,11 +11394,11 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
                        }
                    }
                }
-	    if( ls != NULL ) ls_modulate_speciessource ( w,  st );
+               if( ls != NULL ) ls_modulate_speciessource ( w,  st );
            }
        }
   }
-
+    
 
     /*
    * NOW, CALCULATE SENSITIVITIES for the Jacobian, if needed
@@ -11118,7 +11680,7 @@ Stefan_Maxwell_diff_flux( struct Species_Conservation_Terms *st,
 			  double dt )
 {
   int w1, a, j, k, l, q, var;
-  int w, wi, wj, imtrx;
+  int w, wi, wj;
   int status = 0;
   dbl dB[MAX_CONC*DIM];           /* dB/dx vector where x is mole fraction   */
   dbl dA[MAX_CONC*DIM][MAX_CONC*DIM]; /* dA/dx matrix                        */
@@ -11209,63 +11771,58 @@ Stefan_Maxwell_diff_flux( struct Species_Conservation_Terms *st,
 
   volume_flag = (pd_glob[mn]->MassFluxModel == STEFAN_MAXWELL_VOLUME); /* RSL 8/24/00 */
 
+  if(pd_glob[mn]->e[R_ENERGY])  /* if the energy-transport equation is active, get temperature from fv */ 
+    {
+      T = fv->T;   
+      if(pd_glob[mn]->MassFluxModel == STEFAN_MAXWELL_CHARGED)
+        {
+          if(mp->SolutionTemperatureModel == CONSTANT)
+            {
+              T = mp->solution_temperature;
+            }
+          else if(mp->SolutionTemperatureModel == THERMAL_BATTERY)
+            {              /* need to get T from electrolyte_temperature() for the case of thermal battery */
+              electrolyte_temperature(time, dt, 0);  /* calculate electrolyte temperature at present time */
+              T = mp->electrolyte_temperature;
+            }
+          else
+            {
+              EH(-1, "Solution-temperature model other than THERMAL_BATTERY awaits future implementation");
+            }
+        }
+      if(T == 0.0) T = 298.0;  /* set the solution temperature to the 298 K if it is zero - safety feature */
 
-  /* when the energy-transport equation is NOT being solved */ 
-  if(pd_glob[mn]->MassFluxModel == STEFAN_MAXWELL)
+    }
+  else                          /* when the energy-transport equation is NOT being solved */ 
     { 
-      if(mp->SolutionTemperatureModel == CONSTANT)
-	{ 
-	  T = mp->solution_temperature;
-	}
-      else
-	{
-	  EH(-1, "User needs to define non-CONSTANT solution temperature model in GOMA");
-	}
-    }
-  else if(pd_glob[mn]->MassFluxModel == STEFAN_MAXWELL_CHARGED || volume_flag)  /*  RSL 8/24/00  */
-    {
-      if(mp->SolutionTemperatureModel == CONSTANT)    
-	{              
-	  T = mp->solution_temperature;
-	}
-      else if(mp->SolutionTemperatureModel == THERMAL_BATTERY)    
-	{              /* need to get T from electrolyte_temperature() for the case of thermal battery */
-	  electrolyte_temperature(time, dt, 0);  /* calculate electrolyte temperature at present time */
-	  T = mp->electrolyte_temperature;
-	}
-      else
-	{
-	  EH(-1, "Solution-temperature model other than THERMAL_BATTERY awaits future implementation"); 
-	} 
-    }
-  if(T == 0.0) T = 298.0;  /* set the solution temperature to the 298 K if it is zero - safety feature */
-
-
-  /* if the energy-transport equation is active, get temperature from fv */ 
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-    {
-      if(pd_glob[mn]->e[imtrx][R_ENERGY])  
-	{
-	  T = fv->T;   
-	  if(pd_glob[mn]->MassFluxModel == STEFAN_MAXWELL_CHARGED)
-	    {
-	      if(mp->SolutionTemperatureModel == CONSTANT)
-		{
-		  T = mp->solution_temperature;
-		}
-	      else if(mp->SolutionTemperatureModel == THERMAL_BATTERY)
-		{              /* need to get T from electrolyte_temperature() for the case of thermal battery */
-		  electrolyte_temperature(time, dt, 0);  /* calculate electrolyte temperature at present time */
-		  T = mp->electrolyte_temperature;
-		}
-	      else
-		{
-		  EH(-1, "Solution-temperature model other than THERMAL_BATTERY awaits future implementation");
-		}
-	    }
-	  if(T == 0.0) T = 298.0;  /* set the solution temperature to the 298 K if it is zero - safety feature */
-	  
-	}
+      if(pd_glob[mn]->MassFluxModel == STEFAN_MAXWELL)
+        { 
+          if(mp->SolutionTemperatureModel == CONSTANT)
+            { 
+              T = mp->solution_temperature;
+            }
+          else
+            {
+              EH(-1, "User needs to define non-CONSTANT solution temperature model in GOMA");
+            }
+        }
+      else if(pd_glob[mn]->MassFluxModel == STEFAN_MAXWELL_CHARGED || volume_flag)  /*  RSL 8/24/00  */
+        {
+          if(mp->SolutionTemperatureModel == CONSTANT)    
+            {              
+              T = mp->solution_temperature;
+            }
+          else if(mp->SolutionTemperatureModel == THERMAL_BATTERY)    
+            {              /* need to get T from electrolyte_temperature() for the case of thermal battery */
+              electrolyte_temperature(time, dt, 0);  /* calculate electrolyte temperature at present time */
+              T = mp->electrolyte_temperature;
+            }
+          else
+            {
+              EH(-1, "Solution-temperature model other than THERMAL_BATTERY awaits future implementation"); 
+            } 
+        }
+      if(T == 0.0) T = 298.0;  /* set the solution temperature to the 298 K if it is zero - safety feature */  
     }
 
 
@@ -12317,7 +12874,7 @@ fickian_charged_flux_x (struct Species_Conservation_Terms *st, double time,
   n_species = pd->Num_Species_Eqn + 1;
   mn = ei[pg->imtrx]->mn;
 
-  if (pd_glob[mn]->e[pg->imtrx][R_ENERGY])  /* if the energy equation is being solved */
+  if (pd_glob[mn]->e[R_ENERGY])  /* if the energy equation is being solved */
      {
       T = fv->T;
      }
@@ -13134,7 +13691,7 @@ get_particle_convection_velocity(double pvconv[DIM],
    */
   
   int dim, p, q, b, var, i, w, w1;
-  int species, imtrx, mesh_inertia_and_disp_on=0;			/* MMH species number for particle phase. */
+  int species;			/* MMH species number for particle phase. */
   double volsolid, volsolid_old;
   
   dim = pd->Num_Dim;
@@ -13184,13 +13741,10 @@ get_particle_convection_velocity(double pvconv[DIM],
 	   if ( pd->TimeIntegration != STEADY )
 	     {
 	       pvconv_old[p] = fv_old->pv[p];
-	       for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-		 {
-		   if (pd->v[imtrx][R_MESH1]) {
-		     pvconv[p] -= fv_dot->x[p];
-		     pvconv_old[p] -= fv_dot_old->x[p];
-		   }
-		 }
+	       if (pd->v[pg->imtrx][R_MESH1]) {
+		 pvconv[p] -= fv_dot->x[p];
+		 pvconv_old[p] -= fv_dot_old->x[p];
+	       }
 	     }
 	 }
        
@@ -13248,134 +13802,131 @@ get_particle_convection_velocity(double pvconv[DIM],
        /* calculate (sum diffusion flux)/solid volume frac. and it's derivatives 
 	*  v_solvent_flux  */
 /*       if (pd->v[pg->imtrx][MASS_FRACTION] && mp->PorousMediaType == CONTINUOUS)   */
-       for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
+       if (pd->v[pg->imtrx][MASS_FRACTION] )  
+	 /* if no solvents - then no convective velocity */
 	 {
-	   if (pd->v[imtrx][MASS_FRACTION] )  
-	     /* if no solvents - then no convective velocity */
+	   /* calculate volume fraction of solids and total diffusion flux */
+	   volsolid = 1.;
+	   volsolid_old = 1.;
+	   for (w=0; w<pd->Num_Species_Eqn; w++)
 	     {
-	       /* calculate volume fraction of solids and total diffusion flux */
-	       volsolid = 1.;
-	       volsolid_old = 1.;
-	       for (w=0; w<pd->Num_Species_Eqn; w++)
+/* MMH */
+	       if(w != species)
 		 {
-		   /* MMH */
-		   if(w != species)
-		     {
-		       volsolid -= fv->c[w];
-		       if ( pd->TimeIntegration != STEADY )
-			 volsolid_old -= fv_old->c[w];
-		     }
-		 }
-	   
-	       for (p=0; p<VIM; p++)
-		 {
-		   pvconv[p] = 0.;
-		   pvconv_old[p] = 0.;
-		   if ( cr->MassFluxModel == FICKIAN )
-		     {
-		       if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
-		       /* Get diffusivity and derivatives */
-
-		       /* MMH I don't think this matters for particle phase, there is no diffusion.
-			* diffusivity[species] should be zero
-			*/
-		       for (w=0; w<pd->Num_Species_Eqn; w++)
-			 {
-			   pvconv[p] -= mp->diffusivity[w] * fv->grad_c[w][p];
-			   if ( pd->TimeIntegration != STEADY )
-			     pvconv_old[p] -= mp->diffusivity[w] * fv_old->grad_c[w][p];
-			 }
-		     }
-		   else  if ( cr->MassFluxModel == DARCY )
-		     { /* diffusion induced convection is zero */
-		     }
-		   else
-		     {
-		       EH( -1, "Unimplemented mass flux constitutive relation.");
-		     }
-		 }
-	   
-	       for (p=0; p<VIM; p++)
-		 {
-		   pvconv[p] /= volsolid;
+		   volsolid -= fv->c[w];
 		   if ( pd->TimeIntegration != STEADY )
-		     pvconv_old[p] /= volsolid_old;
+		     volsolid_old -= fv_old->c[w];
 		 }
-	       if ( af->Assemble_Jacobian )
+	     }
+	   
+	   for (p=0; p<VIM; p++)
+	     {
+	       pvconv[p] = 0.;
+	       pvconv_old[p] = 0.;
+	       if ( cr->MassFluxModel == FICKIAN )
 		 {
-		   for (p=0; p<dim; p++)
+		   if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+		     /* Get diffusivity and derivatives */
+
+/* MMH I don't think this matters for particle phase, there is no diffusion.
+ * diffusivity[species] should be zero
+ */
+		   for (w=0; w<pd->Num_Species_Eqn; w++)
 		     {
-		       var = MESH_DISPLACEMENT1;
-		       if (pd->v[pg->imtrx][var])
+		       pvconv[p] -= mp->diffusivity[w] * fv->grad_c[w][p];
+		       if ( pd->TimeIntegration != STEADY )
+			 pvconv_old[p] -= mp->diffusivity[w] * fv_old->grad_c[w][p];
+		     }
+		 }
+	       else  if ( cr->MassFluxModel == DARCY )
+		 { /* diffusion induced convection is zero */
+		 }
+	       else
+		 {
+		   EH( -1, "Unimplemented mass flux constitutive relation.");
+		 }
+	     }
+	   
+	   for (p=0; p<VIM; p++)
+	     {
+	       pvconv[p] /= volsolid;
+	       if ( pd->TimeIntegration != STEADY )
+		 pvconv_old[p] /= volsolid_old;
+	     }
+	   if ( af->Assemble_Jacobian )
+	     {
+	       for (p=0; p<dim; p++)
+		 {
+		   var = MESH_DISPLACEMENT1;
+		   if (pd->v[pg->imtrx][var])
+		     {
+		       for (q=0; q<dim; q++)
 			 {
-			   for (q=0; q<dim; q++)
+			   for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
 			     {
-			       for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
+			       if ( cr->MassFluxModel == FICKIAN )
 				 {
-				   if ( cr->MassFluxModel == FICKIAN )
-				     {
-				       if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+				   if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
 				      
-				       for (w=0; w<pd->Num_Species_Eqn; w++)
-					 {
-					   d_pvconv->X[p][q][i] -= mp->diffusivity[w] *
-					     fv->d_grad_c_dmesh[p][w] [q][i] / volsolid;
-					 }
+				   for (w=0; w<pd->Num_Species_Eqn; w++)
+				     {
+				       d_pvconv->X[p][q][i] -= mp->diffusivity[w] *
+					 fv->d_grad_c_dmesh[p][w] [q][i] / volsolid;
 				     }
 				 }
 			     }
 			 }
+		     }
 		   
-		       /* Temperature dependence of diffusivity not yet implemented  */
-		       /*
-			 var = TEMPERATURE;
-			 if (pd->v[pg->imtrx][var])
-			 {
-			 for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
-			 {
-			 if ( cr->MassFluxModel == FICKIAN )
-			 {
-			 if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
-			 for (w=0; w<pd->Num_Species_Eqn; w++)
-			 {
-			 d_pvconv->T[p][i] -= mp->d_diffusivity[w][var][0] * bf[var]->phi[i] *
-			 fv->grad_c[w][p] / volsolid;
-			 }
-			 }
-			 }
-			 }
-		       */
-		   
-		       var = MASS_FRACTION;
-		       if (pd->v[pg->imtrx][var])
+		   /* Temperature dependence of diffusivity not yet implemented  */
+		   /*
+		   var = TEMPERATURE;
+		   if (pd->v[pg->imtrx][var])
+		     {
+		       for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
 			 {
 			   if ( cr->MassFluxModel == FICKIAN )
 			     {
 			       if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
-
 			       for (w=0; w<pd->Num_Species_Eqn; w++)
 				 {
-				   for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
+				   d_pvconv->T[p][i] -= mp->d_diffusivity[w][var][0] * bf[var]->phi[i] *
+				     fv->grad_c[w][p] / volsolid;
+				 }
+			     }
+			 }
+		     }
+		   */
+		   
+		   var = MASS_FRACTION;
+		   if (pd->v[pg->imtrx][var])
+		     {
+		       if ( cr->MassFluxModel == FICKIAN )
+			 {
+			   if ( Diffusivity() )  EH( -1, "Error in Diffusivity.");
+
+			   for (w=0; w<pd->Num_Species_Eqn; w++)
+			     {
+			       for ( i=0; i<ei[pg->imtrx]->dof[var]; i++)
+				 {
+				   d_pvconv->C[p][w][i] -=
+				     mp->diffusivity[w] * bf[var]->grad_phi[i][p]
+				       / volsolid;
+				   for (w1=0; w1<pd->Num_Species_Eqn; w1++)
 				     {
-				       d_pvconv->C[p][w][i] -=
-					 mp->diffusivity[w] * bf[var]->grad_phi[i][p]
-					 / volsolid;
-				       for (w1=0; w1<pd->Num_Species_Eqn; w1++)
-					 {
-					   d_pvconv->C[p][w][i] -= (
-								    mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1] 
-								    * fv->grad_c[w][p] 
-								    + mp->diffusivity[w] *fv->grad_c[w][p] / volsolid )
-					     * bf[var]->phi[i] / volsolid;
-					 }
+				       d_pvconv->C[p][w][i] -= (
+							      mp->d_diffusivity[w][MAX_VARIABLE_TYPES + w1] 
+							      * fv->grad_c[w][p] 
+							      + mp->diffusivity[w] *fv->grad_c[w][p] / volsolid )
+					 * bf[var]->phi[i] / volsolid;
 				     }
 				 }
 			     }
 			 }
-		     } /* end of loop over pvconv directions */
-		 } /* end of if Assemble Jacobian */
-	     } /* end of if MASS_FRACTION */
-	 }    // for imtrx
+		     }
+		 } /* end of loop over pvconv directions */
+	     } /* end of if Assemble Jacobian */
+	 } /* end of if MASS_FRACTION */
        
         /*    d_node_position/dt */
        if (pd->TimeIntegration != STEADY && 
@@ -13434,16 +13985,7 @@ get_particle_convection_velocity(double pvconv[DIM],
 	    * Velocity of solid in lab coordinates is the velocity of the stress free state
 	    * dotted into the deformation gradient tensor
 	    */
-
-	   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-	     {
-	       if(pd->v[imtrx][MESH_DISPLACEMENT1])
-		 {
-		   mesh_inertia_and_disp_on = 1;
-		 }
-	     }
-
-	   if (!mesh_inertia_and_disp_on)
+	   if (! pd->v[pg->imtrx][MESH_DISPLACEMENT1])
 	     {
 	       for (p=0; p < dim; p++)
 		 {
@@ -13493,7 +14035,7 @@ int
 ls_modulate_speciessource(int w,
 			  struct Species_Conservation_Terms *st)
 {
-  int i, b = -1, var, imtrx;
+  int i, b = -1, var;
   int dim = pd->Num_Dim;
   double factor;
   double pm_minus, pm_plus, width, f1, f2;
@@ -13501,39 +14043,31 @@ ls_modulate_speciessource(int w,
 	
  if(  mp->mp2nd == NULL ||
       mp->mp2nd->SpeciesSourceModel[w] != CONSTANT ||
-      !(pd->e[pg->imtrx][R_MASS] & T_SOURCE) ) return(0);
+      (!pd->gv[R_MASS] || !(pd->e[upd->matrix_index[R_MASS]][R_MASS] & T_SOURCE)) ) return(0);
 	  
 /* kludge for solidification tracking with phase function 0 */
-  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-    {
-      if(pfd != NULL && pd->e[imtrx][R_EXT_VELOCITY])
+ if(pfd != NULL && pd->gv[R_EXT_VELOCITY])
 	{
-	  ls_old = ls;
-	  ls = pfd->ls[0];
-	  width = ls->Length_Scale;
-	  pm_minus = mp->mp2nd->speciessourcemask[0][w];	  
-	  pm_plus =  mp->mp2nd->speciessourcemask[1][w];	  
-	  
-	  f1 = st->MassSource[w];
-	  f2 = mp->mp2nd->speciessource_phase[0][w];
-	  
-	  if(f2 == 0.0 ) f2 = DBL_SMALL;
-	  st->MassSource[w] = ls_modulate_property(  f1,
-						     f2,
-						     width,
-						     pm_minus,
-						     pm_plus,
-						     st->d_MassSource_dF[w],
-						     &factor);
-	  ls = ls_old;
+	ls_old = ls;
+	ls = pfd->ls[0];
+ 	width = ls->Length_Scale;
+ 	pm_minus = mp->mp2nd->speciessourcemask[0][w];	  
+ 	pm_plus =  mp->mp2nd->speciessourcemask[1][w];	  
+ 
+ 	f1 = st->MassSource[w];
+ 	f2 = mp->mp2nd->speciessource_phase[0][w];
+ 
+ 	if(f2 == 0.0 ) f2 = DBL_SMALL;
+ 	st->MassSource[w] = ls_modulate_property(  f1,
+					f2,
+					width,
+					pm_minus,
+					pm_plus,
+					st->d_MassSource_dF[w],
+					&factor);
+	ls = ls_old;
 	}
-    }
-
-  if (mp->mp2nd->use_species_source_width[w]) {
-    width = mp->mp2nd->species_source_width[w];
-  } else {
-    width = ls->Length_Scale;
-  }
+ width = ls->Length_Scale;
  pm_minus = mp->mp2nd->speciessourcemask[0][w];	  
  pm_plus =  mp->mp2nd->speciessourcemask[1][w];	  
  

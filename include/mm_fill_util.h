@@ -96,7 +96,7 @@ EXTERN void calc_unseeded_edge_tangents_TET(
 EXTERN void simple_normalize_vector(struct Rotation_Vectors *, /* vector */
                                     const int); /* dim                */
 
-EXTERN int load_bf_grad();
+EXTERN int load_bf_grad(void);
 
 EXTERN int load_bf_mesh_derivs(void);
 
@@ -215,6 +215,11 @@ extern int fill_variable_vector(int inode, int ivec_varType[],
 
 EXTERN void supg_tau_shakib(SUPG_terms *supg_terms, int dim, double dt,
                             int interp_eqn);
+
+EXTERN void get_supg_tau(SUPG_terms *supg_terms,
+                         int dim,
+                         dbl diffusivity,
+                         PG_DATA *pg_data);
 
 EXTERN void supg_tau_gauss_point(SUPG_terms *supg_terms, int dim,
                                  dbl diffusivity, PG_DATA *pg_data);

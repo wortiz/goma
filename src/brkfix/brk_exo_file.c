@@ -84,7 +84,6 @@
  * Revised:  1998/01/20 15:06 MST pasacki@sandia.gov
  */
 
-#define GOMA_BRK_C
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -280,28 +279,9 @@ extern int interface
        long);			/* seed - for random graph mutations */ 
 #endif
 
-extern int wr_mesh_exo		/* wr_exo.c */
-(Exo_DB *,		/* exo - ptr to full ripe EXODUS II fe db */
-       char *,			/* filename - where to write */
-       int);			/* verbosity - talk while writing */
-
-extern void wr_resetup_exo	/* wr_exo.c */
-(Exo_DB *,		/* exo - ptr to full ripe EXODUS II fe db */
-       char *,			/* filename - where to write */
-       int );			/* verbosity - 0 for quiet, more to talk */
-
-extern void wr_result_exo    /* wr_exo.c */
-        (Exo_DB *exo, char *filename);			/* verbosity - 0 for quiet, more to talk */
-
-extern int wr_dpi		/* wr_dpi.c */
-(Dpi *,			/* fantastic structure defd in "dpi.h" */
-       char *,			/* filename */
-       int );			/* verbosity - how much to talk */
-
-
 static int integer_compare	/* used internally by qsort() brk.c */
-(const void *, 
-       const void *);
+( const void *, 
+  const void *);
 
 int 
 brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File)
@@ -556,9 +536,6 @@ brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File)
 
   char *tmp;			/* char pointer junkyard of no interest */
 
-  extern char *optarg;
-  extern int   optind;
-
   Spfrtn sr=0;
 
 #ifdef CHACO
@@ -702,8 +679,9 @@ brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File)
    */
 
   rd_exo(mono, in_exodus_file_name, 0, (EXODB_ACTION_RD_INIT +
-						 EXODB_ACTION_RD_MESH +
-						 EXODB_ACTION_RD_RES0));
+					EXODB_ACTION_RD_MESH +
+					EXODB_ACTION_RD_RES0 + 
+					EXODB_ACTION_RD_RESG));
 		  
   /*
    * Convenience variables...
@@ -4104,6 +4082,7 @@ brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File)
 
     D->ss_internal_global = ss_internal;
 
+
 #ifdef DEBUG
       for ( i=0; i<mono->eb_num_props; i++)
 	{
@@ -4240,6 +4219,61 @@ brk_exo_file(int num_pieces, char *Brk_File, char *Exo_File)
       wr_resetup_exo(E, E->path, 0);
       zero_base(E);
 
+
+      if ( E->num_glob_vars > 0 ) {
+	int status;
+	E->cmode = EX_WRITE;
+
+
+	E->io_wordsize   = 0;	/* i.e., query */
+	E->comp_wordsize = sizeof(dbl);
+	E->exoid         = ex_open(E->path, 
+				   E->cmode, 
+				   &E->comp_wordsize, 
+				   &E->io_wordsize, 
+				   &E->version);
+
+	mono->cmode = EX_READ;
+
+
+	mono->io_wordsize   = 0;	/* i.e., query */
+	mono->comp_wordsize = sizeof(dbl);
+	mono->exoid         = ex_open(mono->path, 
+				   mono->cmode, 
+				   &mono->comp_wordsize, 
+				   &mono->io_wordsize, 
+				   &mono->version);
+
+	status = ex_put_variable_names(E->exoid, EX_GLOBAL, mono->num_glob_vars,
+				       mono->glob_var_names);
+	EH(status, "ex_put_variable_names global");
+
+	alloc_exo_gv(mono, 1);
+
+
+	for (i = 0; i < mono->num_gv_time_indeces; i++) {
+	  status = ex_get_var(mono->exoid, i+1, EX_GLOBAL,
+			      1, 1, mono->num_glob_vars,
+			      mono->gv[0]);
+	  EH(status, "ex_get_var global");
+
+	  
+	  status = ex_put_var(E->exoid, i+1, EX_GLOBAL,
+			      1, 0, mono->num_glob_vars,
+				    mono->gv[0]);
+	  EH(status, "ex_put_var glob_vars");
+	}
+
+	
+	status = ex_close(E->exoid);
+	EH(status, "ex_close()");
+
+	status = ex_close(mono->exoid);
+	EH(status, "ex_close()");
+
+	free_exo_gv(mono);
+
+      }
       /*
        * If there are any nodal variables, then read their values from
        * each "timestep" and transcribe them into the right place
@@ -4956,11 +4990,9 @@ static int
 integer_compare(const void *arg1, 
                 const void *arg2)
 {
-  int *a;
-  int *b;
-  
-  a = (int *)arg1;
-  b = (int *)arg2;
+  const int *a = (const int *)arg1;
+  const int *b = (const int *)arg2;
+
 
   /*
    * Primarily, sort according to the integer name of the owning processor.

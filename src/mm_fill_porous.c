@@ -52,9 +52,9 @@
 #include "mm_mp.h"
 
 #include "mm_fill_terms.h"
-#include "mm_fill_porous.h"
-
+#include "mm_std_models_shell.h"
 #define GOMA_MM_FILL_POROUS_C
+#include "mm_fill_porous.h"
 #include "sl_aux.h"
 #include "goma.h"
 
@@ -183,7 +183,8 @@ int assemble_porous_transport(double time, /* present time valuel; KSC          
 
   wim = dim;
   if(pd->CoordinateSystem == SWIRLING ||
-     pd->CoordinateSystem == PROJECTED_CARTESIAN)
+     pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+     pd->CoordinateSystem == CARTESIAN_2pt5D)
     wim = wim+1;
 
 
@@ -787,9 +788,221 @@ int assemble_pore_sink_mass(double time, /* present time valuel; KSC           *
      */
 {
 
+  int var, peqn, pvar, eqn;
+  const int dim = pd->Num_Dim;
+  int b, i, j, status = 0;
 
-   EH(-1,"if you got here you need to contact P. R. Schunk.  Pore-Sink-mass"); 
-  return 0;
+  double MassSource = 0.0;
+  double d_MassSource[MAX_VARIABLE_TYPES + MAX_CONC][MDE];
+
+  dbl mass, source;
+
+  /*
+   * Galerkin weighting functions for i-th energy residuals
+   * and some of their derivatives...
+   */
+  dbl phi_i;
+
+  /*
+   * Interpolation functions for variables and some of their derivatives.
+   */
+  dbl phi_j;
+  dbl h3;                       /* Product of all 3 scale factors used for */
+                                /* volume integrals in this coordinate system*/
+  dbl dh3dmesh;                 /* Mesh derivative of same. */
+  dbl det_J;
+  dbl d_det_J_dmesh;                  /* for specified (b,j) mesh dof */
+  dbl wt, wt_total;
+
+  dbl sink_dot[MDE];
+
+  /*
+   * Bail out fast if there's nothing to do...
+   */
+  if (! pd->e[pg->imtrx][R_POR_SINK_MASS]) {
+    return (status);
+  }
+
+
+  /* Get the mass term - mass lumping */
+  for (i = 0; i < ei[pg->imtrx]->dof[R_POR_SINK_MASS]; i++)
+     {
+      sink_dot[i] = *esp_dot->sink_mass[i];
+     }
+
+  wt = fv->wt;
+  h3 = fv->h3;
+
+ /* Get the MassSouece and their Jacobian sensitivities */
+  MassSource = por_mass_source_model(d_MassSource);
+
+  /*
+   * Residuals_________________________________________________________________
+   */
+
+  if (af->Assemble_Residual) 
+    {
+      eqn = R_POR_SINK_MASS;
+      if (pd->e[pg->imtrx][eqn]) 
+        {
+         peqn = upd->ep[pg->imtrx][eqn];
+
+         det_J = bf[eqn]->detJ;
+
+	 wt_total = wt * det_J * h3;
+
+         for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++)
+            {
+             phi_i = bf[eqn]->phi[i];
+
+             mass = 0.0;
+             if (pd->TimeIntegration != STEADY)
+               {
+                if (pd->e[pg->imtrx][eqn] & T_MASS)
+                  {
+                   mass +=  (sink_dot[i] * phi_i * wt_total * pd->etm[pg->imtrx][eqn][LOG2_MASS]);
+                  }
+               }
+
+             source = 0.0;
+             if(pd->e[pg->imtrx][eqn] & T_SOURCE)
+               {
+                source += phi_i * MassSource;
+                source *= wt_total * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+               }
+
+             lec->R[peqn][i] += mass + source;
+            }
+        }
+    }
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian) 
+    {
+     eqn = R_POR_SINK_MASS;
+     peqn = upd->ep[pg->imtrx][eqn];
+
+     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) 
+        {
+         phi_i = bf[eqn]->phi[i];
+
+         det_J = bf[eqn]->detJ;
+
+	 wt_total = wt * det_J * h3;
+
+
+         /*
+          * J_sink_mass_d_sink_mass
+          *  derivative of residual pieces w.r.t. the sink mass
+          */
+
+         var = POR_SINK_MASS;
+         if (pd->v[pg->imtrx][var]) 
+           {
+            pvar = upd->vp[pg->imtrx][var];
+
+            for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+               {
+                phi_j = bf[var]->phi[j];
+
+                mass = 0.0;
+
+                if (pd->TimeIntegration != STEADY) 
+                  {
+                   if ( pd->e[pg->imtrx][eqn] & T_MASS )
+                     {
+                      mass +=  delta(i,j) * (1 + 2. * tt)/ dt;
+                      mass *=  phi_i * wt_total * pd->etm[pg->imtrx][eqn][LOG2_MASS];
+                     }
+                  }
+
+                source = 0.0;
+                if (pd->e[pg->imtrx][eqn] & T_SOURCE) 
+                  {
+                   source +=  phi_i * d_MassSource[var][j];
+                   source *=  wt_total * pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
+                  }
+
+                lec->J[peqn][pvar][i][j] += mass + source;
+               }
+           }
+
+         /*
+          * J_sink_mass_d_por_liq_pres
+          *  derivative of residual pieces w.r.t. the pore liquid pressure
+          */
+
+         var = POR_LIQ_PRES;
+         if (pd->v[pg->imtrx][var]) 
+           {
+            pvar = upd->vp[pg->imtrx][var];
+            for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+               {
+
+                source = 0.0;
+                if (pd->e[pg->imtrx][eqn] & T_SOURCE)
+                  {
+                   source += phi_i * d_MassSource[var][j];
+                   source *= wt_total * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                  }
+
+                lec->J[peqn][pvar][i][j] += source;
+               }
+           }
+
+         /*
+          * J_sink_mass_d_mesh
+          *  derivative of residual pieces w.r.t. mesh displacement
+          */
+
+         var = MESH_DISPLACEMENT1;
+
+         if (pd->v[pg->imtrx][var])
+           {
+            for (b = 0; b < dim; b++)
+               {
+                var = MESH_DISPLACEMENT1 + b;
+                pvar = upd->vp[pg->imtrx][var];
+
+                for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+                   {
+                    phi_j = bf[var]->phi[j];
+
+                    d_det_J_dmesh = bf[var]->d_det_J_dm[b][j];
+                    dh3dmesh = fv->dh3dq[b] * phi_j;
+
+                    mass = 0.0;
+                    if (pd->TimeIntegration != STEADY)
+                      {
+                       if (pd->e[pg->imtrx][eqn] & T_MASS)
+                         {
+                          mass +=  sink_dot[i] * phi_i * pd->etm[pg->imtrx][eqn][LOG2_MASS] *
+                                    (h3 * d_det_J_dmesh + dh3dmesh * det_J) * wt;
+                          }
+                        }
+
+                    source = 0.0;
+                    if (pd->e[pg->imtrx][eqn] & T_SOURCE)
+                      {
+                       source += phi_i * MassSource * (h3 * d_det_J_dmesh + dh3dmesh * det_J);
+                       source += phi_i * d_MassSource[var][j] * h3 * det_J;
+                       source *= wt * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                      }
+
+                    lec->J[peqn][pvar][i][j] += mass + source;
+                   }
+               }
+           }
+
+        } /* End of loop over i-th equation */
+    } /* End of if Assemble_Jacobian */
+
+
+//   EH(-1,"if you got here you need to contact P. R. Schunk.  Pore-Sink-mass");
+  return status;
 
 }
 #endif
@@ -1856,17 +2069,179 @@ load_nodal_porous_properties(double tt, double dt)
 /**************************************************************************/
 /**************************************************************************/
 
+void
+load_nodal_shell_porous_properties(double tt, double dt, int eqn)
+
+    /*********************************************************************
+     *
+     * load_nodal_shell_porous_properties():
+     *
+     *   This routine calculates the mass lumped quantities at node
+     *   points - This is shell version of load_nodal_porous_properties
+     *
+     *  Input
+     * -------
+     *
+     *
+     *  Output
+     * -------
+     *
+     *  pmv_ml->Inventory_Solvent
+     *  pmv_ml->Inventory_Solvent_old
+     *  pmv_ml->Inventory_Solvent_dot
+     *
+     *
+     *********************************************************************/
+{
+  int   idof, lnn, i_lvdesc, lvd, err;
+  int i_ext_field = 0;
+  double xi[3];
+  double phi, H, Patm, cap_pres, d_cap_pres[2];
+  int *lvdesc_to_lnn, *lvdesc_to_idof;
+  int i_pl = 0; /*Piggyback pmv_ml structure, i_pl = 0 --> shell_press_open */
+                /*                            i_pl = 1 --> shell_press_open_2*/
+
+  if (eqn == R_SHELL_SAT_OPEN_2) i_pl = 1;
+
+  i_lvdesc = ei[pg->imtrx]->Lvdesc_First_Var_Type[eqn];
+  lvdesc_to_lnn =  ei[pg->imtrx]->Lvdesc_to_Lnn[i_lvdesc];
+  lvdesc_to_idof = ei[pg->imtrx]->Lvdesc_to_lvdof[i_lvdesc];
+  for (lvd = 0; lvd < ei[pg->imtrx]->Lvdesc_Numdof[i_lvdesc]; lvd++) {
+    idof = lvdesc_to_idof[lvd];
+
+    /*
+     * Translate the degree of freedom into the local node number
+     */
+    lnn = lvdesc_to_lnn[lvd];
+
+    /*
+     * Find the correct local element coordinates, xi[], at the 
+     * the current local node number, lnn.
+     */
+    find_nodal_stu(lnn, ei[pg->imtrx]->ielem_type, xi, xi+1, xi+2);
+
+    /*
+     * Load up basis function information for each basis function
+     * type needed by the current material at the current
+     * location, xi[], in the element. This is done in terms
+     * of local element coordinates.
+     */
+    err = load_basis_functions(xi, bfd);
+    EH(err, "load_basis_functions");
+    err = beer_belly();
+    EH(err, "beer_belly");
+    err = load_fv();
+    EH(err, "load_fv");
+
+
+    /*
+     * Evaluate constitutive relations with gauss point defined at the node
+     */
+
+    /* First, get porosity */
+    if (mp->PorosityModel == CONSTANT)
+      {
+       if (pd->TimeIntegration == TRANSIENT)
+         {
+          mp_old->porosity = mp->porosity;
+         }
+      }
+    else if (mp->PorosityModel == EXTERNAL_FIELD)
+      {
+       i_ext_field = mp->porosity_external_field_index;
+       mp->porosity = fv->external_field[i_ext_field];
+       if (pd->TimeIntegration == TRANSIENT)
+         {
+          mp_old->porosity = mp->porosity;
+         }
+      }
+    else
+      {
+       EH(-1, "Only CONSTANT and EXTERNAL_FIELD porosity models are supported in shell porous open equation");
+      }
+
+    phi = mp->porosity;                         /* Porosity */
+
+
+    H =  porous_shell_closed_height_model();    /* Pore height (vertical */
+    Patm = mp->PorousShellPatm;                  /* Gas pressure - always constant */
+    cap_pres = Patm - fv->sh_p_open;
+    if (eqn == R_SHELL_SAT_OPEN_2)  cap_pres = Patm - fv->sh_p_open_2;
+    if (pd->TimeIntegration == TRANSIENT) {
+     pmv_old->cap_pres = Patm - fv_old->sh_p_open;
+     if (eqn == R_SHELL_SAT_OPEN_2) pmv_old->cap_pres = Patm - fv_old->sh_p_open_2;
+    }
+    load_saturation(phi, cap_pres, d_cap_pres);
+
+    /*
+     * Calculate Inventory_Solvent_dot[MDE][MAX_PMV]
+     * and d_Inventory_solvent_dot_dpmv[MDE][MAX_PMV][MAX_PMV];
+     */
+
+    /*
+     * Store calculated quantities in the pmv_ml structure
+     */
+
+    pmv_ml->Inventory_Solvent_old[idof][i_pl] = H * mp->porosity * mp_old->saturation;
+    pmv_ml->Inventory_Solvent[idof][i_pl] = H * mp->porosity * mp->saturation;
+
+
+    /*
+     * Calculate Inventory_Solvent_dot[MDE][MAX_PMV]
+     *
+     */
+    if (tt > 0.0) {
+      pmv_ml->Inventory_Solvent_dot_old[idof][i_pl] =
+	  fv_dot_old->sh_p_open  * H * mp->porosity * mp_old->d_saturation[SHELL_PRESS_OPEN];
+      if (eqn == R_SHELL_SAT_OPEN_2) pmv_ml->Inventory_Solvent_dot_old[idof][i_pl] =
+          fv_dot_old->sh_p_open_2  * H * mp_old->porosity * mp_old->d_saturation[SHELL_PRESS_OPEN_2];
+
+
+      pmv_ml->Inventory_Solvent_dot[idof][i_pl] =
+	  (1.0 + 2.0 * tt) *
+	  (pmv_ml->Inventory_Solvent[idof][i_pl] -
+	   pmv_ml->Inventory_Solvent_old[idof][i_pl]) / dt
+	  - 2.0 * tt  * pmv_ml->Inventory_Solvent_dot_old[idof][i_pl];
+
+    } else {
+      pmv_ml->Inventory_Solvent_dot[idof][i_pl] =
+	  (pmv_ml->Inventory_Solvent[idof][i_pl] -
+	   pmv_ml->Inventory_Solvent_old[idof][i_pl]) / dt;
+    }
+
+    /*
+     * Store d_Inventory_solvent_dot_dpmv[MDE][MAX_PMV][MAX_PMV]
+     * calculated in other places
+     *
+     * Right now it only has R_SHELL_SAT_OPEN as eqn and SHELL_PRESS_OPEN as var
+     * Or R_SHELL_SAT_OPEN_2 as eqn and SHELL_PRESS_OPEN_2 as var
+     */
+    if (af->Assemble_Jacobian) {
+	pmv_ml->d_Inventory_Solvent_dot_dpmv[idof][i_pl][i_pl] =
+	    (1 + 2. * tt) *
+	  H * mp->porosity * mp->d_saturation[SHELL_PRESS_OPEN]/ dt ;
+
+        if (eqn == R_SHELL_SAT_OPEN_2) pmv_ml->d_Inventory_Solvent_dot_dpmv[idof][i_pl][i_pl] =
+           (1 + 2. * tt) *
+            H * mp->porosity * mp->d_saturation[SHELL_PRESS_OPEN_2]/ dt ;
+    }
+  }
+} /* END load_nodal_shell_porous_properties() */
+/**************************************************************************/
+/**************************************************************************/
+/**************************************************************************/
+
 int
 get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 			  double tt, /* time integration scheme param */
 			  double dt) /* current time step size */
 
-    /********************************************************************* 
+    /*********************************************************************
      *  get_porous_part_sat_terms():
      *
      *
-     *   Calculate the capacity, flux, convection, and source terms 
-     *   for a porous medium 
+     *   Calculate the capacity, flux, convection, and source terms
+     *   for a porous medium
      *   This routine calculates all of the terms that will go into the
      *   fill routines at the volumetric gauss point level.
      *
@@ -1887,7 +2262,9 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
   int dim = pd->Num_Dim;
   double *grad_phi_i, dlamdPl, tmp = 0.0, *grad_phi_j;
   double phi_j, d_cap_pres[3];
-  double tau = 0.0;
+
+  double MassSource = 0.0;
+  double d_MassSource[MAX_VARIABLE_TYPES + MAX_CONC][MDE];
 
   /* Storage for call to get_convection_velocity()
    *  -> lagrangian motion of solid
@@ -1919,18 +2296,25 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 
   /*
    * Get the stress-free-state velocity piece for arbitrary and
-   * Lagrangian motion. 
+   * Lagrangian motion.
    */
   err = get_convection_velocity(vconv, vconv_old, d_vconv, dt, tt);
   EH(err, "Error in calculating effective convection velocity");
 
+  /* Get mass source term if PORE_SINK_MASS is on */
+
+  if (pd->e[pg->imtrx][R_POR_SINK_MASS])
+    {
+     MassSource = por_mass_source_model(d_MassSource);
+    }
+
   /***********************************************************************
-   * CAPACITY TERM - 
+   * CAPACITY TERM -
    *     mass density (gm/cm**3) of liquid and gas solvents
    *     in all phases present at the gauss point. also, energy (J/cm**3)
    *     in all phases present, if the energy eqn is to be solved.
    ***********************************************************************/
-      
+
   pmt->Inventory_solvent[i_pl] = pmv->bulk_density[i_pl];  /*rho*S*phi for PART_SAT */
   pmt->Inventory_solvent[i_pg] = pmv->bulk_density[i_pg];
   pmt->Inventory_solvent[i_pe] = pmv->bulk_density[i_pe];
@@ -1944,20 +2328,20 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
      *  convert Inventory_solvent_dot_old by multiplying by 
      *  capacitance matrix with chain rule
      */
-   
+
    pmt->Inventory_solvent_dot_old[i_pl] =
         fv_dot_old->p_liq    * pmv_old->d_bulk_density[i_pl][POR_LIQ_PRES] +
 	fv_dot_old->p_gas    * pmv_old->d_bulk_density[i_pl][POR_GAS_PRES] +
 	fv_dot_old->porosity * pmv_old->d_bulk_density[i_pl][POR_POROSITY] +
         fv_dot_old->T        * pmv_old->d_bulk_density[i_pl][POR_TEMP];
-	    
-    pmt->Inventory_solvent_dot[i_pl] = 
+
+    pmt->Inventory_solvent_dot[i_pl] =
 	(1.0 + 2.0 * tt) *
 	(pmt->Inventory_solvent[i_pl] - pmt->Inventory_solvent_old[i_pl])/dt
 	- 2.0 * tt  * pmt->Inventory_solvent_dot_old[i_pl];
 
     /*
-     * Gas solvent component, e.g. air 
+     * Gas solvent component, e.g. air
      */
 
     pmt->Inventory_solvent_old[i_pg] = pmv_old->bulk_density[i_pg];
@@ -1966,41 +2350,41 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
      * capacitance matrix with chain rule
      */
     if (pd->e[pg->imtrx][R_POR_GAS_PRES]) {
-      pmt->Inventory_solvent_dot_old[i_pg] = 
+      pmt->Inventory_solvent_dot_old[i_pg] =
 	  fv_dot_old->p_liq    * pmv_old->d_bulk_density[i_pg][POR_LIQ_PRES] +
 	  fv_dot_old->p_gas    * pmv_old->d_bulk_density[i_pg][POR_GAS_PRES] +
 	  fv_dot_old->porosity * pmv_old->d_bulk_density[i_pg][POR_POROSITY] +
           fv_dot_old->T        * pmv_old->d_bulk_density[i_pg][POR_TEMP];
 
-   
+
 
     /*
      * Formulate the current derivative of the total amount of water density
      * at the current gauss point
      */
-    pmt->Inventory_solvent_dot[i_pg] = 
-	(1 + 2. * tt) * 
+    pmt->Inventory_solvent_dot[i_pg] =
+	(1 + 2. * tt) *
 	(pmt->Inventory_solvent[i_pg] - pmt->Inventory_solvent_old[i_pg]) / dt
 	- 2. * tt  * pmt->Inventory_solvent_dot_old[i_pg];
 
     }
 
-    /* 
+    /*
      * Energy
      */
     if (pd->e[pg->imtrx][R_POR_ENERGY]) {
       pmt->Inventory_solvent_old[i_pe] = pmv_old->bulk_density[i_pe];
       /*
-       *  convert Inventory_solvent_dot_old by multiplying by 
+       *  convert Inventory_solvent_dot_old by multiplying by
        *  capacitance matrix with chain rule
        */
-      pmt->Inventory_solvent_dot_old[i_pe] = 
+      pmt->Inventory_solvent_dot_old[i_pe] =
 	fv_dot_old->p_liq    * pmv_old->d_bulk_density[i_pe][POR_LIQ_PRES] +
 	fv_dot_old->p_gas    * pmv_old->d_bulk_density[i_pe][POR_GAS_PRES] +
 	fv_dot_old->porosity * pmv_old->d_bulk_density[i_pe][POR_POROSITY] +
         fv_dot_old->T        * pmv_old->d_bulk_density[i_pe][POR_TEMP];
-	    
-      pmt->Inventory_solvent_dot[i_pe] = 
+
+      pmt->Inventory_solvent_dot[i_pe] =
 	(1.0 + 2.0 * tt) *
 	(pmt->Inventory_solvent[i_pe] - pmt->Inventory_solvent_old[i_pe])/dt
 	- 2.0 * tt  * pmt->Inventory_solvent_dot_old[i_pe];
@@ -2022,18 +2406,18 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 
 
   /*
-   * DIFFUSIVE FLUX TERM - this is the term that is integrated by parts in the 
-   *   species conservation residual equation.  In a porous medium it contains 
+   * DIFFUSIVE FLUX TERM - this is the term that is integrated by parts in the
+   *   species conservation residual equation.  In a porous medium it contains
    *   five parts of the species flux:
    *    1) convection of the bulk concentration of each species with a moving solid
    *    2) convection of each species in gas phase relative to solid (from Darcy)
    *    3) convection of each species in liquid phase relative to solid (from Darcy)
    *    4) diffusion in gas phase (relative to gas Darcy Flux)
-   *    5) diffusion in liquid phase (relative to liquid Darcy Flux) 
+   *    5) diffusion in liquid phase (relative to liquid Darcy Flux)
    *         - currently this is neglected
-   */      
+   */
 
-  if (cr->PorousFluxModel == DARCY_FICKIAN || 
+  if (cr->PorousFluxModel == DARCY_FICKIAN ||
       cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
     /*
      *  Here, vconv is the velocity of the solid phase
@@ -2056,9 +2440,9 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
     EH( -1, "Unimplemented flux constitutive relation in porous media. "
 	"Check Porous Diffusion Constitutive Equation Card");
   }
-  
-  /* 
-   * CONVECTIVE FLUX TERM 
+
+  /*
+   * CONVECTIVE FLUX TERM
    *
    *  This term stems from the fact that Goma actually tracks the material derivative
    *  of the inventory, instead of the ordinary time derivative.
@@ -2112,37 +2496,7 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 
     if(pd->e[pg->imtrx][R_POR_SINK_MASS] && mp->PorousSinkConstantsModel == LINEAR)
       {
-
-	if(mp->saturation >= mp->u_porous_sink_constants[6])
-	  {
-	    tau = mp->u_porous_sink_constants[0];
-	  }
-	else
-	  {
-	    tau = 0.;
-	  }
-	pmt->MassSource[i_pl] = -tau*
-	                         mp->u_porous_sink_constants[2]*
-	                         (mp->u_porous_sink_constants[1] - fv->sink_mass)*
-	                         mp->saturation/mp->u_porous_sink_constants[1]/fv->volume_change ;
-
-	
-	/* Again, I don't think this term belongs, contrary to the paper from which
-	   it came.   Disappears with application of the Reynolds Transport theorem */
-
-	/*
-	for(a=0; a < VIM; a++)
-	  {
-	    pmt->MassSource[i_pl] += fv_dot->x[a] * mp->density * 
-	      (mp->porosity * mp->d_saturation[POR_LIQ_PRES]*fv->grad_p_liq[a] +
-	       mp->saturation * fv->grad_porosity[a]);
-	 
-	  }
-	*/
-      }
-    else
-      {
-	WH(0, "Porous sink equation not being solved, or constants not set");
+        pmt->MassSource[i_pl] = MassSource;
       }
 
   /*** Heat Source - constant only for now ****/
@@ -2193,12 +2547,12 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
    ********************************************************************************/
 
   if (af->Assemble_Jacobian) {
-   
+
     /*
      * sensitivity of CAPACITY TERM - concentration (volume fraction)
-     */      
+     */
     var = POR_LIQ_PRES;
-     
+
     for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
       for ( w=0; w<MAX_PMV; w++) {
 	for ( w1=0; w1<MAX_PMV; w1++) {
@@ -2206,25 +2560,25 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	}
       }
     }
-    
+
 
     if (pd->TimeIntegration != STEADY) {
       for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 	for (w1 = 0; w1 < MAX_PMV; w1++) {
-	  pmt->d_Inventory_solvent_dot_dpmv[i_pl][w1] [j] = 
-	      (1 + 2. * tt) * pmv->d_bulk_density[i_pl][POR_LIQ_PRES + w1] 
+	  pmt->d_Inventory_solvent_dot_dpmv[i_pl][w1] [j] =
+	      (1 + 2. * tt) * pmv->d_bulk_density[i_pl][POR_LIQ_PRES + w1]
 	    * bf[var]->phi[j]/dt;
 
 	  if (pd->e[pg->imtrx][R_POR_GAS_PRES]) {
 	    pmt->d_Inventory_solvent_dot_dpmv[i_pg][w1] [j] =
 		(1 + 2. * tt) * pmv->d_bulk_density[i_pg][POR_LIQ_PRES + w1]
-	      * bf[var]->phi[j]/dt; 
+	      * bf[var]->phi[j]/dt;
 
 	  if (pd->e[pg->imtrx][R_POR_ENERGY]) 
 	    pmt->d_Inventory_solvent_dot_dpmv[i_pe][w1] [j] =
 		(1 + 2. * tt) * pmv->d_bulk_density[i_pe][POR_LIQ_PRES + w1]
-	      * bf[var]->phi[j]/dt; 
-		
+	      * bf[var]->phi[j]/dt;
+
 	  }
 	}
       }
@@ -2232,9 +2586,9 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 
     /*
      * sensitivity of DIFFUSIVE FLUX TERM - concentration, temp, displacement
-     */      
+     */
     var = POR_LIQ_PRES;
-        
+
     for ( w=0; w<MAX_PMV; w++) {
       for ( a=0; a<VIM; a++) {
 	for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
@@ -2244,10 +2598,10 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	}
       }
     }
-    
-    
 
-      
+
+
+
 
     if (cr->PorousFluxModel == DARCY_FICKIAN ||
 	cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
@@ -2259,20 +2613,20 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 
 
 	    if (pd->e[pg->imtrx][R_POR_GAS_PRES]) 
-	      pmt->d_diff_flux_dpmv[i_pg][a] [w1][j] = 
-	       pmv->d_rel_mass_flux_dpmv[i_pg][a] [w1][j]; 
+	      pmt->d_diff_flux_dpmv[i_pg][a] [w1][j] =
+	       pmv->d_rel_mass_flux_dpmv[i_pg][a] [w1][j];
 
 	    if (pd->e[pg->imtrx][R_POR_ENERGY]) 
-	      pmt->d_diff_flux_dpmv[i_pe][a] [w1][j] = 
+	      pmt->d_diff_flux_dpmv[i_pe][a] [w1][j] =
 		  pmv->d_rel_mass_flux_dpmv[i_pe][a] [w1][j];
 
-	  
+
 	  }
-	  
+
 	  if (pd->e[pg->imtrx][R_POR_SINK_MASS])
-	    pmt->d_diff_flux_dSM[i_pl][a][j] = 
+	    pmt->d_diff_flux_dSM[i_pl][a][j] =
 	      pmv->d_rel_mass_flux_dSM[i_pl][a][j];
-	  
+
 	}
       }
     } else {
@@ -2283,7 +2637,7 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
     for (b=0; b < pd->Num_Dim; b++) {
       var = MESH_DISPLACEMENT1 + b;
       if ( pd->v[pg->imtrx][var] )  {
-	
+
 	for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	  for (a=0; a < VIM; a++) {
 	    for ( w=0; w<MAX_PMV; w++) {
@@ -2294,27 +2648,27 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	      cr->PorousFluxModel == DARCY_FICKIAN ||
 	      cr->PorousFluxModel == POWERLAW_DARCY_FICKIAN) {
 	    for (a=0; a < VIM; a++) {
-	      pmt->d_diff_flux_dmesh[i_pl][a] [b][j] += 
-		  pmv->d_rel_mass_flux_dmesh[i_pl][a] [b][j] +
+	      pmt->d_diff_flux_dmesh[i_pl][a] [b][j] +=
+		  pmv->d_rel_mass_flux_dmesh[i_pl][a][b][j] +
 		  d_vconv->X[a][b][j] * pmv->bulk_density[i_pl];
 
 	      if (pd->e[pg->imtrx][R_POR_GAS_PRES]) {
-		pmt->d_diff_flux_dmesh[i_pg][a] [b][j] += 
-		    pmv->d_rel_mass_flux_dmesh[i_pg][a] [b][j] +
+		pmt->d_diff_flux_dmesh[i_pg][a] [b][j] +=
+		    pmv->d_rel_mass_flux_dmesh[i_pg][a][b][j] +
 		    d_vconv->X[a][b][j] * pmv->bulk_density[i_pg];
 	      }
 
 	      if (pd->e[pg->imtrx][R_POR_ENERGY]) 
-		pmt->d_diff_flux_dmesh[i_pe][a] [b][j] += 
+		pmt->d_diff_flux_dmesh[i_pe][a] [b][j] +=
 		  pmv->d_rel_mass_flux_dmesh[i_pe][a] [b][j] +
 		  d_vconv->X[a][b][j] * pmv->bulk_density[i_pe];
-	      
+
 	    }
 	  }
 	}
       }
     }
-      
+
     var = TEMPERATURE;
     if ( pd->v[pg->imtrx][var]  && !pd->e[pg->imtrx][R_POR_ENERGY]) {
       if (cr->PorousFluxModel == DARCY_FICKIAN ||
@@ -2335,7 +2689,7 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
       }
     }
 
-    /* 
+    /*
      * CONVECTIVE FLUX TERM
      */
 
@@ -2345,7 +2699,7 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	  pmt->d_conv_flux_dpmv[i_pl][a] [i_pl][j] = fv->grad_d_dot[a][a]*
 	            pmv->d_bulk_density[i_pl][POR_LIQ_PRES]*bf[var]->phi[j];
-		 
+
 	  if(pd->e[pg->imtrx][R_POR_GAS_PRES]) {
 	    pmt->d_conv_flux_dpmv[i_pg][a] [i_pl][j] = fv->grad_d_dot[a][a]*
 	            pmv->d_bulk_density[i_pg][POR_LIQ_PRES]*bf[var]->phi[j];
@@ -2361,7 +2715,7 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	    pmt->d_conv_flux_dpmv[i_pl][a] [i_pg][j] = fv->grad_d_dot[a][a]*
 	            pmv->d_bulk_density[i_pl][POR_GAS_PRES]*bf[var]->phi[j];
-		     
+
 	    pmt->d_conv_flux_dpmv[i_pg][a] [i_pg][j] = fv->grad_d_dot[a][a]*
 	            pmv->d_bulk_density[i_pg][POR_GAS_PRES]*bf[var]->phi[j];
 
@@ -2370,13 +2724,13 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 
 	  }
 	}
-	     
+
 	var = POR_POROSITY;
 	if (pd->e[pg->imtrx][var]) {
 	  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	    pmt->d_conv_flux_dpmv[i_pl][a] [i_pore][j] = fv->grad_d_dot[a][a]*
 	            pmv->d_bulk_density[i_pl][POR_POROSITY]*bf[var]->phi[j];
-		     
+
 	    if(pd->e[pg->imtrx][R_POR_GAS_PRES])  {
 	      pmt->d_conv_flux_dpmv[i_pg][a] [i_pore][j] = fv->grad_d_dot[a][a]*
 	            pmv->d_bulk_density[i_pg][POR_POROSITY]*bf[var]->phi[j];
@@ -2394,7 +2748,7 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	  for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	    pmt->d_conv_flux_dpmv[i_pl][a] [i_pe][j] = fv->grad_d_dot[a][a]*
 	            pmv->d_bulk_density[i_pl][POR_TEMP]*bf[var]->phi[j];
-		     
+
 	    pmt->d_conv_flux_dpmv[i_pg][a] [i_pe][j] = fv->grad_d_dot[a][a]*
 	            pmv->d_bulk_density[i_pg][POR_TEMP]*bf[var]->phi[j];
 
@@ -2417,7 +2771,7 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	  for (a = 0; a< VIM; a++) {
 	    pmt->d_conv_flux_dmesh[i_pl][a][b][j] = pmv->bulk_density[i_pl]*
 	      fv->d_grad_d_dot_dmesh[a][a][b][j];
-		     
+
 	    if(pd->e[pg->imtrx][R_POR_GAS_PRES]) {
 	      pmt->d_conv_flux_dmesh[i_pg][a][b][j]  = pmv->bulk_density[i_pg]*
 	      fv->d_grad_d_dot_dmesh[a][a][b][j];
@@ -2427,7 +2781,7 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
       }
     }
     /* Recall from above that until we resolve this term, the only contribution
-     * here goes to the solid-phase solvent balance 
+     * here goes to the solid-phase solvent balance
      */
     if (pd->e[pg->imtrx][R_POR_POROSITY]) 
       {
@@ -2436,28 +2790,28 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	  {
 	    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) 
 	      {
-		 pmt->d_conv_flux_dpmv[i_pore][0] [i_pore][j] = 
+		 pmt->d_conv_flux_dpmv[i_pore][0] [i_pore][j] =
 		  -(mp->u_porous_sink_constants[3]/mp->u_porous_sink_constants[4]
 		  + mp->u_porous_sink_constants[2]/mp->u_porous_sink_constants[5]
-		   *(1 + fv->sink_mass*mp->u_porous_sink_constants[5]/mp->density)) 
-		   / (1. - fv->porosity) / (1. - fv->porosity) * bf[var]->phi[j]; 
+		   *(1 + fv->sink_mass*mp->u_porous_sink_constants[5]/mp->density))
+		   / (1. - fv->porosity) / (1. - fv->porosity) * bf[var]->phi[j];
 	      }
 	  }
 	else
 	  {
 	    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) 
 	      {
-		pmt->d_conv_flux_dpmv[i_pore][0] [i_pore][j] = -(1. - mp->u_porosity[0]) 
+		pmt->d_conv_flux_dpmv[i_pore][0] [i_pore][j] = -(1. - mp->u_porosity[0])
 		/ (1. - fv->porosity) / (1. - fv->porosity) * bf[var]->phi[j];
 	      }
 	  }
-	
+
 	var = POR_SINK_MASS;
 	if(pd->v[pg->imtrx][var])
 	  {
 	    for(j=0; j<ei[pg->imtrx]->dof[var]; j++)
 	      {
-		pmt->d_conv_flux_dSM[i_pore][0][j] = 
+		pmt->d_conv_flux_dSM[i_pore][0][j] =
 		  -(mp->u_porous_sink_constants[2]/mp->u_porous_sink_constants[5]
 		  *bf[var]->phi[j]*mp->u_porous_sink_constants[5]/mp->density)
 		  / (1.0 - fv->porosity);
@@ -2468,100 +2822,67 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	  if (pd->v[pg->imtrx][var]) {
 	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++) {
 	      /* Need to calculate the dilation of the medium and relate
-	       * it to the porosity 
-	       * this is really a Kludge for the porosity equation 
+	       * it to the porosity
+	       * this is really a Kludge for the porosity equation
 	       * - replace first mass-flux piece with
 	       * the relationship between porosity and deformation */
-	      pmt->d_conv_flux_dmesh[i_pore][0] [b][j] = fv->d_volume_change_dx[b][j]; 
+	      pmt->d_conv_flux_dmesh[i_pore][0] [b][j] = fv->d_volume_change_dx[b][j];
 	    }
 	  }
 	}
       }
-          
-    /* 
+
+    /*
      * SOURCE TERM - set reaction rates to zero for now; constant heat source assumed
      */
     if(pd->e[pg->imtrx][R_POR_SINK_MASS] && mp->PorousSinkConstantsModel == LINEAR)
       {
-	var = POR_SINK_MASS;
+
+       var = POR_SINK_MASS;
 	if(pd->v[pg->imtrx][var])
-	  {
+	 {
 	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-	      {
-		pmt->d_MassSource_dSM[i_pl][j] = tau*
-	                         mp->u_porous_sink_constants[2]*
-	                         bf[var]->phi[j] *
-	                         mp->saturation/mp->u_porous_sink_constants[1]/fv->volume_change ;
-	      }
-	  }
+	     {
+              pmt->d_MassSource_dSM[i_pl][j] = d_MassSource[var][j];
+	     }
+         }
 
-
-	for(b=0; b<pd->Num_Dim; b++)
-	  { 
-	    var = R_MESH1 + b;
+       var = POR_LIQ_PRES;
 	    if(pd->v[pg->imtrx][var])
-	      {
+	 {
 		for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-		  {
-		    pmt->d_MassSource_dmesh[i_pl][b][j] = fv->d_volume_change_dx[b][j] *
-		                                              tau*
-	                                                      mp->u_porous_sink_constants[2]*
-	                                    (mp->u_porous_sink_constants[1] - fv->sink_mass)*
-	                                    mp->saturation/mp->u_porous_sink_constants[1]/
-		                             fv->volume_change/fv->volume_change ;
+	     {
+              pmt->d_MassSource_dpmv[i_pl][i_pl][j] = d_MassSource[var][j];
+             }
 
-		    /*see comment on residual equaiton above about this term not
-		     *belonging */
+	 }
 
-		    /*
-		    pmt->d_MassSource_dmesh[i_pl][b][j] = ((1.+2.*tt) * bf[var]->phi[j]/dt) *
-		      mp->density * 
-		      (mp->porosity * mp->d_saturation[POR_LIQ_PRES]*fv->grad_p_liq[b] +
-		       mp->saturation * fv->grad_porosity[b]);
-
-		    pmt->d_MassSource_dmesh[i_pl][b][j] = fv_dot->x[a] * mp->density * 
-		      (mp->porosity * mp->d_saturation[POR_LIQ_PRES]*fv->d_grad_p_liq_dmesh[b][b][j] +
-		       mp->saturation * fv->d_grad_porosity_dmesh[b][b][j]);
-		    */
-
-		  }
-	      }
-	  }
-
-	var = POR_LIQ_PRES;
+       var = POR_POROSITY;
 	if(pd->v[pg->imtrx][var])
-	  {
+	 {
 	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-	      {
-		pmt->d_MassSource_dpmv[i_pl][i_pl][j] = 0.0;
-		for(a=0; a < VIM; a++)
-		  {
-		    pmt->d_MassSource_dpmv[i_pl][i_pl][j] +=  fv_dot->x[a] * mp->density * 
-		      (mp->porosity * mp->d_saturation[POR_LIQ_PRES]*bf[var]->grad_phi[j][a]);
-		  }
-	/*PRS Caveate: I think an additional sensitivity to of sat(p_liq) needs to be in here */
+	     {
+	      pmt->d_MassSource_dpmv[i_pl][i_pore][j] = d_MassSource[var][j];
+	     }
+	 }
 
-	      }
-	  }
-	var = POR_POROSITY;
+	var = MESH_DISPLACEMENT1;
 	if(pd->v[pg->imtrx][var])
-	  {
-	    for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
-	      {
-		pmt->d_MassSource_dpmv[i_pl][i_pore][j] = 0.0;
-		for(a=0; a < VIM; a++)
-		  {
-		    pmt->d_MassSource_dpmv[i_pl][i_pore][j] += fv_dot->x[a] * mp->density * 
-		      (bf[var]->phi[j] * mp->d_saturation[POR_LIQ_PRES]*fv->grad_p_liq[a] +
-		       mp->saturation * bf[var]->grad_phi[j][a]);
-	 
-		  }
-	      }
-	  }
+	 {
+          for (b = 0; b < pd->Num_Dim; b++)
+             {
+              var = MESH_DISPLACEMENT1 + b;
+	      for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+	         {
+                  pmt->d_MassSource_dmesh[i_pl][b][j] = d_MassSource[var][j];
+	         }
+             }
+         }
+
       }
 
     /*
-     * SUPG TERMS -> these are calculated numerically, due to 
+     * SUPG TERMS -> these are calculated numerically, due to
      *               their complexity
      */
     if (mp->Porous_wt_funcModel == SUPG) {
@@ -2618,7 +2939,9 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
 	cap_pres = pmv->cap_pres = p_gas_star - fv->p_liq;
 	d_cap_pres[i_pl] = -1.;
 	mp->saturation = load_saturation(mp->porosity, cap_pres, d_cap_pres);
-	load_liq_perm(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
+        if (mp->RelLiqPermModel != CONSTANT) {
+	   load_liq_perm(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
+        }
 	load_mass_flux(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
 	/*
 	 * Calculate U_supg
@@ -2670,7 +2993,9 @@ get_porous_part_sat_terms(struct Porous_Media_Terms *pmt,
        */
       cap_pres = pmv->cap_pres = p_gas_star - fv->p_liq;
       mp->saturation = load_saturation(mp->porosity, cap_pres, d_cap_pres);
-      load_liq_perm(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
+      if (mp->RelLiqPermModel != CONSTANT) {
+         load_liq_perm(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
+      }
       load_mass_flux(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
       /*
        * Calculate U_supg
@@ -3024,7 +3349,9 @@ get_porous_part_sat_terms_decoupled(struct Porous_Media_Terms *pmt,
 	cap_pres = pmv->cap_pres = p_gas_star - fv->p_liq;
 	d_cap_pres[i_pl] = -1.;
 	mp->saturation = load_saturation(mp->porosity, cap_pres, d_cap_pres);
-	load_liq_perm(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
+        if (mp->RelLiqPermModel != CONSTANT) {
+	   load_liq_perm(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
+        }
 	load_mass_flux(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
 	/*
 	 * Calculate U_supg
@@ -3076,7 +3403,9 @@ get_porous_part_sat_terms_decoupled(struct Porous_Media_Terms *pmt,
        */
       cap_pres = pmv->cap_pres = p_gas_star - fv->p_liq;
       mp->saturation = load_saturation(mp->porosity, cap_pres, d_cap_pres);
-      load_liq_perm(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
+      if (mp->RelLiqPermModel != CONSTANT) {
+         load_liq_perm(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
+      }
       load_mass_flux(mp->porosity, cap_pres, mp->saturation, d_cap_pres);
       /*
        * Calculate U_supg
@@ -5135,9 +5464,6 @@ load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
   double alpha_drain = 0.0, beta_drain = 0.0, s_min, sat_switch, pc_switch, pc_switch_clip;
   double alpha_wet = 0.0, beta_wet = 0.0, s_max;
   int ip, mat_ielem;
-  extern int PRS_mat_ielem;
-
-
 
   /*
    *  Find which model is used for saturation and calculate:
@@ -5252,6 +5578,20 @@ load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
 	if (pd->e[pg->imtrx][R_POR_GAS_PRES]) {
 	  mp_old->d_saturation[POR_GAS_PRES] = 
 	    -mp_old->d_saturation[POR_LIQ_PRES];
+        }
+        if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN]) {
+           mp_old->d_saturation[SHELL_PRESS_OPEN] =
+           -(1.0 - mp->u_saturation[0] - mp->u_saturation[1]) *
+            expon2 * pow((1.0 + pow(suction_old, mp->u_saturation[2])), expon2 - 1.0)
+            * mp->u_saturation[2] * mp->u_saturation[3]
+            * pow(suction_old, mp->u_saturation[2] - 1.0);
+	}
+        if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+           mp_old->d_saturation[SHELL_PRESS_OPEN_2] =
+           -(1.0 - mp->u_saturation[0] - mp->u_saturation[1]) *
+            expon2 * pow((1.0 + pow(suction_old, mp->u_saturation[2])), expon2 - 1.0)
+            * mp->u_saturation[2] * mp->u_saturation[3]
+            * pow(suction_old, mp->u_saturation[2] - 1.0);
 	}
       }
     }
@@ -5758,6 +6098,14 @@ load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
       mp_old->saturation = con_a-con_b*tanh(con_c-con_d/cap_pres_clip);
       mp_old->d_saturation[POR_LIQ_PRES] = con_b*con_d/cap_pres_clip/cap_pres_clip*
 	(1-pow(tanh(con_c-con_d/cap_pres_clip),2.0));
+      if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN]) {
+         mp_old->d_saturation[SHELL_PRESS_OPEN] = con_b*con_d/cap_pres_clip/cap_pres_clip*
+	 (1-pow(tanh(con_c-con_d/cap_pres_clip),2.0));
+      }
+      if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+         mp_old->d_saturation[SHELL_PRESS_OPEN_2] = con_b*con_d/cap_pres_clip/cap_pres_clip*
+	 (1-pow(tanh(con_c-con_d/cap_pres_clip),2.0));
+      }
       if (pd->e[pg->imtrx][R_POR_GAS_PRES]) {
 	mp_old->d_saturation[POR_GAS_PRES] = -mp->d_saturation[POR_LIQ_PRES];
       }
@@ -5821,7 +6169,7 @@ load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
 	mp->d_saturation[SHELL_PRESS_OPEN_2] = con_b*con_d*(1.0-pow(tanh(con_c-con_d/cap_pres_clip),2.0))/
                                      cap_pres_clip/cap_pres_clip;
       }
-    
+
     if (af->Assemble_Jacobian) {
       /*
        *  Calculate the second derivative of the dependence of saturation
@@ -5841,7 +6189,7 @@ load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
 	mp->d_d_saturation[POR_GAS_PRES][POR_GAS_PRES] = 
 	  mp->d_d_saturation[POR_LIQ_PRES][POR_LIQ_PRES];
 	  }
-      
+
       if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
 	{
 	  mp->d_d_saturation[SHELL_PRESS_OPEN][SHELL_PRESS_OPEN] = 
@@ -5859,7 +6207,7 @@ load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
 	}
 
     }
-    
+
     /*
      * Now Calculate the old saturation value if we are doing a transient
      * calculation
@@ -5875,6 +6223,14 @@ load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
 	(1-pow(tanh(con_c-con_d/cap_pres_clip),2.0));
       if (pd->e[pg->imtrx][R_POR_GAS_PRES]) {
 	mp_old->d_saturation[POR_GAS_PRES] = -mp->d_saturation[POR_LIQ_PRES];
+      }
+      if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN]) {
+        mp_old->d_saturation[SHELL_PRESS_OPEN] = con_b*con_d/cap_pres_clip/cap_pres_clip*
+        (1-pow(tanh(con_c-con_d/cap_pres_clip),2.0));
+      }
+      if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2]) {
+        mp_old->d_saturation[SHELL_PRESS_OPEN_2] = con_b*con_d/cap_pres_clip/cap_pres_clip*
+        (1-pow(tanh(con_c-con_d/cap_pres_clip),2.0));
       }
     }
   }
@@ -6267,6 +6623,25 @@ load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
 	  WH(-1, "SHELL_TANH MODEL not yet fitted for pressure gradients in both gas and liquid");
 	  //Do nothing because the saturation model is called from assemble_porous_shell_open 
 	}
+
+      /*
+       * Now Calculate the old saturation value if we are doing a transient
+       * calculation
+       */
+      if (pd->TimeIntegration == TRANSIENT)
+        {
+         cap_pres = pmv_old->cap_pres;
+         mp_old->saturation = shell_saturation_pressure_curve(-cap_pres, &dSdP, &dSdP_P);
+
+         if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+           {
+            mp_old->d_saturation[SHELL_PRESS_OPEN] = dSdP;
+           }
+         if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+           {
+            mp_old->d_saturation[SHELL_PRESS_OPEN_2] = dSdP;
+           }
+        }
     }
   else
     {
@@ -7966,10 +8341,13 @@ load_liq_perm(double porosity, double cap_pres, double saturation,
      *    mp->d_rel_liq_perm[POR_LIQ_PRES]
      *    mp->d_rel_liq_perm[POR_GAS_PRES]
      *    mp->d_rel_liq_perm[POR_POROSITY]
+     *    mp->d_rel_liq_perm[SHELL_PRESS_OPEN] OR mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2]
      **************************************************************************/
 {
   double s_eff, d_s_eff, rel_liq_perm, a1, factor, r_pore, rad, factor2;
   double d_rel_d_rad, expon2, sat_min, sat_max, viscosity, lambda;
+  int i_rel_perm_ev;
+  double scale;
   /*
    * Set these two derivatives to zero -> they are almost always zero
    */
@@ -8005,6 +8383,14 @@ load_liq_perm(double porosity, double cap_pres, double saturation,
       {
 	mp->rel_liq_perm = 0.0;
 	mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
+        if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+          {
+	   mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = 0.0;
+          }
+        else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+          {
+	   mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = 0.0;
+          }
       }
     /*
      *  Clip the relative permeability at one -> it can never be
@@ -8013,12 +8399,20 @@ load_liq_perm(double porosity, double cap_pres, double saturation,
      *  by zero as factor=1.0 below.    Now and then GOMA aborts due
      *  to this.  
      */
-    else if (s_eff >= 0.99999)  
+    else if (s_eff >= 0.99999)
       {
 	mp->rel_liq_perm = 1.0 / viscosity;
 	mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
+        if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+          {
+	   mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = 0.0;
+          }
+        else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+          {
+	   mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = 0.0;
+          }
       }
-    else 
+    else
       {
       expon2 = 1.0 / lambda;
       factor  = pow(s_eff, expon2);
@@ -8036,27 +8430,45 @@ load_liq_perm(double porosity, double cap_pres, double saturation,
 	d_s_eff = 1.0 / (sat_max - sat_min);
 	if (a1 == 0.0) {
 	  mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
+          if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+            {
+	     mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = 0.0;
+            }
+          else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+            {
+	     mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = 0.0;
+            }
 	} else {
-	  mp->d_rel_liq_perm[POR_LIQ_PRES] = 
-	      d_s_eff * rel_liq_perm * mp->d_saturation[POR_LIQ_PRES] * 
-	      (0.5 / s_eff + 
+	  mp->d_rel_liq_perm[POR_LIQ_PRES] =
+	      d_s_eff * rel_liq_perm * mp->d_saturation[POR_LIQ_PRES] *
+	      (0.5 / s_eff +
 	       2. * factor2 * factor / ((1.0 - factor) * s_eff * a1)  );
+          if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+            {
+	     mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = d_s_eff * rel_liq_perm * mp->d_saturation[SHELL_PRESS_OPEN] *
+	                                            (0.5 / s_eff + 2. * factor2 * factor / ((1.0 - factor) * s_eff * a1)  );
+            }
+          else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+            {
+	     mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = d_s_eff * rel_liq_perm * mp->d_saturation[SHELL_PRESS_OPEN_2] *
+	                                            (0.5 / s_eff + 2. * factor2 * factor / ((1.0 - factor) * s_eff * a1)  );
+            }
 	}
 	if (pd->e[pg->imtrx][R_POR_GAS_PRES]) {
 	  if (a1 == 0.0) {
 	    mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
 	  } else {
-	    mp->d_rel_liq_perm[POR_GAS_PRES] = 
-		d_s_eff * rel_liq_perm * mp->d_saturation[POR_GAS_PRES] * 
-		(0.5 / s_eff + 
+	    mp->d_rel_liq_perm[POR_GAS_PRES] =
+		d_s_eff * rel_liq_perm * mp->d_saturation[POR_GAS_PRES] *
+		(0.5 / s_eff +
 		 2. * factor2 * factor / ((1.0 - factor) * s_eff * a1));
 	  }
 	}
-      }    
+      }
       }
   }
   else if (mp->RelLiqPermModel == PSD_VOL) {
-    /*  
+    /*
      * FOR PSD_VOL EQUATION -
      *
      * all parameters are loaded from saturation and permeability
@@ -8073,7 +8485,7 @@ load_liq_perm(double porosity, double cap_pres, double saturation,
     if (pd->e[pg->imtrx][R_POR_POROSITY]) r_pore = pmv->r_pore;
     else                       r_pore = mp->u_saturation[3];
     rad = pmv->r_cap / r_pore;
-	  
+
     if (pmv->r_cap > r_pore) {
       mp->rel_liq_perm = 1.0 / viscosity;
       mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
@@ -8087,9 +8499,10 @@ load_liq_perm(double porosity, double cap_pres, double saturation,
       mp->rel_liq_perm = (CUBE(rad) - CUBE(mp->u_permeability[2])) * factor;
 
       if ( af->Assemble_Jacobian) {
-	mp->d_rel_liq_perm[POR_LIQ_PRES]= 3. * pow(pmv->r_cap, 2.0) 
+	mp->d_rel_liq_perm[POR_LIQ_PRES]= 3. * pow(pmv->r_cap, 2.0)
 	    * pmv->d_r_cap[POR_LIQ_PRES] / pow(r_pore,3.0) * factor;
 	if (pd->e[pg->imtrx][R_POR_GAS_PRES]) {
+
 	  mp->d_rel_liq_perm[POR_GAS_PRES] = 
 	      3.0 * pow(pmv->r_cap,2.0) * pmv->d_r_cap[POR_GAS_PRES] 
 	      / CUBE(r_pore) * factor;
@@ -8121,11 +8534,12 @@ load_liq_perm(double porosity, double cap_pres, double saturation,
 		    (2. + 4. * rad + 4. * rad * rad + 8./3. * pow(rad,3.0) 
 		     + 4./3. * pow(rad,4.0)))
 		   / mp->u_rel_liq_perm[0]);
-	  
+
     if (af->Assemble_Jacobian) {
       mp->d_rel_liq_perm[POR_LIQ_PRES] = d_rel_d_rad * pmv->d_r_cap[POR_LIQ_PRES]
 	  / r_pore;
       if (pd->e[pg->imtrx][R_POR_GAS_PRES]) mp->d_rel_liq_perm[POR_GAS_PRES] = d_rel_d_rad 
+
 				     * pmv->d_r_cap[POR_GAS_PRES] 
 				     / r_pore;
       if (pd->e[pg->imtrx][R_POR_POROSITY]) mp->d_rel_liq_perm[POR_POROSITY] = - d_rel_d_rad 
@@ -8145,20 +8559,165 @@ load_liq_perm(double porosity, double cap_pres, double saturation,
 		   - exp(-factor * rad *rad) * 
 		   (4. * factor * factor / 2. * pow(rad,3.0) + 2. * factor * rad)
 	)/ mp->u_rel_liq_perm[0];
-	  
+
     if (af->Assemble_Jacobian) {
       mp->d_rel_liq_perm[POR_LIQ_PRES] = d_rel_d_rad * pmv->d_r_cap[POR_LIQ_PRES]
 	  / r_pore;
       if (pd->e[pg->imtrx][R_POR_GAS_PRES]) mp->d_rel_liq_perm[POR_GAS_PRES] = d_rel_d_rad 
+
 				     * pmv->d_r_cap[POR_GAS_PRES] 
 				     / r_pore;
       if (pd->e[pg->imtrx][R_POR_POROSITY]) mp->d_rel_liq_perm[POR_POROSITY] = - d_rel_d_rad 
 				     * pmv->d_r_pore[POR_POROSITY] * rad / r_pore;
     }
   }
+  else if (mp->RelLiqPermModel == EXTERNAL_FIELD) {
+    /*
+     *
+     * FOR EXTERNAL FIELD
+     *  mp->u_rel_liq_perm[0] is the scaling factor for the read-in external field variable
+     */
+
+     i_rel_perm_ev = mp->rel_liq_perm_external_field_index;
+     scale = mp->u_rel_liq_perm[0];
+
+     mp->rel_liq_perm = scale * fv->external_field[i_rel_perm_ev];
+     mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
+     if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+       {
+        mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = 0.0;
+       }
+     else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+       {
+        mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = 0.0;
+       }
+  }
+  else if (mp->RelLiqPermModel == VAN_GENUCHTEN_EXTERNAL) {
+    /*
+     *
+     * FOR VAN_GENUCHTEN_EXTERNAL
+     *  mp->u_rel_liq_perm[0] is the irreduceable water saturation
+     *  mp->u_rel_liq_perm[1] is the irreduceable air saturation
+     *  mp->u_rel_liq_perm[2] is the exponent, 1 - 1/beta for external field value of 0
+     *  mp->u_rel_liq_perm[3] is the liquid viscosity
+     *  mp->u_rel_liq_perm[4] is the exponent, 1 - 1/beta for external field value of 1
+     */
+
+     i_rel_perm_ev = mp->rel_liq_perm_external_field_index;
+
+     sat_min = mp->u_rel_liq_perm[0];
+     sat_max = 1.0 - mp->u_rel_liq_perm[1];
+     s_eff = (saturation - sat_min) / (sat_max - sat_min);
+     viscosity = mp->u_rel_liq_perm[3];
+
+     /* Here I assume that efv is bounded between 0 and 1 */
+     lambda = fv->external_field[i_rel_perm_ev] *
+              (mp->u_rel_liq_perm[4] - mp->u_rel_liq_perm[2]) + mp->u_rel_liq_perm[2];
+
+    /*
+     *  Clip the relative permeability to zero if the effective saturation
+     *  is equal to or less than zero. -> there can be no transport
+     *  in a liquid phase if there is no continguous pathway in that phase.
+     */
+     if (s_eff < 0.0)
+       {
+	mp->rel_liq_perm = 0.0;
+	mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
+        if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+          {
+	   mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = 0.0;
+          }
+        else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+          {
+	   mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = 0.0;
+          }
+       }
+    /*
+     *  Clip the relative permeability at one -> it can never be
+     *  greater than one.  Actually, note that if somehow s_eff is
+     *  very close to 1.0 and fails this test, then you are dividing
+     *  by zero as factor=1.0 below.    Now and then GOMA aborts due
+     *  to this.
+     */
+     else if (s_eff >= 0.99999)
+       {
+	mp->rel_liq_perm = 1.0 / viscosity;
+	mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
+        if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+          {
+	   mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = 0.0;
+          }
+        else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+          {
+	   mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = 0.0;
+          }
+       }
+     else
+       {
+        expon2 = 1.0 / lambda;
+        factor  = pow(s_eff, expon2);
+        factor2 = pow(1.0 - factor, lambda);
+        a1 = 1.0 - factor2;
+        rel_liq_perm = mp->rel_liq_perm = sqrt(s_eff) * a1 * a1 /
+	               viscosity;
+
+        if (af->Assemble_Jacobian || mp->Porous_wt_funcModel == SUPG)
+          {
+	 /*
+	  * Set these two derivatives to zero -> they are almost always zero
+	  */
+	   mp->d_rel_liq_perm[POR_GAS_PRES] = 0.0;
+	   mp->d_rel_liq_perm[POR_POROSITY] = 0.0;
+	   d_s_eff = 1.0 / (sat_max - sat_min);
+	   if (a1 == 0.0)
+             {
+	      mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
+              if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+                {
+	         mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = 0.0;
+                }
+              else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+                {
+	         mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = 0.0;
+                }
+	     }
+           else
+             {
+	      mp->d_rel_liq_perm[POR_LIQ_PRES] =
+	      d_s_eff * rel_liq_perm * mp->d_saturation[POR_LIQ_PRES] *
+	      (0.5 / s_eff +
+	      2. * factor2 * factor / ((1.0 - factor) * s_eff * a1)  );
+              if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN])
+                {
+	         mp->d_rel_liq_perm[SHELL_PRESS_OPEN] = d_s_eff * rel_liq_perm * mp->d_saturation[SHELL_PRESS_OPEN] *
+	         (0.5 / s_eff + 2. * factor2 * factor / ((1.0 - factor) * s_eff * a1)  );
+                }
+              else if (pd->e[pg->imtrx][R_SHELL_SAT_OPEN_2])
+                {
+	         mp->d_rel_liq_perm[SHELL_PRESS_OPEN_2] = d_s_eff * rel_liq_perm * mp->d_saturation[SHELL_PRESS_OPEN_2] *
+	         (0.5 / s_eff + 2. * factor2 * factor / ((1.0 - factor) * s_eff * a1)  );
+                }
+	     }
+	   if (pd->e[pg->imtrx][R_POR_GAS_PRES])
+             {
+	      if (a1 == 0.0)
+                {
+	         mp->d_rel_liq_perm[POR_LIQ_PRES] = 0.0;
+	        }
+              else
+                {
+	         mp->d_rel_liq_perm[POR_GAS_PRES] =
+		 d_s_eff * rel_liq_perm * mp->d_saturation[POR_GAS_PRES] *
+		 (0.5 / s_eff +
+		 2. * factor2 * factor / ((1.0 - factor) * s_eff * a1));
+	        }
+	     }
+          }
+       }
+  }
   else
   {
-    EH(-1, "No models for liquid permeability");
+   EH(-1, "No models for liquid relative permeability");
   }
   return;
 } /* end  load_liq_perm  */
@@ -8381,7 +8940,8 @@ load_MandE_flux(double porosity, double cap_pres, double saturation,
   if(pd->CoordinateSystem == CARTESIAN ||
        pd->CoordinateSystem == CYLINDRICAL ||
        pd->CoordinateSystem == SWIRLING ||
-       pd->CoordinateSystem == PROJECTED_CARTESIAN) 
+       pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+       pd->CoordinateSystem == CARTESIAN_2pt5D) 
       {
 	WIM = pd->Num_Dim;
       } else {
@@ -8737,7 +9297,7 @@ load_MandE_flux(double porosity, double cap_pres, double saturation,
 		    {
 		      for ( w=0; w<MAX_PMV; w++)
 			{
-			  pmv->d_rel_mass_flux_dmesh[w][a] [b][j] = 0.;
+			  pmv->d_rel_mass_flux_dmesh[w][a][b][j] = 0.;
 			}
 		    }
 		  for (a=0; a < WIM; a++)
@@ -8800,7 +9360,7 @@ load_MandE_flux(double porosity, double cap_pres, double saturation,
 
                           /* Additional terms for energy equation */
 			   if (pd->e[pg->imtrx][R_POR_GAS_PRES]) 
-			       pmv->d_rel_mass_flux_dmesh[i_pe][a] [b][j] +=
+			       pmv->d_rel_mass_flux_dmesh[i_pe][a][b][j] +=
 				    - mp->thermal_conductivity * fv->d_grad_T_dmesh[a][b][j];
 
 			} /* DARCY_FICKIAN */
@@ -8885,7 +9445,7 @@ calc_grad_Ywg (int var, double *grad_Ywg)
 } /* end calc_grad_Ywg */
 /******************************************************************************/
 void
-calc_darcy_velocity()
+calc_darcy_velocity(void)
 {
   int a, b, j, w1, var, WIM;
   const int i_pl = 0, i_pg = 1, i_pore = 2;
@@ -8899,7 +9459,8 @@ calc_darcy_velocity()
   if(pd->CoordinateSystem == CARTESIAN ||
      pd->CoordinateSystem == CYLINDRICAL ||
      pd->CoordinateSystem == SWIRLING ||
-     pd->CoordinateSystem == PROJECTED_CARTESIAN) 
+     pd->CoordinateSystem == PROJECTED_CARTESIAN ||
+     pd->CoordinateSystem == CARTESIAN_2pt5D) 
     {
       WIM = pd->Num_Dim;
     } else {
@@ -9706,7 +10267,7 @@ load_mass_flux(double porosity, double cap_pres, double saturation,
 		    {
 		      for ( w=0; w<MAX_PMV; w++)
 			{
-			  pmv->d_rel_mass_flux_dmesh[w][a] [b][j] = 0.;
+			  pmv->d_rel_mass_flux_dmesh[w][a][b][j] = 0.;
 			}
 		    }
 		  for (a=0; a < VIM; a++)
@@ -9731,7 +10292,7 @@ load_mass_flux(double porosity, double cap_pres, double saturation,
 			      } else {
 				for (p=0; p < VIM; p++)
 				  {
-				    pmv->d_rel_mass_flux_dmesh[w][a] [b][j] +=
+		 		    pmv->d_rel_mass_flux_dmesh[w][a] [b][j] +=
 				      - mp->perm_tensor[a][p] * mp->rel_liq_perm 
 				      * pmv->liq_Xvol_solvents[w] * fv->d_grad_p_liq_dmesh[p][b][j]
 				      * mp->density;
@@ -10710,4 +11271,196 @@ evaluate_sat_hyst_criterion(int ip,
   }
 
   return(1);
+}
+
+/*****************************************************************************/
+double
+por_mass_source_model( double d_MassSource[MAX_VARIABLE_TYPES + MAX_CONC][MDE] )
+/******************************************************************************
+*
+*  A function which computes mass source term in porous media transport and their 
+*  Jacobian sensitivities
+*
+*  Kristianto Tjiptowidjojo (June 2015)
+*
+*
+******************************************************************************/
+{
+  int b, j, var;
+  double phi_j;
+  double MassSource = 0.0;
+  double tau = 0.0;
+  double sink_mass_max = 0.0, nexp = 0.0;
+
+  int dim = pd->Num_Dim;
+
+
+  /*** Calculate MassSource based on the selected models ***/
+
+  switch (mp->PorousSinkConstantsModel)
+    {
+
+     case LINEAR:
+
+       if(mp->saturation >= mp->u_porous_sink_constants[6])
+         {
+          tau = mp->u_porous_sink_constants[0];
+         }
+       else
+         {
+          tau = 0.;
+         }
+
+       sink_mass_max = mp->u_porous_sink_constants[1];
+
+       MassSource = -tau * mp->u_porous_sink_constants[2] * (sink_mass_max - fv->sink_mass)
+                    * mp->saturation/sink_mass_max/fv->volume_change ;
+
+      /* Again, I don't think this term belongs, contrary to the paper from which
+         it came.   Disappears with application of the Reynolds Transport theorem */
+
+      /*
+      for(b=0; b < VIM; b++)
+         {
+          MassSource += fv_dot->x[b] * mp->density * 
+                        (mp->porosity * mp->d_saturation[POR_LIQ_PRES]*fv->grad_p_liq[b] +
+                         mp->saturation * fv->grad_porosity[b]);
+         }
+      */
+
+     break;
+
+     case POWER_LAW:
+
+       if(mp->saturation >= mp->u_porous_sink_constants[3])
+         {
+          tau = mp->u_porous_sink_constants[0];
+         }
+       else
+         {
+          tau = 0.;
+         }
+
+       sink_mass_max = mp->u_porous_sink_constants[1];
+       nexp = mp->u_porous_sink_constants[2];
+
+       MassSource = -tau * pow ( ((sink_mass_max - fv->sink_mass)/sink_mass_max), nexp )
+                    * mp->saturation/mp->density;
+
+
+     break;
+
+     default:
+
+     EH(-1, "No valid porous sink models were found");
+    }
+
+  /****** Calculate their Jacobian sensitivities */
+
+
+  memset(d_MassSource,  0.0, sizeof(double) * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE);
+
+  switch (mp->PorousSinkConstantsModel)
+    {
+
+     case LINEAR:
+
+       var = POR_SINK_MASS;
+       if(pd->v[pg->imtrx][var])
+         {
+          for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+             {
+              phi_j = bf[var]->phi[j];
+
+              d_MassSource[var][j] = tau * mp->u_porous_sink_constants[2] * phi_j *
+                                     mp->saturation/sink_mass_max/fv->volume_change ;
+             }
+         }
+
+       var = POR_LIQ_PRES;
+       if(pd->v[pg->imtrx][var])
+         {
+          for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+             {
+              phi_j = bf[var]->phi[j];
+
+              d_MassSource[var][j] = -tau * mp->u_porous_sink_constants[2] * (sink_mass_max - fv->sink_mass)
+                                     * mp->d_saturation[POR_LIQ_PRES]/sink_mass_max/fv->volume_change * phi_j;
+
+              /*
+              for(a=0; a < VIM; a++)
+                 {
+                  d_MassSource[var][j] +=  fv_dot->x[a] * mp->density *
+                                           (mp->porosity * mp->d_saturation[POR_LIQ_PRES]*bf[var]->grad_phi[j][a]);
+                 }
+              */
+              /*PRS Caveate: I think an additional sensitivity to of sat(p_liq) needs to be in here */
+
+             }
+         }
+
+
+       var = MESH_DISPLACEMENT1;
+       if(pd->v[pg->imtrx][var])
+         {
+          for(b=0; b<dim; b++)
+             {
+              var = MESH_DISPLACEMENT1 + b;
+
+              for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+                 {
+                  d_MassSource[var][j] = fv->d_volume_change_dx[b][j] * tau * mp->u_porous_sink_constants[2] *
+                                         (sink_mass_max - fv->sink_mass) * mp->saturation/sink_mass_max/
+                                         fv->volume_change/fv->volume_change ;
+
+                  /*see comment on residual equation above about this term not belonging */
+
+                  /*
+                  d_MassSource[var][j] = ((1.+2.*tt) * bf[var]->phi[j]/dt) *
+                                         mp->density * (mp->porosity * mp->d_saturation[POR_LIQ_PRES]*fv->grad_p_liq[b] +
+                                         mp->saturation * fv->grad_porosity[b]);
+
+                  d_MassSource[var][j] = fv_dot->x[a] * mp->density *
+                                         (mp->porosity * mp->d_saturation[POR_LIQ_PRES]*fv->d_grad_p_liq_dmesh[b][b][j] +
+                                          mp->saturation * fv->d_grad_porosity_dmesh[b][b][j]);
+                  */
+
+                 }
+
+             }
+         }
+
+     break;
+
+     case POWER_LAW:
+
+       var = POR_SINK_MASS;
+       if(pd->v[pg->imtrx][var])
+         {
+          for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+             {
+              phi_j = bf[var]->phi[j];
+
+              d_MassSource[var][j] = tau * pow( ((sink_mass_max - fv->sink_mass)/sink_mass_max), (nexp - 1.0) )
+                                     * (phi_j/sink_mass_max) * mp->saturation/mp->density ;
+
+             }
+         }
+
+       var = POR_LIQ_PRES;
+       if(pd->v[pg->imtrx][var])
+         {
+          for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+             {
+              phi_j = bf[var]->phi[j];
+
+              d_MassSource[var][j] = -tau * pow ( ((sink_mass_max - fv->sink_mass)/sink_mass_max), nexp )
+                                     * mp->d_saturation[var]/mp->density;
+
+             }
+         }
+     break;
+    }
+
+  return(MassSource);
 }

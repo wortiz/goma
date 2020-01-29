@@ -23,10 +23,7 @@
 
 #ifdef GOMA_MM_NUMJAC_C
 #define EXTERN
-#
-#endif
-
-#ifndef GOMA_MM_NUMJAC_C
+#else
 #define EXTERN extern
 #endif
 
@@ -87,6 +84,7 @@ numerical_jacobian_compute_stress(struct Aztec_Linear_Solver_System *ams,
 		   Dpi *dpi,        /* any distributed processing info */
 		   double *h_elem_avg,
   double *U_norm);
+
 
 EXTERN void numerical_jacobian	/* mm_numjac.c                               */
 (struct Aztec_Linear_Solver_System *, /* ams                           */

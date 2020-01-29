@@ -101,13 +101,8 @@ belly_flop(dbl mu)		/* elastic modulus (plane stress case) */
 
   status = 0;
 
- if (pd->gv[MESH_DISPLACEMENT1]) {
-    dim = ei[pd->mi[MESH_DISPLACEMENT1]]->ielem_dim;
-    mdof = ei[pd->mi[MESH_DISPLACEMENT1]]->dof[MESH_DISPLACEMENT1];
-  } else {
-    dim = ei[pg->imtrx]->ielem_dim;
-    mdof = ei[pg->imtrx]->dof[MESH_DISPLACEMENT1];
-  }
+  dim = ei[pg->imtrx]->ielem_dim;
+  mdof = ei[pg->imtrx]->dof[MESH_DISPLACEMENT1];
   /*******************************************************************************/
   /* load up the displacement gradient and it's sensitivities or calculate it in 
    * psuedo-cartesian coordinates if using arbitrary mesh */
@@ -152,9 +147,9 @@ belly_flop(dbl mu)		/* elastic modulus (plane stress case) */
 	  for ( q=0; q<dim; q++)
 	    {
 	      v = MESH_DISPLACEMENT1 + p;
-	      if ( pd->gv[v] )
+	      if ( pd->v[pg->imtrx][v] )
 		{
-		  dofs     = ei[pd->mi[v]]->dof[v];
+		  dofs     = ei[pg->imtrx]->dof[v];
 		  for ( i=0; i<dofs; i++)
 		    {
 		      grad_d[p][q] += 
@@ -448,16 +443,9 @@ belly_flop(dbl mu)		/* elastic modulus (plane stress case) */
 		  }
 	      }
 	  }
-    
-          if (pd->gv[MESH_DISPLACEMENT1]) {
-            invert_tensor(invdeform_grad, fv->deform_grad, VIM,
-                          d_invdeform_grad_dx, fv->d_deform_grad_dx, 
-                          ei[pd->mi[MESH_DISPLACEMENT1]]->dof[MESH_DISPLACEMENT1], af->Assemble_Jacobian);
-          } else {
-            invert_tensor(invdeform_grad, fv->deform_grad, VIM,
-                          d_invdeform_grad_dx, fv->d_deform_grad_dx, 
-                          ei[pg->imtrx]->dof[MESH_DISPLACEMENT1], af->Assemble_Jacobian);
-          }
+	  invert_tensor(invdeform_grad, fv->deform_grad, VIM,
+			d_invdeform_grad_dx, fv->d_deform_grad_dx, 
+			ei[pg->imtrx]->dof[MESH_DISPLACEMENT1], af->Assemble_Jacobian);
 	}
     }
 
@@ -1437,9 +1425,9 @@ force_n_dot_f_spring_bc(double func[DIM],
     initial_xpos1 = Coor[0][node_1];
     initial_ypos1 = Coor[1][node_1];
     initial_zpos1 = Coor[2][node_1];
-    idx1 = Index_Solution(node_1, MESH_DISPLACEMENT1, 0, 0, -2, pg->imtrx);
-    idy1 = Index_Solution(node_1, MESH_DISPLACEMENT2, 0, 0, -2, pg->imtrx);
-    idz1 = Index_Solution(node_1, MESH_DISPLACEMENT3, 0, 0, -2, pg->imtrx);
+    idx1 = Index_Solution(node_1, MESH_DISPLACEMENT1, 0, 0, -2);
+    idy1 = Index_Solution(node_1, MESH_DISPLACEMENT2, 0, 0, -2);
+    idz1 = Index_Solution(node_1, MESH_DISPLACEMENT3, 0, 0, -2);
     delta_xpos1 = x[idx1];
     delta_ypos1 = x[idy1];
     delta_zpos1 = x[idz1];
@@ -1754,7 +1742,6 @@ rep_force_roll_n_dot_f_bc(double func[DIM],
 	    }
 	}
     }
-/*fprintf(stderr," force %g %g %g\n",coord[0],force,friction);*/
 
   for (a=0; a<ei[pg->imtrx]->ielem_dim; a++)
     {  
@@ -2574,6 +2561,7 @@ put_liquid_stress_in_solid_ALE(int id, /* local element node number for the
 		ieqn_solid = R_SOLID1 + p;
 		lec->R[upd->ep[pg->imtrx][ieqn_solid]][id_dofsol] += 
 		    scale*lec->R[upd->ep[pg->imtrx][ieqn_mom]][id_dofmom];
+/*fprintf(stderr,"solid_fluid %g %g %g\n",scale,fv->x[0],fv->P);*/
 	      }
 	}
       }
@@ -3216,10 +3204,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
  dbl factor = 0.0;
  dbl d_mu_dx[DIM][MDE], d_lambda_dx[DIM][MDE];
  int a=0, b, j, p, q, dim, var, w, v, dofs, err, mat_ielem;
- int SPECIES = MAX_VARIABLE_TYPES, imtrx;
+ int SPECIES = MAX_VARIABLE_TYPES;
  dbl p_gas_star = 0.0;
- extern int PRS_mat_ielem;
-
 
   dbl thermexp;
   dbl speciesexp[MAX_CONC];
@@ -3260,7 +3246,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 	      TT[p][q] = lambda * fv->volume_strain * delta(p,q) + 2. * mu * fv->strain[p][q];
 	    }
 	}
-	  
+
       /* add shrinkage stress, if called for */
       if(elc->thermal_expansion_model == SHRINKAGE)
 	{
@@ -3279,8 +3265,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 	}
  
       /*  add thermo-elasticity  */
-      if( pd->gv[R_ENERGY] )
-	{
+      if( pd->e[pg->imtrx][R_ENERGY] )
+ 	{
 	  if( elc->thermal_expansion_model == CONSTANT)
 	    {
 	      for ( p=0; p<VIM; p++)
@@ -3288,6 +3274,17 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 		  for ( q=0; q<VIM; q++)
 		    {
 		      TT[p][q] -=  (2.* mu + 3.*lambda) * thermexp * 
+			(fv->T - elc->solid_reference_temp) * delta(p,q);
+		    }
+		}
+	    }
+	  if( elc->thermal_expansion_model == IDEAL_GAS)
+	    {
+	      for ( p=0; p<VIM; p++)
+		{
+		  for ( q=0; q<VIM; q++)
+		    {
+		      TT[p][q] -=  (2.* mu + 3.*lambda) / (thermexp + fv->T) * 
 			(fv->T - elc->solid_reference_temp) * delta(p,q);
 		    }
 		}
@@ -3303,26 +3300,26 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 		}
 	    }
 	}
-	
       
-      /*   add species expansion/shrinkage	*/
-      if (pd->gv[R_MASS])
+/*   add species expansion/shrinkage	*/
+      if (pd->e[pg->imtrx][R_MASS])
 	{
-	  for (w=0; w<pd->Num_Species_Eqn; w++) 
-	    {
-	      if(mp->SpecVolExpModel[w] == CONSTANT )
-		{
-		  for ( p=0; p<VIM; p++)
-		    {
-		      for ( q=0; q<VIM; q++)
-			{
-			  TT[p][q] -=  (2.* mu + 3.*lambda) * speciesexp[w] * 
-			    (fv->c[w] - mp->reference_concn[w]) * delta(p,q);
-			}
-		    }
-		}
-	    }
-	}
+	     for (w=0; w<pd->Num_Species_Eqn; w++) 
+	       {
+		 if(mp->SpecVolExpModel[w] == CONSTANT ||
+                     mp->SpecVolExpModel[w] == PHOTO_CURING)
+		   {
+		     for ( p=0; p<VIM; p++)
+		       {
+			 for ( q=0; q<VIM; q++)
+			   {
+			     TT[p][q] -=  (2.* mu + 3.*lambda) * speciesexp[w] * 
+			       (fv->c[w] - mp->reference_concn[w]) * delta(p,q);
+			   }
+		       }
+		   }
+	       }
+	   }
 
    if ( af->Assemble_Jacobian )
      {
@@ -3344,33 +3341,32 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 			   
 			   dTT_dx[p][q][b][j] += d_lambda_dx[b][j] * fv->volume_strain * delta(p,q) 
 			     + 2. * d_mu_dx[b][j] * fv->strain[p][q];
-			   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
+			   if( pd->e[pg->imtrx][R_ENERGY] )
 			     {
-			       if( pd->e[imtrx][R_ENERGY] )
+	  			if( elc->thermal_expansion_model == CONSTANT || 
+                                    elc->thermal_expansion_model == IDEAL_GAS )
+	  			{
+			       dTT_dx[p][q][b][j] -=  (2. * d_mu_dx[b][j] + 3.*d_lambda_dx[b][j])
+				 * thermexp * 
+				 (fv->T - elc->solid_reference_temp) * delta(p,q);
+	  			}
+	  			if( elc->thermal_expansion_model == USER)
+	  			{
+				  dTT_dx[p][q][b][j] -=  ((2.*d_mu_dx[b][j]+3.*d_lambda_dx[b][j])*thermexp 
+							  + (2.*mu+3.*lambda)*d_thermexp_dx[v]*bf[v]->phi[j])
+				    * delta(p,q);
+	  			}
+			     }
+			   if( pd->e[pg->imtrx][R_MASS] )
+			     {
+			       for (w=0; w<pd->Num_Species_Eqn; w++) 
 				 {
-				   if( elc->thermal_expansion_model == CONSTANT)
+				   if(mp->SpecVolExpModel[w] == CONSTANT ||
+                                        mp->SpecVolExpModel[w] == PHOTO_CURING)
 				     {
 				       dTT_dx[p][q][b][j] -=  (2. * d_mu_dx[b][j] + 3.*d_lambda_dx[b][j])
-					 * thermexp * 
-					 (fv->T - elc->solid_reference_temp) * delta(p,q);
-				     }
-				   if( elc->thermal_expansion_model == USER)
-				     {
-				       dTT_dx[p][q][b][j] -=  ((2.*d_mu_dx[b][j]+3.*d_lambda_dx[b][j])*thermexp 
-							       + (2.*mu+3.*lambda)*d_thermexp_dx[v]*bf[v]->phi[j])
+					 * speciesexp[w] * (fv->c[w] - mp->reference_concn[w]) 
 					 * delta(p,q);
-				     }
-				 }
-			       if( pd->e[imtrx][R_MASS] )
-				 {
-				   for (w=0; w<pd->Num_Species_Eqn; w++) 
-				     {
-				       if(mp->SpecVolExpModel[w] == CONSTANT )
-					 {
-					   dTT_dx[p][q][b][j] -=  (2. * d_mu_dx[b][j] + 3.*d_lambda_dx[b][j])
-					     * speciesexp[w] * (fv->c[w] - mp->reference_concn[w]) 
-					     * delta(p,q);
-					 }
 				     }
 				 }
 			     }
@@ -3395,6 +3391,15 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 			 {
 			   dTT_dT[p][q][j] -=  (2.* mu + 3.*lambda) * thermexp * bf[v]->phi[j] 
 			     * delta(p,q); 
+			 }
+		     }
+		   if( elc->thermal_expansion_model == IDEAL_GAS)
+		     {
+		       for ( j=0; j<dofs; j++)
+			 {
+			   dTT_dT[p][q][j] -=  (2.* mu + 3.*lambda) * 
+                                    (thermexp+elc->solid_reference_temp)/SQUARE(fv->T+thermexp)
+                                      * bf[v]->phi[j] * delta(p,q); 
 			 }
 		     }
 		   if( elc->thermal_expansion_model == USER)
@@ -3454,7 +3459,8 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
  		     {
 		       for (w=0; w<pd->Num_Species_Eqn; w++) 
 			 {
-			   if(mp->SpecVolExpModel[w] == CONSTANT )
+			   if(mp->SpecVolExpModel[w] == CONSTANT ||
+                                 mp->SpecVolExpModel[w] == PHOTO_CURING)
 			     {
 			       dTT_dc[p][q][w][j] -=  (2.* mu + 3.*lambda)*
 				 speciesexp[w]*bf[v]->phi[j]*delta(p,q); 
@@ -3545,92 +3551,89 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
      /* now, add in pressure due to swelling for incompressible lagrangian
       * mesh motion */
      var = PRESSURE;
-     for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
+     if (pd->v[pg->imtrx][var] && ( mp->PorousMediaType == CONTINUOUS ) ) 
        {
-	 if (pd->v[imtrx][var] && ( mp->PorousMediaType == CONTINUOUS ) ) 
+	 if (cr->MeshFluxModel == INCOMP_PSTRAIN ||
+	     cr->MeshFluxModel == INCOMP_PSTRESS || 
+	     cr->MeshFluxModel == INCOMP_3D      ||
+	     cr->MeshFluxModel == LINEAR)
 	   {
-	     if (cr->MeshFluxModel == INCOMP_PSTRAIN ||
-		 cr->MeshFluxModel == INCOMP_PSTRESS || 
-		 cr->MeshFluxModel == INCOMP_3D      ||
-		 cr->MeshFluxModel == LINEAR)
+	     for ( a=0; a<DIM; a++)
 	       {
-		 for ( a=0; a<DIM; a++)
-		   {
-		     TT[a][a] -=  fv->P; 
-		   }
-	       }
-	   }
-       
-	 /* pressure force is the pressure of each phase times its volume fraction */
-	 if ((mp->PorousMediaType == POROUS_UNSATURATED || 
-	      mp->PorousMediaType == POROUS_SATURATED || 
-	      mp->PorousMediaType == POROUS_TWO_PHASE) && pd->e[imtrx][R_POR_POROSITY]) 
-	   {
-	     for ( a=0; a<VIM; a++)
-	       {
-		 if (mp->CapStress == NO_CAP_STRESS)
-		   {
-		     /*do nothing*/
-		   }
-		 else if (mp->CapStress == COMPRESSIBLE && mp->PorousMediaType != POROUS_SATURATED) 
-		   {
-		     EH(-1,"Need to reconcile the COMPRESSIBLE model pressures.  Not ready yet");
-		     /* Compressible model of effective stress law with
-		      *  partially saturated media from Zienkeivicz and Garg and Nur */
-		     if (elc->lame_lambda_model != POWER_LAW) 
-		       EH(-1,"Effective stress law may be missing constant");
-		     
-		     TT[a][a] -=  (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) * 
-		       mp->saturation * fv->p_liq; 
-		     if (pd->v[imtrx][POR_GAS_PRES])
-		       {
-			 TT[a][a] -=  (1 - (1 - mp->porosity) 
-				       * elc->lame_lambda / elc->u_lambda[0]) * 
-			   (1. - mp->saturation) * fv->p_gas; 
-			 
-		       }
-		   } 
-		 else if (mp->CapStress == PARTIALLY_WETTING && mp->PorousMediaType != POROUS_SATURATED) 
-		   {
-		     p_gas_star =  mp->u_porous_gas_constants[3];
-		     TT[a][a] -= (1. - mp->saturation)*p_gas_star + mp->saturation * fv->p_liq;
-		     
-		     if (pd->v[imtrx][POR_GAS_PRES]) TT[a][a] -= (1. - mp->saturation) * fv->p_gas; 
-		   }
-	       
-		 else if (mp->CapStress == WETTING && mp->PorousMediaType != POROUS_SATURATED) 
-		   {
-		     /* If liquid is wetting, so that all surfaces are covered
-			by a thin layer of liquid */
-		     EH(-1,"Need to reconcile the WETTING model pressures.  Not ready yet");
-		     TT[a][a] -= (1 - mp->porosity * (1. - mp->saturation)) * fv->p_liq;  
-		     if (pd->v[imtrx][POR_GAS_PRES]) TT[a][a] -= mp->porosity * (1. - mp->saturation) * fv->p_gas;  
-		   }
-		 else if (mp->PorousMediaType == POROUS_SATURATED && pd->e[imtrx][POR_POROSITY])
-		   { 
-		     TT[a][a] -= fv->p_liq; 
-		     
-		   }
-		 else 
-		   {
-		     WH(-1,"No way to put liquid stress into porous matrix because you have const porosity and/or no pore eqn");
-		   }
-		 
-		 if(pd->e[imtrx][R_POR_SINK_MASS])
-		   {
-		     
-		     /*This factor is used to partition the strain of an agm particle between the network
-		      *and the pore-space.  factor=0 implies porespace only. 
-		      */
-		     factor = mp->u_porous_sink_constants[7];  
-		     
-		     TT[a][a] -= factor*2*mu*fv->sink_mass*mp->u_porous_sink_constants[5]/mp->density; 
-		   }
-
+		 TT[a][a] -=  fv->P; 
 	       }
 	   }
        }
-     
+
+     /* pressure force is the pressure of each phase times its volume fraction */
+     if ((mp->PorousMediaType == POROUS_UNSATURATED || 
+	 mp->PorousMediaType == POROUS_SATURATED || 
+	 mp->PorousMediaType == POROUS_TWO_PHASE) && pd->e[pg->imtrx][R_POR_POROSITY]) 
+       {
+	 for ( a=0; a<VIM; a++)
+	   {
+	     if (mp->CapStress == NO_CAP_STRESS)
+	       {
+		 /*do nothing*/
+	       }
+	     else if (mp->CapStress == COMPRESSIBLE && mp->PorousMediaType != POROUS_SATURATED) 
+	       {
+		 EH(-1,"Need to reconcile the COMPRESSIBLE model pressures.  Not ready yet");
+		 /* Compressible model of effective stress law with
+		  *  partially saturated media from Zienkeivicz and Garg and Nur */
+		 if (elc->lame_lambda_model != POWER_LAW) 
+		   EH(-1,"Effective stress law may be missing constant");
+
+		 TT[a][a] -=  (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) * 
+		   mp->saturation * fv->p_liq; 
+		 if (pd->v[pg->imtrx][POR_GAS_PRES])
+		   {
+		     TT[a][a] -=  (1 - (1 - mp->porosity) 
+				   * elc->lame_lambda / elc->u_lambda[0]) * 
+		       (1. - mp->saturation) * fv->p_gas; 
+	       
+		   }
+	       } 
+	     else if (mp->CapStress == PARTIALLY_WETTING && mp->PorousMediaType != POROUS_SATURATED) 
+	       {
+		 p_gas_star =  mp->u_porous_gas_constants[3];
+		 TT[a][a] -= (1. - mp->saturation)*p_gas_star + mp->saturation * fv->p_liq;
+
+		 if (pd->v[pg->imtrx][POR_GAS_PRES]) TT[a][a] -= (1. - mp->saturation) * fv->p_gas; 
+	       }
+	       
+	     else if (mp->CapStress == WETTING && mp->PorousMediaType != POROUS_SATURATED) 
+	       {
+		 /* If liquid is wetting, so that all surfaces are covered
+		    by a thin layer of liquid */
+		 EH(-1,"Need to reconcile the WETTING model pressures.  Not ready yet");
+		 TT[a][a] -= (1 - mp->porosity * (1. - mp->saturation)) * fv->p_liq;  
+		 if (pd->v[pg->imtrx][POR_GAS_PRES]) TT[a][a] -= mp->porosity * (1. - mp->saturation) * fv->p_gas;  
+	       }
+	     else if (mp->PorousMediaType == POROUS_SATURATED && pd->e[pg->imtrx][POR_POROSITY])
+	       { 
+		 TT[a][a] -= fv->p_liq; 
+	       
+	       }
+	     else 
+	       {
+		 WH(-1,"No way to put liquid stress into porous matrix because you have const porosity and/or no pore eqn");
+	       }
+
+	     if(pd->e[pg->imtrx][R_POR_SINK_MASS])
+	       {
+
+		 /*This factor is used to partition the strain of an agm particle between the network
+		  *and the pore-space.  factor=0 implies porespace only. 
+		  */
+		 factor = mp->u_porous_sink_constants[7];  
+
+		 TT[a][a] -= factor*2*mu*fv->sink_mass*mp->u_porous_sink_constants[5]/mp->density; 
+	       }
+
+	   }
+       }
+ 
      if ( af->Assemble_Jacobian )
        {
 	 var = PRESSURE; 
@@ -3720,47 +3723,44 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 	 var = POR_LIQ_PRES;
 	 if (pd->v[pg->imtrx][var] && pd->e[pg->imtrx][R_POR_POROSITY])
 	   {
-	     for ( p=0; p<VIM; p++)
-	       {
-		 for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
+		 for ( p=0; p<VIM; p++)
 		   {
-		     if (mp->CapStress == COMPRESSIBLE) 
+		     for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
 		       {
-			 dTT_dp_liq[p][p][j] -= bf[var]->phi[j] *
-			   (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) * 
-			   ( mp->saturation + mp->d_saturation[POR_LIQ_PRES] * fv->p_liq);
-			 
-			 for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
+			 if (mp->CapStress == COMPRESSIBLE) 
 			   {
-			     if (pd->v[imtrx][POR_GAS_PRES]) 
+			     dTT_dp_liq[p][p][j] -= bf[var]->phi[j] *
+			       (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) * 
+			       ( mp->saturation + mp->d_saturation[POR_LIQ_PRES] * fv->p_liq);
+ 
+			     if (pd->v[pg->imtrx][POR_GAS_PRES]) 
 			       {
 				 dTT_dp_gas[p][p][j] -= bf[var]->phi[j] * 
 				   (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) * 
-				       ((1. - mp->saturation) - mp->d_saturation[POR_GAS_PRES] * fv->p_gas); 
-				   }
-				 if (pd->v[imtrx][POR_POROSITY])  
-				   {
-				     dTT_dporosity[p][p][j] -= bf[var]->phi[j] 
-				       * (
-					  mp->d_porosity[POR_POROSITY] * elc->lame_lambda 
-					  / elc->u_lambda[0] * mp->saturation
-					  - (1 - mp->porosity) * elc->d_lame_lambda[POR_POROSITY] 
-					  / elc->u_lambda[0] * mp->saturation
-					  + (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) 
-					  * mp->d_saturation[POR_POROSITY]
-					  )  * fv->p_liq; 
-				   }
-				 if (pd->v[imtrx][POR_GAS_PRES] && pd->v[imtrx][POR_POROSITY] )  
-				   {
-				     dTT_dporosity[p][p][j] -= bf[var]->phi[j]
-				       * ( 
-					  mp->d_porosity[POR_POROSITY] 
-					  * elc->lame_lambda / elc->u_lambda[0] * (1 - mp->saturation)
-					  - (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) 
-					  * mp->d_saturation[POR_POROSITY]
-					   ) * fv->p_gas;
-				   }
+				   ((1. - mp->saturation) - mp->d_saturation[POR_GAS_PRES] * fv->p_gas); 
 			       }
+			   if (pd->v[pg->imtrx][POR_POROSITY])  
+			     {
+			       dTT_dporosity[p][p][j] -= bf[var]->phi[j] 
+				 * (
+				    mp->d_porosity[POR_POROSITY] * elc->lame_lambda 
+				    / elc->u_lambda[0] * mp->saturation
+				    - (1 - mp->porosity) * elc->d_lame_lambda[POR_POROSITY] 
+				    / elc->u_lambda[0] * mp->saturation
+				    + (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) 
+				    * mp->d_saturation[POR_POROSITY]
+				    )  * fv->p_liq; 
+			     }
+			   if (pd->v[pg->imtrx][POR_GAS_PRES] && pd->v[pg->imtrx][POR_POROSITY] )  
+			     {
+			       dTT_dporosity[p][p][j] -= bf[var]->phi[j]
+				 * ( 
+				    mp->d_porosity[POR_POROSITY] 
+				    * elc->lame_lambda / elc->u_lambda[0] * (1 - mp->saturation)
+				    - (1 - (1 - mp->porosity) * elc->lame_lambda / elc->u_lambda[0]) 
+				    * mp->d_saturation[POR_POROSITY]
+				    ) * fv->p_gas;
+			     }
 
 			   }
 			 else if (mp->CapStress == PARTIALLY_WETTING)
@@ -3771,26 +3771,23 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 			       +bf[var]->phi[j] *
 			       (mp->saturation + mp->d_saturation[POR_LIQ_PRES] *  fv->p_liq ); 
 
-			     for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
+			     if (pd->v[pg->imtrx][POR_GAS_PRES]) 
 			       {
-				 if (pd->v[imtrx][POR_GAS_PRES]) 
-				   {
-				     dTT_dp_gas[p][p][j] -= bf[var]->phi[j] * 
-				       ( 
-					(1. - mp->saturation) + mp->d_saturation[POR_GAS_PRES] * 
-					(fv->p_liq - fv->p_gas) );
-				   }
-				 if (pd->v[imtrx][POR_POROSITY])  
-				   {
-				     dTT_dporosity[p][p][j] -= bf[var]->phi[j]
-				       * mp->d_saturation[POR_POROSITY] * fv->p_liq;
-				   }
-				 if (pd->v[imtrx][POR_POROSITY] && pd->v[imtrx][POR_GAS_PRES] ) 
-				   {
-				     dTT_dporosity[p][p][j] += bf[var]->phi[j]*
-				       mp->d_saturation[POR_POROSITY] * fv->p_gas;
-				   }
+				 dTT_dp_gas[p][p][j] -= bf[var]->phi[j] * 
+				   ( 
+				    (1. - mp->saturation) + mp->d_saturation[POR_GAS_PRES] * 
+				    (fv->p_liq - fv->p_gas) );
 			       }
+			   if (pd->v[pg->imtrx][POR_POROSITY])  
+			     {
+			       dTT_dporosity[p][p][j] -= bf[var]->phi[j]
+						* mp->d_saturation[POR_POROSITY] * fv->p_liq;
+			     }
+			   if (pd->v[pg->imtrx][POR_POROSITY] && pd->v[pg->imtrx][POR_GAS_PRES] ) 
+			     {
+			       dTT_dporosity[p][p][j] += bf[var]->phi[j]*
+				 mp->d_saturation[POR_POROSITY] * fv->p_gas;
+			     }
 
 			   }
 			 else if (mp->CapStress == WETTING)
@@ -3800,30 +3797,27 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 			     dTT_dp_liq[p][p][j] -= bf[var]->phi[j]
 			       * ((1 -  mp->porosity * (1. - mp->saturation))
 				  + mp->porosity * mp->d_saturation[POR_LIQ_PRES] * fv->p_liq );
-			     for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
+			     if (pd->v[pg->imtrx][POR_GAS_PRES]) 
 			       {
-				 if (pd->v[imtrx][POR_GAS_PRES]) 
-				   {
-				     dTT_dp_gas[p][p][j] -= bf[var]->phi[j] * mp->porosity * 
-				       (
-					(1. - mp->saturation) - mp->d_saturation[POR_GAS_PRES] *fv->p_gas );
-				   }
-				 if (pd->v[imtrx][POR_POROSITY])  
-				   {
-				     dTT_dporosity[p][p][j] -= bf[var]->phi[j] 
-				       * (
-					  - mp->d_porosity[POR_POROSITY] * (1. - mp->saturation) 
-					  + mp->porosity * mp->d_saturation[POR_POROSITY] 
-					  ) * fv->p_liq;
-				   }
-				 if (pd->v[imtrx][POR_GAS_PRES] && pd->v[imtrx][POR_POROSITY] ) 
-				   {
-				     dTT_dporosity[p][p][j] -= bf[var]->phi[j]
-				       * (
-					  mp->d_porosity[POR_POROSITY] * (1. - mp->saturation) 
-					  - mp->porosity * mp->d_saturation[POR_POROSITY] 
-					  ) * fv->p_gas;
-				   }
+				 dTT_dp_gas[p][p][j] -= bf[var]->phi[j] * mp->porosity * 
+				   (
+				    (1. - mp->saturation) - mp->d_saturation[POR_GAS_PRES] *fv->p_gas );
+			       }
+			     if (pd->v[pg->imtrx][POR_POROSITY])  
+			       {
+				 dTT_dporosity[p][p][j] -= bf[var]->phi[j] 
+				   * (
+				      - mp->d_porosity[POR_POROSITY] * (1. - mp->saturation) 
+				      + mp->porosity * mp->d_saturation[POR_POROSITY] 
+				      ) * fv->p_liq;
+			       }
+			     if (pd->v[pg->imtrx][POR_GAS_PRES] && pd->v[pg->imtrx][POR_POROSITY] ) 
+			       {
+				 dTT_dporosity[p][p][j] -= bf[var]->phi[j]
+				   * (
+				      mp->d_porosity[POR_POROSITY] * (1. - mp->saturation) 
+				      - mp->porosity * mp->d_saturation[POR_POROSITY] 
+				      ) * fv->p_gas;
 			       }
 
 			   }
@@ -3832,7 +3826,7 @@ mesh_stress_tensor(dbl TT[DIM][DIM],
 			     dTT_dp_liq[p][p][j] -= bf[var]->phi[j]; 
 			   }
 		       }
-		     
+
 		   }
 	   }
 
@@ -5062,7 +5056,7 @@ load_elastic_properties(struct Elastic_Constitutive *elcp,
  */
 {
   /*local variables */
-  int err, imtrx;
+  int err;
   int nnn, ins, inode, dim, dofs;
   int a, b, q, v, i, j, w;
 
@@ -5261,7 +5255,6 @@ load_elastic_properties(struct Elastic_Constitutive *elcp,
         int use_new_behavior = 1;
         int lag_strain = 0;
         int true_stress_strain = 1;
-	int max_strain_on = 0, cur_strain_on = 0;
         double small_strain = 1e-6;
         double compare_factor = 0.99999;
         double downslope_scale = 0.1;
@@ -5277,28 +5270,14 @@ load_elastic_properties(struct Elastic_Constitutive *elcp,
 
 	// Check that the max strain equation is active
 	var = MAX_STRAIN;
-	for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-	  {
-	    if(pd->v[imtrx][var])
-	      {
-		max_strain_on = 1;
-	      }
-	  }
-	if ( !max_strain_on ) {
+	if ( !pd->v[pg->imtrx][var] ) {
 	  EH(-1, "The max_strain equation must be activated to use FAUX_PLASTIC");	  
 	}
         
         // If using the new behavior, then the cur_strain equation must be on.
 	var = CUR_STRAIN;
         if ( use_new_behavior ) {
-	    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-	      {
-		if(pd->v[imtrx][var])
-		  {
-		    cur_strain_on = 1;
-		  }
-	      }
-          if ( !cur_strain_on ) {
+          if ( !pd->v[pg->imtrx][var] ) {
             EH(-1, "The cur_strain equation must be activated to use 'new' FAUX_PLASTIC");	  
           }
         }
@@ -5555,7 +5534,11 @@ load_elastic_properties(struct Elastic_Constitutive *elcp,
      }
    else if(elc_ptr->thermal_expansion_model == SHRINKAGE)
      {
-	*thermexp = elc_ptr->thermal_expansion;
+	*thermexp = elc_ptr->u_thermal_expansion[0];
+     }
+   else if(elc_ptr->thermal_expansion_model == IDEAL_GAS)
+     {
+	*thermexp = elc_ptr->u_thermal_expansion[0];
      }
    else if(elc_ptr->thermal_expansion_model == USER )
      {
@@ -5569,23 +5552,22 @@ load_elastic_properties(struct Elastic_Constitutive *elcp,
      }
 
 /*  species expansion	*/
-   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) 
-     {
-       if (pd->e[imtrx][R_MASS] && pd->MeshMotion != ARBITRARY)
-	 {
-	   for(w=0 ; w<pd->Num_Species_Eqn ; w++)
-	     {
-	       if(mp->SpecVolExpModel[w] == CONSTANT )
+   if (pd->e[pg->imtrx][R_MASS] && 
+        (pd->MeshMotion != ARBITRARY || mp->SpecVolExpModel[0] == PHOTO_CURING)) 
+   {
+	for(w=0 ; w<pd->Num_Species_Eqn ; w++)
+	   {
+   	    if(mp->SpecVolExpModel[w] == CONSTANT  ||
+                mp->SpecVolExpModel[w] == PHOTO_CURING)
      		{
-		  speciesexp[w] = mp->species_vol_expansion[w];
+       	    	speciesexp[w] = mp->species_vol_expansion[w];
      		}
-	       else
-		 {
-		   EH(-1,"Unrecognized species expansion model");
-		 }
-	     }
-	 }
-     }
+   	    else
+     		{
+       		EH(-1,"Unrecognized species expansion model");
+     		}
+	   }
+   }
   return(1);
 } /*End of load_elastic_properties*/
 
@@ -5728,8 +5710,7 @@ int check_for_neg_elem_volume( int eb,
   /* now populate augc with elem number */
   for (e = e_start; e < e_end && !neg_elem_volume; e++)
     {
-      err = load_elem_dofptr(e, exo, x, x_old, xdot, xdot_old,
-                             resid_vector, 0);
+      err = load_elem_dofptr(e, exo, x, x_old, xdot, xdot_old, 0);
 
       ip_total = elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
 

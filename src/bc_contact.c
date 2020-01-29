@@ -60,7 +60,7 @@
  
 #include "mm_eh.h"
 
-#define GOMA_BC_INTEG_C
+#define GOMA_BC_CONTACT_C
 #include "goma.h"
 
 
@@ -1268,9 +1268,9 @@ apply_embedded_bc (
     }
     
   fplus = 0.8 * fmax;
-  if ( fplus > 1.e-4 * h_elem ) fplus = 1.e-4 * h_elem;
+  if ( fplus > FD_FACTOR * h_elem ) fplus = FD_FACTOR * h_elem;
   fminus = 0.8 * fmin;
-  if ( fminus < -1.e-4 * h_elem ) fminus = -1.e-4 * h_elem;
+  if ( fminus < -FD_FACTOR * h_elem ) fminus = -FD_FACTOR * h_elem;
   
 #if 0
   if ( fplus > -fminus )
@@ -2713,8 +2713,7 @@ setup_shop_at_point(int ielem,
   if (ielem != ei[pg->imtrx]->ielem)
     {
       err = load_elem_dofptr(ielem, exo, x_static, x_old_static,
-                             xdot_static, xdot_old_static,
-		   	     x_static, 0);
+                             xdot_static, xdot_old_static, 0);
       EH(err, "load_elem_dofptr");
       
       err = bf_mp_init(pd);

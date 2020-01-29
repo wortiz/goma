@@ -25,10 +25,6 @@
 #ifndef GOMA_SL_EGGROLL_DEF_H
 #define GOMA_SL_EGGROLL_DEF_H
 
-#ifndef PI
-#define PI     M_PI
-#endif
-
 #define IDG_EPS    1.0e-14
 #define IDG_BIG    1.0e+14
 #define IDG_STEP   1.0e-08

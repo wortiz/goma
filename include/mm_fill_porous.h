@@ -43,6 +43,7 @@ extern double
 get_supg_terms_porous(double [DIM], double [DIM][DIM]);
 
 extern void load_nodal_porous_properties(double, double);
+extern void load_nodal_shell_porous_properties(double, double, int);
 
 EXTERN int get_porous_part_sat_terms
 (struct Porous_Media_Terms *, /* pm                            */
@@ -309,47 +310,6 @@ EXTERN void load_MandE_flux
 EXTERN void calc_darcy_velocity
 (void );
 
-EXTERN void load_gas_conc
-(double ,			/* porosity                                  */
-       double ,			/* cap_pres                                  */
-       double [2]);		/* d_cap_pres                                */
-
-EXTERN void load_gas_conc_flat
-(double ,			/* porosity                                  */
-       double ,			/* cap_pres                                  */
-       double [2]);		/* d_cap_pres                                */
-
-EXTERN void load_bulk_density
-(double ,			/* porosity                                  */
-       double ,			/* cap_pres                                  */
-       double ,			/* saturation                                */
-       double [2]);		/* d_cap_pres                                */
-
-EXTERN void load_liq_perm
-(double ,			/* porosity                                  */
-       double ,			/* cap_pres                                  */
-       double ,			/* saturation                                */
-       double [2]);		/* d_cap_pres                                */
-
-EXTERN void load_gas_perm
-(double ,			/* porosity                                  */
-       double ,			/* cap_pres                                  */
-       double ,			/* saturation                                */
-       double [2]);		/* d_cap_pres                                */
-
-EXTERN void load_gas_diff
-(double ,			/* porosity                                  */
-       double ,			/* cap_pres                                  */
-       double ,			/* saturation                                */
-       double [2],		/* d_cap_pres                                */
-       int );			/* species number                            */
-
-EXTERN void load_mass_flux
-(double ,			/* porosity                                  */
-       double ,			/* cap_pres                                  */
-       double ,			/* saturation                                */
-       double [2]);		/* d_cap_pres                                */
-
 EXTERN void porous_pressure
 (double *,		/* func                                      */
        double [],		/* d_func                                    */
@@ -405,5 +365,8 @@ void por_liq_flux_fill
 	double ,
 	double ,
 	int      );
+
+double por_mass_source_model
+( double d_MassSource[MAX_VARIABLE_TYPES + MAX_CONC][MDE] );
 
 #endif /* GOMA_MM_FILL_POROUS_H */

@@ -667,9 +667,9 @@ rd_dpi(Dpi *d,
    *    for each type. NetCDF 2 wants to know all the dimensions!
    */
 
-  get_variable(u, NC_CHAR, 2, 
-	       d->num_elem_blocks_global,	d->len_string,
-	       si.eb_elem_type_global,	&(d->eb_elem_type_global[0][0]));
+  get_variable(u, NC_CHAR, 2,
+               d->num_elem_blocks_global, d->len_string,
+               si.eb_elem_type_global, &(d->eb_elem_type_global[0][0]));
 
   get_variable(u, NC_INT, 1, 
 	       d->num_elem_blocks_global,	-1, 
@@ -703,9 +703,12 @@ rd_dpi(Dpi *d,
 		   si.eb_prop_global,		&(d->eb_prop_global[0][0]));
     }
 
-  get_variable(u, NC_INT, 1, 
-	       d->len_elem_var_tab_global,	-1, 
-	       si.elem_var_tab_global,		d->elem_var_tab_global);
+  if (d->len_elem_var_tab_global > 0)
+    {
+      get_variable(u, NC_INT, 1,
+                   d->len_elem_var_tab_global, -1,
+                   si.elem_var_tab_global, d->elem_var_tab_global);
+    }
 
   if ( d->num_elems > 0 )
     {
@@ -951,6 +954,13 @@ getdid(int netcdf_unit,			/* should already be open	(in) */
 
 #ifdef NETCDF_3  
   err  = nc_inq_dimid(netcdf_unit, string_name, dimension_identifier_address);
+
+  /* Handle ghosty dims later */
+  if (err != NC_NOERR)
+    {
+      *dimension_identifier_address = -1;
+    }
+
   /*
    * Assume an error means this quanitity is not found here. That's OK for
    * some things, but not others.
@@ -1388,31 +1398,27 @@ free_dpi_uni(Dpi *d)
 
   return;
 }
+
 /************************************************************************/
 /************************************************************************/
 /************************************************************************/
 /*
  * get_variable() -- provide interface to read netCDF vars via rev2 & rev3
  *
- * NetCDF versions 2 and 3 provide different interfaces. We attempt to
- * accomodate the basic version 3 interface with backward compatible calls
- * surrounded by relevent preprocessor directives.
- *
  * Created: 1998/08/21 09:59 MDT pasacki@sandia.gov
- * 
+ *
  * Revised:
  */
-
 static void
 get_variable(const int netcdf_unit,
-	     const nc_type netcdf_type,
-	     const int num_dimensions,
-	     const int dimension_val_1,
-	     const int dimension_val_2,
-	     const int variable_identifier,
-	     void *variable_address)
+             const nc_type netcdf_type,
+             const int num_dimensions,
+             const int dimension_val_1,
+             const int dimension_val_2,
+             const int variable_identifier,
+             void *variable_address)
 {
-  int err;
+  int err = 0;
 #ifndef NO_NETCDF_2
   int i;
   long count[NC_MAX_VAR_DIMS];
@@ -1441,31 +1447,29 @@ get_variable(const int netcdf_unit,
 	{
 	  sprintf(err_msg, "nc_get_var_int() varid=%d", 
 	          variable_identifier);
-      WH(-1, err_msg);
-	}
-      break;
-      
-    case NC_CHAR:
-      err = nc_get_var_text(netcdf_unit, variable_identifier, 
-			    variable_address);
-      if ( err != NC_NOERR )
-	{
-	  sprintf(err_msg, "nc_get_var_text() varid=%d", 
-		  variable_identifier);
-	  EH(-1, err_msg);
+          WH(-1, err_msg);
 	}
       break;
 
-    case NC_DOUBLE:
-      err = nc_get_var_double(netcdf_unit, variable_identifier, 
-			      variable_address);
+    case NC_CHAR:
+      err = nc_get_var_text(netcdf_unit, variable_identifier,
+                            variable_address);
       if ( err != NC_NOERR )
-	{
-	  sprintf(err_msg, "nc_get_var_double() varid=%d", 
-	          variable_identifier);
-	  EH(-1, err_msg);
-	}
-	break;
+        {
+          sprintf(err_msg, "nc_get_var_text() varid=%d",
+                  variable_identifier);
+        }
+      break;
+
+    case NC_DOUBLE:
+      err = nc_get_var_double(netcdf_unit, variable_identifier,
+                              variable_address);
+      if ( err != NC_NOERR )
+        {
+          sprintf(err_msg, "nc_get_var_double() varid=%d",
+                  variable_identifier);
+        }
+        break;
 
     default:
       EH(-1, "Specified netCDF data type unrecognized or unimplemented.");
@@ -1473,12 +1477,17 @@ get_variable(const int netcdf_unit,
     }
 #endif
 
+  if (err != NC_NOERR)
+    {
+      EH(-1, err_msg);
+    }
+
 #ifndef NO_NETCDF_2		/* backward compatibility mode to netcdf2 */
-  
+
   if ( num_dimensions < 0 || num_dimensions > 2 )
     {
-      sprintf(err_msg, "Bad or too large dimension value %d", 
-	      num_dimensions);
+      sprintf(err_msg, "Bad or too large dimension value %d",
+              num_dimensions);
       EH(-1, err_msg);
     }
 
@@ -1491,30 +1500,30 @@ get_variable(const int netcdf_unit,
   if ( num_dimensions > 0 )
     {
       if ( dimension_val_1 < 1 )
-	{
-	  EH(-1, "Bad dimension specification.");
-	}
+        {
+          EH(-1, "Bad dimension specification.");
+        }
       count[0] = dimension_val_1;
     }
 
-  if ( num_dimensions > 1 ) 
+  if ( num_dimensions > 1 )
     {
       if ( dimension_val_2 < 1 )
-	{
-	  EH(-1, "Bad dimension specification.");
-	}
+        {
+          EH(-1, "Bad dimension specification.");
+        }
       count[1] = dimension_val_2;
     }
 
-  err = ncvarget(netcdf_unit, variable_identifier, start, count, 
-		 variable_address);
+  err = ncvarget(netcdf_unit, variable_identifier, start, count,
+                 variable_address);
   if ( err < 0 )
     {
-      sprintf(err_msg, 
-  	      "get_variable (%d call), varid %d (%d dim %d,%d)\n",
-	      get_variable_call_count,
-	      variable_identifier, num_dimensions, 
-	      dimension_val_1, dimension_val_2);
+      sprintf(err_msg,
+              "get_variable (%d call), varid %d (%d dim %d,%d)\n",
+              get_variable_call_count,
+              variable_identifier, num_dimensions,
+              dimension_val_1, dimension_val_2);
       EH(err, err_msg);
     }
 
@@ -1522,6 +1531,8 @@ get_variable(const int netcdf_unit,
 
   return;
 }
+
+
 /************************************************************************/
 /************************************************************************/
 /************************************************************************/
