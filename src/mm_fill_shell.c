@@ -10932,7 +10932,7 @@ assemble_porous_shell_gasn(
   dbl D    = mp->PorousShellDiffusivity;
 
   // Prepare heaviside function for multiphase flow
-  dbl HsideM = 1.0, d_HsideM_dF[DIM] = {0.0};
+  dbl HsideM = 1.0, d_HsideM_dF[MDE] = {0.0};
   if ( pd->v[pg->imtrx][FILL] ) {
     load_lsi( ls->Length_Scale );
     HsideM = 1 - lsi->Hn;
@@ -10947,7 +10947,7 @@ assemble_porous_shell_gasn(
   dbl Pbr = Patm/P0;
 
   // Calculate flux
-  dbl flux, flux_N, flux_S, flux_F[DIM] = {0.0};
+  dbl flux, flux_N, flux_S, flux_F[MDE] = {0.0};
   dbl si, fi, fi_S, fi_N, fi_SN;
   dbl dS = 1e-2;
   if ( (SAT<dS) || (SAT>(1-dS)) ) {
@@ -11253,7 +11253,7 @@ assemble_porous_shell_open(
 
 
   // Load heaviside for level set weighting
-  dbl Hside = 1.0, d_Hside_dF[DIM] = {0.0};
+  dbl Hside = 1.0, d_Hside_dF[MDE] = {0.0};
   if ( pd->v[pg->imtrx][FILL] ) {
     load_lsi( ls->Length_Scale );
     Hside = 1 - lsi->Hn;
