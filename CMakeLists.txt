@@ -115,6 +115,7 @@ if (Sparse_FOUND)
   add_definitions(-DHAVE_SPARSE)
 else()
   message(STATUS "Sparse library not found")
+  set(Sparse_INCLUDES "")
 endif()
 
 macro(option_definition OPTION VALUE)
