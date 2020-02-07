@@ -2725,19 +2725,12 @@ assemble_stress_log_conf(dbl tt,
 	  lambda = mup/ve[mode]->time_const;
 	}
 
-      if(VIM==2)
-	{
-          compute_exp_s(s, exp_s, eig_values, R1);
-	}
-      else
-	{
-	  EH(-1, "Log-conformation tensor only tested for 2D.");	  
-	}
+      compute_exp_s(s, exp_s, eig_values, R1);
 
       /* Check to make sure eigenvalues are positive (negative eigenvalues will not
          work for log-conformation formulation). These eigenvalues are for the
          conformation tensor, not the log-conformation tensor. */
-      if(eig_values[0] < 0. || eig_values[1] < 0.)
+      if(eig_values[0] < 0. || eig_values[1] < 0. || (VIM > 2 && eig_values[2] < 0.))
 	{
 	  WH(-1, "Error: Negative eigenvalue for conformation tensor");
 	  return -1;
@@ -2746,7 +2739,10 @@ assemble_stress_log_conf(dbl tt,
       memset(D, 0, sizeof(double)*DIM*DIM);
       D[0][0] = eig_values[0];
       D[1][1] = eig_values[1];
-      (void) tensor_dot(D, D, D_dot_D, 2);
+      if (VIM > 2) {
+        D[2][2] = eig_values[2];
+      }
+      (void) tensor_dot(D, D, D_dot_D, VIM);
 
       // Decompose velocity gradient
 
@@ -2794,6 +2790,9 @@ assemble_stress_log_conf(dbl tt,
 
       //Predetermine advective terms
       trace = eig_values[0]+eig_values[1]; 
+      if (VIM > 2) {
+        trace += eig_values[2];
+      }
       
       for(a=0; a<VIM; a++)
       	{
