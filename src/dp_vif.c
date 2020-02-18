@@ -2642,6 +2642,7 @@ noahs_ark(void)
     }  
   ddd_add_member(n, &LAMB_VECTOR, 1, MPI_INT);
   ddd_add_member(n, &Q_FCN, 1, MPI_INT);
+  ddd_add_member(n, &PSPG_PP, 1, MPI_INT);
 
   if ( nn_post_fluxes > 0 )
     {
