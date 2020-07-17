@@ -45,6 +45,7 @@
 #include "mm_eh.h"
 #include "mm_std_models.h"
 #include "mm_std_models_shell.h"
+#include "mm_qtensor_model.h"
 
 
 #include "mm_mp.h"
@@ -860,7 +861,72 @@ int assemble_ewave(double time, // present time
   return(0);
 } // end of assemble_ewave
 
+void mms_exact(dbl *point, dbl *f) {
+  dbl x = point[0];
+  dbl y = point[1];
+  dbl z = point[2];
 
+  f[0] = y*y;
+  f[1] = -x*y;
+  f[2] = 0;
+}
+
+void mms_source(dbl *point, dbl *f) {
+  mms_exact(point, f);
+}
+
+int apply_em_mms_bc(double func[DIM],
+                    double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE]) {
+  dbl *n = fv->snormal;
+  dbl f[DIM];
+  mms_exact(fv->x, f);
+#define USE_N_CROSS_MMS_BC 0
+#if USE_N_CROSS_MMS_BC
+  dbl nxf[DIM];
+  dbl nxE[DIM];
+  cross_really_simple_vectors(n, f, nxf);
+  cross_really_simple_vectors(n, fv->em_er, nxE);
+
+  for (int i = 0; i < DIM; i++) {
+    func[i] = (nxf[i] - nxE[i]);
+  }
+  
+  if (af->Assemble_Jacobian) {
+    for (int kdir=0; kdir<pd->Num_Dim; kdir++) {
+      for (int p=0; p<pd->Num_Dim; p++) {
+	int var = EM_E1_REAL + p;
+	if (pd->v[var]) {
+	  for ( int j=0; j<ei->dof[var]; j++) {
+            dbl phi_vec[DIM] = {0.0, 0.0, 0.0};
+            phi_vec[p] = bf[var]->phi[j];
+            cross_really_simple_vectors(n, phi_vec, nxE);
+	    d_func[kdir][var][j] += -nxE[kdir];
+	  }
+	}
+      }
+    }
+  }
+#else
+  for (int i = 0; i < DIM; i++) {
+    func[i] = (f[i] - fv->em_er[i]);
+  }
+  
+  if (af->Assemble_Jacobian) {
+    for (int kdir=0; kdir<DIM; kdir++) {
+      for (int p=0; p<DIM; p++) {
+	int var = EM_E1_REAL + p;
+	if (pd->v[var]) {
+	  for ( int j=0; j<ei->dof[var]; j++) {
+            dbl phi_vec[DIM] = {0.0, 0.0, 0.0};
+            phi_vec[p] = bf[var]->phi[j];
+	    d_func[kdir][var][j] += -phi_vec[kdir];
+	  }
+	}
+      }
+    }
+  }
+#endif
+}
 /* assemble_ewave_tensor_bf -- assemble terms (Residual &| Jacobian) for EM harmonic
  *                    wave equations
  *                   Substitue H for curl(E) so that goma solves
@@ -941,10 +1007,29 @@ int assemble_ewave_tensor_bf(double time, // present time
   re_coeff = -omega*omega*mag_permeability*r_elperm;
   im_coeff =  omega*omega*mag_permeability*i_elperm;
 
+  double source_vec[DIM];
+  mms_source(fv->x, source_vec);
+
   double stab_scale = 10;
   if ( af->Assemble_Residual ) {
     for (int i = 0; i < ei->dof[eqn]; i++) {
       for (int a = 0; a < dim; a++) {
+        int eqn_real = EM_E1_REAL+a;
+        int eqn_imag = EM_E1_IMAG+a;
+        int peqn_real = upd->ep[eqn_real];
+        int peqn_imag = upd->ep[eqn_imag];
+
+        double diffusion_real = 0;
+        double diffusion_imag = 0;
+        diffusion_real += bf[eqn_real]->phi[i] * fv->em_er[a];
+        diffusion_imag += bf[eqn_imag]->phi[i] * fv->em_ei[a];
+        
+        double source = 0;
+        source += -bf[eqn_real]->phi[i] * source_vec[a];
+
+        lec->R[peqn_real][i] += (diffusion_real + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;
+        lec->R[peqn_imag][i] += (diffusion_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+#if 0
         int eqn_real = EM_E1_REAL+a;
         int eqn_imag = EM_E1_IMAG+a;
         int peqn_real = upd->ep[eqn_real];
@@ -976,6 +1061,7 @@ int assemble_ewave_tensor_bf(double time, // present time
 
         lec->R[peqn_real][i] += (advection_real + diffusion_real + stab_real + lagr_term_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
         lec->R[peqn_imag][i] += (advection_imag + diffusion_imag + stab_imag + lagr_term_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+#endif
       }
     }
   }
@@ -991,6 +1077,14 @@ int assemble_ewave_tensor_bf(double time, // present time
           int var = EM_E1_REAL + b;
           int pvar_real = upd->vp[var];
           for (int j = 0; j < ei->dof[var]; j++) {
+
+            double diffusion_real = 0;
+            double diffusion_imag = 0;
+            diffusion_real += bf[eqn_real]->phi[i] * bf[eqn_real]->phi[j] * delta(a,b);
+
+            lec->J[peqn_real][pvar_real][i][j] += (diffusion_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
+            lec->J[peqn_imag][pvar_real][i][j] += (diffusion_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+#if 0
             double diffusion_real = 0;
             double diffusion_imag = 0;
             for (int q = 0; q < dim; q++) {
@@ -1009,6 +1103,7 @@ int assemble_ewave_tensor_bf(double time, // present time
 
             lec->J[peqn_real][pvar_real][i][j] += (diffusion_real + advection_real + stab_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
             lec->J[peqn_imag][pvar_real][i][j] += (diffusion_imag + advection_imag + stab_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+#endif
           }
         }
 
@@ -1016,6 +1111,15 @@ int assemble_ewave_tensor_bf(double time, // present time
           int var = EM_E1_IMAG + b;
           int pvar_imag = upd->vp[var];
           for (int j = 0; j < ei->dof[var]; j++) {
+            double diffusion_real = 0;
+            double diffusion_imag = 0;
+            for (int q = 0; q < dim; q++) {
+              diffusion_imag += bf[eqn_imag]->phi[i] * bf[var]->phi[j] * delta(a,b);
+            }
+
+            lec->J[peqn_real][pvar_imag][i][j] += (diffusion_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
+            lec->J[peqn_imag][pvar_imag][i][j] += (diffusion_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+#if 0
             double diffusion_real = 0;
             double diffusion_imag = 0;
             for (int q = 0; q < dim; q++) {
@@ -1033,6 +1137,7 @@ int assemble_ewave_tensor_bf(double time, // present time
             double advection_imag = -bf[eqn_imag]->phi[i] * (delta(a,b) * re_coeff * bf[var]->phi[j]);
             lec->J[peqn_real][pvar_imag][i][j] += (diffusion_real + advection_real + stab_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
             lec->J[peqn_imag][pvar_imag][i][j] += (diffusion_imag + advection_imag + stab_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+#endif
           }
         }
 

@@ -463,6 +463,7 @@ rd_bc_specs(FILE *ifp,
         case EM_EI_FREE_BC:
         case EM_HR_FREE_BC:
         case EM_HI_FREE_BC:
+        case EM_MMS_BC:
 
 	  break;
 

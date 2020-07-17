@@ -573,6 +573,8 @@
 #define EM_CONT_REAL_BC 1202
 #define EM_CONT_IMAG_BC 1203
 
+#define EM_MMS_BC 1204
+
 /* pressure */
 
 #define P_BC 100000

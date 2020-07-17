@@ -43,6 +43,7 @@
 #include "mm_mp_const.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
+#include "mm_fill_em.h"
 #include "mm_as.h"
 
 #include "mm_mp.h"
@@ -1784,6 +1785,9 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
                    xi,
                    (int) bc->BC_Name
                   );
+              break;
+          case EM_MMS_BC:
+              apply_em_mms_bc(func, d_func);
               break;
         case E_ER_PLANEWAVE_BC:
         case E_EI_PLANEWAVE_BC:
