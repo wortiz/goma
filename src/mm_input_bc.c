@@ -755,6 +755,7 @@ rd_bc_specs(FILE *ifp,
         case EM_CONT_REAL_BC:
         case EM_CONT_IMAG_BC:
 	case SHELL_TFMP_SAT_BC:
+        case POISSON_BC:
   
 	    if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
 	      sprintf(err_msg, "%s: Expected 1 flt for %s.",

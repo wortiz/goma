@@ -1097,6 +1097,9 @@
 #define RESTIME_BC        788000030
 #define SHELL_LUBRICATION_OUTFLOW_BC  777000050
 
+// Poisson BCs
+#define POISSON_BC  79900000
+
 /* Vectors used for rotations */
 #define ROT_NONE -1
 #define ROT_N    -2
