@@ -547,6 +547,7 @@ struct Element_Variable_Pointers
   dbl *em_ei[DIM][MDE];				/* EMwave Electric Field imag part */
   dbl *em_hr[DIM][MDE];				/* EMwave Magnetic Field real part */
   dbl *em_hi[DIM][MDE];				/* EMwave Magnetic Field imag part */
+  dbl *u[MDE];					/* Poisson */
 };
 
 /*___________________________________________________________________________*/
@@ -660,6 +661,7 @@ struct Element_Stiffness_Pointers
   dbl ***em_ei;		      	 /* *em_xx[DIM][MDE], em_wave*/
   dbl ***em_hr;		      	 /* *em_xx[DIM][MDE], em_wave*/
   dbl ***em_hi;		      	 /* *em_xx[DIM][MDE], em_wave*/
+  dbl **u;                       /* poisson */
 
   /*
    * These are for debugging purposes...
@@ -1617,6 +1619,7 @@ struct Field_Variables
   dbl em_ei[DIM];		/* EM Electric Field Vector (imag)*/	
   dbl em_hr[DIM];		/* EM Magnetic Field Vector (real)*/	
   dbl em_hi[DIM];		/* EM Magnetic Field Vector (imag)*/	
+  dbl u;
 
   /*
    * Grads of scalars...
@@ -1657,6 +1660,7 @@ struct Field_Variables
   dbl grad_tfmp_pres[DIM];   /* Gradient of the thin-film multi-phase lubrication pressure */
   dbl grad_tfmp_sat[DIM];   /* Gradient of the thin-film multi-phase lubrication saturation */
   dbl grad_restime[DIM];   /* Gradient of the residence time function */
+  dbl grad_u[DIM];
 
   /*
    * Grads of vectors...
@@ -1829,7 +1833,8 @@ struct Field_Variables
   dbl d_grad_sh_p_open_2_dmesh[DIM] [DIM][MDE];
   dbl d_max_strain_dmesh[DIM][MDE];
   dbl d_cur_strain_dmesh[DIM][MDE];
-  dbl d_grad_restime_dmesh[DIM] [DIM][MDE];
+  dbl d_grad_restime_dmesh[DIM][DIM][MDE];
+  dbl d_grad_u_dmesh[DIM][DIM][MDE];
  /*
   * Values at surfaces for integrated boundary conditions 
   */ 
@@ -1967,6 +1972,7 @@ struct Diet_Field_Variables
   dbl tfmp_pres;           /* thin-film multi-phase lubrication pressure */
   dbl tfmp_sat;         /* thin-film multi-phase saturation */
   dbl restime;         /* residence time field */
+  dbl u;			/* Poisson. */
   dbl em_er[DIM];			/* EM wave Fields */
   dbl em_ei[DIM];			/* EM wave Fields */
   dbl em_hr[DIM];			/* EM wave Fields */
@@ -2002,6 +2008,7 @@ struct Diet_Field_Variables
   dbl grad_restime[DIM];       /* Gradient of the Residence time field */
 
   dbl grad_v[DIM][DIM];         /* Velocity gradient */
+  dbl grad_u[DIM];         /* Poisson */
 
 };
 

@@ -8753,6 +8753,17 @@ load_fv_sens(void)
     }
   }
 
+  v = POISSON;
+  fv_sens->u = 0.;
+  if ( pd->v[v] )
+    {
+      dofs  = ei->dof[v];
+      for ( i=0; i<dofs; i++)
+	{
+	  fv_sens->u += *esp_old->u[i] * bf[v]->phi[i];
+	}
+    }
+
 
   /*
    * External...

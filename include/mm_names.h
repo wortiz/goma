@@ -1130,6 +1130,7 @@ struct Equation_Names EQ_Name[] = {
     { "R_EM_H3_IMAG", "EM_H3_IMAG", R_EM_H3_IMAG},/*   199  */
     { "R_EM_CONT_REAL", "EM_CONT_REAL", R_EM_CONT_REAL},/*   200  */
     { "R_EM_CONT_IMAG", "EM_CONT_IMAG", R_EM_CONT_IMAG},/*   201  */
+    { "R_POISSON", "POISSON", R_POISSON},/*   202  */
     /*
      *  Note -> these entries must remain until we get rid
      *          of putting the species unknowns after V_LAST
@@ -1137,7 +1138,7 @@ struct Equation_Names EQ_Name[] = {
      *          are species in the problem
      */
 
-    { "R_Y0", "Y0", V_LAST + 0} ,                    /* 200 */
+    { "R_Y0", "Y0", V_LAST + 0} ,                    /* 201 */
     { "R_Y1", "Y1", V_LAST + 1} ,
     { "R_Y2", "Y2", V_LAST + 2} ,
     { "R_Y3", "Y3", V_LAST + 3} ,
@@ -1147,7 +1148,7 @@ struct Equation_Names EQ_Name[] = {
     { "R_Y7", "Y7", V_LAST + 7} ,
     { "R_Y8", "Y8", V_LAST + 8} ,
     { "R_Y9", "Y9", V_LAST + 9} ,                    
-    { "R_Y10", "Y10", V_LAST + 10} ,                 /* 210 */
+    { "R_Y10", "Y10", V_LAST + 10} ,                 /* 211 */
     { "R_Y11", "Y11", V_LAST + 11} ,                   
     { "R_Y12", "Y12", V_LAST + 12} ,                  
     { "R_Y13", "Y13", V_LAST + 13} ,                  
@@ -1157,7 +1158,7 @@ struct Equation_Names EQ_Name[] = {
     { "R_Y17", "Y17", V_LAST + 17} ,                 
     { "R_Y18", "Y18", V_LAST + 18} ,                   
     { "R_Y19", "Y19", V_LAST + 19} ,                 
-    { "R_Y20", "Y20", V_LAST + 20} ,                 /* 220 */  
+    { "R_Y20", "Y20", V_LAST + 20} ,                 /* 221 */  
     { "R_Y21", "Y21", V_LAST + 21} ,
     { "R_Y22", "Y22", V_LAST + 22} ,
     { "R_Y23", "Y23", V_LAST + 23} ,
@@ -1166,21 +1167,21 @@ struct Equation_Names EQ_Name[] = {
     { "R_Y26", "Y26", V_LAST + 26} ,
     { "R_Y27", "Y27", V_LAST + 27} ,   
     { "R_Y28", "Y28", V_LAST + 28} ,
-    { "R_Y29", "Y29", V_LAST + 29} ,                 /* 229 */
+    { "R_Y29", "Y29", V_LAST + 29} ,                 /* 230 */
 
     /*
      * Add extra equation names for vector fields that can be rotated
      */
     
-    { "R_MOM_NORMAL",  "DN",  R_MOM_NORMAL } ,       /* 230 */
+    { "R_MOM_NORMAL",  "DN",  R_MOM_NORMAL } ,       /* 231 */
     { "R_MOM_TANG1",   "DT1", R_MOM_TANG1 } ,
     { "R_MOM_TANG2",   "DT2", R_MOM_TANG2 } ,
     { "R_MESH_NORMAL", "VN",  R_MESH_NORMAL } ,
     { "R_MESH_TANG1",  "VT1", R_MESH_TANG1 } ,
-    { "R_MESH_TANG2",  "VT2", R_MESH_TANG2 } ,       /* 235 */
+    { "R_MESH_TANG2",  "VT2", R_MESH_TANG2 } ,       /* 236 */
     { "R_SOLID_NORMAL", "SN",  R_SOLID_NORMAL } ,
     { "R_SOLID_TANG1",  "ST1", R_SOLID_TANG1 } ,
-    { "R_SOLID_TANG2",  "ST2", R_SOLID_TANG2 }         /* 238 */
+    { "R_SOLID_TANG2",  "ST2", R_SOLID_TANG2 }         /* 248 */
 };
 int Num_EQ_Names = sizeof(EQ_Name) / sizeof(struct Equation_Names);  
 
@@ -1419,9 +1420,10 @@ struct Equation_Names Var_Name[] =  {
     { "EM_H3_IMAG", "HIZ", EM_H3_IMAG},
     { "EM_CONT_REAL", "EPR", EM_CONT_REAL},
     { "EM_CONT_IMAG", "EPI", EM_CONT_IMAG},
+    { "POISSON", "U", POISSON},
 
     { "MESH_POSITION1", "X",  MESH_POSITION1 } ,
-    { "MESH_POSITION2", "Y",  MESH_POSITION2 } ,	/* 201 */
+    { "MESH_POSITION2", "Y",  MESH_POSITION2 } ,	/* 202 */
     { "MESH_POSITION3", "Z",  MESH_POSITION3 } ,
 
     { "VEL_NORM",       "VN", VEL_NORM } ,
@@ -1435,14 +1437,14 @@ struct Equation_Names Var_Name[] =  {
 
     { "D_X1_DT",   "XDOT", D_X1_DT } ,
     { "D_X2_DT",   "YDOT", D_X2_DT } ,
-    { "D_X3_DT",   "ZDOT", D_X3_DT } ,			/* 212 */
+    { "D_X3_DT",   "ZDOT", D_X3_DT } ,			/* 213 */
     { "D_S_DT",    "SDOT", D_S_DT } ,
 
     { "D_P_DT",    "PDOT", D_P_DT } ,
 
     { "SOLID_POSITION1", "X_RS",  SOLID_POSITION1 } ,  
     { "SOLID_POSITION2", "Y_RS",  SOLID_POSITION2 } ,
-    { "SOLID_POSITION3", "Z_RS",  SOLID_POSITION3 } 	/* 217 */
+    { "SOLID_POSITION3", "Z_RS",  SOLID_POSITION3 } 	/* 218 */
 };
 
 int Num_Var_Names = sizeof(Var_Name) / sizeof(struct Equation_Names);  
@@ -1678,6 +1680,7 @@ struct Equation_Names Exo_Var_Names[] =
   { "Magnetic Field, Imaginary z-component", "HIZ", EM_H3_IMAG },
   { "lagrange mult em cont real", "EPR", EM_CONT_REAL },
   { "lagrange mult em cont imag", "EPI", EM_CONT_IMAG },
+  { "Poisson field", "U", POISSON },
 };
 
 int Num_Exo_Var_Names = sizeof(Exo_Var_Names) / sizeof(struct Equation_Names);  

@@ -3871,6 +3871,16 @@ set_interaction_masks(Exo_DB *exo)
           v=EM_CONT_IMAG;
           if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
           break;
+        case POISSON:
+          v=POISSON;
+          if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+          v=MESH_DISPLACEMENT1;
+          if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+          v=MESH_DISPLACEMENT2;
+          if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+          v=MESH_DISPLACEMENT3;
+          if(Num_Var_In_Type[v])  eqn_var_mask[e][v] = 1;
+          break;
 	}
     } 
   

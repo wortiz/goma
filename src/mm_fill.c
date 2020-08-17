@@ -61,6 +61,7 @@
 
 #include "mm_fill_species.h"
 #include "mm_fill_common.h"
+#include "mm_fill_poisson.h"
 
 #include "bc_dirich.h"
 #include "mm_qp_storage.h"
@@ -2414,6 +2415,16 @@ matrix_fill(
           if( neg_elem_volume ) return -1;
 	}
       
+      if( pde[R_POISSON] )
+	{
+	  err = assemble_poisson();
+	  EH( err, "assemble_poisson");
+#ifdef CHECK_FINITE
+	  err = CHECKFINITE("assemble_poisson"); 
+	  if (err) return -1;
+#endif
+	}
+
       if(pde[R_VORT_DIR1]) /* Then R_VORT_DIR2 and R_VORT_DIR3 should be on*/
 	{
 	  err = assemble_vorticity_direction();

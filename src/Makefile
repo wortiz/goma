@@ -514,6 +514,7 @@ MM_SRC= mm_as_alloc.c\
         mm_fill_porous.c\
 	mm_porous_EOS.c\
         mm_fill_potential.c\
+        mm_fill_poisson.c\
         mm_fill_pthings.c\
         mm_fill_ptrs.c\
         mm_fill_rs.c\
@@ -569,6 +570,7 @@ MM_INC=	mm_as.h\
         mm_fill_jac.h\
         mm_fill_porous.h\
         mm_fill_potential.h\
+        mm_fill_poisson.h\
         mm_fill_pthings.h\
         mm_fill_ptrs.h\
         mm_fill_rs.h\

@@ -467,6 +467,7 @@
 #define EM_H3_IMAG            199
 #define EM_CONT_REAL          200
 #define EM_CONT_IMAG          201
+#define POISSON               202
 /*
  * define a variable to hold an external field which will be 
  * held fixed in the problem but parametered by the basis functions
@@ -842,7 +843,8 @@
 #define R_EM_H3_IMAG            199 
 #define R_EM_CONT_REAL          200
 #define R_EM_CONT_IMAG          201
-#define V_LAST		        202
+#define R_POISSON               202
+#define V_LAST		        203
 
 
 /* MMH

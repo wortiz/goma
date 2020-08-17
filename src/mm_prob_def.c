@@ -378,7 +378,8 @@ setup_pd()
 	    }
 	  else if((ce == R_CURVATURE ) ||
 		  (ce == R_LUBP) ||
-		  (ce == R_LUBP_2))
+		  (ce == R_LUBP_2) ||
+		  (ce == POISSON))
 	    {
 	      if ( pd_glob[mn]->etm[ce][(LOG2_BOUNDARY)] != 0. )
 		{

@@ -1317,6 +1317,9 @@ assembly_alloc(Exo_DB *exo)
     esp->cur_strain = (dbl **) alloc_ptr_1(MDE);
   }
 
+  if(Num_Var_In_Type[POISSON]) {
+    esp->u = (dbl **) alloc_ptr_1(MDE);
+  }
 
   /*
    * Action_Flags______________________________________________________________

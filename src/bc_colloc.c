@@ -3150,6 +3150,11 @@ load_variable (double *x_var,        /* variable value */
       var = POR_GAS_PRES;
       *d_x_var = 1.;
       break;
+    case POISSON:
+      *x_var = fv->u;
+      var = POISSON;
+      *d_x_var = 1.;
+      break;
      /* adding velocity magnitude, i.e. SPEED  */
     case SPEED:
       for(b=0 ; b<pd->Num_Dim ; b++)	{

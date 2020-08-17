@@ -2117,6 +2117,11 @@ load_elem_dofptr(const int ielem,
 				      esp_dot->tfmp_pres);
     }
   
+  eqn = R_POISSON;
+  if (upd->ep[eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->u, esp_old->u, esp_dot->u);
+  }
+
   eqn  = R_MASS;
   if (upd->ep[eqn] >= 0) {
     for (k = 0; k < pd->Num_Species_Eqn; k++) {

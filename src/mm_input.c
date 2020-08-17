@@ -8281,7 +8281,8 @@ rd_eq_specs(FILE *ifp,
       ce = set_eqn(R_EM_H2_IMAG, pd_ptr);
     } else if (!strcasecmp(ts, "em_h3_imag")) {
       ce = set_eqn(R_EM_H3_IMAG, pd_ptr);  
-
+    } else if (!strcasecmp(ts, "poisson")) {
+      ce = set_eqn(R_POISSON, pd_ptr);  
     } else if (!strcasecmp(ts, "porous_sat"))  {
       ce = set_eqn(R_POR_LIQ_PRES, pd_ptr);
       if( pd_ptr->e[R_POR_GAS_PRES] || pd_ptr->e[R_POR_SATURATION] 
@@ -8909,7 +8910,8 @@ rd_eq_specs(FILE *ifp,
       cv = set_var(EM_H2_IMAG, pd_ptr);
     } else if (!strcasecmp(ts, "EM_H3_IMAG")) {
       cv = set_var(EM_H3_IMAG, pd_ptr);  
-
+    } else if (!strcasecmp(ts, "U")) {
+      cv = set_var(POISSON, pd_ptr);  
     } else if (!strncasecmp(ts, "Sp", 2)) {
       if (!strcasecmp(ts, "Sp")) {
 	cv = SPECIES_UNK_0;
@@ -9414,6 +9416,7 @@ rd_eq_specs(FILE *ifp,
     case R_CURVATURE:
     case R_LUBP:
     case R_LUBP_2:
+    case R_POISSON:
         if ( fscanf(ifp, "%lf %lf %lf", 
                     &(pd_ptr->etm[ce][(LOG2_BOUNDARY)]),
                     &(pd_ptr->etm[ce][(LOG2_DIFFUSION)]),

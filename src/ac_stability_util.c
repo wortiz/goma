@@ -936,6 +936,19 @@ modify_fv_mesh_derivs_for_LSA_3D_of_2D(void)
 	    }
 	}
     }
+
+  v = POISSON;
+  if (pd->v[v])
+    {
+      for (b=0; b<dim; b++)
+	{
+	  for (j=0; j<mdof; j++)
+	    {
+	      fv->d_grad_u_dmesh[p][b][j] =
+		  - fv->grad_u[b] * bfx->grad_phi[j][2];
+	    }
+	}
+    }
 }
 
 /*************************************************************************/
