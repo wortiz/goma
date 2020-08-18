@@ -11063,6 +11063,43 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
 	  }
 	}
       }
+      else if (mp->SpeciesSourceModel[w]  == SCHNAKENBERG_U)
+      {
+        st->MassSource[w] = schnackenberg_u_species_source(w);
+
+        if ( af->Assemble_Jacobian )
+         {
+           var = MASS_FRACTION;
+           if (pd->v[MASS_FRACTION] )
+            {
+              for (int w1 = 0; w1 < pd->Num_Species; w1++) {
+                for ( j=0; j<ei->dof[var]; j++)
+                 {
+                   st->d_MassSource_dc[w][w1][j]=mp->d_species_source[MAX_VARIABLE_TYPES+w1]*bf[var]->phi[j];
+                 }
+              }
+            }
+         }
+      }
+      else if (mp->SpeciesSourceModel[w]  == SCHNAKENBERG_V)
+      {
+        /* Computing current source by calling butler_volmer_source */
+        st->MassSource[w] = schnackenberg_v_species_source(w);
+
+        if ( af->Assemble_Jacobian )
+         {
+           var = MASS_FRACTION;
+           if (pd->v[MASS_FRACTION] )
+            {
+              for (int w1 = 0; w1 < pd->Num_Species; w1++) {
+                for ( j=0; j<ei->dof[var]; j++)
+                 {
+                   st->d_MassSource_dc[w][w1][j]=mp->d_species_source[MAX_VARIABLE_TYPES+w1]*bf[var]->phi[j];
+                 }
+              }
+            }
+         }
+      }
       else if (mp->SpeciesSourceModel[w]  == BUTLER_VOLMER)     /* added by KSC: 05/15/06 */
       {
         dbl dh[3], p[10];

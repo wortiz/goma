@@ -221,4 +221,7 @@ PROTO((dbl,                     /* Current time */
 EXTERN double calc_KOH_Si_etch_rate_100 /* mm_std_models.c */
 PROTO(( double [MAX_CONC] ));        /* Sensitivities of etch rate w.r.t. concentration */
 
+double schnackenberg_u_species_source(int species_no);
+double schnackenberg_v_species_source(int species_no);
+
 #endif /* _MM_STD_MODELS_H */

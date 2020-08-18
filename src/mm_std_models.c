@@ -6847,3 +6847,76 @@ calc_KOH_Si_etch_rate_100( double d_etch_rate_d_C[MAX_CONC] ) /* Sensitivity of 
 
   return etch_rate;
 } /* END of calc_KOH_Si_etch_rate_100 */
+
+double schnackenberg_u_species_source(int species_no) {
+  int v_index = -1;
+  for (int i = 0; i < mp->Num_Species; i++) {
+    if (mp->SpeciesSourceModel[i] == SCHNAKENBERG_V) {
+      v_index = i;
+      break;
+    }
+  }
+  EH(v_index, "Expected SCHNAKENBERG_V source enabled with SCHNAKENBERG_U");
+  dbl a = mp->u_species_source[species_no][0];
+  dbl gamma = mp->u_species_source[species_no][1];
+  dbl u = fv->c[species_no];
+  dbl v = fv->c[v_index];
+  
+  /* Species piece */
+  int eqn = MASS_FRACTION;
+  if ( pd->e[eqn] & T_SOURCE )
+    {
+      mp->species_source[species_no] = gamma*(a - u + u*u*v);
+      
+      /* Jacobian entries for source term */
+      int var = MASS_FRACTION;
+      if (pd->v[var] )
+	{
+          // u derivative
+	  int var_offset = MAX_VARIABLE_TYPES + species_no;
+	  mp->d_species_source[var_offset] = gamma*(-1+2*u*v);
+
+          // v derivative
+	  var_offset = MAX_VARIABLE_TYPES + v_index;
+	  mp->d_species_source[var_offset] = gamma*(u*u);
+	}
+    }
+  return mp->species_source[species_no];
+}
+
+double schnackenberg_v_species_source(int species_no) {
+  int u_index = -1;
+  for (int i = 0; i < mp->Num_Species; i++) {
+    if (mp->SpeciesSourceModel[i] == SCHNAKENBERG_U) {
+      u_index = i;
+      break;
+    }
+  }
+  EH(u_index, "Expected SCHNAKENBERG_U source enabled with SCHNAKENBERG_V");
+  dbl b = mp->u_species_source[species_no][0];
+  dbl gamma = mp->u_species_source[u_index][1];
+  dbl v = fv->c[species_no];
+  dbl u = fv->c[u_index];
+  
+  /* Species piece */
+  int eqn = MASS_FRACTION;
+  if ( pd->e[eqn] & T_SOURCE )
+    {
+      mp->species_source[species_no] = gamma*(b - u*u*v);
+      
+      /* Jacobian entries for source term */
+      int var = MASS_FRACTION;
+      if (pd->v[var] )
+	{
+          // u derivative
+	  int var_offset = MAX_VARIABLE_TYPES + species_no;
+	  mp->d_species_source[var_offset] = -gamma*u*u;
+
+          // v derivative
+	  var_offset = MAX_VARIABLE_TYPES + u_index;
+	  mp->d_species_source[var_offset] = -gamma*(2*u*v);
+	}
+    }
+  return mp->species_source[species_no];
+}
+

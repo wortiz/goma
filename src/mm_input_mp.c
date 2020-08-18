@@ -8655,6 +8655,55 @@ ECHO("\n----Acoustic Properties\n", echo_file);
 	  model_read = 1;
 	  mat_ptr->SpeciesSourceModel[species_no] = ION_REACTIONS;
 	}
+      else if ( !strcmp(model_name, "SCHNAKENBERG_U") )
+	{
+	  SpeciesSourceModel = SCHNAKENBERG_U;
+	  model_read = 1;
+	  mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
+	  if ( fscanf(imp, "%lf %lf",
+			  &a0, &a1)
+		   != 2 )
+	    {
+	      sprintf(err_msg, 
+		      "Matl %s needs 2 constants for %s %s model.\n",
+		      pd_glob[mn]->MaterialName, "Species Source", "SCHNAKENBERG_U");
+	      EH(-1, err_msg);
+	    }
+
+	  mat_ptr->u_species_source[species_no] = (dbl *)
+						 array_alloc(1,2,sizeof(dbl)); 
+
+	  mat_ptr->len_u_species_source[species_no] = 2;
+
+	  mat_ptr->u_species_source[species_no][0] = a0;  /* a */
+	  mat_ptr->u_species_source[species_no][1] = a1;  /* gamma */ 
+
+	  SPF_DBL_VEC(endofstring(es), 2,  mat_ptr->u_species_source[species_no]);
+	}
+      else if ( !strcmp(model_name, "SCHNAKENBERG_V") )
+	{
+	  SpeciesSourceModel = SCHNAKENBERG_V;
+	  model_read = 1;
+	  mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
+	  if ( fscanf(imp, "%lf",
+			  &a0)
+		   != 1 )
+	    {
+	      sprintf(err_msg, 
+		      "Matl %s needs 2 constants for %s %s model.\n",
+		      pd_glob[mn]->MaterialName, "Species Source", "SCHNAKENBERG_V");
+	      EH(-1, err_msg);
+	    }
+
+	  mat_ptr->u_species_source[species_no] = (dbl *)
+						 array_alloc(1,1,sizeof(dbl)); 
+
+	  mat_ptr->len_u_species_source[species_no] = 1;
+
+	  mat_ptr->u_species_source[species_no][0] = a0;  /* b */
+
+	  SPF_DBL_VEC(endofstring(es), 1,  mat_ptr->u_species_source[species_no]);
+	}
 
       else if(model_read == -1)
 	  {

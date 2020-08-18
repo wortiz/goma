@@ -465,6 +465,10 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS];	/* number of variables to overwri
 #define ELECTRONEUTRALITY_SM 906
 #define ELECTRONEUTRALITY_FICKIAN 907
 
+// Schnakenberg species models
+#define SCHNAKENBERG_U 110
+#define SCHNAKENBERG_V 111
+
 /*Thermodynamic potential models: KSC 2/21/02 */
 #define FeS2 908
 #define LiSi 909
