@@ -8282,6 +8282,33 @@ ECHO("\n----Acoustic Properties\n", echo_file);
     }
 
   ECHO(es,echo_file);
+  model_read = look_for_mat_prop(imp, "Poisson Source", 
+				     &(mat_ptr->PoissonSourceModel), 
+				     &(mat_ptr->poisson_source), 
+				     &(mat_ptr->u_poisson_source), 
+				     &(mat_ptr->len_u_poisson_source), 
+				     model_name, SCALAR_INPUT, &NO_SPECIES,es);
+  if ( !strcmp(model_name, "EXP") )
+    {
+      int poissonSourceModel = POISSON_EXP;
+      model_read = 1;
+      mat_ptr->PoissonSourceModel = poissonSourceModel;
+      num_const = read_constants(imp, &(mat_ptr->u_poisson_source), 
+				     NO_SPECIES);
+      if (num_const != 5) {
+        EH(-1, "Expected 5 constants for Poisson Source = EXP");
+      }
+      mat_ptr->len_u_poisson_source = num_const;
+      SPF_DBL_VEC( endofstring(es), num_const, mat_ptr->u_poisson_source);
+    }
+  else
+    {
+      if(model_read == -1)
+	{
+	  EH(model_read, "Poisson Source model invalid");
+	}
+    }
+  ECHO(es,echo_file);
   
   model_read = look_for_mat_prop(imp, "Second Level Set Heat Source", 
 				 &(i0), 

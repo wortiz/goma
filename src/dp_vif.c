@@ -1566,6 +1566,7 @@ noahs_ark()
       ddd_add_member(n, &mp_glob[i]->VoltageFormulation, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->heat_capacity, 1, MPI_DOUBLE);
       ddd_add_member(n, &mp_glob[i]->heat_source, 1, MPI_DOUBLE);
+      ddd_add_member(n, &mp_glob[i]->poisson_source, 1, MPI_DOUBLE);
       ddd_add_member(n, &mp_glob[i]->heat_transfer_coefficient, 1, MPI_DOUBLE);
       /*
        * The elc_rs_glob[i] evidently transport these Lame coefficients now.
@@ -1671,6 +1672,7 @@ noahs_ark()
       ddd_add_member(n, &mp_glob[i]->FlowingLiquidViscosityModel, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->HeatCapacityModel, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->HeatSourceModel, 1, MPI_INT);
+      ddd_add_member(n, &mp_glob[i]->PoissonSourceModel, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->InertiaCoefficientModel, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->LiquidusModel, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->MassSourceModel, 1, MPI_INT);
@@ -1889,6 +1891,7 @@ noahs_ark()
       ddd_add_member(n, &mp_glob[i]->len_u_permittivity, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->len_u_heat_capacity, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->len_u_heat_source, 1, MPI_INT);
+      ddd_add_member(n, &mp_glob[i]->len_u_poisson_source, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->len_u_mass_source, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->len_u_mesh_source, 1, MPI_INT);
       ddd_add_member(n, &mp_glob[i]->len_u_momentum_source, 1, MPI_INT);
@@ -2952,6 +2955,9 @@ ark_landing()
 
       dalloc( m->len_u_heat_source,
 	      m->    u_heat_source);
+
+      dalloc( m->len_u_poisson_source,
+              m->    u_poisson_source);
 
       dalloc( m->len_u_mass_source,
 	      m->    u_mass_source);

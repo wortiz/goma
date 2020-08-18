@@ -1099,6 +1099,7 @@
 
 // Poisson BCs
 #define POISSON_BC  79900000
+#define POISSON_SIDE_SIN_BC  79900001
 
 /* Vectors used for rotations */
 #define ROT_NONE -1

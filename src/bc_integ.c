@@ -57,6 +57,7 @@
 #include "mm_fill_terms.h"
 #include "mm_fill_util.h"
 #include "mm_fill_potential.h"
+#include "mm_fill_poisson.h"
 #include "mm_qp_storage.h"
 #include "mm_shell_bc.h"
 #include "mm_fill_em.h"
@@ -2109,6 +2110,14 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
           apply_sh_weak(func, d_func, xi, exo,
                        BC_Types[bc_input_id].BC_Data_Float[0]);
 
+          break;
+        case POISSON_SIDE_SIN_BC:
+          poisson_side_sin_bc(func, d_func, 
+              BC_Types[bc_input_id].BC_Data_Float[0],
+              BC_Types[bc_input_id].BC_Data_Float[1],
+              BC_Types[bc_input_id].BC_Data_Float[2],
+              BC_Types[bc_input_id].BC_Data_Float[3],
+              BC_Types[bc_input_id].BC_Data_Float[4]);
           break;
 
 	default:

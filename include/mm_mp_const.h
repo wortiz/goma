@@ -525,6 +525,9 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS];	/* number of variables to overwri
 /* Special function models for structured porous shells */
 #define MULTI_MODE 1014
 
+/* Poisson */
+#define POISSON_EXP 0
+
 /*
 
    CONSTANTS FOR MATERIAL PROPERTY TAGS

@@ -613,6 +613,12 @@ struct Material_Properties
   int len_u_heat_source;
   dbl *u_heat_source;
 
+  dbl poisson_source;
+  dbl d_poisson_source[MAX_VARIABLE_TYPES + MAX_CONC];
+  int PoissonSourceModel;
+  int len_u_poisson_source;
+  dbl *u_poisson_source;
+  
   dbl species_source[MAX_CONC];
   dbl d_species_source[MAX_VARIABLE_TYPES + MAX_CONC];
   int SpeciesSourceModel[MAX_CONC];

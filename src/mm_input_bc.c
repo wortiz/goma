@@ -1157,6 +1157,7 @@ rd_bc_specs(FILE *ifp,
 	case VELO_SLIP_LEVEL_SIC_BC:
 	case VELO_SLIP_LS_ROT_BC:
 	case SHARP_HOFFMAN_VELOCITY_BC:
+        case POISSON_SIDE_SIN_BC:
 	  if ( fscanf(ifp, "%lf %lf %lf %lf %lf", 
 		      &BC_Types[ibc].BC_Data_Float[0],
 		      &BC_Types[ibc].BC_Data_Float[1],
