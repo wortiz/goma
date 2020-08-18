@@ -51,6 +51,7 @@
 #define _MM_VISCOSITY_C
 #include "goma.h"
 
+
 /*********** R O U T I N E S   I N   T H I S   F I L E ***********************
  * 
  *
@@ -77,6 +78,10 @@
  *        ls_modulate_viscosity()
  *     copy_pF_to_F()
  */
+static double
+cross_viscosity(struct Generalized_Newtonian *gn_local,
+		  dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+		  VISCOSITY_DEPENDENCE_STRUCT *d_mu);
 /*******************************************************************************
  * viscosity(): Calculate the viscosity and derivatives of viscosity
  *              with respect to solution unknowns at the Gauss point. Most 
@@ -654,6 +659,10 @@ viscosity(struct Generalized_Newtonian *gn_local,
     {
       mu = carreau_wlf_conc_viscosity(gn_local, gamma_dot, d_mu,
 				      gn_local->ConstitutiveEquation);
+    }
+  else if (gn_local->ConstitutiveEquation == CROSS_VISCOSITY)
+    {
+      mu = cross_viscosity(gn_local, gamma_dot, d_mu);
     }
   else
     {
@@ -3879,5 +3888,85 @@ flowing_liquid_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_flow_vis)
   return(flow_vis);
 
 } /* End of flowing_liquid_viscosity*/
+
+static double
+cross_viscosity(struct Generalized_Newtonian *gn_local,
+		  dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+		  VISCOSITY_DEPENDENCE_STRUCT *d_mu)
+{
+  int vdofs = ei->dof[VELOCITY1];
+  
+  int mdofs = 0;
+  if ( pd->e[R_MESH1] )
+    {
+      mdofs = ei->dof[R_MESH1];
+    }
+  
+  double gammadot;
+  dbl d_gd_dv[DIM][MDE];        /* derivative of strain rate invariant 
+ 				   wrt velocity */ 
+  dbl d_gd_dmesh[DIM][MDE];     /* derivative of strain rate invariant 
+ 				   wrt mesh */ 
+  calc_shearrate(&gammadot, gamma_dot, d_gd_dv, d_gd_dmesh);
+
+  dbl mu0 = gn_local->mu0;
+  dbl nexp = gn_local->nexp;
+  dbl muinf = gn_local->muinf;
+  dbl lambda = gn_local->lam;
+
+
+  dbl val = 1.0/pow(1. + lambda * gammadot,1 - nexp);
+  dbl mu = muinf + (mu0 - muinf)* val;
+  
+  /* gammadot = 0.0; */
+  /* this effectively turns off the viscosity Jac terms */
+  if ( d_mu != NULL ) d_mu->gd = -(mu0 - muinf)* (1. - nexp) * lambda * val * val * pow(1 + lambda * gammadot, -nexp);
+  
+  /*
+   * d( mu )/dmesh
+   */
+  if ( d_mu != NULL && pd->e[R_MESH1] )
+    {
+      for ( int b=0; b<VIM; b++)
+	{
+	  for ( int j=0; j<mdofs; j++)
+	    {
+	      if(gammadot != 0.0 && Include_Visc_Sens )
+		{
+		  d_mu->X [b][j] =
+		    d_mu->gd * d_gd_dmesh [b][j] ;
+		}
+	      else
+		{
+		  /* printf("\ngammadot is zero in viscosity function");*/
+		  d_mu->X [b][j] = 0.0;
+		}
+	    }
+	}
+    }
+  
+  /*
+   * d( mu )/dv
+   */
+  if ( d_mu != NULL && pd->e[R_MOMENTUM1] )
+    {
+      for ( int a=0; a<VIM; a++)
+        {
+          for ( int i=0; i<vdofs; i++)
+	    {
+	      if(gammadot != 0.0 && Include_Visc_Sens )
+	        {
+	          d_mu->v[a][i] =
+		    d_mu->gd * d_gd_dv[a][i] ;
+	        }
+	      else
+	        {
+	          d_mu->v[a][i] = 0.0 ;
+	        }
+	    }
+        }
+    }
+  return(mu);
+}
 
 /* end of file mm_viscosity.c */

@@ -1629,6 +1629,10 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     {
       ConstitutiveEquation = CARREAU_WLF_CONC_EXP;
     } 
+  else if ( !strcmp(model_name, "CROSS") )
+    {
+      ConstitutiveEquation = CROSS_VISCOSITY;
+    } 
   else 
     {
       EH( -1, "Unrecognizable Constitutive Equation");
@@ -1773,7 +1777,8 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
       ConstitutiveEquation == BOND ||
       ConstitutiveEquation == BOND_SH ||
-      ConstitutiveEquation == FOAM_EPOXY)
+      ConstitutiveEquation == FOAM_EPOXY ||
+      ConstitutiveEquation == CROSS_VISCOSITY)
     {
       model_read = look_for_mat_prop(imp, "Low Rate Viscosity", 
 				     &(gn_glob[mn]->mu0Model), 
@@ -1823,7 +1828,8 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
      ConstitutiveEquation == FILLED_EPOXY ||
      ConstitutiveEquation == HERSCHEL_BULKLEY ||
      ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
-     ConstitutiveEquation == CARREAU_WLF_CONC_EXP )
+     ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
+     ConstitutiveEquation == CROSS_VISCOSITY)
     {
       model_read = look_for_mat_prop(imp, "Power Law Exponent", 
 				     &(gn_glob[mn]->nexpModel), 
@@ -1866,7 +1872,8 @@ rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
      ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
      ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
      ConstitutiveEquation == BOND_SH ||
-     ConstitutiveEquation == BOND )
+     ConstitutiveEquation == BOND ||
+     ConstitutiveEquation == CROSS_VISCOSITY)
     {
       model_read = look_for_mat_prop(imp, "High Rate Viscosity", 
 				     &(gn_glob[mn]->muinfModel), 
@@ -8305,8 +8312,13 @@ ECHO("\n----Acoustic Properties\n", echo_file);
     {
       if(model_read == -1)
 	{
-	  EH(model_read, "Poisson Source model invalid");
+          mat_ptr->PoissonSourceModel = CONSTANT;
+          mat_ptr->poisson_source = 0.0;
 	}
+      else 
+      {
+	  EH(model_read, "Poisson Source model invalid");
+      }
     }
   ECHO(es,echo_file);
   
