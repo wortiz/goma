@@ -2212,6 +2212,7 @@ find_bc_unk_offset(struct Boundary_Condition *bc, int curr_mat,
      */
     if (bc_name == CONT_TANG_VEL_BC ||
 	bc_name == CONT_NORM_VEL_BC ||
+        bc_name == CONT_FLUID_STRESS_2_BC ||
 	bc_name == DISCONTINUOUS_VELO_BC ||
 	bc_name == VL_EQUIL_BC ||
 	bc_name == VL_POLY_BC ||

@@ -572,6 +572,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  break;
 
 	case CONT_FLUID_STRESS_BC:
+	case CONT_FLUID_STRESS_2_BC:
 	  continuous_fluid_stress(func, d_func);
 	  break;
 
@@ -2329,7 +2330,8 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 		       bf[eqn]->interpolation == I_Q2_D_LSA) &&
 		      (bc->BC_Name == CONT_TANG_VEL_BC ||
 		       bc->BC_Name == CONT_NORM_VEL_BC ||
-//		       bc->BC_Name == CONT_FLUID_STRESS_BC ||
+		       bc->BC_Name == CONT_FLUID_STRESS_BC ||
+		       bc->BC_Name == CONT_FLUID_STRESS_2_BC ||
 		       bc->BC_Name == DISCONTINUOUS_VELO_BC ||
 		       bc->BC_Name == VL_EQUIL_BC ||
 		       bc->BC_Name == VL_POLY_BC ||

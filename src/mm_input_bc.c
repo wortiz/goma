@@ -706,6 +706,7 @@ rd_bc_specs(FILE *ifp,
         case CONT_TANG_VEL_BC:
         case CONT_NORM_VEL_BC:
         case CONT_FLUID_STRESS_BC:
+        case CONT_FLUID_STRESS_2_BC:
 	case VELO_NORMAL_EDGE_BC:
 	case VELO_NORMAL_EDGE_INT_BC:
 	case CA_EDGE_CURVE_BC:
