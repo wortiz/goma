@@ -753,6 +753,10 @@ PROTO((double [DIM],		 /* func                                      */
 				  * implicit (tt = 0)                         */
        const dbl ));		 /* dt - current value of the time step size  */
 
+EXTERN void continuous_fluid_stress
+PROTO((double [DIM],		/* func                                      */
+       double [DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE])); /* d_func         */
+
 EXTERN void fnormal_stress_bc
 PROTO((double [DIM],		  /* func                                      */
        double [DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE], /* d_func           */

@@ -509,7 +509,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  break;
 
 	case VELO_TANGENT_LS_BC:
-		
+
 	  /*  first all external boundaries with velocity
 	      second - internal boundaries with an explicit block id
 	      third  - internal boundaries with implicit iapply logic
@@ -527,7 +527,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
                                      bc->BC_Data_Float[0], 
 			             x_dot, 
                                      theta, 
-                                     delta_t, 
+                                     delta_t,
                                      bc->BC_Data_Float[1], 
                                      bc->BC_Data_Float[2],
                                      bc->BC_Data_Float[3]);
@@ -536,11 +536,11 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  break;
 
 	case LS_ATTACH_BC:
-	  fvelo_normal_bc(func, d_func, 0.0, contact_flag = FALSE, 
+	  fvelo_normal_bc(func, d_func, 0.0, contact_flag = FALSE,
 			  x_dot, theta, delta_t, (int) bc->BC_Name,0,0,135.0);
 	  ls_attach_bc( func, d_func, bc->BC_Data_Float[0] );
 	  break;
-		
+
 
  	case KIN_DISPLACEMENT_PETROV_BC:
 	case KIN_DISPLACEMENT_BC:
@@ -548,18 +548,18 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  break;
 
 	case KIN_DISPLACEMENT_RS_BC:
-	  f_kinematic_displacement_rs_bc(func, d_func, bc->BC_Data_Int[0], 
+	  f_kinematic_displacement_rs_bc(func, d_func, bc->BC_Data_Int[0],
 					 elem_side_bc->id_side, xi, exo );
 	  break;
 
 	case KINEMATIC_DISC_BC:
 	case VELO_NORMAL_DISC_BC:
-	  fvelo_normal_disc_bc(func, d_func, bc->BC_Data_Float[0], 
+	  fvelo_normal_disc_bc(func, d_func, bc->BC_Data_Float[0],
 			       x_dot, theta, delta_t);
 	  break;
 
 	case KINEMATIC_SPECIES_BC:
-	  kinematic_species_bc(func, d_func, bc->BC_Data_Int[0], 
+	  kinematic_species_bc(func, d_func, bc->BC_Data_Int[0],
 			       bc->BC_Data_Float[0], x_dot, theta, delta_t);
 	  break;
 
@@ -571,6 +571,10 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 	  continuous_normal_velocity(func, d_func, ielem_dim);
 	  break;
 
+	case CONT_FLUID_STRESS_BC:
+	  continuous_fluid_stress(func, d_func);
+	  break;
+
 	case DISCONTINUOUS_VELO_BC:
 	  discontinuous_velocity(func, d_func, x_dot, bc->BC_Data_Int[0],
 				 bc->BC_Data_Int[1], bc->BC_Data_Int[2],
@@ -579,7 +583,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 
 	case DARCY_CONTINUOUS_BC:
 	case DARCY_LUB_BC:
-	  
+
 	  if(time_intermediate >= bc->BC_Data_Float[1])
 	    {
 	      v_attach = -0.0;  /*This will eventually be replaced by 
@@ -2325,6 +2329,7 @@ apply_integrated_bc(double x[],           /* Solution vector for the current pro
 		       bf[eqn]->interpolation == I_Q2_D_LSA) &&
 		      (bc->BC_Name == CONT_TANG_VEL_BC ||
 		       bc->BC_Name == CONT_NORM_VEL_BC ||
+//		       bc->BC_Name == CONT_FLUID_STRESS_BC ||
 		       bc->BC_Name == DISCONTINUOUS_VELO_BC ||
 		       bc->BC_Name == VL_EQUIL_BC ||
 		       bc->BC_Name == VL_POLY_BC ||

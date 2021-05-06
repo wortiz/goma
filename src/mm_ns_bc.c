@@ -119,6 +119,7 @@ static char rcsid[] =
 *  continuous_tangent_velocity          void
 *  continuous_normal_velocity           void
 *  discontinuous_velocity               void
+*  continuous_fluid_stress              void
 *  fnormal_stress_bc                    void
 *  fvelo_slip_electrokinetic_bc         void
 *  fvelo_electrokinetic_3d              void
@@ -13533,7 +13534,7 @@ continuous_tangent_velocity(double func[DIM],
 /****************************************************************************/
 /****************************************************************************/
 
-void 
+void
 continuous_normal_velocity(double func[DIM],
 			   double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
 			   const int ielem_dim) /* dimension of element     */
@@ -13826,6 +13827,89 @@ discontinuous_velocity(
 /****************************************************************************/
 /****************************************************************************/
 /****************************************************************************/
+
+void
+continuous_fluid_stress(double func[DIM],
+			double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE])
+{
+    int j, b, kdir, var, p;
+    double Pi[DIM][DIM];
+    STRESS_DEPENDENCE_STRUCT d_Pi_struct;
+    STRESS_DEPENDENCE_STRUCT *d_Pi = &d_Pi_struct;
+
+
+    if(af->Assemble_LSA_Mass_Matrix)
+      return;
+
+ /* Get momentum stress tensor */
+    fluid_stress_conf(Pi, d_Pi);
+
+ /* Calculate the residual contribution	*/
+    for (kdir = 0; kdir < pd->Num_Dim; kdir++)
+       {
+        for (p = 0; p < pd->Num_Dim; p++)
+           {
+	    func[kdir] += fv->snormal[p] * Pi[p][kdir];
+           }
+       }
+
+
+ /* Calculate the Jacobian contribution */
+
+    if (af->Assemble_Jacobian)
+      {
+        for (kdir = 0; kdir < pd->Num_Dim; kdir++)
+	   {
+	    for (b = 0; b < pd->Num_Dim; b++)
+	       {
+
+               /* Mesh dependence */
+		var = MESH_DISPLACEMENT1 + b;
+		if (pd->v[var])
+		  {
+                   for (p = 0; p < pd->Num_Dim; p++)
+                      {
+		       for ( j=0; j<ei->dof[var]; j++)
+		          {
+		           d_func[kdir][var][j] +=   fv->dsnormal_dx[p][b][j] * Pi[p][kdir]
+                                                   + fv->snormal[p] * d_Pi->X[p][kdir][b][j];
+		          }
+                      }
+		  }
+
+               /* Velocity dependence */
+		var = VELOCITY1 + b;
+		if (pd->v[var])
+		  {
+                   for (p = 0; p < pd->Num_Dim; p++)
+                      {
+		       for ( j=0; j<ei->dof[var]; j++)
+		          {
+		           d_func[kdir][var][j] += fv->snormal[p] * d_Pi->v[p][kdir][b][j];
+		          }
+                      }
+		  }
+	       }
+
+         /* Pressure dependence */
+            var = PRESSURE;
+	    if (pd->v[var])
+	      {
+               for (p = 0; p < pd->Num_Dim; p++)
+                  {
+		   for ( j=0; j<ei->dof[var]; j++)
+		      {
+		       d_func[kdir][var][j] += fv->snormal[p] * d_Pi->P[p][kdir][j];
+		      }
+                  }
+              }
+	   }
+      } /* end of if Assemble_Jacobian */
+}
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+
 #define SIGNN 1.
 
 void 

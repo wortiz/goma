@@ -2228,6 +2228,7 @@ find_bc_unk_offset(struct Boundary_Condition *bc, int curr_mat,
      */
     else if (bc_name == KINEMATIC_SPECIES_BC ||
 	     bc_name == CAPILLARY_BC ||
+	     bc_name == CONT_FLUID_STRESS_BC ||
 	     bc_name == CAP_REPULSE_BC ||
 	     bc_name == CAP_REPULSE_ROLL_BC ||
 	     bc_name == CAP_REPULSE_USER_BC ||

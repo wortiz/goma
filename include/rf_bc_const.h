@@ -961,6 +961,7 @@
 #define HEAT_OF_RXN_BC        47000024
 #define T_CONTACT_RESIS_BC    47000025
 #define T_CONTACT_RESIS_2_BC  47000026
+#define CONT_FLUID_STRESS_BC  47000027
 
 /*
  * HKM Chemkin boundary conditions along surfaces
