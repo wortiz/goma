@@ -5305,8 +5305,8 @@ void supg_tau_gauss_point(SUPG_terms *supg_terms, int dim, dbl diffusivity,
     for (int j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1 + a]; j++) {
       double tmp = 0;
       for (int b = 0; b < dim; b++) {
-        tmp += (2 * pg_data->hhv[b][a] * pg_data->dhv_dxnode[b][j]) /
-               (2 * sqrt(pg_data->hsquared[b]));
+        tmp += (pg_data->hhv[a][b] * pg_data->dhv_dxnode[a][j]) /
+               (sqrt(pg_data->hsquared[a]));
       }
       hk_dX[a][j] = tmp / dim;
     }

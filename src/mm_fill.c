@@ -1525,8 +1525,8 @@ matrix_fill(
 
       if(vn->evssModel == EVSS_F || vn->evssModel == EVSS_GRADV)
 	{
-	  err = assemble_stress_fortin(theta, delta_t, pg_data.hsquared,
-				       pg_data.hhv, pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);
+	  err = assemble_stress_fortin(theta, delta_t,
+				       &pg_data);
 	  err = segregate_stress_update( x_update );
 	  EH(err, "assemble_stress_fortin");
 #ifdef CHECK_FINITE

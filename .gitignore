@@ -1,8 +1,10 @@
 /bin/
 /build*/
+/cmake-build*/
 /lib/
 /settings.mk
 /.settings/
+/.idea/
 *~
 *.a
 *.o
