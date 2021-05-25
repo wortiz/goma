@@ -1422,7 +1422,7 @@ int assemble_stress_fortin(dbl tt,           /* parameter to vary time integrati
   }
 
   if (supg != 0.) {
-    supg_tau(&supg_terms, dim, 1e-8, pg_data, dt, 0, POLYMER_STRESS11);
+    supg_tau(&supg_terms, dim, 1e-8, pg_data, dt, 1, POLYMER_STRESS11);
   }
   /* end Petrov-Galerkin addition */
 
@@ -2135,7 +2135,7 @@ int assemble_stress_fortin(dbl tt,           /* parameter to vary time integrati
 
                       dbl source_d = 0;
                       if (evss_gradv) {
-                        dbl source_d = -at * mup * (dg_dm[a][b] + dgt_dm[a][b]);
+                        source_d = -at * mup * (dg_dm[a][b] + dgt_dm[a][b]);
                         source_d *= wt_func * det_J * h3;
                       }
 
@@ -3667,6 +3667,9 @@ int assemble_gradient(dbl tt, /* parameter to vary time integration from
 
           if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
             advection -= grad_v[a][b];
+            if (upd->traceless_gradient && a == b) {
+              advection += fv->div_v / VIM;
+            }
             advection *= wt_func * det_J * wt * h3;
             advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
           }
@@ -3674,9 +3677,7 @@ int assemble_gradient(dbl tt, /* parameter to vary time integration from
           /*
            * Source term...
            */
-
           source = 0;
-
           if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
             source += g[a][b];
             source *= wt_func * det_J * h3 * wt;
@@ -3716,9 +3717,19 @@ int assemble_gradient(dbl tt, /* parameter to vary time integration from
 
                 if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
                   advection -= bf[var]->grad_phi_e[j][p][a][b];
+
+                  if (upd->traceless_gradient && a == b) {
+                    double div_phi_j_e_b = 0.;
+                    for ( int r=0; r<VIM; r++) {
+                      div_phi_j_e_b += bf[var]->grad_phi_e[j][p][r][r];
+                    }
+                    advection += div_phi_j_e_b / VIM;
+                  }
+
                   advection *= wt_func * det_J * wt * h3;
                   advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
                 }
+
 
                 source = 0.;
 
@@ -3756,9 +3767,16 @@ int assemble_gradient(dbl tt, /* parameter to vary time integration from
 
                   advection_a = -grad_v[a][b];
 
+                  if (upd->traceless_gradient && a == b) {
+                    advection_a += fv->div_v / VIM;
+                  }
+
                   advection_a *= (d_det_J_dmesh_pj * h3 + det_J * dh3dmesh_pj);
 
                   advection_b = -fv->d_grad_v_dmesh[a][b][p][j];
+                  if (upd->traceless_gradient && a == b) {
+                    advection_b += fv->d_div_v_dmesh[p][j] / VIM;
+                  }
 
                   advection_b *= det_J * h3;
 

@@ -876,6 +876,7 @@ struct Uniform_Problem_Description {
   int SegregatedSolve;     /* Flag indicating segregated solve should be used */
   int SegregatedSubcycles;
   int matrix_index[MAX_VARIABLE_TYPES];
+  int traceless_gradient;
 };
 typedef struct Uniform_Problem_Description UPD_STRUCT;
 /*____________________________________________________________________________*/

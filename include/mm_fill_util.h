@@ -213,7 +213,7 @@ extern void set_solid_inertia(void);
 extern int fill_variable_vector(int inode, int ivec_varType[],
                                 int ivec_matID[]);
 
-EXTERN void supg_tau_shakib(SUPG_terms *supg_terms, int dim, double dt,
+EXTERN void supg_tau_shakib(SUPG_terms *supg_terms, int dim, dbl dt, dbl diffusivity,
                             int interp_eqn);
 
 EXTERN void get_supg_tau(SUPG_terms *supg_terms,
@@ -221,8 +221,10 @@ EXTERN void get_supg_tau(SUPG_terms *supg_terms,
                          dbl diffusivity,
                          PG_DATA *pg_data);
 
-EXTERN void supg_tau_gauss_point(SUPG_terms *supg_terms, int dim,
-                                 dbl diffusivity, PG_DATA *pg_data);
+EXTERN void supg_tau_gauss_point(SUPG_terms *supg_terms,
+                          int dim,
+                          dbl diffusivity,
+                          const PG_DATA *pg_data);
 
 EXTERN void supg_tau(SUPG_terms *supg_terms, int dim, dbl diffusivity,
                      PG_DATA *pg_data, double dt, int shakib, int interp_eqn);

@@ -7142,6 +7142,30 @@ rd_solver_specs(FILE *ifp,
       ECHO("(Continuity Stabilization = None) (default)", echo_file);
     }
 
+  iread = look_for_optional(ifp, "DEVSS Traceless Gradient", input, '=');
+  if (iread == 1) {
+    (void) read_string(ifp, input, '\n');
+    strip(input);
+    if ( strcmp(input,"no") == 0 )
+    {
+      upd->traceless_gradient = 0;
+    }
+    else if ( strcmp(input,"yes") == 0 )
+    {
+      upd->traceless_gradient = 1;
+    }
+    else
+    {
+      EH( -1, "invalid choice: DEVSS Traceless Gradient = yes or no");
+    }
+    SPF(echo_string,eoformat, "DEVSS Traceless Gradient", input ); ECHO(echo_string,echo_file);
+  }
+  else
+  {
+    upd->traceless_gradient = 0;
+    ECHO("(DEVSS Traceless Gradient = no) (default)", echo_file);
+  }
+
   iread = look_for_optional(ifp, "Number of Segregated Subcycles", input, '=');
   if (iread == 1) {
     upd->SegregatedSubcycles = read_int(ifp, "Number of Segregated Subcycles");

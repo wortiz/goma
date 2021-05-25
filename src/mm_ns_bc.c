@@ -7464,15 +7464,23 @@ stress_no_v_dot_gradS(double func[MAX_MODES][6],
           gamma[a][b] = grad_v[a][b] + grad_v[b][a];
          }
      }
+
+  int evss_gradv = 0;
+  if (vn->evssModel == EVSS_GRADV) {
+    evss_gradv = 1;
+  }
   /* Continuous velocity gradient field and its transpose */
-  for ( a=0; a<VIM; a++)
-     {
-      for ( b=0; b<VIM; b++)
-         {
-          g[a][b]  = fv->G[a][b];
-          gt[b][a] = g[a][b];
-         }
-     }
+  for (a = 0; a < VIM; a++) {
+    for (b = 0; b < VIM; b++) {
+      if (evss_gradv) {
+        g[a][b] = fv->grad_v[a][b];
+        gt[a][b] = fv->grad_v[b][a];
+      } else {
+        g[a][b] = fv->G[a][b];
+        gt[b][a] = g[a][b];
+      }
+    }
+  }
 
   /*  Time-temperature shift factor  */
    if ( pd->e[pg->imtrx][TEMPERATURE])
@@ -7668,9 +7676,54 @@ stress_no_v_dot_gradS(double func[MAX_MODES][6],
 
                               /* advection term */
                               advection = 0.;
+                              if (lambda != 0 && evss_gradv) {
+                                if (pd->CoordinateSystem != CYLINDRICAL) {
+                                  if (ucwt != 0) {
+                                    for (k = 0; k < VIM; k++) {
+                                      advection -=
+                                          ucwt * (bf[VELOCITY1 + a]->grad_phi_e[j][p][k][a] * s[k][b] +
+                                                  bf[VELOCITY1 + b]->grad_phi_e[j][p][k][b] * s[a][k]);
+                                    }
+                                  }
+                                  if (lcwt != 0.) {
+                                    for (k = 0; k < VIM; k++) {
+                                      advection +=
+                                          lcwt * (bf[VELOCITY1 + b]->grad_phi_e[j][p][b][k] * s[a][k] +
+                                                  bf[VELOCITY1 + a]->grad_phi_e[j][p][a][k] * s[k][b]);
+                                    }
+                                  }
+                                } else {
+                                  if (ucwt != 0) {
+                                    for (k = 0; k < VIM; k++) {
+                                      advection -=
+                                          ucwt * (bf[VELOCITY1]->grad_phi_e[j][p][k][a] * s[k][b] +
+                                                  bf[VELOCITY1]->grad_phi_e[j][p][k][b] * s[a][k]);
+                                    }
+                                  }
+                                  if (lcwt != 0.) {
+                                    for (k = 0; k < VIM; k++) {
+                                      advection +=
+                                          lcwt * (bf[VELOCITY1]->grad_phi_e[j][p][b][k] * s[a][k] +
+                                                  bf[VELOCITY1]->grad_phi_e[j][p][a][k] * s[k][b]);
+                                    }
+                                  }
+                                }
+                              }
+                              advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
                               /* source term */
                               source =  -at * d_mup_dv_pj * ( g[a][b] +  gt[a][b]);
+                              if (evss_gradv) {
+                                if (pd->CoordinateSystem != CYLINDRICAL) {
+                                  source -= at * mup *
+                                              (bf[VELOCITY1 + a]->grad_phi_e[j][p][a][b] +
+                                               bf[VELOCITY1 + b]->grad_phi_e[j][p][b][a]);
+                                } else {
+                                  source -= at * mup *
+                                              (bf[VELOCITY1]->grad_phi_e[j][p][a][b] +
+                                               bf[VELOCITY1]->grad_phi_e[j][p][b][a]);
+                                }
+                              }
                               if (alpha != 0.0)
                                 {
                                  source -= saramitoCoeff * alpha * lambda * d_mup_dv_pj * s_dot_s[a][b]/(mup*mup);
@@ -7758,16 +7811,44 @@ stress_no_v_dot_gradS(double func[MAX_MODES][6],
 
                           for ( j=0; j<ei[pg->imtrx]->dof[var]; j++)
                              {
-
                               /* mass term */
                               mass = 0.0;
 
+                              dbl dg_dm[DIM][DIM];
+                              dbl dgt_dm[DIM][DIM];
+                              for (int m = 0; m < VIM; m++) {
+                                for (int r = 0; r < VIM; r++) {
+                                  dg_dm[m][r] = fv->d_grad_v_dmesh[m][r][p][j];
+                                  dgt_dm[m][r] = fv->d_grad_v_dmesh[r][m][p][j];
+                                }
+                              }
+
                               /* advection term */
                               advection = 0.0;
+                              if (lambda != 0 && evss_gradv && (ucwt !=0 || lcwt != 0)) {
+                                dbl d_s_dot_g_dm[DIM][DIM];
+                                dbl d_gt_dot_s_dm[DIM][DIM];
+                                dbl d_s_dot_gt_dm[DIM][DIM];
+                                dbl d_g_dot_s_dm[DIM][DIM];
+                                if (ucwt != 0.) {
+                                  (void)tensor_dot(s, dg_dm, d_s_dot_g_dm, VIM);
+                                  (void)tensor_dot(dgt_dm, s, d_gt_dot_s_dm, VIM);
+                                  advection -= ucwt * (d_gt_dot_s_dm[a][b] + d_s_dot_g_dm[a][b]);
+                                }
+
+                                if (lcwt != 0.) {
+                                  (void)tensor_dot(s, dgt_dm, d_s_dot_gt_dm, VIM);
+                                  (void)tensor_dot(dg_dm, s, d_g_dot_s_dm, VIM);
+                                  advection += lcwt * (d_s_dot_gt_dm[a][b] + d_g_dot_s_dm[a][b]);
+                                }
+                              }
+                              advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
                               /* source term */
-                              source = 0.0;
                               source = - at * d_mup->X[p][j] * ( g[a][b] +  gt[a][b]);
+                              if (evss_gradv) {
+                                source -= at * mup * (dg_dm[a][b] + dgt_dm[a][b]);
+                              }
                               if (alpha != 0.)
                                 {
                                  source -= saramitoCoeff * alpha * lambda * d_mup->X[p][j] * s_dot_s[a][b]/(mup*mup);
