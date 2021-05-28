@@ -48,11 +48,7 @@ EXTERN int assemble_stress_fortin
 EXTERN int
 assemble_stress_log_conf(dbl tt,
 			 dbl dt,
-			 dbl h[DIM],
-			 dbl hh[DIM][DIM],
-			 dbl dh_dxnode[DIM][MDE],
-			 dbl vcent[DIM],
-			 dbl dvc_dnode[DIM][MDE]);
+                         PG_DATA *pg_data);
 
 
 EXTERN int assemble_stress_level_set

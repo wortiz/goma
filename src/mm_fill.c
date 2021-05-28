@@ -1556,8 +1556,7 @@ matrix_fill(
 	}
       else if(vn->evssModel==LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
         {
-          err = assemble_stress_log_conf(theta, delta_t, pg_data.hsquared,
-                                                     pg_data.hhv, pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);
+          err = assemble_stress_log_conf(theta, delta_t, &pg_data);
 
           EH(err, "assemble_stress_log_conf");
 	  if (err) return -1;
@@ -4083,8 +4082,7 @@ matrix_fill_stress(
 
       if(vn->evssModel==LOG_CONF || vn->evssModel == LOG_CONF_GRADV)
         {
-          err = assemble_stress_log_conf(theta, delta_t, pg_data.hsquared,
-                                     pg_data.hhv, pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);
+          err = assemble_stress_log_conf(theta, delta_t, &pg_data);
 	  if (err) return -1;
 	  err = segregate_stress_update( x_update );
           EH(err, "assemble_stress_log_conf");

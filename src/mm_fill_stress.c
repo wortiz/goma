@@ -2396,11 +2396,7 @@ int assemble_stress_fortin(dbl tt,           /* parameter to vary time integrati
  */
 int assemble_stress_log_conf(dbl tt,
                              dbl dt,
-                             dbl h[DIM],
-                             dbl hh[DIM][DIM],
-                             dbl dh_dxnode[DIM][MDE],
-                             dbl vcent[DIM],
-                             dbl dvc_dnode[DIM][MDE]) {
+                             PG_DATA *pg_data) {
   int dim, p, q, a, b, w;
   int eqn, siz;
 
@@ -2531,12 +2527,16 @@ int assemble_stress_log_conf(dbl tt,
     supg = vn->wt_func;
   }
 
-  if (supg != 0.0) {
-    h_elem = 0.0;
-    for (p = 0; p < dim; p++) {
-      h_elem += vcent[p] * vcent[p] * h[p];
-    }
-    h_elem = sqrt(h_elem) / 2.0;
+  SUPG_terms supg_terms;
+  if (vn->wt_funcModel == GALERKIN) {
+    supg = 0.;
+  } else if (vn->wt_funcModel == SUPG) {
+    supg = vn->wt_func;
+    zero_structure(&supg_terms, sizeof(SUPG_terms), 1);
+  }
+
+  if (supg != 0.) {
+    supg_tau(&supg_terms, dim, 1e-8, pg_data, dt, 1, POLYMER_STRESS11);
   }
 
   // Shift factor
@@ -2704,7 +2704,7 @@ int assemble_stress_log_conf(dbl tt,
               // SUPG weighting, this is SUPG with s, not e^s
               if (DOUBLE_NONZERO(supg)) {
                 for (w = 0; w < dim; w++) {
-                  wt_func += supg * h_elem * v[w] * bf[eqn]->grad_phi[i][w];
+                  wt_func += supg * supg_terms.supg_tau * v[w] * bf[eqn]->grad_phi[i][w];
                 }
               }
 
