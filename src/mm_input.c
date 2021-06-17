@@ -1874,6 +1874,33 @@ rd_timeint_specs(FILE *ifp,
   }
 
 
+  tran->shear_adapt = 0;
+
+  iread = look_for_optional(ifp,"Shear Adapt",input,'=');
+  if (iread == 1) {
+    (void) read_string(ifp,input,'\n');
+    strip(input); stringup(input);
+
+    if ((strcmp(input,"ON") == 0) || (strcmp(input,"YES") == 0 )) {
+      tran->shear_adapt = 1;
+    }
+    else if ((strcmp(input,"OFF") == 0) || (strcmp(input,"NO") == 0 )) {
+      tran->shear_adapt = 0;
+    } else {
+      GOMA_EH(GOMA_ERROR, "Expected either yes or no for Shear Adapt");
+    }
+    SPF(echo_string,"%s = %s", "Shear Adapt", input); ECHO(echo_string, echo_file);
+  }
+
+  tran->shear_adapt_error = 1e-1;
+  iread = look_for_optional(ifp,"Shear adapt error",input,'=');
+  if (iread == 1) {
+    tran->shear_adapt_error = read_dbl(ifp, "Shear adapt error");
+    if (tran->shear_adapt_error < 0) {
+      GOMA_EH(GOMA_ERROR, "Expected ");
+    }
+    SPF(echo_string, "%s = %g", "Shear adapt error", tran->shear_adapt_error); ECHO(echo_string, echo_file);
+  }
 
 }    
 /* rd_timeint_specs -- read input file for time integration specifications */

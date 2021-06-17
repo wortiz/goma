@@ -415,6 +415,7 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
           Omega_h::parallel_for(mesh->nverts(), f0, "set_iso_metric_values");
           mesh->add_tag(Omega_h::VERT, "iso_size_metric", Omega_h::symm_ncomps(mesh->dim()),
                         Omega_h::Reals(target_metrics));
+        } else if (tran->shear_adapt) {
         }
       }
     }
@@ -1629,8 +1630,13 @@ void adapt_mesh(Omega_h::Mesh &mesh) {
   Omega_h::MetricInput genopts;
   //  genopts.sources.push_back(
   //      Omega_h::MetricSource{OMEGA_H_VARIATION, 1e-3, "phi", OMEGA_H_ISO_SIZE});
-  genopts.sources.push_back(Omega_h::MetricSource{OMEGA_H_GIVEN, 1.0, "iso_size_metric",
-                                                  OMEGA_H_ISO_SIZE, OMEGA_H_ABSOLUTE});
+  if (tran->shear_adapt) {
+    genopts.sources.push_back(
+        Omega_h::MetricSource{OMEGA_H_VARIATION, tran->shear_adapt_error, "SH", OMEGA_H_ANISOTROPIC});
+  } else {
+    genopts.sources.push_back(Omega_h::MetricSource{OMEGA_H_GIVEN, 1.0, "iso_size_metric",
+                                                    OMEGA_H_ISO_SIZE, OMEGA_H_ABSOLUTE});
+  }
   //      genopts.sources.push_back(Omega_h::MetricSource{OMEGA_H_GIVEN, 1.0,
   //    "initial_metric",OMEGA_H_ISO_SIZE,OMEGA_H_ABSOLUTE});
   genopts.should_limit_lengths = true;
@@ -1663,6 +1669,9 @@ void adapt_mesh(Omega_h::Mesh &mesh) {
   opts.should_coarsen_slivers = true;
   opts.should_refine = true;
   opts.min_quality_desired = 0.5;
+  if (tran->shear_adapt) {
+    opts.min_quality_allowed = 0.3;
+  }
   int count = 1000;
 
   for (int i = 0; i < count; i++) {
@@ -1755,7 +1764,9 @@ void adapt_mesh_omega_h(struct Aztec_Linear_Solver_System **ams,
 #ifdef DEBUG_OMEGA_H
   verbose = true;
 #endif
+
   Omega_h::Mesh mesh(&lib);
+  std::cout<< "Convert to mesh\n";
   Omega_h::exodus::convert_to_omega_h_mesh_parallel(exo, dpi, x, &mesh, verbose);
   //  if (lib.world()->size() > 1) {
   //  } else {
@@ -1823,6 +1834,7 @@ void adapt_mesh_omega_h(struct Aztec_Linear_Solver_System **ams,
 
   //auto writer = Omega_h::vtk::Writer("transfer.vtk", &mesh);
   //writer.write(step);
+  std::cout<< "adapt mesh\n";
   adapt_mesh(mesh);
 
   std::string filename;
@@ -1840,7 +1852,11 @@ void adapt_mesh_omega_h(struct Aztec_Linear_Solver_System **ams,
 
   std::stringstream ss2;
 
-  ss2 << base_name << "-s." << step;
+  ss2 << base_name;
+  if (step > 0) {
+    ss2 << "-s." << step;
+  }
+  std::cout<< "convert mesh to goma\n";
 
   if (Num_Proc > 1) {
     Omega_h::exodus::convert_back_to_goma_exo_parallel(ss2.str().c_str(), &mesh, exo, dpi, verbose,
@@ -1849,6 +1865,7 @@ void adapt_mesh_omega_h(struct Aztec_Linear_Solver_System **ams,
     Omega_h::exodus::convert_back_to_goma_exo(ss2.str().c_str(), &mesh, exo, dpi, classify_with);
   }
 
+  std::cout<< "resetup problem";
   resetup_problem(exo, dpi);
 
   for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
@@ -1878,8 +1895,11 @@ void adapt_mesh_omega_h(struct Aztec_Linear_Solver_System **ams,
     realloc_dbl_1(&efv->ext_fld_ndl_val[w],
                   dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes, 0);
   }
+  std::cout << "resetup matrix\n";
   resetup_matrix(ams, exo, dpi);
+  std::cout << "copy solution\n";
   copy_solution(dpi, x, mesh);
+  std::cout << "finishcopy solution\n";
   step++;
 }
 

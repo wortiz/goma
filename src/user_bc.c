@@ -107,18 +107,18 @@ dbl velo_vary_fnc(const int velo_condition,
     double y = x2, z = x3;
 
     //origin of circle
-    double z0 = (2.162810-1.21031)*0.5 + 1.21031;
+    double z0 = 0.0;
     double y0 = 0.0;
 
-    double R = 0.469015; // Radius of tube
+    double R = 0.05*2.54;
 
-    double v_max = -4.52418;
+    double v_max = 10;
 
     double coeff = v_max*(1/(R*R));
 
     double r = sqrt((y-y0)*(y-y0) + (z-z0)*(z-z0));
 
-    f = coeff * (R*R - r*r);
+    f = coeff * (R*R - r*r) * tanh(time/2);
 
       /*  f = -a2*x2/radius; */
     }

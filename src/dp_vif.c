@@ -719,6 +719,8 @@ noahs_ark(void)
   ddd_add_member(n, &tran->steady_state_tolerance, 1, MPI_DOUBLE);
   ddd_add_member(n, &tran->march_to_steady_state, 1, MPI_INT);
   ddd_add_member(n, &tran->ale_adapt, 1, MPI_INT);
+  ddd_add_member(n, &tran->shear_adapt, 1, MPI_INT);
+  ddd_add_member(n, &tran->shear_adapt_error, 1, MPI_DOUBLE);
   ddd_add_member(n, &tran->ale_adapt_iso_size, 1, MPI_DOUBLE);
 
   /*
@@ -2659,6 +2661,7 @@ noahs_ark(void)
   ddd_add_member(n, &POYNTING_VECTORS, 1, MPI_INT);
   ddd_add_member(n, &SARAMITO_YIELD, 1, MPI_INT);
   ddd_add_member(n, &STRESS_NORM, 1, MPI_INT);
+  ddd_add_member(n, &PP_FOAM_VOLUME_SOURCE, 1, MPI_INT);
   ddd_add_member(n, &len_u_post_proc, 1, MPI_INT);
   ddd_add_member(n, &PSPG_PP, 1, MPI_INT);
 

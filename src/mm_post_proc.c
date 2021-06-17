@@ -310,6 +310,7 @@ int POYNTING_VECTORS = -1;   	/* conduction flux vectors*/
 int PSPG_PP = -1;
 int SARAMITO_YIELD = -1;
 int STRESS_NORM = -1;
+int PP_FOAM_VOLUME_SOURCE = -1;
 
 int len_u_post_proc = 0;	/* size of dynamically allocated u_post_proc
 				 * actually is */
@@ -1320,6 +1321,24 @@ static int calc_standard_fields(double **post_proc_vect,
         }
     local_post[VELO_SPEED] = sqrt(velo_sqrd);
     local_lumped[VELO_SPEED] = 1.;
+  }
+
+  if (PP_FOAM_VOLUME_SOURCE != -1 && pd->e[pg->imtrx][R_MOMENTUM1] ){
+			double dFVS_dv[DIM][MDE]; 
+			double dFVS_dT[MDE];
+			double dFVS_dx[DIM][MDE];
+			double dFVS_dC[MAX_CONC][MDE];
+			double dFVS_dF[MDE];
+    double source = FoamVolumeSource(time,
+			delta_t,
+			theta,
+			dFVS_dv,
+			dFVS_dT,
+			dFVS_dx,
+			dFVS_dC,
+			dFVS_dF);
+    local_post[PP_FOAM_VOLUME_SOURCE] = source;
+    local_lumped[PP_FOAM_VOLUME_SOURCE] = 1.;
   }
 
   if (PRESSURE_CONT != -1 && (pd->v[pg->imtrx][PRESSURE] || pd->v[pg->imtrx][TFMP_PRES]) &&
@@ -7657,6 +7676,7 @@ rd_post_process_specs(FILE *ifp,
   iread = look_for_post_proc(ifp, "PSPG Post", &PSPG_PP);
   iread = look_for_post_proc(ifp, "Saramito Yield Coeff", &SARAMITO_YIELD);
   iread = look_for_post_proc(ifp, "VE Stress Norm", &STRESS_NORM);
+  iread = look_for_post_proc(ifp, "Foam Volume Source", &PP_FOAM_VOLUME_SOURCE);
 
   /*
    * Initialize for surety before communication to other processors.
@@ -9768,6 +9788,20 @@ load_nodal_tkn (struct Results_Description *rd, int *tnv, int *tnv_post)
            index_post_export++;
          }
        VELO_SPEED = index_post;
+       index_post++;
+    }
+
+  if (PP_FOAM_VOLUME_SOURCE != -1 && Num_Var_In_Type[pg->imtrx][R_MOMENTUM1])
+     {
+       set_nv_tkud(rd, index, 0, 0, -2, "FOAM_VOL_SOURCE","[1]", "Foam Volume Source",
+		   FALSE);
+       index++;
+       if (PP_FOAM_VOLUME_SOURCE == 2)
+         {
+           Export_XP_ID[index_post_export] = index_post;
+           index_post_export++;
+         }
+       PP_FOAM_VOLUME_SOURCE = index_post;
        index_post++;
     }
 

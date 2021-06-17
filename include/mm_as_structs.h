@@ -1135,6 +1135,8 @@ struct Transient_Information {
 
   int ale_adapt;
   double ale_adapt_iso_size;
+  int shear_adapt;
+  double shear_adapt_error;
 };
 
 struct Eigensolver_Info
