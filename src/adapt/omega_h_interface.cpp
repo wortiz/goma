@@ -104,6 +104,21 @@ extern Comm_Ex **cx;
 }
 
 //#define DEBUG_OMEGA_H
+//
+static void log_line(const char *func, const char *file, int line) {
+  static double tstart;
+  static bool time_set = false;
+  if (!time_set) {
+    tstart = MPI_Wtime();
+    time_set = true;
+  }
+  double time = MPI_Wtime();
+  std::cout << "Proc:" << ProcID << " " << time - tstart << " at " << file << ":" << line << " in " << func;
+  std::cout << std::endl;
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+
 
 namespace Omega_h {
 
@@ -226,6 +241,8 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
     }
   }
 
+  log_line(__FUNCTION__, __FILE__, __LINE__);
+
   //  for (auto e : owned_elems) {
   //    std::cout << "proc " << ProcID << " owns elem " << dpi->elem_index_global[e] << "\n";
   //  }
@@ -286,6 +303,7 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
   HostWrite<Real> h_coords(LO(new_verts.size() * dim));
   std::vector<LO> exo_from_omega;
 
+  log_line(__FUNCTION__, __FILE__, __LINE__);
   for (int i = 0; i < new_verts.size(); i++) {
     int idx = in_list(new_verts[i], 0, exo->num_nodes, dpi->node_index_global);
     assert(idx != -1);
@@ -325,6 +343,7 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
   for (size_t i = 0; i < owned_elems.size(); i++) {
     elem_class_ids_w[i] = 1;
   }
+  log_line(__FUNCTION__, __FILE__, __LINE__);
   std::map<LO, LO> exo_to_global;
   for (int node = 0; node < mesh->globals(0).size(); node++) {
     int exo_index = in_list(mesh->globals(0)[node], 0, exo->num_nodes, dpi->node_index_global);
@@ -420,6 +439,7 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
       }
     }
   }
+  log_line(__FUNCTION__, __FILE__, __LINE__);
   for (int w = 0; w < efv->Num_external_field; w++) {
     auto var_values = Omega_h::Write<Omega_h::Real>(mesh->nverts());
     for (int i = 0; i < exo->num_nodes; i++) {
@@ -507,6 +527,7 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
     }
   }
 #endif
+  log_line(__FUNCTION__, __FILE__, __LINE__);
   if (1 && dpi->num_side_sets_global) {
     std::vector<char> names_memory;
     std::vector<char *> name_ptrs;
@@ -519,7 +540,8 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
       nsides = exo->ss_num_sides[i];
       if (verbose)
         std::cout << "Proc" << ProcID << " has " << nsides << "sides\n";
-      int snl[MAX_NODES_PER_SIDE]; /* Side Node List - NOT Saturday Night Live! */
+      int snl[3]; /* Side Node List - NOT Saturday Night Live! */
+      int local_indeces[3]; /* Side Node List - NOT Saturday Night Live! */
 
       std::set<int> ss_side_nodes;
       std::set<int> ss_side_nodes_global;
@@ -528,7 +550,55 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
              q++) {
           int elem = exo->ss_elem_list[q];
           int side = exo->ss_side_list[q];
-          int num_nodes = build_side_node_list(elem, side - 1, exo, snl);
+          int num_nodes = 0;
+          int face = side-1;
+          switch (dim) {
+          case 2:		/* nice regular counterclockwise node/face...*/
+            num_nodes  = 2;
+            local_indeces[0] = face;
+            local_indeces[1] = (face+1)%3;
+            break;
+      
+          case 3:
+            num_nodes  = 3;
+            switch ( face )
+      	    {
+      	    case 0:
+      	      local_indeces[0] = 0;
+      	      local_indeces[1] = 1;
+      	      local_indeces[2] = 3;
+      	      break;
+      
+      	    case 1:
+      	      local_indeces[0] = 1;
+      	      local_indeces[1] = 2;
+      	      local_indeces[2] = 3;
+      	      break;
+      
+      	    case 2:
+      	      local_indeces[0] = 2;
+      	      local_indeces[1] = 0;
+      	      local_indeces[2] = 3;
+      	      break;
+      
+      	    case 3:
+      	      local_indeces[0] = 0;
+      	      local_indeces[1] = 2;
+      	      local_indeces[2] = 1;
+      	      break;
+      
+      	    default:
+      	      GOMA_EH(GOMA_ERROR, "Bad face for TETRAHEDRON. face %d", face);
+      	      break;
+            }
+            break;
+      	   default:
+      	     GOMA_EH(GOMA_ERROR, "Bad dimension omega_h mesh", face);
+             break;
+	  }
+          for (int i = 0; i < num_nodes; i++) {
+            snl[i] = exo->elem_node_list[exo->elem_node_pntr[elem] + local_indeces[i]];
+          }
           for (int j = 0; j < num_nodes; j++) {
             ss_side_nodes.insert(snl[j]);
             if (exo_to_global.find(snl[j]) != exo_to_global.end()) {
@@ -542,7 +612,9 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
             }
           }
         }
+  log_line(__FUNCTION__, __FILE__, __LINE__);
       }
+  log_line(__FUNCTION__, __FILE__, __LINE__);
 
       if (verbose) {
         std::cout << "ss#" << dpi->ss_id_global[i] << " Proc " << ProcID << " ss_side_nodes ";
@@ -595,6 +667,7 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
       std::sort(my_nodes_sorted.begin(), my_nodes_sorted.end());
       std::vector<int> all_owned_set(owned_set.begin(), owned_set.end());
       std::vector<int> mark_nodes;
+  log_line(__FUNCTION__, __FILE__, __LINE__);
       mark_nodes.reserve(all_owned_set.size());
       for (size_t j = 0; j < all_owned_set.size(); j++) {
         if (all_owned_set[j] != -1 &&
@@ -609,6 +682,7 @@ void convert_to_omega_h_mesh_parallel(Exo_DB *exo, Dpi *dpi, double **x, Mesh *m
         }
       }
 
+  log_line(__FUNCTION__, __FILE__, __LINE__);
       HostWrite<LO> h_set_nodes(mark_nodes.size());
       for (size_t j = 0; j < mark_nodes.size(); j++) {
         h_set_nodes[j] = mark_nodes[j];
