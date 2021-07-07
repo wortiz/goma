@@ -8679,6 +8679,49 @@ ECHO("\n----Acoustic Properties\n", echo_file);
 
           SPF_DBL_VEC(endofstring(es), 4,  mat_ptr->u_species_source[species_no]);
         }
+      else if ( !strcmp(model_name, "SCHNAKENBERG_U") )
+        {
+          SpeciesSourceModel = SCHNAKENBERG_U;
+          model_read = 1;
+	  if(read_bc_mp == -1) read_bc_mp = SCHNAKENBERG_U;
+          mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
+          if ( fscanf(imp, "%lf %lf",
+                            &a0, &a1) != 2)
+            {
+                  sr = sprintf(err_msg,
+                               "Matl %s needs 2 floats for %s %s model.\n",
+                               pd_glob[mn]->MaterialName,
+                               "Species Source", "SCHNAKENBERG_U");
+                  EH(-1, err_msg);
+            }
+          mat_ptr->u_species_source[species_no] = (dbl *) array_alloc(1,2,sizeof(dbl));
+          mat_ptr->len_u_species_source[species_no] = 2;
+          mat_ptr->u_species_source[species_no][0] = a0;  /* gamma */
+          mat_ptr->u_species_source[species_no][1] = a1;  /* a */
+
+          SPF_DBL_VEC(endofstring(es), 2,  mat_ptr->u_species_source[species_no]);
+        }
+      else if ( !strcmp(model_name, "SCHNAKENBERG_V") )
+        {
+          SpeciesSourceModel = SCHNAKENBERG_V;
+          model_read = 1;
+	  if(read_bc_mp == -1) read_bc_mp = SCHNAKENBERG_V;
+          mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
+          if ( fscanf(imp, "%lf",
+                            &a0) != 1)
+            {
+                  sr = sprintf(err_msg,
+                               "Matl %s needs 1 floats for %s %s model.\n",
+                               pd_glob[mn]->MaterialName,
+                               "Species Source", "SCHNAKENBERG_V");
+                  EH(-1, err_msg);
+            }
+          mat_ptr->u_species_source[species_no] = (dbl *) array_alloc(1,1,sizeof(dbl));
+          mat_ptr->len_u_species_source[species_no] = 1;
+          mat_ptr->u_species_source[species_no][0] = a0;  /* b */
+
+          SPF_DBL_VEC(endofstring(es), 1,  mat_ptr->u_species_source[species_no]);
+        }
       else if(model_read == -1)
 	  {
 	    EH(model_read,

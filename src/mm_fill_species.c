@@ -11302,8 +11302,33 @@ get_continuous_species_terms(struct Species_Conservation_Terms *st,
 	  }
 	}
       }
-
-      else if (mp->SpeciesSourceModel[w]  == CONSTANT )
+    else if (mp->SpeciesSourceModel[w] == SCHNAKENBERG_U) {
+    double derivatives[MAX_CONC];
+    st->MassSource[w] = schnakenberg_u_source(w, derivatives);
+    if (af->Assemble_Jacobian) {
+      var = MASS_FRACTION;
+      if (pd->v[MASS_FRACTION]) {
+        for (w1 = 0; w1 < pd->Num_Species; w1++) {
+          for (j = 0; j < ei->dof[var]; j++) {
+            st->d_MassSource_dc[w][w1][j] = derivatives[w1] * bf[var]->phi[j];
+          }
+        }
+      }
+    }
+  } else if (mp->SpeciesSourceModel[w] == SCHNAKENBERG_V) {
+    double derivatives[MAX_CONC];
+    st->MassSource[w] = schnakenberg_v_source(w, derivatives);
+      if (af->Assemble_Jacobian) {
+        var = MASS_FRACTION;
+        if (pd->v[MASS_FRACTION]) {
+          for (w1 = 0; w1 < pd->Num_Species; w1++) {
+            for (j = 0; j < ei->dof[var]; j++) {
+              st->d_MassSource_dc[w][w1][j] = derivatives[w1] * bf[var]->phi[j];
+            }
+          }
+        }
+    }
+  }  else if (mp->SpeciesSourceModel[w]  == CONSTANT )
       {
 	st->MassSource[w]    = mp->species_source[w];
 	/* Jacobians should default to zero without us doing anything b/c of

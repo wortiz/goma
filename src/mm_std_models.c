@@ -6847,3 +6847,47 @@ calc_KOH_Si_etch_rate_100( double d_etch_rate_d_C[MAX_CONC] ) /* Sensitivity of 
 
   return etch_rate;
 } /* END of calc_KOH_Si_etch_rate_100 */
+
+dbl schnakenberg_u_source(int species_no, dbl *derivatives) {
+  dbl u = fv->c[species_no];
+  int v_index = -1;
+  for (int w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (mp->SpeciesSourceModel[w] == SCHNAKENBERG_V) {
+      v_index = w;
+      break;
+    }
+  }
+  EH(v_index, "SCHNAKENBERG_V not found");
+  dbl v = fv->c[v_index];
+  dbl gamma = mp->u_species_source[species_no][0];
+  dbl a = mp->u_species_source[species_no][1];
+
+  dbl source = gamma * (a - u + u*u * v);
+
+  derivatives[species_no] = -gamma + 2*gamma*u*v;
+  derivatives[v_index] = 100*gamma*u*u;
+
+  return source;
+}
+
+dbl schnakenberg_v_source(int species_no, dbl *derivatives) {
+  dbl v = fv->c[species_no];
+  int u_index = -1;
+  for (int w = 0; w < pd->Num_Species_Eqn; w++) {
+    if (mp->SpeciesSourceModel[w] == SCHNAKENBERG_U) {
+      u_index = w;
+      break;
+    }
+  }
+  EH(u_index, "SCHNAKENBERG_U not found");
+  dbl u = fv->c[u_index];
+  dbl gamma = mp->u_species_source[u_index][0];
+  dbl b = mp->u_species_source[species_no][0];
+
+  dbl source = gamma * (b - u*u*v);
+
+  derivatives[species_no] = gamma * (-u*u);
+  derivatives[u_index] = gamma * (-2*u*v);
+
+  return source;
+}

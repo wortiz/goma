@@ -458,6 +458,9 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS];	/* number of variables to overwri
 #define ELECTRODE_KINETICS 904
 #define ION_REACTIONS 908  /* RSL 3/13/01 */
 
+#define SCHNAKENBERG_U 1022
+#define SCHNAKENBERG_V 1023
+
 /*Thermal-battery property model: KSC 3/1/99 */
 #define THERMAL_BATTERY 905
 
