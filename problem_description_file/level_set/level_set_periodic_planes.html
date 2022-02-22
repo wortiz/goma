@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Level Set Periodic Planes &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Level Set Periodic Planes</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/level_set/level_set_periodic_planes.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="level-set-periodic-planes">
+<h1>Level Set Periodic Planes<a class="headerlink" href="#level-set-periodic-planes" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Periodic</span> <span class="n">Planes</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float4</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float5</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float6</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card directs the level-set renormalization to accommodate peroidic boundary
+conditions (see Advanced Capabilities Manual AC_Periodic capability). The periodic
+boundary conditions on the level set field are not compatible with renormalization
+unless this capability is specified.</p>
+<dl class="simple">
+<dt>&lt;float1&gt;</dt><dd><p>x-coordinate value of first periodic boundary.</p>
+</dd>
+<dt>&lt;float2&gt;</dt><dd><p>x-coordinate value of second periodic boundary. If equivalent to float1
+than this direction is not periodic.</p>
+</dd>
+<dt>&lt;float3&gt;</dt><dd><p>y-coordinate value of first periodic boundary.</p>
+</dd>
+<dt>&lt;float4&gt;</dt><dd><p>y-coordinate value of second periodic boundary. If equivalent to float3
+than this direction is not periodic.</p>
+</dd>
+<dt>&lt;float5&gt;</dt><dd><p>y-coordinate value of first periodic boundary.</p>
+</dd>
+<dt>&lt;float6&gt;</dt><dd><p>y-coordinate value of second periodic boundary. If equivalent to float5
+than this direction is not periodic.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Two examples of initialization methods are provide below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Periodic</span> <span class="n">Boundary</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>This card instructs renormalization to accommodate the x-directed-boundaries to be
+considered as periodic relative to the level-set field.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

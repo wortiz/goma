@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saturation &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Saturation</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/microstructure/saturation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="saturation">
+<h1><strong>Saturation</strong><a class="headerlink" href="#saturation" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Saturation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card specifies the model for the liquid saturation in a partially saturated porous
+media, which is frequently observed experimentally to be a function of the capillary
+pressure (gas pressure minus liquid pressure). This card is required for <em>Media Type</em>
+specifications of <strong>POROUS_PART_SAT, POROUS_UNSAT,</strong> and <strong>POROUS_TWO_PHASE</strong>. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the liquid in a partially saturated porous media. The
+permissible values are <strong>CONSTANT,VAN_GENUCHTEN, TANH, PSD_VOL, PSD_WEXP,</strong> and
+<strong>PSD_SEXP.</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Saturation model choices and their parameters are discussed below.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>For the constant value of saturation model. This model is rarely used, unless one
+wanted to study the flow of gas and liquid at some constant, pre-specified saturation
+as a function of gas and liquid phase pressure.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>VAN_GENUCHTEN</strong></p></td>
+<td><p>The <strong>VAN_GENUCHTEN</strong> model assumes that saturation is a function of the capillary
+pressure. The {float_list} contains four values, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Irreducible water saturation</p></li>
+<li><p>&lt;float2&gt; - Irreducible air saturation</p></li>
+<li><p>&lt;float3&gt; - An exponent β</p></li>
+<li><p>&lt;float4&gt; - A scaling to convert from capillary pressure to suction (α ⁄ ρl ⁄g)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>TANH</strong> &lt;float_list&gt;</p></td>
+<td><p>The first version of the <strong>TANH</strong> model assumes that saturation is only a function of
+capillary pressure. The {float_list} contains four values, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Irreducible water saturation, θw</p></li>
+<li><p>&lt;float2&gt; - Irreducible air saturation, θair</p></li>
+<li><p>&lt;float3&gt; - A constant c</p></li>
+<li><p>&lt;float3&gt; - A constant d</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>PSD_VOL</strong> &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+relative liquid permeability; two input values are required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Surface tension of the liquid</p></li>
+<li><p>&lt;float2&gt; - Contact angle the liquid-vapor menisci makes with the solid surfaces</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>PSD_WEXP</strong> &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+relative liquid permeability; two input values are required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Surface tension of the liquid</p></li>
+<li><p>&lt;float2&gt; - Contact angle the liquid-vapor menisci makes with the solid surfaces</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>PSD_SEXP</strong> &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+relative liquid permeability; two input values are required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Surface tension of the liquid</p></li>
+<li><p>&lt;float2&gt; - Contact angle the liquid-vapor menisci makes with the solid surfaces</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Saturation</span> <span class="o">=</span> <span class="n">VAN_GENUCHTEN</span> <span class="mf">0.01</span> <span class="mf">0.01</span> <span class="mf">3.9</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<p>The parameters on this <strong>VAN_GENUCHTEN</strong> specification are basically curve fit
+parameters to experimental measured saturation values versus capillary pressure. They
+do have some physical meaning, as is described below, and in the references.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The saturation function specification is perhaps the most critical and most influential
+function for capturing accurate behavior of flow through partially saturated porous
+media. The basic cap of this function versus capillary pressure is depicted in the figure
+below: Notice the plateau of saturation at unity at low capillary pressures (high positive
+liquid pressures) and the dip to the irreducible water saturation at high capillary
+pressures. In most real operations, this dependence will be highly sensitive to many
+factors: viz. whether you are filling or vacating the pore space, whether network stress
+in poroelastic problems is leading to liquid tension, etc.</p>
+<p>The Van Genuchten model has the following functional form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/415_goma_physics.png"><img alt="../../_images/415_goma_physics.png" src="../../_images/415_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here the irreducible water saturation is θw, the irreducible air saturation 0air, the
+suction factor is α, and the exponents β and m, the latter of which is 1 – 1 ⁄ β.</p>
+<p>The <strong>TANH</strong> model has the following functional form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/416_goma_physics.png"><img alt="../../_images/416_goma_physics.png" src="../../_images/416_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>a</em> and <em>b</em> are automatically calculated from</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/417_goma_physics.png"><img alt="../../_images/417_goma_physics.png" src="../../_images/417_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and <em>c</em> and <em>d</em> are two fitted coefficients provided as input parameters. Here the
+irreducible water saturation is 0w, the irreducible air saturation 0air, and are also
+provided by the user as input parameters. Pc is the capillary pressure which has a lower
+limit of 1.E-5.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk.</p>
+<p>GTM-029.0: SUPG Formulation for the Porous Flow Equations in Goma, H. K.
+Moffat, August 2001 (DRAFT).</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

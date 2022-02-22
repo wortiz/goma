@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Default Material Species Type &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Default Material Species Type</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/problem_description/default_material_species_type.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="default-material-species-type">
+<h1><strong>Default Material Species Type</strong><a class="headerlink" href="#default-material-species-type" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Default</span> <span class="n">Material</span> <span class="n">Species</span> <span class="n">Type</span> <span class="o">=</span> <span class="p">{</span><span class="n">species_type_string</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This optional parameter sets the form of the species variable type within <em>Goma</em>. Valid
+options for {species_type_string} are given below by the <em>SPECIES_*</em> names (along
+with a description and variable (prefix) name:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 38%" />
+<col style="width: 20%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>SPECIES_MASS_FRACTION</strong></p></td>
+<td><p>Mass Fractions</p></td>
+<td><p><em>Yk_</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SPECIES_MOLE_FRACTION</strong></p></td>
+<td><p>Mole Fractions</p></td>
+<td><p><em>Xk_</em></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>SPECIES_VOL_FRACTION</strong></p></td>
+<td><p>Volume Fractions</p></td>
+<td><p><em>Vk_</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SPECIES_DENSITY</strong></p></td>
+<td><p>Species Densities</p></td>
+<td><p><em>Dk_</em></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>SPECIES_CONCENTRATION</strong></p></td>
+<td><p>Species Concentration</p></td>
+<td><p><em>Ck_</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SPECIES_UNDEFINED_FORM</strong></p></td>
+<td><p>Undefined form</p></td>
+<td><p><em>Y</em></p></td>
+</tr>
+</tbody>
+</table>
+<p>The default is to assume <strong>SPECIES_UNDEFINED_FORM</strong>. Please refer to the
+Technical Discussion for important details.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Default</span> <span class="n">Material</span> <span class="n">Species</span> <span class="nb">type</span> <span class="o">=</span> <span class="n">SPECIES_MASS_FRACTION</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>For nondilute systems the <em>SPECIES_</em> quantities above are not just simply
+interchangeable via a multiplicative constant. Their values are distinct, and their
+interrelationship evaluated via a potentially nontrivial equation of state. Prior to the
+implementation of this card/capability, <em>Goma</em> hadn’t handled many nondilute cases,
+and where it had, this issue was finessed by special casing property evaluations.</p>
+<p>This card both sets the type of the species variables and establishes a convention for the
+units of equations within <em>Goma</em>. For settings of <strong>SPECIES_MASS_FRACTION</strong> and
+<strong>SPECIES_DENSITY_FRACTION</strong>, equations generally have a mass unit attached to
+them. Equations have concentration units attached to them for settings of
+<strong>SPECIES_MOLE_FRACTION</strong>, <strong>SPECIES_VOL_FRACTION</strong>, and
+<strong>SPECIES_CONCENTRATION</strong>. For example, given a setting of
+<strong>SPECIES_MASS_FRACTION</strong>, each volumetric term in the species conservation
+equation has units of mass per time, i.e., the time derivative term is written as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/257_goma_physics.png"><img alt="../../_images/257_goma_physics.png" src="../../_images/257_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>For a setting of <strong>SPECIES_MOLE_FRACTION</strong>, each volumetric term would have
+units of moles per time, i.e., the time derivative term is written out as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/258_goma_physics.png"><img alt="../../_images/258_goma_physics.png" src="../../_images/258_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>All this is necessary in order to handle cases where the total density or total
+concentration of a phase is spatially variable. In that case, it can’t just be divided out as in earlier versions of <em>Goma</em> but must be included in the conservation equations, and therefore the units of the conservation equation must reflect this.</p>
+<p>The species variable type affects the units and thus values of quantities returned from
+certain boundary conditions. For example, the <strong>IS_EQUIL_PSEUDORXN</strong> boundary
+condition returns units of moles per time per <span class="math notranslate nohighlight">\(length^2\)</span> if the species variable type is defined to be <strong>SPECIES_CONCENTRATION</strong>, but will multiply by molecular
+weights and thus return units of mass per time per <span class="math notranslate nohighlight">\(length^2\)</span> if the species variable type is defined to be <strong>SPECIES_MASS_FRACTION</strong>. This change conforms to the expected units of the overall species conservation equation for the two values of the species variable type variable used as examples above.</p>
+<p>The last column in the table above contains a three letter string. This string is used as a prefix for the name of the species variable in the EXODUS output file. If no names are
+specified in the material file and Chemkin is not used (which provides names for the
+species variables itself), then integers are used for names. For example, the first species unknown in <em>Goma</em> problem employing Mass Fractions as the independent species
+variables will be called <strong>Yk_1</strong>. If Chemkin is used in the same problem and the first
+chemkin species is named <strong>H2O</strong>, then the name in the EXODUS output file will be
+<strong>Yk_H2O</strong>. If a <em>Goma</em> problem is solved with no specification of the type of the species
+variable, then the first unknown in the EXODUS file will be named <strong>Y1</strong>.</p>
+<p>Additionally, some boundary conditions and inputs from the material file section will
+set the species variable type on their own without the benefit of this card, if the species variable type is the default undefined form. Some internal checks are done; if an
+inconsistency is caught, <em>Goma</em> will abort with an informative error message.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

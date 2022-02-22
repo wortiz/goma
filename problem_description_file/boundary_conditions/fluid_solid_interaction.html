@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Category 14: Fluid-Solid Interaction &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Category 14: Fluid-Solid Interaction</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/boundary_conditions/fluid_solid_interaction.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="category-14-fluid-solid-interaction">
+<h1>Category 14: Fluid-Solid Interaction<a class="headerlink" href="#category-14-fluid-solid-interaction" title="Permalink to this headline"></a></h1>
+<p>This is a special group of boundary conditions for problems in which there are two distinct
+material phases (fluid and solid) with relative motion between them. These BC’s provide a means
+to apply conditions to a moving boundary with sensitivities to variables in both phases. These
+problems are formulated in Goma as overset-grid or phase function problems.</p>
+<section id="lagrange-no-slip">
+<h2><strong>LAGRANGE_NO_SLIP</strong><a class="headerlink" href="#lagrange-no-slip" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LAGRANGE_NO_SLIP</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer2</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p><strong>(CONTACT_SURF/R_LAGR_MULT1)</strong></p>
+<p>This boundary condition is used to apply a kinematic Lagrange multiplier constraint to
+a solid/fluid boundary while using Goma’s overset grid capability. The condition is
+used when the complete fluid-structure interaction problem is being solved, viz.
+stresses between fluid and solid are both accommodated as is the dynamics of the
+structure and fluid. In contrast, <em>Goma</em> allows for a structure to be moved through a
+fluid under prescribed kinematics, and in that case a different Lagrange multiplier
+constraint is advocated (see LS_NO_SLIP, for example). Two integer inputs together
+with a sideset ID integer are required for this boundary condition:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LAGRANGE_NO_SLIP</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong> denotes
+node set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (node set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Element block ID of solid phase from the EXODUS II
+database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element block ID of liquid phase from the EXODUS II
+database.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LAGRANGE_NO_SLIP</span> <span class="n">SS</span> <span class="mi">2</span> <span class="mi">1</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<p>In this case the kinematic condition (viz. a velocity match of fluid and solid at the
+interface) is applied to the interface imprinted by sideset 2. That side set is imprinted
+on the background fluid mesh. The solid material block ID is 1 in this case and the
+background fluid material ID is 2.</p>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>In this work, the governing equations consist of a fluid momentum balance:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/188_goma_physics.png"><img alt="../../_images/188_goma_physics.png" src="../../_images/188_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>a mass balance:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/189_goma_physics.png"><img alt="../../_images/189_goma_physics.png" src="../../_images/189_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and a solid momentum balance:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/190_goma_physics.png"><img alt="../../_images/190_goma_physics.png" src="../../_images/190_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The kinematic constraint at the fluid-solid interface is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/191_goma_physics.png"><img alt="../../_images/191_goma_physics.png" src="../../_images/191_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and the level set function is evaluated at each fluid mesh node by:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/192_goma_physics.png"><img alt="../../_images/192_goma_physics.png" src="../../_images/192_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The first four equations are written in a Galerkin/Finite form, with <span class="math notranslate nohighlight">\(\phi_i\)</span> representing the
+weighting functions at node <em>i</em>. The first three equations are enforced at all nodes <em>i</em> that
+contain the appropriate degrees of freedom (viz. solid or fluid dofs). The fourth
+equation applies at the solid-liquid interface. <span class="math notranslate nohighlight">\(\rho_f\)</span> and <span class="math notranslate nohighlight">\(\rho_s\)</span> are the fluid and solid material
+densities, respectively, <span class="math notranslate nohighlight">\(\underline{v}\)</span> is the fluid velocity, <span class="math notranslate nohighlight">\(\underline{F}\)</span> represents any body forces such as
+gravity, <span class="math notranslate nohighlight">\(\tau\)</span> is the fluid stress tensor, <span class="math notranslate nohighlight">\(\underline{\gamma}\)</span> is the Lagrange multiplier vector unknown, <span class="math notranslate nohighlight">\(\underline{\chi}\)</span> is the
+solid displacement vector unknown, <span class="math notranslate nohighlight">\(\sigma\)</span> is the solid stress tensor, <em>f</em> is the level set
+unknown, <span class="math notranslate nohighlight">\(\Theta\)</span> is a step function which is -1 for points within the region occupied by the
+solid and +1 outside this region, <span class="math notranslate nohighlight">\(\underline{x_i}\)</span> and <span class="math notranslate nohighlight">\(\underline{x_s}\)</span> are the position vectors of a fluid node and of
+the closest point to it on the solid boundary, respectively, <em>V</em> is the fluid volume domain,
+<em>S</em> is the solid volume domain, and <span class="math notranslate nohighlight">\(\Gamma\)</span> is the solid boundary (interface) surface domain.</p>
+<p>Noteworthy is that this boundary condition applies the second-to-last “kinematic”
+constraint.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>GT-026.3: Goma’s Overset Mesh Capability. Randy Schunk.</p>
+</section>
+</section>
+<section id="overset-fluid-solid-baaijens-fluid-solid">
+<h2><strong>OVERSET_FLUID_SOLID/BAAIJENS_FLUID_SOLID</strong><a class="headerlink" href="#overset-fluid-solid-baaijens-fluid-solid" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">BAAIJENS_FLUID_SOLID</span> <span class="n">PF</span> <span class="o">&lt;</span><span class="n">pf_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer2</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p><strong>(EMBEDDED_SURF/R_MOMENTUM1)</strong></p>
+<p>This boundary condition is used to apply a traction to the fluid that comes from a solid
+while using <em>Goma’s</em> overset grid capability. The condition is used when the complete
+fluid-structure interaction problem is being solved, viz. stresses between fluid and solid
+are both accommodated as is the dynamics of the structure and fluid. The condition is
+applied to the fluid phase along a zero-level-set contour, hence the PF BC ID type. In
+another mode of usage, Goma allows for a structure to be moved through a fluid under
+prescribed kinematics, and in that case this condition is still applied as a solid traction
+to the fluid. The value of that traction is dictated by the Lagrange multiplier kinematic
+constraint (cf. LANGRANGE_NO_SLIP BC and LS_NO_SLIP BC). Note that the
+condition is applied to a boundary in the fluid defined by a phase-field function (see
+<em>phase1</em> equation type). . Two integer inputs together with a sideset ID integer are
+required for this boundary condition:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 74%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>BAAIJENS_FLUID_SOLD</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>PF</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>PF</strong> denotes
+a surface defined by a phase function (level-set).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;pf_id&gt;</p></td>
+<td><p>The boundary flag identifier basically sets the number of the
+phase field function to which this condition applies. For
+now you must set this to 1, as this phase-field is hardwired
+to handle the imprinted fluid solid boundary.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Element block ID of solid phase from the EXODUS II
+database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element block ID of liquid phase from the EXODUS II
+database.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The peculiar name was derived from a paper by Frank Baaijens, from which
+Goma’s formulation was generated. We are in the process of changing that
+name to OVERSET_FLUID_SOLID.</p>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">BAAIJENS_FLUID_SOLID</span> <span class="n">PF</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_NO_SLIP</span> <span class="n">PF</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<p>This condition set applies a fluid traction condition to a surface defined by phase field
+1, which is slaved to a side set that is set in the phase function slave surface capability.
+(see Phase Function Initialization Method).</p>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>See discussion on LANGRANGE_NO_SLIP. This condition applies the fluid traction
+boundary term on the fluid momentum equation.</p>
+</section>
+<section id="id4">
+<h3><strong>References</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>GT-026.3</p>
+</section>
+</section>
+<section id="overset-solid-fluid-baaijens-solid-fluid">
+<h2><strong>OVERSET_SOLID_FLUID/BAAIJENS_SOLID_FLUID</strong><a class="headerlink" href="#overset-solid-fluid-baaijens-solid-fluid" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">OVERSET_SOLID_FLUID</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p><strong>(CONTACT_SURF/ MESH)</strong></p>
+<p>This boundary condition is used to apply a traction to a solid that comes from the fluid
+while using <em>Goma’s</em> overset grid capability. The condition is used when the complete
+fluid-structure interaction problem is being solved, viz. stresses between fluid and solid
+are both accommodated as is the dynamics of the structure and fluid. The condition is
+applied to the solid phase along a side set that defines the fluid/solid interface. Two
+integer inputs together with a sideset ID integer are required for this boundary
+condition:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 72%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>BAAIJENS_SOLID_FLUID</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;ss_id&gt;</p></td>
+<td><p>The boundary flag identifier that sets the side set number.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Element block ID of solid phase from the EXODUS II
+database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element block ID of liquid phase from the EXODUS II
+database.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The peculiar name was derived from a paper by Frank Baaijens, from which
+Goma’s formulation was generated. We are in the process of changing that
+name to OVERSET_SOLID_FLUID.</p>
+</section>
+<section id="id6">
+<h3><strong>Examples</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card set:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">BAAIJENS_SOLID_FLUID</span> <span class="n">SS</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">BAAIJENS_FLUID_SOLID</span> <span class="n">PF</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LAGRANGE_NO_SLIP</span> <span class="n">SS</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>Here, the BAAIJENS_SOLID_FLUID cared applies a boundary fluid traction to a
+solid phase defined by side set 1. In this case the solid phase material ID is 2 and the
+fluid phase 1.</p>
+</section>
+<section id="id7">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>See discussion on LAGRANGE_NO_SLIP. Basically, this condition results in a
+boundary traction set by the Lagrange multiplier constraint to be applied to the solid
+momentum equation (note the weak term that appears on that equation).</p>
+</section>
+<section id="id8">
+<h3><strong>References</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>GT-026.3</p>
+</section>
+</section>
+<section id="f1-f2-f3-f4-f5">
+<h2><strong>F1 F2 F3 F4 F5</strong><a class="headerlink" href="#f1-f2-f3-f4-f5" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="p">{</span><span class="n">F1</span> <span class="o">|</span> <span class="n">F2</span> <span class="o">|</span> <span class="n">F3</span> <span class="o">|</span> <span class="n">F4</span> <span class="o">|</span> <span class="n">F5</span><span class="p">}</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id9">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p><strong>(DC/R_PHASE)</strong></p>
+<p>This boundary condition format is used to set a constant phase function field values at
+node sets. Please see “phase#” equation types for a description of the variables. Each
+such specification (for each field being used) is made on a separate input card. These
+boundary conditions must be applied to node sets. Definitions of the input parameters
+are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 32%" />
+<col style="width: 68%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>{F1 | F2 | F3 | F4 | F5 }</strong></p></td>
+<td><p>Two-character boundary condition name (&lt;bc_name&gt;)
+that defines which phase field variable is being set. There
+are a maximum of five addtional level-set/phase fields.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>NS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong> denotes
+node set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (node set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>Value at which the phase field unknown will be fixed on this
+node set.</p></td>
+</tr>
+<tr class="row-odd"><td><p>[float2]</p></td>
+<td><p>An optional parameter (that serves as a flag to the code for a
+Dirichlet boundary condition). If a value is present, and is
+not -1.0, the condition is applied as a residual equation.
+Otherwise, it is a “hard set” condition and is eliminated
+from the matrix. <em>The residual method must be used when
+this Dirichlet boundary condition is used as a parameter in
+automatic continuation sequences</em>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id10">
+<h3><strong>Examples</strong><a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card which applies an phase field boundary condition to the
+nodes in node set 100, specifically an phase field-3 value of 1.0.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">F3</span> <span class="n">NS</span> <span class="mi">100</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id11">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>This boundary condition finds most of its use in the Phase Function interface tracking
+algorithm where it is used to fix the value of the color function at an inlet or outlet
+boundary. The phase function fields were put in to supplement Goma’s base level set
+capability to provide the ability to model multiple (more than two) materials. We don’t
+anticipate that these boundary conditions will be used much. Nonetheless, this
+condition allows Dirichlet conditions to be applied to each of the five additional level
+set fields.</p>
+</section>
+<section id="id12">
+<h3><strong>References</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>GT-026.3</p>
+</section>
+</section>
+<section id="pf-capillary">
+<h2><strong>PF_CAPILLARY</strong><a class="headerlink" href="#pf-capillary" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">PF_CAPILLARY</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id13">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition applies an “embedded” surface tension source term when
+solving capillary hydrodynamics problems with phase function level set interface
+tracking. Note that its counterpart for the base level set field is LS_CAPILLARY, and
+this boundary condition is applied the same way to other level-set fields defined by the
+Phase Function cards. It can be used with only subgrid integration. The surface
+tension value used in this boundary condition is obtained from the Surface Tension
+material parameter defined in the mat file. Note that each phase-function field requires
+a separate PF_CAPILLARY boundary condition.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 80%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>PF_CAPILLARY</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>PF</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter that is used to specify to which phase
+function field that the boundary condition is to be applied.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>Not currently used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>Not currently used.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>Not currently used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id14">
+<h3><strong>Examples</strong><a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">PF_CAPILLARY</span> <span class="n">PF</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="id15">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p>Surface tension forces at a level set (phase function) representation of an interfacial
+boundary are applied solely via this boundary condition. An additional divergence of
+stress tensor term <span class="math notranslate nohighlight">\(\Delta\)</span> ⋅
+<span class="math notranslate nohighlight">\(T_{cap}\)</span> is added to the fluid momentum equation. The form of this
+tensor is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/193_goma_physics.png"><img alt="../../_images/193_goma_physics.png" src="../../_images/193_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>s</em> is the (isotropic) surface tension, <em>I</em> is the identity tensor, <em>n</em> is the vector normal
+to the interface and <span class="math notranslate nohighlight">\(\zeta_a\)</span> ( <span class="math notranslate nohighlight">\(\phi\)</span> ) is the smoothed Dirac delta function. The surface tension
+value used in this expression is obtained from the Surface Tension card found in the
+material file.</p>
+<p>The actual implementation in Goma integrates the divergence term by parts so the
+expression that is added to the weak form of the momentum equation is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/194_goma_physics.png"><img alt="../../_images/194_goma_physics.png" src="../../_images/194_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This fact introduces the issue of integration error into the problem. As obvious above,
+this source term involves the non-linear Dirac delta function factor. Conventional
+numerical integration methods often do not offer adequate accuracy in evaluating this
+integral, especially if if the interface width is a fraction of the average element size.
+This has led to introduction the level-set-specific integration methods: subelement
+integration and subgrid integration. In the latter case, more integration points are
+clustered around the interface (in essence) to improve accuracy. The integer parameter
+on the card should be set to zero to signify that the surface tension forces are distributed
+in equal measure on both sides of the interfacial curve.</p>
+<p>In the subelement integration case, however, an actual subelement mesh is place on
+each of the interface-containing elements which is made to conform to the interface
+curve. That is, the interface curve itself is covered by these subelement boundaries.
+This allows the volume integral to be collapsed into a line integral and the line integral
+evaluated along the subelement boundaries. This, however, introduces the problem of
+identifying which side of the element the surface tension forces should actually be
+applied to. Applying them to both simultaneously while either result in a cancellation
+or a doubling of the surface tension effect. For these cases, the integer parameter on
+this card is set to a -1 or a +1 to signify that the surface tension forces are applied to the
+negative or positive side of the interface curve, respectively.</p>
+</section>
+<section id="id16">
+<h3><strong>References</strong><a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

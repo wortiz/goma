@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Current Source &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Current Source</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/source_terms/current_source.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="current-source">
+<h1><strong>Current Source</strong><a class="headerlink" href="#current-source" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Current</span> <span class="n">Source</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">optional</span> <span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">E</span><span class="o">/</span><span class="n">M</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card is used to specify the model for the source term on the voltage potential
+equation. Values for the permissible {model_names} and the associated &lt;optional
+integer&gt; and &lt;floatlist&gt; parameters are given below.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the source term on the voltage equation having permissible
+values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>CONSTANT</strong></p></li>
+<li><p><strong>USER</strong></p></li>
+<li><p><strong>BUTLER_VOLMER</strong></p></li>
+<li><p><strong>ELECTRODE_KINETICS</strong></p></li>
+<li><p><strong>FICKIAN_CHARGED</strong></p></li>
+<li><p><strong>NET_CHARGE</strong></p></li>
+<li><p><strong>STEFAN_MAXWELL_CHARGED</strong></p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p>&lt;optional integer&gt;</p></td>
+<td><p>This is required for the <strong>BUTLER_VOLMER</strong> model only.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float_list&gt;</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}. Note that not all models have a
+&lt;float_list&gt;.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Source-term model choices and their parameters are discussed below. WARNING:
+make sure the equation term multipliers for the source terms are set to unity (see the
+Equation Cards segment in the previous chapter).</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>For the <strong>CONSTANT</strong> current source term, there is a single input parameter
+corresponding to the current density.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Current density [E/M]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>USER</strong> &lt;float_list&gt;</p></td>
+<td><p>For a user-defined model, the set of parameters specified in the &lt;floatlist&gt; are
+defined in file user_mp.c in the function usr_current_source.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>BUTLER_VOLMER</strong>
+&lt;integer&gt; &lt;float1&gt;
+&lt;float2&gt; &lt;float3&gt; &lt;float4&gt;
+&lt;float5&gt; &lt;float6&gt; &lt;float7&gt;
+&lt;float8&gt;</p></td>
+<td><p>This is the homogeneous current source or sink term (in units of amphere per unit
+volume, e.g. A/cm3) as described by the Butler-Volmer kinetic model (see the Theory
+section below).One integer and 8 flotas are required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - Index of the species involved in the electrochemical reaction (here,
+we assume that only a single species is involved).</p></li>
+<li><p>&lt;float1&gt; - Stoichiometric coefficient, s.</p></li>
+<li><p>&lt;float2&gt; - Product of interfacial area per unit volume by exchange current
+density, ai0, in units of A/cm3.</p></li>
+<li><p>&lt;float3&gt; - Reaction order, β.</p></li>
+<li><p>&lt;float4&gt; - Reference species concentration, cref, in units of moles/cm3.</p></li>
+<li><p>&lt;float5&gt; - Anodic transfer coefficient, αa.</p></li>
+<li><p>&lt;float6&gt; - Cathodic transfer coefficient, αc.</p></li>
+<li><p>&lt;float7&gt; - Temperature, T, in unit of K.</p></li>
+<li><p>&lt;float8&gt; - Open-circuit potential, U0, in unit of V.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ELECTRODE_KINETICS</strong></p></td>
+<td><p>This is a toggle, turning the model on; no parameters are required.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>FICKIAN_CHARGED</strong></p></td>
+<td><p>This is a toggle, turning the model on; no parameters are required.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>NET_CHARGE</strong></p></td>
+<td><p>This is a toggle, turning the model on; no parameters are required.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>STEFAN_MAXWELL_CHARGED</strong></p></td>
+<td><p>This is a toggle, turning the model on; no parameters are required.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Sample card for the <strong>CONSTANT</strong> model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Current</span> <span class="n">Source</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.50</span>
+</pre></div>
+</div>
+<p>Sample card for the <strong>BUTLER_VOLMER</strong> model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Current</span> <span class="n">Source</span> <span class="o">=</span> <span class="n">BUTLER_VOLMER</span> <span class="mi">0</span> <span class="mf">1.</span> <span class="mf">1000.</span> <span class="mf">0.5</span> <span class="mf">4.e-5</span> <span class="mf">1.</span> <span class="mf">1.</span> <span class="mf">353.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The <strong>CONSTANT</strong> and <strong>USER</strong> models are those standardly available in <em>Goma</em>.</p>
+<p>In the <strong>BUTLER_VOLMER</strong> model the current source or sink due to a homogeneuous
+electrochemical reaction involving a single species (e.g., the hydrogen oxidation and
+oxygen reduction reactions in a hydrogen-feuled polymer-electrolyte-membrane fuel
+cell) is computed using the Butler-Volmer kinetic model as described below in the
+Theory section.</p>
+<p>In the <strong>FICKIAN_CHARGED</strong> model, current source or sink for electrochemical
+processes involving dilute electrolyte solution and multiple species as in LIGA
+electrodeposition is computed.</p>
+<p>The <strong>NET_CHARGE</strong> model is used to compute the net charge or current source in a
+region where the concentrations of positively and negatively charged species differ as
+in the space layer of a atmospheric copper sulfidation process, in which the copper hole
+and vacancy concentrations differ such that charge separation occur (see the reference
+listed below in the Reference sub-section, Chen 2004, for further details).</p>
+<p>In the <strong>STEFAN_MAXWELL_CHARGED</strong> and <strong>ELECTRODE_KINETICS</strong>
+models, current sources or sinks for electrochemical processes involving concentrated
+electrolyte solutions and multiple species as in thermal batteries are computed.</p>
+<p>Further details of these models can be found in the SAND Reports and proceeding
+paper referenced below in the Theory sub-section.</p>
+</section>
+<section id="theory">
+<h2><strong>Theory</strong><a class="headerlink" href="#theory" title="Permalink to this headline"></a></h2>
+<p>BUTLER_VOLMER model: for the Butler-Volmer kinetic model with the exchange
+current density being dependent on a single species is given by (cf. Newman 1991,
+Chen et al. 2000, Chen and Hickner 2006):</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/484_goma_physics.png"><img alt="../../_images/484_goma_physics.png" src="../../_images/484_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where j is the homogeneous current source or sink in units of A/cm3; s is the
+stoichiometric coefficient with a sign convention such that j represents a source when s
+&gt; 0 and sink when s &lt; 0; ai0 denotes the product of interfacial area per unit volume by
+exchange current density, which has units of A/cm3; c and cref are, respectively, species
+and reference molar concentrations in units of moles/cm3; β is reaction order; αa and αc
+are, respetively, the anodic and cathodic transfer coefficients; F is the Faraday’s
+constant ( ≡ 96487 C/mole) and R is the universal gasl constant ( ≡ 8.314 J/mole-
+K); Φ1 and Φ2 are, respectively, the electrode and electrolyte potentials in unit of V;
+U0 is the open-circuit potential in unit of V; and T is temperature in unit of K.</p>
+<p>NET_CHARGE model: The net charge or current source in a region with charge
+separation (e.g., in a space charge layer in which hole and vacancy concentrations
+differ as in the atmospheric copper sulfidation corrosion process) is given by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/485_goma_physics.png"><img alt="../../_images/485_goma_physics.png" src="../../_images/485_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where j is the net charge or current source in units of A/cm3; zi is the charge number and
+ci is the molar concentration in units of moles/cm3, respectively, of species i; F is the
+Faraday’s constant ( ≡ 96487 C/mole); and n is the number of charge species present.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<ol class="upperalpha simple" start="10">
+<li><p>Newman, Electrochemical Systems, 2nd Edition, Prentice-Hall, NJ (1991).</p></li>
+</ol>
+<p>K. S. Chen, G. H. Evans, R. S. Larson, D. R. Noble, and W. G. Houf, “Final Report on
+LDRD Project: A Phenomenological Model for Multicomponent Transport with
+Simultaneous Electrochemical Reactions in Concentrated Solutions”, Sandia Report
+SAND2000-0207 (2000).</p>
+<p>K. S. Chen and G. H. Evans, “Multi-dimensional Multi-species Modeling of Transient
+Electrodeposition in LIGA Microfabrication”, Sandia Report SAND2004-2864 (2004).</p>
+<p>K. S. Chen, “Multi-dimensional Modeling of Atmospheric Copper-Sulfidation
+Corrosion on non-Planar Substrates”, Sandia Report SAND2004-5878 (2004).</p>
+<p>K. S. Chen and M. A. Hickner, “Modeling PEM fuel cell performance using the finiteelement
+method and a fully-coupled implicit solution scheme via Newton’s technique”,
+in ASME Proceedings of FUELCELL2006-97032 (2006).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

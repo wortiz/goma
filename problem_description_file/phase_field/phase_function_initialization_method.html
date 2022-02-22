@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase Function Initialization Method &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Phase Function Initialization Method</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/phase_field/phase_function_initialization_method.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="phase-function-initialization-method">
+<h1><strong>Phase Function Initialization Method</strong><a class="headerlink" href="#phase-function-initialization-method" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="p">{</span><span class="n">method_name</span><span class="p">}</span> <span class="p">{</span><span class="n">parameter</span> <span class="nb">list</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card specifies the means by which the phase functions are initialized. After the
+initial instance, subsequent instances of {model_name} {parameter_list} are used to
+describe initializations of phase fields 2 through 5. This card constructs from a
+representation of the starting interface shape, a value for the distance function at every
+node in the mesh. The syntax of the card is as follows:</p>
+<dl class="simple">
+<dt>{method_name}</dt><dd><p>A character string which identifies the initialization option desired.
+Choices for this string are: <strong>Projection, Exodus, Nodeset, Surfaces,
+SM_object.</strong></p>
+</dd>
+<dt>{parameter list}</dt><dd><p>This is a variable parameter list specific to each option. The nature of it
+for each method is detailed in the syntax descriptions below.</p>
+</dd>
+</dl>
+<p>Below are the exact syntax used for each initialization method, a brief description of
+the method and a specification of any additional required parameters.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 44%" />
+<col style="width: 56%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>Projection</strong></p></td>
+<td><p>This method computes the initial phase function
+field by
+calling a user-specified routine which returns the
+signed
+distance function for a given point. It has no
+parameter
+list after its name.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Exodus</strong></p></td>
+<td><p>Using this card indicates that the initial phase
+function
+field is to be read from the exodus file specified
+earlier
+(see <em>FEM file</em> and <em>Initial Guess</em> cards for **
+read_exoII**
+option). This card has no parameter list after its
+name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Nodeset</strong> &lt;integer1&gt; <strong>EB</strong> &lt;integer2&gt;</p></td>
+<td><p>This method establishes the initial location of the
+interface as the boundary between two element blocks.
+The value &lt;integer1&gt; is the nodeset identification
+number for an internal nodeset defined to exist at
+the
+interface between the two element blocks. The
+character
+string <strong>EB</strong> is required. The integer &lt;integer2&gt; is
+the
+element block id number to which positive values of
+phase function function is going to be assigned.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Surfaces</strong> &lt;integer&gt;</p></td>
+<td><p>This card establishes the initial phase function
+function
+by referring to a set of primitive geometric
+objects. It is
+the easiest to use and the most general. The integer
+value &lt;integer&gt; is the number of surface objects
+that are
+used to construct the initial interface. This number
+of
+<strong>SURF</strong> object cards must follow this card. This is
+the
+syntax of the <strong>SURF</strong> object card:</p>
+<p><strong>SURF</strong> = {object_name} {float list}</p>
+<p>{object_name}: a character string identifying the
+type of geometric object. Options are: <strong>PLANE,</strong>
+<strong>CIRCLE, SPHERE,</strong> SS, <strong>USER.</strong></p>
+<p>{float list}: geometric parameters associated with
+each object as float values.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The following is the syntax and description for each geometric
+object option, i.e., the “{object_name} {float list}” part of <strong>SURF</strong></p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 55%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>PLANE</strong> &lt;nx. &lt;ny&gt; &lt;nz&gt; &lt;d&gt;</p></td>
+<td><p>This card constructs a planar interface surface.The
+float
+values &lt;nx&gt;, &lt;ny&gt;, &lt;nz&gt; define a vector normal to
+this
+plane with the restriction that the sign of the
+vector must
+be such that it points from the negative side of the
+interface to the positive side of the interface.
+The
+float value &lt;d&gt; effectively represents the distance
+of the
+plane from the origin. Its value must be set,
+however, so
+that the dot product of any position vector to a
+point on
+the desired plane and the vector (nx,ny,nz) must be
+equal to &lt;d&gt; (it is a property of planes that this
+number
+is independent of the point on the plane that is
+chosen).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>CIRCLE</strong> &lt;cx&gt; &lt;cy&gt; &lt;radius&gt;</p></td>
+<td><p>This card constructs a circular interface surface
+in a
+two-dimensional domain. The float values &lt;cx&gt; &lt;cy&gt;
+identify the coordinates of the center of the
+circle. The
+float value &lt;radius&gt; establishes the radius of the
+curve.
+By definition, points interior to the circle are
+assigned
+negative phase function function values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>SPHERE</strong> &lt;cx&gt; &lt;cy&gt; &lt;cz&gt; &lt;radius&gt;</p></td>
+<td><p>This card constructs a spherical interface surface
+in a
+three-dimensional domain. The float values &lt;cx&gt; &lt;cy&gt;
+&lt;cz&gt; identify the coordinates of the center of the
+circle.
+The float value &lt;radius&gt; establishes the radius of
+the
+sphere. By definition, points interior to the
+sphere are
+assigned negative phase function function values.</p></td>
+</tr>
+<tr class="row-even"><td><p>SS {ss_id}</p></td>
+<td><p>This card uses an existing sideset in the problem
+as a
+defined geometric object for construction of an
+interface. The parameter &lt;ss_id&gt; identifies this
+sideset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>USER</strong> {user-defined float list}</p></td>
+<td><p>This card indicates the user has defined an object
+function using the supplied parameter float list
+that
+returns a signed distance value when supplied with
+the
+coordinates of a point in space. This object
+function
+should appear in the function call <em>user_init_object
+* in the file **user_pre.c.*</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SM_object</strong> {object_type} {object_name}</p></td>
+<td><p>This card allows the user to initialize the phase
+function
+location by using a piece of solid model geometry.
+The
+solid model object_type can be either <strong>FACE</strong> or **
+BODY.**
+A 2D initialization uses the boundary of the
+specified
+FACE (or surface) as the 0 phase function. A 3D
+initialization uses the boundary of the specified
+BODY (or volume) as the 0 phase function.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Three examples of initialization methods for a single phase function are provide below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Nodeset</span> <span class="mi">20</span> <span class="n">EB</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Surfaces</span> <span class="mi">3</span>
+        <span class="n">SURF</span> <span class="o">=</span> <span class="n">PLANE</span> <span class="o">-</span><span class="mf">1.</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="o">-</span><span class="mf">3.</span>
+        <span class="n">SURF</span> <span class="o">=</span> <span class="n">CIRCLE</span> <span class="o">-</span><span class="mi">2</span> <span class="mi">0</span> <span class="mi">1</span>
+        <span class="n">SURF</span> <span class="o">=</span> <span class="n">CIRCLE</span> <span class="o">-</span><span class="mi">3</span> <span class="mi">0</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">SM_object</span> <span class="n">BODY</span> <span class="n">my_blob</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Please consult Level Set Initialization Method card for discussion.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

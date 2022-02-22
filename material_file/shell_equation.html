@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shell Equation Properties and Models &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Moment Properties" href="moments.html" />
+    <link rel="prev" title="Source Terms" href="source_terms.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../material_files.html">Material Files</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="physical_properties.html">Physical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mechanical_and_constitutive.html">Mechanical Properties and Constitutive Equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="thermal_properties.html">Thermal Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="electrical.html">Electrical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="microstructure.html">Microstructure Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="species.html">Species Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source_terms.html">Source Terms</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Shell Equation Properties and Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#upper-height-function-constants"><strong>Upper Height Function Constants</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#lower-height-function-constants"><strong>Lower Height Function Constants</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#upper-velocity-function-constants"><strong>Upper Velocity Function Constants</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id4"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#lower-velocity-function-constants"><strong>Lower Velocity Function Constants</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id7"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id9"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#upper-contact-angle"><strong>Upper Contact Angle</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id10"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id11"><strong>Examples</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#lower-contact-angle"><strong>Lower Contact Angle</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id12"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id13"><strong>Examples</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#lubrication-fluid-source"><strong>Lubrication Fluid Source</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id14"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id15"><strong>Examples</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#lubrication-momentum-source"><strong>Lubrication Momentum Source</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id16"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id17"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id18"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#turbulent-lubrication-mode"><strong>Turbulent Lubrication Mode</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id19"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id20"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id21"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id22"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#shell-energy-source-qconv"><strong>Shell Energy Source QCONV</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id23"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id24"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id25"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#shell-energy-source-sliding-contact"><strong>Shell Energy Source Sliding Contact</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id26"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id27"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id28"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#shell-energy-source-viscous-dissipation"><strong>Shell Energy Source Viscous Dissipation</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id29"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id30"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id31"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#shell-energy-source-external"><strong>Shell Energy Source External</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id32"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id33"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id34"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id35"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#fsi-deformation-model"><strong>FSI Deformation Model</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id36"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id37"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id38"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id39"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#film-evaporation-model"><strong>Film Evaporation Model</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id40"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id41"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id42"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#disjoining-pressure-model"><strong>Disjoining Pressure Model</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id43"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id44"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id45"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id46"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#diffusion-coefficient-model"><strong>Diffusion Coefficient Model</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id47"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id48"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id49"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-radius"><strong>Porous Shell Radius</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id50"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id51"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id52"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-height"><strong>Porous Shell Height</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id53"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id54"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id55"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-closed-porosity"><strong>Porous Shell Closed Porosity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id56"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id57"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id58"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-closed-gas-pressure"><strong>Porous Shell Closed Gas Pressure</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id59"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id60"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id61"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-atmospheric-pressure"><strong>Porous Shell Atmospheric Pressure</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id62"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id63"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id64"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-reference-pressure"><strong>Porous Shell Reference Pressure</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id65"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id66"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id67"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-cross-permeability"><strong>Porous Shell Cross Permeability</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id68"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id69"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id70"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-gas-diffusivity"><strong>Porous Shell Gas Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id71"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id72"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id73"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-gas-temperature-constant"><strong>Porous Shell Gas Temperature Constant</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id74"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id75"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id76"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-shell-henrys-law-constant"><strong>Porous Shell Henrys Law Constant</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id77"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id78"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id79"><strong>References</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="moments.html">Moment Properties</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../material_files.html">Material Files</a> &raquo;</li>
+      <li>Shell Equation Properties and Models</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/material_file/shell_equation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="shell-equation-properties-and-models">
+<h1>Shell Equation Properties and Models<a class="headerlink" href="#shell-equation-properties-and-models" title="Permalink to this headline"></a></h1>
+<p>In this section we list all “material-region” specific models and properties associated with
+GOMA’s extensive shell equation capability. Currently we have specialized shell equations for
+Reynolds lubrication flow (lubp), open Reynolds film flow (shell_film_H), energy (shell_energy,
+convection and diffusion, coupled with lubrication), thin porous media (closed cell and open cell),
+melting and phase change and more. While many of these cards are actual material properties,
+most are geometry and kinematic related. The most appropriate place for these cards are region/
+material files because they are actually boundary conditions and related parameters which arise
+from the reduction of order (integration through the thin film). For more information, please see
+the shell-equation tutorial (GT-036).</p>
+<section id="upper-height-function-constants">
+<h2><strong>Upper Height Function Constants</strong><a class="headerlink" href="#upper-height-function-constants" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Upper</span> <span class="n">Height</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This card takes the specification of the upper-height function for the confined channel
+lubrication capability, or the lub_p equation. This function specifies the height of the
+channel versus distance and time. Currently three models for {model_name} are
+permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT_SPEED</strong></p></td>
+<td><p>This model invokes a squeeze/separation velocity uniformly across the entire material
+region, viz. the two walls are brought together/apart at a constant rate. This option
+requires two floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; the separation velocity (rate) in units of length/time</p></li>
+<li><p>&lt;float2&gt; the initial wall separation in units of length</p></li>
+<li><p>&lt;float3&gt; An OPTIONAL parameter which scales the addition of an external field
+called “HEIGHT” which is read in using the External Field or External Pixel Field
+capabilities. If this field is present, the value of it is added to the height
+calculated with this model.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ROLL_ON</strong></p></td>
+<td><p>This model invokes a squeeze/separation velocity in a hinging-motion along one
+boundary. The model is best explained with the figure in the technical discussion
+section. The equation for the gap h as a function of time and the input parameters
+(floats) is as follows:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is x0 in units of length</p></li>
+<li><p>&lt;float2&gt; is hlow in units of length</p></li>
+<li><p>&lt;float3&gt; is h Δ, in units of length</p></li>
+<li><p>&lt;float4&gt; is the verticle separation velocity (if negative then squeeze velocity)
+in units of length/time</p></li>
+<li><p>&lt;float5&gt; is the length of the plate, L.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/486_goma_physics.png"><img alt="../_images/486_goma_physics.png" src="../_images/486_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>ROLL</strong></p></td>
+<td><p>This model is used for a roll coating geometry. This option requires 8 floats:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; x-coordinate of origin, L.</p></li>
+<li><p>&lt;float2&gt; y-coordinate of orgin, L.</p></li>
+<li><p>&lt;float3&gt; z-coordinate of origin, L.</p></li>
+<li><p>&lt;float4&gt; Direction angle 1 of rotation axis</p></li>
+<li><p>&lt;float5&gt; Direction angle 2of rotation axis</p></li>
+<li><p>&lt;float6&gt; Direction angle 3of rotation axis</p></li>
+<li><p>&lt;float7&gt; rotation speed L/t.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>FLAT_GRAD_FLAT</strong></p></td>
+<td><p>This model used two arctan functions to mimic a flat region, then a region of
+constant slope, then another flat region. The transitions between the two regions are
+curved by the arctan function. This currently on works for changes in the x
+direction. This option requires five floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; x location of the first transition (flat to grad)</p></li>
+<li><p>&lt;float2&gt; height of the first flat region</p></li>
+<li><p>&lt;float3&gt; x location of the second transition (grad to flat)</p></li>
+<li><p>&lt;float4&gt; height of the second flat region</p></li>
+<li><p>&lt;float5&gt; parameter controlling the curvature of the transitions</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>POLY_TIME</strong></p></td>
+<td><p>This time applies a time-dependent lubrication height in the form of a polynomial. It
+can take as many arguments as GOMA can handle, and the resulting height function is</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;floati&gt; value of Ci</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/487_goma_physics.png"><img alt="../_images/487_goma_physics.png" src="../_images/487_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>JOURNAL</strong></p></td>
+<td><p>This model simulates a journal bearing. It is intended to be run on a cylindrical
+shell mesh aligned along the z axis and centered at (0,0). It could be extended to be
+more flexible, but this is all it is currently capable of. The height is defined by</p>
+<p>h(θ ) = C(1+ε cos(0))</p>
+<p>Where C is the mean lubrication height and is the eccentricity of the two cylinders,
+with the smallest gap in the –y direction.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; C</p></li>
+<li><p>&lt;float2&gt; ε</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXTERNAL_FIELD</strong></p></td>
+<td><p>Not recognized. Oddly, this model is invoked with the extra optional float on the
+CONSTANT_SPEED option.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">HEIGHT</span> <span class="n">Q1</span> <span class="n">name</span><span class="o">.</span><span class="n">exoII</span> <span class="p">(</span><span class="n">see</span> <span class="n">this</span> <span class="n">card</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Upper</span> <span class="n">Height</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="n">CONSTANT_SPEED</span> <span class="p">{</span><span class="n">v_sq</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.001</span><span class="p">}</span> <span class="p">{</span><span class="n">h_i</span><span class="o">=</span><span class="mf">0.001</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>This results in an upper wall speed of 0.001 in a direction which reduces the gap, which
+is initial 0.001.</p>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>The material function model ROLL_ON prescribes the squeezing/separation motion of
+two non-parallel flate plates about a hinge point, as shown in the figure below.</p>
+</section>
+</section>
+<section id="lower-height-function-constants">
+<h2><strong>Lower Height Function Constants</strong><a class="headerlink" href="#lower-height-function-constants" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lower</span> <span class="n">Height</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>This card takes the specification of the lower-height function for the confined channel
+lubrication capability, or the lub_p equation. This function specifies the height of the
+channel versus distance and time. Currently three models for {model_name} are
+permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT_SPEED</strong></p></td>
+<td><p>This model invokes a squeeze/separation velocity uniformly across the entire material
+region, viz. the two walls are brought together/apart at a constant rate. This option
+requires two floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; the separation velocity (rate) in units of length/time</p></li>
+<li><p>&lt;float2&gt; the initial wall separation in units of length</p></li>
+<li><p>&lt;float3&gt; An OPTIONAL parameter which scales the addition of an external field
+called “HEIGHT” which is read in using the External Field or External Pixel Field
+capabilities. If this field is present, the value of it is added to the height
+calculated with this model.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ROLL_ON</strong></p></td>
+<td><p>This model invokes a squeeze/separation velocity in a hinging-motion along one
+boundary. The model is best explained with the figure in the technical discussion
+section. The equation for the gap h as a function of time and the input parameters
+(floats) is as follows:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is x0 in units of length</p></li>
+<li><p>&lt;float2&gt; is hlow in units of length</p></li>
+<li><p>&lt;float3&gt; is h Δ, in units of length</p></li>
+<li><p>&lt;float4&gt; is the verticle separation velocity (if negative then squeeze velocity)
+in units of length/time</p></li>
+<li><p>&lt;float5&gt; is the length of the plate, L.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/488_goma_physics.png"><img alt="../_images/488_goma_physics.png" src="../_images/488_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>ROLL</strong></p></td>
+<td><p>This model is used for a roll coating geometry. This option requires 8 floats:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; x-coordinate of origin, L.</p></li>
+<li><p>&lt;float2&gt; y-coordinate of orgin, L.</p></li>
+<li><p>&lt;float3&gt; z-coordinate of origin, L.</p></li>
+<li><p>&lt;float4&gt; Direction angle 1 of rotation axis</p></li>
+<li><p>&lt;float5&gt; Direction angle 2 of rotation axis</p></li>
+<li><p>&lt;float6&gt; Direction angle 3 of rotation axis</p></li>
+<li><p>&lt;float7&gt; rotation speed L/t.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>TABLE</strong> &lt;integer1&gt;
+&lt;character_string1&gt;
+{LINEAR | BILINEAR}
+[integer2] [FILE = filenm]</p></td>
+<td><p>Please see discussion at the beginning of the material properties Chapter 5 for input
+description and options. Most likely <em>character_string1</em> will be <strong>LOWER_DISTANCE</strong>
+This option is good for inputing table geometry versus distance. Specifically, an
+arbitrary lower height function model is input as a function of the x-direction
+coordinate of the Lower Velocity Function model. This option in turn requires the use
+of SLIDER_POLY_TIME lower velocity function model. See example below.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lower</span> <span class="n">Height</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="n">CONSTANT_SPEED</span> <span class="p">{</span><span class="n">v_sq</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.001</span><span class="p">}</span> <span class="p">{</span><span class="n">h_i</span><span class="o">=</span><span class="mf">0.001</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>This results in an lower wall speed of 0.001 in a direction which reduces the gap, which
+is initial 0.001.</p>
+<p>In another example:</p>
+<p>Lower Height Function Constants = TABLE 2 LOWER_DISTANCE 0
+LINEAR FILE=shell.dat</p>
+<p>where shell.dat is a table with 2 columns, the first the position, the second the height.</p>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>The material function model ROLL_ON prescribes the squeezing/separation motion of
+two non-parallel flate plates about a hinge point, as shown in the figure below.</p>
+</section>
+</section>
+<section id="upper-velocity-function-constants">
+<h2><strong>Upper Velocity Function Constants</strong><a class="headerlink" href="#upper-velocity-function-constants" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Upper</span> <span class="n">Velocity</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id4">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>This card takes the specification of the upper-wall velocity function for the confined
+channel lubrication capability, or the lub_p equation. This function specifies the
+velocity of the upper channel wall as a function of time. Currently two models for
+{model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model invokes a squeeze/separation velocity uniformly across the entire material
+region, viz. the two walls are brought together/apart at a constant rate. This option
+requires two floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the velocity component in the x-direction. L/t.</p></li>
+<li><p>&lt;float2&gt; is the velocity component in the y-direction. L/t</p></li>
+<li><p>&lt;float3&gt; is the velocity component in the z-direction. L/t (NOTE: this is usually
+taken as zero as it is set in the Upper Wall Height Function model)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ROLL</strong></p></td>
+<td><p>This model invokes a wall velocity which corresponds to a rolling-motion. This model
+takes nine constants ???? :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; Roll radius, L.</p></li>
+<li><p>&lt;float2&gt; x-coordinate of axis origin, L.</p></li>
+<li><p>&lt;float3&gt; y-coordinate of axis orgin, L.</p></li>
+<li><p>&lt;float4&gt; z-coordinate of axis origin, L.</p></li>
+<li><p>&lt;float5&gt; Direction angle 1 of rotation axis</p></li>
+<li><p>&lt;float6&gt; Direction angle 2of rotation axis</p></li>
+<li><p>&lt;float7&gt; Direction angle 3of rotation axis</p></li>
+<li><p>&lt;float8&gt; Squeeze rate</p></li>
+<li><p>&lt;float9&gt; rotation rate</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>TANGENTIAL_ROTATE</strong></p></td>
+<td><p>his model allows a velocity that is always tangential to a shell surface, not
+necessarily aligned along the coordinate directions. It requires three
+specifications. First, a vector (v) that is always non-colinear to the normal vector
+of the shell must be specified. This is used to make unique tangent vectors. The last
+two specifications are the two tangential components to the velocity. The first
+velocity is applied in the direction of t1 = v×n. The second velocity is then applied
+in the t = t ×n  direction.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; vx</p></li>
+<li><p>&lt;float2&gt; vy</p></li>
+<li><p>&lt;float3&gt; vz</p></li>
+<li><p>&lt;float4&gt; velocity in the t1 direction</p></li>
+<li><p>&lt;float5&gt; velocity in the t2 direction</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>CIRCLE_MELT</strong></p></td>
+<td><p>Model which allows a converging or diverging height that is like a circle. Also works
+for melting.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - x-location of the circle center (circle is in x-y plane)</p></li>
+<li><p>&lt;float2&gt; - radius of circle</p></li>
+<li><p>&lt;float3&gt;- minimum height of circle</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id5">
+<h3><strong>Examples</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Upper</span> <span class="n">Velocity</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">v_x</span><span class="o">=</span> <span class="o">-</span><span class="mf">0.001</span><span class="p">}</span> <span class="p">{</span><span class="n">vy</span><span class="o">=</span><span class="mf">0.00</span><span class="p">}</span> <span class="p">{</span><span class="n">vz</span><span class="o">=</span><span class="mi">0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>This card results in an upper wall speed of -0.001 in the x-direction which is tangential
+to the substrate, thus generating a Couette component to the flow field.</p>
+</section>
+<section id="id6">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>For non-curved shell meshes, most of the time they are oriented with the x-, y-, or zplane.
+This card is aimed at applying a tangential motion to that plane, and so one of
+the three components is usually zero.</p>
+</section>
+</section>
+<section id="lower-velocity-function-constants">
+<h2><strong>Lower Velocity Function Constants</strong><a class="headerlink" href="#lower-velocity-function-constants" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lower</span> <span class="n">Velocity</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id7">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>This card takes the specification of the Lower-wall velocity function for the confined
+channel lubrication capability, or the lub_p equation. This function specifies the
+velocity of the Lower channel wall as a function of time. Currently two models for
+{model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model invokes a squeeze/separation velocity uniformly across the entire material
+region, viz. the two walls are brought together/apart at a constant rate. This option
+requires two floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the velocity component in the x-direction. L/t</p></li>
+<li><p>&lt;float2&gt; is the velocity component in the y-direction. L/t</p></li>
+<li><p>&lt;float3&gt; is the velocity component in the z-direction. L/t (NOTE: this is usually
+taken as zero as it is set in the Lower Wall Height Function model)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>SLIDER_POLY_TIME</strong></p></td>
+<td><p>This model implements a spatially-uniform velocity in the x-direction that is
+specified as a polynomial in time. The value of time may be scaled by a given scaling
+factor and the polynomial may have an unlimited number of terms.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the time scaling factor</p></li>
+<li><p>&lt;float2-N&gt; are the coefficients in front of the t^(i-2) term</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/490_goma_physics.png"><img alt="../_images/490_goma_physics.png" src="../_images/490_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>ROLL</strong></p></td>
+<td><p>This model invokes a wall velocity which corresponds to a rolling-motion. This model
+takes nine constants ???? :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; Roll radius, L.</p></li>
+<li><p>&lt;float2&gt; x-coordinate of axis origin, L.</p></li>
+<li><p>&lt;float3&gt; y-coordinate of axis orgin, L.</p></li>
+<li><p>&lt;float4&gt; z-coordinate of axis origin, L.</p></li>
+<li><p>&lt;float5&gt; Direction angle 1 of rotation axis</p></li>
+<li><p>&lt;float6&gt; Direction angle 2of rotation axis</p></li>
+<li><p>&lt;float7&gt; Direction angle 3of rotation axis</p></li>
+<li><p>&lt;float8&gt; Squeeze rate.</p></li>
+<li><p>&lt;float9&gt; rotation rate</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>TANGENTIAL_ROTATE</strong></p></td>
+<td><p>This model allows a unique specification of tangential motion in a lubrication shell
+element. Previous implementations allowed specification only in terms of coordinate
+direction, but this option can be used to rotate a cylinder. Five floats are required</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; x-comnponent of a vector tangential to the shell. This vector must never
+be normal to the shell. It is then projected onto the shell.</p></li>
+<li><p>&lt;float2&gt; y-comnponent of a vector tangential to the shell.</p></li>
+<li><p>&lt;float3&gt; z-comnponent of a vector tangential to the shell.</p></li>
+<li><p>&lt;float4&gt; U1, or scalar speed of wall velocity in a direction determined by the
+cross product ot the tangent vector and the normal vector to the shell. (L/t)</p></li>
+<li><p>&lt;float5&gt; U2 scalar speed component in direction normal to U1. (L/t)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id8">
+<h3><strong>Examples</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lower</span> <span class="n">Velocity</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">v_x</span><span class="o">=</span> <span class="o">-</span><span class="mf">0.001</span><span class="p">}</span> <span class="p">{</span><span class="n">vy</span><span class="o">=</span><span class="mf">0.00</span><span class="p">}</span> <span class="p">{</span><span class="n">vz</span><span class="o">=</span><span class="mi">0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>This card results in an Lower wall speed of -0.001 in the x-direction which is tangential
+to the substrate, thus generating a Couette component to the flow field.</p>
+</section>
+<section id="id9">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>For non-curved shell meshes, most of the time they are oriented with the x-, y-, or zplane.
+This card is aimed at applying a tangential motion to that plane, and so one of
+the three components is usually zero.</p>
+</section>
+</section>
+<section id="upper-contact-angle">
+<h2><strong>Upper Contact Angle</strong><a class="headerlink" href="#upper-contact-angle" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Upper</span> <span class="n">Contact</span> <span class="n">Angle</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id10">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>This card sets contact angle of the liquid phase on the upper-wall for the two-phase
+capability in the lub_p equation (viz. when using the level-set equation to model the
+motion of a meniscus in a thin gap, where the in-plan curvature is neglected. Currently
+one model {model_name} is permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model is used to set a constant contact able of the the free surface at the
+upper wall. Contact angle of less than 90 degrees is considered as nonwetting with
+respect to the heavier level-set phase. Only one floating point value is required.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the contact angle in degrees.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id11">
+<h3><strong>Examples</strong><a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Upper</span> <span class="n">Contact</span> <span class="n">Angle</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">180.</span>
+</pre></div>
+</div>
+<p>This card results in an upper wall contact able to 180 degrees, which is perfectly
+wetting. If the lower wall is given the same angle, then the capillary pressure jump will
+go as 2/h, where h is the gap.</p>
+</section>
+</section>
+<section id="lower-contact-angle">
+<h2><strong>Lower Contact Angle</strong><a class="headerlink" href="#lower-contact-angle" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lower</span> <span class="n">Contact</span> <span class="n">Angle</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id12">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>This card sets contact angle of the liquid phase on the lower-wall for the two-phase
+capability in the lub_p equation (viz. when using the level-set equation to model the
+motion of a meniscus in a thin gap, where the in-plan curvature is neglected. Currently
+one model {model_name} is permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model is used to set a constant contact able of the the free surface at the
+lower wall. Contact angle of less than 90 degrees is considered as nonwetting
+with respect to the heavier level-set phase. Only one floating point value is
+required.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the contact angle in degrees.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id13">
+<h3><strong>Examples</strong><a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lower</span> <span class="n">Contact</span> <span class="n">Angle</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">180.</span>
+</pre></div>
+</div>
+<p>This card results in an lower wall contact able to 180 degrees, which is perfectly
+wetting. If the lower wall is given the same angle, then the capillary pressure jump will
+go as 2/h, where h is the gap.</p>
+</section>
+</section>
+<section id="lubrication-fluid-source">
+<h2><strong>Lubrication Fluid Source</strong><a class="headerlink" href="#lubrication-fluid-source" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lubrication</span> <span class="n">Fluid</span> <span class="n">Source</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id14">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>This card sets a fluid mass source term in the lub_p equation. Can be used to specify
+inflow mass fluxes over the entire portion of the lubrication gap in which the lub_p
+equation is active (over the shell material). This flux might be the result of an injection
+of fluid, or even melting. Currently two models {model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model is used to set a constant fluid source in units of velocity. Only one
+floating point value is required.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the velocity of the fluid source.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>MELT</strong></p></td>
+<td><p>This model is used to set fluid source in units of Velocity which results from an
+analytical model of lubricated melt bearing flow due to Stiffler (1959). Three
+floating point values are required.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is load on the slider in units of pressure</p></li>
+<li><p>&lt;float2&gt; is the Stiffler delta factor. Unitless but depends on the aspect ratio.</p></li>
+<li><p>&lt;float3&gt; is the length of the slider in the direction of the motion.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id15">
+<h3><strong>Examples</strong><a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lubrication</span> <span class="n">Fluid</span> <span class="n">Source</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">180.</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="lubrication-momentum-source">
+<h2><strong>Lubrication Momentum Source</strong><a class="headerlink" href="#lubrication-momentum-source" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lubrication</span> <span class="n">Momentum</span> <span class="n">Source</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id16">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>This card sets a fluid “body force per unit volume” source term in the lub_p
+equation. This capability can be used to specify a force field over the entire shell area
+(over the shell material).. Currently two models {model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>THIS MODEL NOT IMPLEMENTED AS OF 11/11/2010. This model is used to set a constant
+fluid momentum source in units of force per unit volume. Only one floating point
+value is required.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the fluid momentum source in F/L^3.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>JXB</strong></p></td>
+<td><p>This model is used to set fluid momentum source in units of force per unit volume
+which comes from externally supplied current density J field and magnetic B fields.
+These fields are suppled with the external field capability in Goma in a component
+wise fashion. Please consult the technical discussion below.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is scale factor which may be used for nondimensionalization. Typically
+this is set to 1.0.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id17">
+<h3><strong>Examples</strong><a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lubrication</span> <span class="n">Momentum</span> <span class="n">Source</span> <span class="o">=</span> <span class="n">JXB</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+</section>
+<section id="id18">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>The two vector fields J, the current flux, and B, the magnetic induction, must be
+supplied to Goma in order to activate this option. At present, these fields must be
+supplied with the External Field cards, which provide the specific names of nodal
+variable fields in the EXODUS II files from which the fields are read. The three
+components of the J field must be called JX_REAL, JY_REAL, and JZ_REAL.
+Likewise the B field components must be called BX_REAL, BY_REAL, and
+BZ_REAL. These names are the default names coming from the electromagnetics code
+like Alegra. Because of the different coordinate convention when using cylindrical
+components, the fields have been made compatible with those arising from TORO II. It
+is the interface with TORO that also makes the Lorentz scaling (lsf) necessary so that
+the fixed set of units in TORO (MKS) can be adjusted to the user-selected units in
+Goma.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="turbulent-lubrication-mode">
+<h2><strong>Turbulent Lubrication Mode</strong><a class="headerlink" href="#turbulent-lubrication-mode" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Turbulent</span> <span class="n">Lubrication</span> <span class="n">Model</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id19">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id19" title="Permalink to this headline"></a></h3>
+<p>This card activates a turbulent model for viscosity in the lub_p equation. Currently
+one model {model_name} is permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>PRANDTL_MIXING</strong></p></td>
+<td><p>This model is used to determine the pre-multiplier on the molecular viscosity in the
+Reynolds lubrication equation. For confined, laminar flow, this multiplier is 12. For
+turbulent flow it is taken as K(Re), where Re is the local Reynolds number.
+Specifically, invoking a analytical approximation for K from Hirs (1973), we set k0
+according to the:</p>
+<p>Reynolds number Re= :ρh U μ</p>
+<p>For 0 &lt; Re &lt; 2000 K0=12 (Laminar case),</p>
+<p>Else 2000 &lt; Re &lt; 100000 K0 = 0.05Re 3/4</p>
+<p>Here the wall velocity is used to compute The Reynolds number, as this turbulence
+model is specific to turbulent Couette flow.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id20">
+<h3><strong>Examples</strong><a class="headerlink" href="#id20" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Turbulent</span> <span class="n">Lubrication</span> <span class="n">Model</span> <span class="o">=</span> <span class="n">PRANDTL_MIXING</span>
+</pre></div>
+</div>
+</section>
+<section id="id21">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id21" title="Permalink to this headline"></a></h3>
+<p>Several other models can be implemented in this instance. We chose this simple
+model which derives from Prandtl mixing length theory.</p>
+</section>
+<section id="id22">
+<h3><strong>References</strong><a class="headerlink" href="#id22" title="Permalink to this headline"></a></h3>
+<p>G.G. Hirs, “Bulk flow theory for turbulence in lubricant films”, Trans. ASME, ser. F,
+95, pp 137-146, 1973.</p>
+</section>
+</section>
+<section id="shell-energy-source-qconv">
+<h2><strong>Shell Energy Source QCONV</strong><a class="headerlink" href="#shell-energy-source-qconv" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shell</span> <span class="n">Energy</span> <span class="n">Source</span> <span class="n">QCONV</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id23">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id23" title="Permalink to this headline"></a></h3>
+<p>This card activates a heat source (or sink, as it were) in the shell_energy
+equation. The functional form of this source/sink is a lumped heat-transfer coefficient
+model, hence the QCONV in its name (see BC = QCONV card in main user manual).
+Currently two models {model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model invokes a simple constant heat-transfer coefficient and reference
+temperature, viz.</p>
+<p>q = H(T − Tref ). Commensurately there are two floats required:</p>
+<p>&lt;float1&gt; - Heat transfer coefficient in units of Energy/time/L2/deg T E.g. W/m2-K in
+MKS units.</p>
+<p>&lt;float2&gt; - Reference temperature.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>MELT_TURB</strong></p></td>
+<td><p>This model also invokes a lumped parameter model, but the heat-transfer coefficient
+depends on the flow strength (Reynolds number), viz.</p>
+<p>q = H(T − Tref ). Three floats are required:</p>
+<p>&lt;float1&gt; - Thermal conductivity in units of Energy time/L/deg (e.g. W/m/k).</p>
+<p>&lt;float2&gt; - Reference temperature.</p>
+<p>&lt;float3&gt; - Latent heat of melting (Energy/M, e.g. J/Kg). This quantity is required
+due to the cross use of this in the shell_deltah equation (viz. EQ =  shell_deltah).</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id24">
+<h3><strong>Examples</strong><a class="headerlink" href="#id24" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shell</span> <span class="n">Energy</span> <span class="n">Source</span> <span class="n">QCONV</span> <span class="o">=</span> <span class="n">MELT_TURB</span> <span class="p">{</span><span class="n">thermal_conductivity</span><span class="p">}</span> <span class="p">{</span><span class="n">Tref</span><span class="p">}</span> <span class="p">{</span><span class="n">latent_heat</span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id25">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id25" title="Permalink to this headline"></a></h3>
+<p>The MELT_TURB model warrants further discussion. The functional form of the heat
+transfer coefficient H is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/491_goma_physics.png"><img alt="../_images/491_goma_physics.png" src="../_images/491_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here cf is the coefficient of friction, which for now is taken as 8./Re.</p>
+</section>
+</section>
+<section id="shell-energy-source-sliding-contact">
+<h2><strong>Shell Energy Source Sliding Contact</strong><a class="headerlink" href="#shell-energy-source-sliding-contact" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shell</span> <span class="n">Energy</span> <span class="n">Source</span> <span class="n">Sliding_Contact</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id26">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id26" title="Permalink to this headline"></a></h3>
+<p>This card activates a heat source (or sink, as it were) in the shell_energy
+equation. The functional form of this source/sink is a sliding contact model derived in
+the frame-of-reference of the slider on a stationary surface, so that the surface is
+moving in the simulation. In this case, the conditions for the flux vary from the leading
+edge to the trailing edge of the slider as a thermal boundary layer builds up. Think of
+this as a hot slider moving over a cold stationary wall, so that the flux at the leading
+edge of the slider into the cold wall will be larger, due to a steeper thermal boundary
+layer. Clearly the contact time will play a role. Currently two models {model_name}
+are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LOCAL_CONTACT</strong></p></td>
+<td><p>This model invokes the following functional form:</p>
+<p>Commensurately there are seven floats required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - length l of slider.</p></li>
+<li><p>&lt;float2&gt; - Sink temperature of substrate.</p></li>
+<li><p>&lt;float3&gt; - Thermal conductivity of substrate.</p></li>
+<li><p>&lt;float4&gt; - Density of substrate</p></li>
+<li><p>&lt;float5&gt; - Heat capacity of substrate.</p></li>
+<li><p>&lt;float6&gt; - Delta L, or L1 – L2. This parameter sets the segment size (less than
+the total slider length) over which the heat flux is resolved.</p></li>
+<li><p>&lt;float7&gt; - Leading edge coordinate of slider.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/492_goma_physics.png"><img alt="../_images/492_goma_physics.png" src="../_images/492_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>AVERAGE_CONTACT</strong></p></td>
+<td><p>This model invokes the following functional form:</p>
+<p>Commensurately there are seven floats required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - length l of slider.</p></li>
+<li><p>&lt;float2&gt; - Sink temperature of substrate.</p></li>
+<li><p>&lt;float3&gt; - Thermal conductivity of substrate.</p></li>
+<li><p>&lt;float4&gt; - Density of substrate</p></li>
+<li><p>&lt;float5&gt; - Heat capacity of substrate.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/493_goma_physics.png"><img alt="../_images/493_goma_physics.png" src="../_images/493_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id27">
+<h3><strong>Examples</strong><a class="headerlink" href="#id27" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shell</span> <span class="n">Energy</span> <span class="n">Source</span> <span class="n">Sliding_Contact</span> <span class="o">=</span> <span class="n">LOCAL_CONTACT</span> <span class="p">{</span><span class="n">L</span><span class="o">=</span> <span class="mf">2.5</span><span class="p">}</span> <span class="p">{</span><span class="n">t_r</span><span class="o">=</span><span class="mi">20</span><span class="p">}</span> <span class="p">{</span><span class="n">t_cond_cu_cgs</span><span class="p">}</span> <span class="p">{</span><span class="n">density_cu_cgs</span><span class="p">}</span> <span class="p">{</span><span class="n">heat_capacity_cu_cgs</span><span class="p">}</span> <span class="p">{</span><span class="n">delta_L</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">}</span> <span class="p">{</span><span class="n">leading_edge_coordx</span> <span class="o">=</span> <span class="mf">2.5</span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id28">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id28" title="Permalink to this headline"></a></h3>
+<p>Technical Discussion
+This boundary condition was derived using the analytical solution for heat conduction
+into an infinite slab, as derived by Carslaw and Jaeger. The modification here is that
+the temperature source accommodates a motion relative to the substrate, which is what
+leads to the need to segment the slider into bins over which a local heat flux solution is
+derived.</p>
+<p>NOTE: If this card is used and there is no upper-wall or lower wall sliding motion, and
+error is thrown.</p>
+</section>
+</section>
+<section id="shell-energy-source-viscous-dissipation">
+<h2><strong>Shell Energy Source Viscous Dissipation</strong><a class="headerlink" href="#shell-energy-source-viscous-dissipation" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shell</span> <span class="n">Energy</span> <span class="n">Source</span> <span class="n">Viscous</span> <span class="n">Dissipation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id29">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id29" title="Permalink to this headline"></a></h3>
+<p>This card activates a heat source (or sink, as it were) in the shell_energy
+equation resulting from viscous dissipation due to shear combined Couette and
+pressure-driven flow in the Reynolds lubrication equation (lubp equation).</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LUBRICATION</strong></p></td>
+<td><p>This model invokes a viscous dissipation model simplified for the lubrication
+approximation.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Scale factor for the term, typically taken as 1.0</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>LUBRICATION_FRICTION</strong></p></td>
+<td><p>This model invokes the same viscous dissipation source term as in the LUBRICATION
+model, but adds on an additional linear friction model of the form μ*Pload vslider.
+Commensurately there are seven floats required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - coefficient of friction, μ.</p></li>
+<li><p>&lt;float2&gt; - Applied external load Pload</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id30">
+<h3><strong>Examples</strong><a class="headerlink" href="#id30" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shell</span> <span class="n">Energy</span> <span class="n">Source</span> <span class="n">Viscous</span> <span class="n">Dissipation</span><span class="o">=</span> <span class="n">LUBRICATION_FRICTION</span> <span class="p">{</span><span class="n">load</span><span class="o">=</span><span class="mf">5e8</span><span class="p">}</span> <span class="p">{</span><span class="n">coeff</span><span class="o">=</span><span class="mf">0.9</span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id31">
+<h3><strong>References</strong><a class="headerlink" href="#id31" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="shell-energy-source-external">
+<h2><strong>Shell Energy Source External</strong><a class="headerlink" href="#shell-energy-source-external" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shell</span> <span class="n">Energy</span> <span class="n">Source</span> <span class="n">Viscous</span> <span class="n">External</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id32">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id32" title="Permalink to this headline"></a></h3>
+<p>This card activates a heat source (or sink, as it were) in the shell_energy equation
+which corresponds to a user-supplied or constant value. Two models are available.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model invokes a constant heat source term (heat sink if negative) in units of
+energy per area per time.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Value of heat source.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>JOULE</strong></p></td>
+<td><p>This model invokes a constant energy source which is determined by an external
+current density field of the form</p>
+<p>Qjoule = hξ J ⋅ J. Here J is the current density, h is the gap, and is the electrical
+resistivity, or the inverse conductivity. Both h and ξ are determined from other
+models in the material file. J is brought in as an external field variable from
+another exodusII file (see discussion below).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Scale factor, usually set to 1.0.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p>JOULE_LS</p></td>
+<td><p>This model differs from JOULE only in that the electrical conductivity is pulled out
+and must be specified with a LEVEL_SET model. This model is not well tested (PRS
+12/14/2012)</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Scale factor, usually set to 1.0.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id33">
+<h3><strong>Examples</strong><a class="headerlink" href="#id33" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shell</span> <span class="n">Energy</span> <span class="n">Source</span> <span class="n">External</span> <span class="o">=</span> <span class="n">JOULE</span> <span class="p">{</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id34">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id34" title="Permalink to this headline"></a></h3>
+<p>To bring in an external field of the appropriate form, see the main Goma user’s manual
+and refer to the External Field card. As an example, you might consider solving
+a simple electrostatic problem using the EQ = V (voltage) equation and output the
+magnitude of the current density vector. In Goma, this is done with the post
+processing</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Electric</span> <span class="n">Field</span> <span class="n">Magnitude</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+<p>Card. This card outputs this J-magnitude as the exodusII variable EE. You then bring
+it in as follows in the input script:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">EE</span> <span class="n">Q1</span> <span class="n">current_dens_out</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<p>With the JOULE model, this field is used to compute the Joule heating term.</p>
+</section>
+<section id="id35">
+<h3><strong>References</strong><a class="headerlink" href="#id35" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="fsi-deformation-model">
+<h2><strong>FSI Deformation Model</strong><a class="headerlink" href="#fsi-deformation-model" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">FSI</span> <span class="n">Deformation</span> <span class="n">Model</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id36">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id36" title="Permalink to this headline"></a></h3>
+<p>This card specifies the type of interaction the lubrication shell elements will have with
+any surrounding continuum element friends. When not coupling the lubrication
+equations to a continuum element, this card should be set to the default value,
+FSI_SHELL_ONLY. All models are described below:</p>
+<p><strong>FSI_MESH_BOTH</strong> This model should be used when both the shell
+and neighboring continuum elements use deformable meshes and the user wishes to
+full couple these behaviors. This model is not currently implemented and should not be
+used.</p>
+<p><strong>FSI_MESH_CONTINUUM</strong> In this model, the neighboring continuum
+elements use mesh equations, but the lubrication shell does not. This model features a
+two-way coupling, where the lubrication pressure can deform the neighboring solid
+(through the appropriate boundary condition) and deformations to the mesh in turn
+affect the height of the lubrication gap. This is equivalent to the old “toggle = 1”.</p>
+<p><strong>FSI_MESH_SHELL</strong> This model accounts for mesh equations present
+in the lubrication shell, but not in the adjoining continuum elements. This model is not
+currently implemented and should not be used.</p>
+<p><strong>FSI_SHELL_ONLY</strong> This model can be thought of as the default
+behavior, where there is no coupling between the lubrication shell elements and any
+neighboring continuum elements. This should also be used if only shells are present.</p>
+<p><strong>FSI_MESH_UNDEF</strong> This model is similar to
+FSI_MESH_CONTINUUM, but the normal vectors in the shell are calculated using
+the original undeformed configuration, rather than the current deformed state.
+Implementation of this model is currently in progress and needs to be fully tested.</p>
+<p><strong>FSI_MESH_ONEWAY</strong> This model is similar to
+FSI_MESH_CONTINUUM, but only utilizes a one way coupling. Deformations in the
+neighboring continuum element do not affect the lubrication height, but do affect the
+calculated normal vectors. This is equivalent to the old “toggle = 0”.</p>
+</section>
+<section id="id37">
+<h3><strong>Examples</strong><a class="headerlink" href="#id37" title="Permalink to this headline"></a></h3>
+</section>
+<section id="id38">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id38" title="Permalink to this headline"></a></h3>
+</section>
+<section id="id39">
+<h3><strong>References</strong><a class="headerlink" href="#id39" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="film-evaporation-model">
+<h2><strong>Film Evaporation Model</strong><a class="headerlink" href="#film-evaporation-model" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Film</span> <span class="n">Evaporation</span> <span class="n">Model</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id40">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id40" title="Permalink to this headline"></a></h3>
+<p>This card takes the specification of the evaporation rate for the film-flow equation
+capability, specifically the shell_filmp equation. This function specifies the rate
+of evaporation in the unit of length per time. Currently two models for
+{model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model specifies a constant evaporation rate. This option requires one floating
+point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the evaporation rate in the unit of length/time</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>CONC_POWER</strong></p></td>
+<td><p>This model specifies evaporation rate function of particles volume fraction and the
+input parameters (floats). This model is proposed by Schwartz et al (2001). The
+functional form is:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the pure liquid evaporation rate in units of length per time</p></li>
+<li><p>&lt;float2&gt; is exponent v and it should satisfy 0 &lt;ν &lt;1</p></li>
+<li><p>&lt;float3&gt; is the maximum packing volume fraction 0max</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/494_goma_physics.png"><img alt="../_images/494_goma_physics.png" src="../_images/494_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id41">
+<h3><strong>Examples</strong><a class="headerlink" href="#id41" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Film</span> <span class="n">Evaporation</span> <span class="n">Model</span> <span class="o">=</span> <span class="n">CONC_POWER</span> <span class="mf">1.0e-3</span> <span class="mf">0.5</span> <span class="mf">0.64</span>
+</pre></div>
+</div>
+<p>This results in film evaporation with the pure liquid evaporation rate of 1.0e-3, exponent
+of 0.5, and maximum packing volume fraction of 0.64.</p>
+</section>
+<section id="id42">
+<h3><strong>References</strong><a class="headerlink" href="#id42" title="Permalink to this headline"></a></h3>
+<p>Leonard W. Schwartz, R. Valery Roy, Richard R. Eley, and Stanislaw Petrash,
+“Dewetting Patterns in a Drying Liquid Film”, Journal of Colloid and Interface
+Science 234, 363–374 (2001)</p>
+</section>
+</section>
+<section id="disjoining-pressure-model">
+<h2><strong>Disjoining Pressure Model</strong><a class="headerlink" href="#disjoining-pressure-model" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Disjoining</span> <span class="n">Pressure</span> <span class="n">Model</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id43">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id43" title="Permalink to this headline"></a></h3>
+<p>This card takes the specification of the disjoining pressure model for the film-flow
+equation capability, specifically the shell_filmh equation. This function
+specifies the disjoining pressure in the unit of force per area. Currently four models for
+{model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model specifies a constant disjoining pressure. This option requires one
+floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the evaporation rate in the unit of length/time</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>ONE_TERM</strong> This model specifies disjoining pressure and the input parameters
+(floats). This model only employs the repulsion part of the van der Waals force. The
+functional form is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/495_goma_physics.png"><img alt="../_images/495_goma_physics.png" src="../_images/495_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<ul class="simple">
+<li><p>&lt;float1&gt; is the equilibrium liquid-solid contact angle θe</p></li>
+<li><p>&lt;float2&gt; is exponent n and it should satisfy n &gt;1</p></li>
+<li><p>&lt;float3&gt; is the precursor film thickness h*</p></li>
+</ul>
+<p><strong>TWO_TERM</strong> This model specifies disjoining pressure and the input parameters
+(floats). Here, the model only employs both repulsion and attraction part of the van der
+Waals force. The functional form is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/496_goma_physics.png"><img alt="../_images/496_goma_physics.png" src="../_images/496_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/497_goma_physics.png"><img alt="../_images/497_goma_physics.png" src="../_images/497_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<ul class="simple">
+<li><p>&lt;float1&gt; is the equilibrium liquid-solid contact angle 0e</p></li>
+<li><p>&lt;float2&gt; is exponent n corresponding to the repulsive part of the
+van der Waals force. It should satisfy n &gt;1</p></li>
+<li><p>&lt;float3&gt; is exponent m corresponding to the attractive part of the
+van der Waals force. It should satisfy m &gt; n since
+the attractive part acts in longer range than the repulsive
+one.</p></li>
+<li><p>&lt;float4&gt; is the precursor film thickness h</p></li>
+<li><p>&lt;float5&gt; is the parameter a describing relative importance of the
+attractive part to the repulsive part. Typically, a is
+chosen to be 0 &lt;α &lt;1 in order to achieve
+more numerical stability.</p></li>
+</ul>
+<p><strong>TWO_TERM_EXT_CA</strong> This model is identical with <strong>TWO_TERM</strong> except that it
+uses contact angle from an external field identifies as THETA.</p>
+</section>
+<section id="id44">
+<h3><strong>Examples</strong><a class="headerlink" href="#id44" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Disjoining</span> <span class="n">Pressure</span> <span class="n">Model</span> <span class="o">=</span> <span class="n">TWO_TERM</span> <span class="mf">120.3</span> <span class="mi">2</span> <span class="mf">1.0e-4</span> <span class="mf">0.1</span>
+</pre></div>
+</div>
+<p>This results in disjoining pressure with contact angle of 120, repulsive exponent of 3,
+attractive repulsion of 2, precursor film thickness of 1.0e-4, and relative importance of
+attractive part of 0.1.</p>
+</section>
+<section id="id45">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id45" title="Permalink to this headline"></a></h3>
+<p>A thorough discussion of disjoining pressure can be found in Teletzke et al (1987). The
+premultiplying constant is related to contact angle and surface tension by
+balancing capillary and disjoining force where the wetting line meets the precursor film.
+See Schwartz (1998) for further detail.</p>
+</section>
+<section id="id46">
+<h3><strong>References</strong><a class="headerlink" href="#id46" title="Permalink to this headline"></a></h3>
+<p>Leonard W. Schwartz, R. Valery Roy, Richard R. Eley, and Stanislaw Petrash,
+“Dewetting Patterns in a Drying Liquid Film”, Journal of Colloid and Interface
+Science 234, 363–374 (2001)</p>
+<p>Teletzke, G. F., Davis, H. T., and Scriven, L. E., “How liquids spread on solids”, Chem.
+Eng. Comm., 55, pp 41-81 (1987).</p>
+</section>
+</section>
+<section id="diffusion-coefficient-model">
+<h2><strong>Diffusion Coefficient Model</strong><a class="headerlink" href="#diffusion-coefficient-model" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusion</span> <span class="n">Coefficient</span> <span class="n">Model</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id47">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id47" title="Permalink to this headline"></a></h3>
+<p>This card takes the specification of the diffusion coefficient model for the conservation
+of particles inside film-flow capability, i.e. equation describing shell_partc.
+Currently two models for {model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model specifies a constant diffusion coefficient. This option requires one
+floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the diffusion coefficient</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>STOKES_EINSTEIN</strong></p></td>
+<td><p>This model specifies diffusion coefficient that depends on particles radius and the
+film viscosity. The functional form is:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the Boltzmann constant kb where the magnitude depends on the units
+chosen by the user.</p></li>
+<li><p>&lt;float2&gt; is temperature T in unit of Kelvin.</p></li>
+<li><p>&lt;float3&gt; is the particles radii R.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/489_goma_physics.png"><img alt="../_images/489_goma_physics.png" src="../_images/489_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id48">
+<h3><strong>Examples</strong><a class="headerlink" href="#id48" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusion</span> <span class="n">Coefficient</span> <span class="n">Model</span> <span class="o">=</span> <span class="n">STOKES_EINSTEIN</span> <span class="mf">1.3807e-16</span> <span class="mi">298</span> <span class="mf">1.0e-6</span>
+</pre></div>
+</div>
+<p>This results in diffusion coefficient calculated with Stokes Einstein model with
+Bolztmann constant of 1.3807e-16 in CGS units, 298 K temperature, and 1.0e-6 cm
+radius particles.</p>
+</section>
+<section id="id49">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id49" title="Permalink to this headline"></a></h3>
+<p>Viscosity dependence of diffusion coefficient can be exploited to relate particles
+concentration (or volume fraction in this case) to diffusion coefficient by employing
+SUSPENSION viscosity model in the material file. See SUSPENSION viscosity model for
+further detail</p>
+</section>
+</section>
+<section id="porous-shell-radius">
+<h2><strong>Porous Shell Radius</strong><a class="headerlink" href="#porous-shell-radius" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Closed</span> <span class="n">Radius</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id50">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id50" title="Permalink to this headline"></a></h3>
+<p>This card specifies the radius of the pores used in porous_shell_closed and
+porous_shell_open equations. Currently two models for {model_name} are
+permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model applies a constant pore radius for the entire model. It requires a single
+floating point value.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the pore radius. L.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXTERNAL_FIELD</strong></p></td>
+<td><p>This model reads in an array of values for the radius from an initial exodus file.
+This allows for spatial variations in the parameter value.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id51">
+<h3><strong>Examples</strong><a class="headerlink" href="#id51" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Radius</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.00001</span>
+</pre></div>
+</div>
+</section>
+<section id="id52">
+<h3><strong>References</strong><a class="headerlink" href="#id52" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-shell-height">
+<h2><strong>Porous Shell Height</strong><a class="headerlink" href="#porous-shell-height" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Height</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id53">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id53" title="Permalink to this headline"></a></h3>
+<p>This card specifies height of the pores used in porous_shell_closed and
+porous_shell_open equations. Currently two models for {model_name} are
+permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model applies a constant pore height for the entire model. It requires a single
+floating point value.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the pore height. L.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXTERNAL_FIELD</strong></p></td>
+<td><p>This model reads in an array of values for the height from an initial exodus file.
+This allows for spatial variations in the parameter value.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id54">
+<h3><strong>Examples</strong><a class="headerlink" href="#id54" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Height</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.00001</span>
+</pre></div>
+</div>
+</section>
+<section id="id55">
+<h3><strong>References</strong><a class="headerlink" href="#id55" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-shell-closed-porosity">
+<h2><strong>Porous Shell Closed Porosity</strong><a class="headerlink" href="#porous-shell-closed-porosity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Closed</span> <span class="n">Porosity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id56">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id56" title="Permalink to this headline"></a></h3>
+<p>This card specifies the porosity used in porous_shell_closed equations.
+Currently two models for {model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model applies a constant porosity for the entire model. It requires a single
+floating point value.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the porosity</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXTERNAL_FIELD</strong></p></td>
+<td><p>FIELDThis model reads in an array of values for the porosity from an initial exodus
+file. This allows for spatial variations in the parameter value.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; scale factor for scaling field value</p></li>
+</ul>
+</div></blockquote>
+<p>The ExodusII field variable name should be “SH_SAT_CL_POROSITY”, viz.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">SH_SAT_CLOSED_POROSITY</span> <span class="n">Q1</span> <span class="n">name</span><span class="o">.</span><span class="n">exoII</span> <span class="p">(</span><span class="n">see</span> <span class="n">this</span> <span class="n">card</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id57">
+<h3><strong>Examples</strong><a class="headerlink" href="#id57" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Closed</span> <span class="n">Porosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+</section>
+<section id="id58">
+<h3><strong>References</strong><a class="headerlink" href="#id58" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-shell-closed-gas-pressure">
+<h2><strong>Porous Shell Closed Gas Pressure</strong><a class="headerlink" href="#porous-shell-closed-gas-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Closed</span> <span class="n">Gas</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id59">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id59" title="Permalink to this headline"></a></h3>
+<p>This card specifies the gas pressure used in porous_shell_closed equations.
+Currently one model for {model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model applies a constant gas pressure for the entire model. It requires a single
+floating point value.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the gas pressure</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id60">
+<h3><strong>Examples</strong><a class="headerlink" href="#id60" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Closed</span> <span class="n">Gas</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+</section>
+<section id="id61">
+<h3><strong>References</strong><a class="headerlink" href="#id61" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-shell-atmospheric-pressure">
+<h2><strong>Porous Shell Atmospheric Pressure</strong><a class="headerlink" href="#porous-shell-atmospheric-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Atmospheric</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id62">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id62" title="Permalink to this headline"></a></h3>
+<p>This card is used to set the atmospheric pressure level in a open-cell shell porous
+equation (for partially saturated flow). As of 11/27/2012 this card is NOT used.</p>
+</section>
+<section id="id63">
+<h3><strong>Examples</strong><a class="headerlink" href="#id63" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id64">
+<h3><strong>References</strong><a class="headerlink" href="#id64" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-shell-reference-pressure">
+<h2><strong>Porous Shell Reference Pressure</strong><a class="headerlink" href="#porous-shell-reference-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Atmospheric</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id65">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id65" title="Permalink to this headline"></a></h3>
+<p>This card is used to set the reference pressure level in a open-cell shell porous equation
+(for partially saturated flow). This pressure is used to shift the saturation-capillary
+pressure curve appropriately. As of 11/27/2012 this card is NOT used as all saturation
+curve information is handled in the main porous flow property input framework, even
+for shell formulations.</p>
+</section>
+<section id="id66">
+<h3><strong>Examples</strong><a class="headerlink" href="#id66" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id67">
+<h3><strong>References</strong><a class="headerlink" href="#id67" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-shell-cross-permeability">
+<h2><strong>Porous Shell Cross Permeability</strong><a class="headerlink" href="#porous-shell-cross-permeability" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Cross</span> <span class="n">Permeability</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id68">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id68" title="Permalink to this headline"></a></h3>
+<p>This card is used to set the permeability in the thin direction of a shell porous region.
+The property is used for the porous_sat_open equation. The in-shell (in-plane for
+a flat shell) permeabilities are set on the Permeability card. Please consult the
+references for the equation form. The property can take on one of two models:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model applies a constant cross-region permeability. It requires a single
+floating point input:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the cross region permeability</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXTERNAL_FIELD</strong></p></td>
+<td><p>This model is used to read a finite element mesh field representing the cross-term
+permeability. Please consult tutorials listed below for proper usage. This model
+requires one float:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; scale factor for incoming exodusII field and desired level.</p></li>
+</ul>
+</div></blockquote>
+<p>The ExodusII field variable name should be “CROSS_PERM”, viz.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id69">
+<h3><strong>Examples</strong><a class="headerlink" href="#id69" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id70">
+<h3><strong>References</strong><a class="headerlink" href="#id70" title="Permalink to this headline"></a></h3>
+<ol class="upperalpha simple" start="19">
+<li><ol class="upperalpha simple">
+<li><p>Roberts and P. R. Schunk 2012. in preparation.</p></li>
+</ol>
+</li>
+</ol>
+<p>Randy Schunk 2011. GT-038 “Pixel-to-Mesh-Map Tool Tutorial for GOMA”. Memo to
+distribution.</p>
+</section>
+</section>
+<section id="porous-shell-gas-diffusivity">
+<h2><strong>Porous Shell Gas Diffusivity</strong><a class="headerlink" href="#porous-shell-gas-diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Gas</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id71">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id71" title="Permalink to this headline"></a></h3>
+<p>This card is used to set the gas diffusivity for the trapped gas in the
+porous_sat_closed equation. Basically, the gas trapped in closed pores during
+the imbibition process is allowed to diffuse into the liquid, and this property is a part of
+that model gas inventory equation R_SHELL_SAT_GASN. Only one model is
+available for this property:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model applies a constant cross-region permeability. It requires a single
+floating point input:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the cross region permeability</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXTERNAL_FIELD</strong></p></td>
+<td><p>This model applies a constant gas diffusivity. It requires a single floating point
+input:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the gas diffusivity (L2/t)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id72">
+<h3><strong>Examples</strong><a class="headerlink" href="#id72" title="Permalink to this headline"></a></h3>
+<p>Porous Shell Gas Diffusivity = CONSTANT 1.e-5</p>
+</section>
+<section id="id73">
+<h3><strong>References</strong><a class="headerlink" href="#id73" title="Permalink to this headline"></a></h3>
+<ol class="upperalpha simple" start="19">
+<li><ol class="upperalpha simple">
+<li><p>Roberts and P. R. Schunk 2012. in preparation.</p></li>
+</ol>
+</li>
+</ol>
+</section>
+</section>
+<section id="porous-shell-gas-temperature-constant">
+<h2><strong>Porous Shell Gas Temperature Constant</strong><a class="headerlink" href="#porous-shell-gas-temperature-constant" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Gas</span> <span class="n">Temperature</span> <span class="n">Constant</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id74">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id74" title="Permalink to this headline"></a></h3>
+<p>This card is used to set the temperature constant in Henry’s law for the trapped gas in
+the porous_sat_closed equation. Basically, the gas trapped in closed pores
+during the imbibition process is allowed to diffuse into the liquid, and this property is a
+part of that model for the dissolution constant of gas in pressurized liquid. It is only
+needed if the equation R_SHELL_SAT_GASN is used. Only one model is available for
+this property:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model sets the Henry’s law temperature constant. It requires a single floating
+point input:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the gas temperature constant</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id75">
+<h3><strong>Examples</strong><a class="headerlink" href="#id75" title="Permalink to this headline"></a></h3>
+<p>Porous Shell Gas Temperature Constant= CONSTANT 1.e10</p>
+</section>
+<section id="id76">
+<h3><strong>References</strong><a class="headerlink" href="#id76" title="Permalink to this headline"></a></h3>
+<ol class="upperalpha simple" start="19">
+<li><ol class="upperalpha simple">
+<li><p>Roberts and P. R. Schunk 2012. in preparation.</p></li>
+</ol>
+</li>
+</ol>
+</section>
+</section>
+<section id="porous-shell-henrys-law-constant">
+<h2><strong>Porous Shell Henrys Law Constant</strong><a class="headerlink" href="#porous-shell-henrys-law-constant" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Shell</span> <span class="n">Henrys</span> <span class="n">Law</span> <span class="n">Constant</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id77">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id77" title="Permalink to this headline"></a></h3>
+<p>This card is used to set the partitionconstant in Henry’s law for the trapped gas in the
+porous_sat_closed equation. Basically, the gas trapped in closed pores during
+the imbibition process is allowed to diffuse into the liquid, and this property is a part of
+that model for the dissolution constant of gas in pressurized liquid. It is only needed if
+the equation R_SHELL_SAT_GASN is used. Please consult the references for a
+detailed explanation. Only one model is available for this property:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model sets the Henry’s law constant. It requires a single floating point
+input:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the Henry’s law constant</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id78">
+<h3><strong>Examples</strong><a class="headerlink" href="#id78" title="Permalink to this headline"></a></h3>
+<p>Porous Shell Gas Temperature Constant= CONSTANT 1.e10</p>
+</section>
+<section id="id79">
+<h3><strong>References</strong><a class="headerlink" href="#id79" title="Permalink to this headline"></a></h3>
+<ol class="upperalpha simple" start="19">
+<li><ol class="upperalpha simple">
+<li><p>Roberts and P. R. Schunk 2012. in preparation.</p></li>
+</ol>
+</li>
+</ol>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="source_terms.html" class="btn btn-neutral float-left" title="Source Terms" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="moments.html" class="btn btn-neutral float-right" title="Moment Properties" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

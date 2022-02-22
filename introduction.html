@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Introduction &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Background Information" href="background.html" />
+    <link rel="prev" title="Goma User Manual" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Goma User Manual
+            <img src="_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Introduction</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/introduction.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline"></a></h1>
+<p>“<em>Goma</em>,” which means rubber, gum, or elastic in Spanish, is a two- or three-dimensional finite
+element program currently being advanced and specialized for the analysis of manufacturing
+flows and related processes that involve one or more transport fields, i.e., any combination of
+heat, mass, momentum (solid and fluid) and species transport fields. Specifically, the processes
+for which <em>Goma</em> is suited are those which contain free or moving boundaries between dissimilar
+materials or phases. Whether determining the position of an interface whose motion is governed
+by the underlying physics of the problem, or prescribing the dynamics of a boundary according to
+user specified kinematics or geometry, the multiphysics approach on which <em>Goma</em> is based allows
+for rapid convergence to the solution. Unique features which make this possible include: (1) a
+Lagrangian-Eulerian solid mechanics module for mesh motion, (2) energy and chemical species
+transport modules incorporating convection, diffusion and reaction, (3) fluid momentum transport
+modules that are fully and mutually coupled, particularly with the mesh motion module through
+an analytical Jacobian matrix, (3) a Newton-based solution algorithm (full and modified) which
+exploits that Jacobian matrix, and (4) a structure which allows for different physical descriptions
+of different materials in the same problem, i.e., conjugate problems. The scope of potentially
+accessible problems defined by the interaction and close coupling of the individual field equation
+sets is partially shown in Figure 1 (note that missing from this figure are the fully coupled,
+partially saturated porous deformable media module and overall variable density mass balance
+modules). The analytical Jacobian matrix which provides the coupling facilitates a range of
+computer-aided nonlinear analyses such as parametric sensitivity (stability), design, and
+optimization as it provides the building blocks (through chain-rule differentiation) for evaluating
+sensitivities of process variables to processing conditions.</p>
+<p><em>Goma</em> originated in 1994 from an early version of <em>MP_SALSA</em> (Shadid, et. al., 1995), a finite
+element program designed to simulate chemically reacting flows in massively-parallel computing
+environments. As a point-of-departure, <em>Goma</em> was originally extended and adapted to free and
+moving boundary problems in fluid mechanics, heat transfer, and mass transfer. By virtue of a
+novel mesh motion algorithm based on Lagrangian solid elasticity, many multiphysics problems
+involving nonlinear elasticity and viscoplasticity in combination with other transport phenomena
+are now accessible. The detailed algorithm and underlying physical principles of the moving
+mesh scheme together with several advanced examples from capillary hydrodynamics, melting
+and solidification, and polymer processing may be found elsewhere (Sackinger, et. al., 1995;
+Cairncross, et al., 1995; Chen, et. al., 1995; Cairncross, et. al., 2000; Baer, et. al., 2000; Schunk
+and Rao, 1994; Bertram, et. al., 1998; Schunk, et. al., 2002).</p>
+<p>Since the original publication of the GOMA 2.0 manual (see Schunk, et. al., 1998) work has
+further focused on concentrated chemical species transport (neutral and charged species) and
+Eulerian front tracking schemes for large material deformation problems. As in all other
+developments, these capabilities are being implemented in a fully-coupled way using Newton’s
+method. A concerted effort to bring these capabilities to bear on real-life problems has led to the
+addition of many esoteric features that address capillary wetting, phase change, charge neutrality,
+multicomponent species transport, and a host of other physical features. The best way to survey
+the available features is to consult the large library of reports, technical memoranda, tutorials, and
+other advanced feature manuals (e.g. Gates, et. al., 2000; Schunk, et. al., 1998; Rao, et. al., 2001;
+see <em>Goma</em> Documentation List in the Appendix), most of which are linked together with this
+manual in the CD version of the <em>Goma</em> Document System currently under development.</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/001_goma_physics.png"><img alt="_images/001_goma_physics.png" src="_images/001_goma_physics.png" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Main physics modules of Goma, their coupling and examples of
+potential applications.</span><a class="headerlink" href="#id1" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>Most recent developments, from 2006 through 2012, that are noteworthy are an extensive library
+of thin-shell physics/equations and accompanying boundary conditions, triangle and tetrahedral
+elements, phase-field modeling, parallel processing improvements and more. On the thin shell
+equations, the capability is fully coupled with continuum element equations. We have
+implemented theory and equations for Reynold’s lubrication (laminar or turbulent), thin-shell
+energy, thin-porous media, and surface rheology.</p>
+<p>The purpose of this report is to provide a practical introduction and reference to <em>Goma</em>; to
+introduce the user to the range of options available in <em>Goma</em>; to show how easily the code may be
+adapted to investigate novel situations; and to provide a link to several simple illustrative
+examples as a tutorial and as a demonstration of the overall utility of the program. By design this
+is a reference manual which is best navigated together with a tutorial on the class of problems
+being addressed. It is recommended that perusal be undertaken section by section, consulting the
+individual input records as needed for a given problem.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Goma User Manual" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="background.html" class="btn btn-neutral float-right" title="Background Information" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>External Field &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>External Field</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/general_specifications/external_field.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="external-field">
+<h1><strong>External Field</strong><a class="headerlink" href="#external-field" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char_string1</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">char_string2</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">char_string_3</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This optional card format provides a mechanism for reading-in nodal field variables
+stored in an EXODUS II file. Each field variable is specified on a separate input card,
+with the following input parameters:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>&lt;char_string1&gt;</dt><dd><p>Name of the nodal field to be read; it should correspond to a nodal
+variable name in the EXODUS II file.</p>
+</dd>
+<dt>{char_string2}</dt><dd><p>Two- to eight-character value that identifies the type of interpolation to
+be applied to the external variable field. Possible values are as follows:</p>
+<ul class="simple">
+<li><p><strong>Q1</strong>       - Linear</p></li>
+<li><p><strong>Q2</strong>       - Quadratic</p></li>
+<li><p><strong>Q2_LSA</strong>   - Special quadratic for 3D analysis of 2D LSA</p></li>
+<li><p><strong>Q1_D</strong>     - Linear with special surface dofs</p></li>
+<li><p><strong>Q2_D</strong>     - Quadratic with special surface dofs</p></li>
+<li><dl class="simple">
+<dt><strong>Q2_D_LSA</strong> - Special quadratic discontinuous for 3D</dt><dd><p>analysis of 2D LSA</p>
+</dd>
+</dl>
+</li>
+<li><p><strong>PQ1</strong>      - Bilinear discontinuous</p></li>
+<li><p><strong>PQ2</strong>      - Biquadratic discontinuous</p></li>
+<li><p><strong>P0</strong>       - Piecewise constant</p></li>
+<li><p><strong>Pl</strong>       - Piecewise linear</p></li>
+<li><dl class="simple">
+<dt><strong>SP</strong>       - Subparametric; linear on interior,</dt><dd><p>quadratic on surface</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>&lt;file_name&gt;</dt><dd><p>Name of the EXODUS II file from which the nodal field is to be read. When
+Goma is compiled with LIBRARY_MODE defined (see Appendix 2) and the
+external field will be passed into Goma from a driver code, this entry will
+be either IMPORT (for nodal variables) or IMPORT_EV (for element
+variables), instead of a file name.</p>
+</dd>
+<dt>[char_string3]</dt><dd><p>Optional character string. Only optional available is <strong>“timedependent”</strong>
+which enables nodal variables to be interpolated to the current time step.
+This option is useful for transient coupling, viz. a case in which
+a transient field variable is used to drive a time-dependent simulation.
+A good example of this is a transient current density field from
+a electromagnetics calculation being used to drive a transient thermal
+calculation with Joule heating.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The first example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">VX</span> <span class="n">Q2</span> <span class="n">velocity</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">VY</span> <span class="n">Q2</span> <span class="n">velocity</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<p>The second example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">JX_FIELD</span> <span class="n">Q2</span> <span class="n">fields</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">JY_FIELD</span> <span class="n">Q2</span> <span class="n">fields</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">BTHETA_FIELD</span> <span class="n">Q2</span> <span class="n">fields</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<p>The third example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">DMX</span> <span class="n">Q1</span> <span class="n">IMPORT</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">DMY</span> <span class="n">Q1</span> <span class="n">IMPORT</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">P_POR</span> <span class="n">Q1</span> <span class="n">IMPORT_EV</span>
+</pre></div>
+</div>
+<p>The fourth example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">JE_N_1</span> <span class="n">Q1</span> <span class="n">emfields</span><span class="o">.</span><span class="n">exoII</span> <span class="n">time_dependent</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The field variables read into <em>Goma</em> from the Example cards can be accessed in any
+user-defined subroutine.</p>
+<p>In the case of variables named <strong>VX, VY, or VZ</strong>, these fields are automatically loaded to
+the appropriate velocity component so they can be used in an advection-diffusion
+analysis, i.e., <strong>VX, VY, VZ</strong> are reserved names for &lt;char_string1&gt; and a user-defined
+routine is not required. Thus the variables for the two fields, “VX” and “VY”, read
+from the file named “velocity.exoII” in the first example above, would be automatically
+accessed when the advection term is left on in the <em>energy</em> or <em>species_bulk</em> equation
+cards. In other words, without solving the momentum equations, one can access an
+external velocity field for advection-diffusion problems. These variables would have
+quadratic interpolation (Q2) applied to the velocity values read.</p>
+<p>The three cards in the second example can be used to read two components of a current
+density field (JX_FIELD, JY_FIELD), and the azimuthal component of a magnetic
+field (BTHETA_FIELD) from the file “fields.exoII” (generated by some other analysis
+code). These fields are then accessed in the user-defined subroutines as</p>
+<p>fv-&gt;external_field[0], fv-&gt;external_field[1], and fv-&gt;external_field[2],</p>
+<p>respectively, as an interpolated value at an integration point. NOTE that these fields are
+brought in as a part of the BOUSS_JXB_FORCE on the Navier Stokes source
+card. These are to be distinguished from the electromagnetic fields in the fourth
+example which correspond to Solid Momentum Source models.</p>
+<p>Note that the number of field variables read from the EXODUS II file must not exceed
+the value MAX_EXTERNAL_FIELD set in the include file rf_fem_const.h.
+Should that occur, a new version of <em>Goma</em> must be compiled with an increased value of
+MAX_EXTERNAL_FIELD. The user should consult notes on building <em>Goma</em> if (s)he
+has questions regarding how to do this.</p>
+<p>The third example assumes that <em>Goma</em> has been compiled with LIBRARY_MODE and
+is linked in to an external driver code along with another program which will compute
+some variables and pass their values into <em>Goma</em>; here the imported fields are the X and
+Y components of mesh displacement (nodal variables) and porosity (an element
+variable). There is a naive first order interpolation function in <em>Goma</em> to obtain nodal
+values of fields which are imported as element variables. Although <em>Goma</em> does not
+solve for these variables, their values are included in the output Exodus file.</p>
+<p>In the fourth example a field JE_N_1, the x-directed current density field, timedependent,
+is brought in from emfields.exoII. Typically, depending on the
+dimension of the problem, additional fields JE_N_2, JE_N_3 are also brought in as
+current density is a e. These fields are part of the JXB Solid Momentum Source model, together with the magnetic nodal field quantities, BE_N_1, BE_N_2, and
+BE_N_3.</p>
+<p>Several other standard external fields variables are supported in GOMA. Namely:</p>
+<p>FVP11, FVP22, etc. These fields are useful for the elastoviscoplasticity model. Please
+consult GOMA tutorial GT-019.2 for more details.</p>
+<p>SAT, HEIGHT, PERM, CROSS_PERM, SH_SAT_CL_POROSITY, etc. These are
+specially designated external fields which are mapped to variations in these properties
+corresponding to thin porous media. Please see GT-038.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-019.2. Elastoviscoplastic (EVP) Consitutive Model in GOMA: Theory, Testing,
+and Tutorial, P. R. Schunk, A. Sun, S. Y. Tam, and K. S. Chen. Memo to Distribution.
+March 13, 2003.</p>
+<p>GT-038.0: Pixel-to-Mesh Tool Tutorial for GOMA. P R. Schunk, Memo to
+distribution, 10 November 2009.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Category 17: Acoustic Equations &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Category 17: Acoustic Equations</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/boundary_conditions/acoustic.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="category-17-acoustic-equations">
+<h1>Category 17: Acoustic Equations<a class="headerlink" href="#category-17-acoustic-equations" title="Permalink to this headline"></a></h1>
+<p>These boundary conditions are applied to acoustic equations (Preal, Pimag, Reyn_stress).</p>
+<section id="apr">
+<h2>APR<a class="headerlink" href="#apr" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">APR</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p><strong>(DC/ACOUS_PREAL)</strong></p>
+<p>This Dirichlet boundary condition card is used to set constant amplitude of the
+real part of the acoustic pressure. Definitions of the input parameters are as
+follows:</p>
+<dl class="simple">
+<dt>APR</dt><dd><p>Name of the boundary condition (&lt;bc_name&gt;).</p>
+</dd>
+<dt>NS</dt><dd><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong> denotes node set in
+the EXODUS II database.</p>
+</dd>
+<dt>&lt;bc_id&gt;</dt><dd><p>The boundary flag identifier, an integer associated with &lt;bc_type&gt; that
+identifies the boundary location (node set in EXODUS II) in the problem
+domain.</p>
+</dd>
+<dt>&lt;float1&gt;</dt><dd><p>Value of the real part of the acoustic pressure amplitude.</p>
+</dd>
+<dt>[float2]</dt><dd><p>An optional parameter (that serves as a flag to the code for a Dirichlet
+boundary condition). If a value is present, and is not -1.0, the condition
+is applied as a residual equation. Otherwise, it is a “hard set” condition
+and is eliminated from the matrix. <em>The residual method must be used when
+this Dirichlet boundary condition is used as a parameter in automatic
+continuation sequences</em>.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">APR</span> <span class="n">NS</span> <span class="mi">100</span> <span class="mf">1000.0</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="apr-plane-tran">
+<h2><strong>APR_PLANE_TRAN</strong><a class="headerlink" href="#apr-plane-tran" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">APR_PLANE_TRAN</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/SCALAR ACOUS_PREAL)</strong></p>
+<p>This boundary condition card applies the plane wave transmission conditions to the acoustic wave equations. This card concerns the real part while API_PLANE_TRAN concerns the imaginary component. This condition is used to set reflection/ transmission conditions for a surrounded material that is not being meshed. Definitions of the input parameters are as follows:</p>
+<dl class="simple">
+<dt>APR_PLANE_TRAN</dt><dd><p>Name of the boundary condition (&lt;bc_name&gt;).</p>
+</dd>
+<dt>SS</dt><dd><p>Type of boundary condition (&lt;bc_type&gt;), where
+<strong>SS</strong> denotes side set.</p>
+</dd>
+<dt>&lt;bc_id&gt;</dt><dd><p>The boundary flag identifier, or a side set number which is an integer that
+identifies the boundary location (side set in EXODUS II) in the problem
+domain.</p>
+</dd>
+<dt>&lt;float1&gt;</dt><dd><p><span class="math notranslate nohighlight">\(R_2\)</span>, the acoustic impedance (i.e. product of density and wave
+speed) in the surrounded material.</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">APR_PLANE_TRAN</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">0.1</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>This condition should be used to account for transmission/reflection conditions for the external boundaries when the acoustic wave equation is used. It reflects characteristics for an acoustic wave encountering a planar interface between two materials;</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/254_goma_physics.png"><img alt="../../_images/254_goma_physics.png" src="../../_images/254_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where k is the acoustic wavenumber and R is the acoustic impedance. The subscript 1 refers to the material inside the external boundary and is the material which is meshed. Subscript 2 refers to the material outside of the external boundary. If <span class="math notranslate nohighlight">\(R_2\)</span> is set equal to
+<span class="math notranslate nohighlight">\(R_1\)</span>, then this condition mimics an infinite boundary condition, i.e. no reflection at the external boundary.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="api">
+<h2><strong>API</strong><a class="headerlink" href="#api" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">API</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id3">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p><strong>(DC/ACOUS_PIMAG)</strong></p>
+<p>This Dirichlet boundary condition card is used to set constant amplitude of the
+imaginary part of the acoustic pressure. Definitions of the input parameters are as follows:</p>
+<dl class="simple">
+<dt><strong>API</strong></dt><dd><p>Name of the boundary condition (&lt;bc_name&gt;).</p>
+</dd>
+<dt><strong>NS</strong></dt><dd><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong> denotes node set in
+the EXODUS II database.</p>
+</dd>
+<dt>&lt;bc_id&gt;</dt><dd><p>The boundary flag identifier, an integer associated with &lt;bc_type&gt; that
+identifies the boundary location (node set in EXODUS II) in the problem
+domain.</p>
+</dd>
+<dt>&lt;float1&gt;</dt><dd><p>Value of the imaginary part of the acoustic pressure amplitude.</p>
+</dd>
+<dt>[float2]</dt><dd><p>An optional parameter (that serves as a flag to the code for a Dirichlet
+boundary condition). If a value is present, and is not -1.0, the condition
+is applied as a residual equation. Otherwise, it is a “hard set” condition
+and is eliminated from the matrix. <em>The residual method must be used when
+this Dirichlet boundary condition is used as a parameter in automatic
+continuation sequences</em>.</p>
+</dd>
+</dl>
+</section>
+<section id="id4">
+<h3><strong>Examples</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">API</span> <span class="n">NS</span> <span class="mi">100</span> <span class="mf">1000.0</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="api-plane-tran">
+<h2><strong>API_PLANE_TRAN</strong><a class="headerlink" href="#api-plane-tran" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">API_PLANE_TRAN</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/SCALAR ACOUS_PIMAG)</strong></p>
+<p>This boundary condition card applies the plane wave transmission conditions to the acoustic wave equations. This card concerns the imaginary part while
+APR_PLANE_TRAN concerns the real component. This condition is used to set
+reflection/transmission conditions for a surrounded material that is not being meshed. Definitions of the input parameters are as follows:</p>
+<dl class="simple">
+<dt>API_PLANE_TRAN</dt><dd><p>Name of the boundary condition (&lt;bc_name&gt;).</p>
+</dd>
+<dt>SS</dt><dd><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes side set in
+the EXODUS II database.</p>
+</dd>
+<dt>&lt;bc_id&gt;</dt><dd><p>The boundary flag identifier, an integer associated with &lt;bc_type&gt; that
+identifies the boundary location (side set in EXODUS II) in the problem
+domain.</p>
+</dd>
+<dt>&lt;float1&gt;</dt><dd><p><span class="math notranslate nohighlight">\(R_2\)</span>, the acoustic impedance (i.e. product of density and wave
+speed) in the surrounded material.</p>
+</dd>
+</dl>
+</section>
+<section id="id6">
+<h3><strong>Examples</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">API_PLANE_TRAN</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">0.1</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>This condition should be used to account for transmission/reflection conditions for the external boundaries when the acoustic wave equation is used. It reflects characteristics for an acoustic wave encountering a planar interface between two materials;</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/255_goma_physics.png"><img alt="../../_images/255_goma_physics.png" src="../../_images/255_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where k is the acoustic wavenumber and R is the acoustic impedance. The subscript 1 refers to the material inside the external boundary and is the material which is meshed. Subscript 2 refers to the material outside of the external boundary. If <span class="math notranslate nohighlight">\(R_2\)</span> is set equal to
+<span class="math notranslate nohighlight">\(R_1\)</span>, then this condition mimics an infinite boundary condition, i.e. no reflection at the external boundary.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

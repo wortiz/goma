@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POROUS_LIQ_PRESSURE &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>POROUS_LIQ_PRESSURE</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/porous/porous_liq_pressure.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="porous-liq-pressure">
+<h1><strong>POROUS_LIQ_PRESSURE</strong><a class="headerlink" href="#porous-liq-pressure" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">POROUS_LIQ_PRESSURE</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(DC/POR_LIQ_PRES)</strong></p>
+<p>This Dirichlet boundary condition is used to set the liquid phase pore pressure at a noden set. It can be applied to a node set on a boundary of a <em>POROUS_SATURATED,
+POROUS_UNSATURATED</em> or <em>POROUS_TWO_PHASE</em> medium type (see <em>Media Type</em>
+card).</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 72%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>POROUS_LIQ_PRESSURE</strong></p></td>
+<td><p>Boundary condition name (bc_name).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>NS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong>
+denotes node set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (node
+set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>Value of liquid phase pressure.</p></td>
+</tr>
+<tr class="row-odd"><td><p>[float2]</p></td>
+<td><p>An optional parameter (that serves as a flag to the code
+for a Dirichlet boundary condition). If a value is present,
+and is not -1.0, the condition is applied as a residual
+equation. Otherwise, it is a “hard set” condition and is
+eliminated from the matrix. <em>The residual method must
+be used when this Dirichlet boundary condition is used
+as a parameter in automatic continuation sequences</em>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The boundary condition card</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">POROUS_LIQ_PRESSURE</span> <span class="n">NS</span> <span class="mi">101</span> <span class="p">{</span><span class="n">pcmin</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>sets the porous liquid pressure at the boundary denoted by node set 101 to the value
+represented by the APREPRO variable {pcmin}.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Setting the porous liquid pressure to a value cannot be done independently of the
+saturation as the two are related through the vapor pressure curve for simulations in
+partially saturated media (see <em>Saturation</em> model card). Keep in mind that when using
+this card in these situations, you are setting also the saturation level based on the
+capillary pressure, defined as <span class="math notranslate nohighlight">\(p_{gas}\)</span> - <span class="math notranslate nohighlight">\(p_{liq}\)</span> = <span class="math notranslate nohighlight">\(p_c\)</span> . The convention in <em>Goma</em> is that when
+the capillary pressure <span class="math notranslate nohighlight">\(p_c\)</span> is greater than zero, the saturation level is less than unity, viz.
+the medium is partially saturated. When <span class="math notranslate nohighlight">\(p_c\)</span> is less than zero, i.e., when the liquid
+phase pressure is greater than the gas phase pressure, then the medium is saturated (in
+this case the capillary pressure is poorly defined, though). Also, for <em>Media Type</em> options
+of <em>POROUS_UNSATURATED</em>, the ambient gas pressure is constant within the pore
+space and is set by the <em>Porous Gas Constants</em> card in the material file. This boundary
+condition, when setting the liquid phase pressure, must be used with consideration of
+these definitions.</p>
+<p>For saturated media (viz. <em>Media Type</em> of <em>POROUS_SATURATED</em>), this discussion is
+not relevant. In this case, one must only consider the pressure level as it may effect the
+isotropic stress in poroelastic problems.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Convective Lagrangian Velocity &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Convective Lagrangian Velocity</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/mechanical_and_constitutive/convective_lagrangian_velocity.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="convective-lagrangian-velocity">
+<h1>Convective Lagrangian Velocity<a class="headerlink" href="#convective-lagrangian-velocity" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Convective</span> <span class="n">Lagrangian</span> <span class="n">Velocity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">L</span><span class="o">/</span><span class="n">t</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>In solid mechanics, when the deformation of the mesh is Lagrangian, i.e., motion of the
+solid can be described by a mapping from the stress-free state (undeformed state) to the
+deformed state, it is often desirable to prescribe a convective velocity of the stress-free
+state that can lead to inertial forces through deformation (see Technical Discussion
+below). This required card allows for the specification of solid-body translation or
+rotation of the stress-free state, and results in an inertial term on the otherwise quasi
+static solid momentum equation.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 87%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the prescribed velocity model. This parameter can have one of the following
+values: <strong>NONE</strong>, <strong>CONSTANT</strong>, or <strong>ROTATIONAL</strong>.</p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}. These are identified in the discussion of
+each model below. Note that not all models employ a {float_list}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Thus,</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 53%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>NONE</strong></p></td>
+<td><p>the stress-free state is assumed to be unmoving. No
+floating point input values are required with this model.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>CONSTANT</strong> &lt;float1&gt; &lt;float2&gt; &lt;float3&gt;</p></td>
+<td><p>the stress-free state is one of solid-body translation,
+viz. it moves uniformly with a velocity specified by
+three orthogonal components:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - X-component of velocity</p></li>
+<li><p>&lt;float2&gt; - Y-component of velocity</p></li>
+<li><p>&lt;float3&gt; - Z-component of velocity (for 3-D)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ROTATIONAL</strong> &lt;float1&gt; &lt;float2&gt; &lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>the stress-free state is one of solid-body rotation at a
+specified rotation rate.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Rotation rate, in radians/sec.</p></li>
+<li><p>&lt;float2&gt; - X-position of axis of rotation (must be
+constant in 3D).</p></li>
+<li><p>&lt;float3&gt; - Y-position of axis of rotation (must be
+constant in 3D, viz. the axis must be perpendicular to
+both the X and Y axes, viz. the axis must be the Z
+axis.</p></li>
+<li><p>&lt;float4&gt; - Set to zero. Parameter is not used for now.</p></li>
+</ul>
+</div></blockquote>
+<p>Note that this model is applicable in 2-D and certain 3-D
+problems in which the rotation axis is the Z-axis. To
+generalize this model to three-dimensions, the proper
+input will require a point and a direction of the
+rotation axis. In two-dimensions, the axis of rotation
+is the Z-direction.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Convective</span> <span class="n">Lagrangian</span> <span class="n">Velocity</span> <span class="o">=</span> <span class="n">ROTATIONAL</span> <span class="mf">25.0</span> <span class="mf">1.</span> <span class="mf">1.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+<p>This card is associated with a material file, and hence a material that is of
+<em>LAGRANGIAN</em> or <em>TOTAL_ALE</em> type (see <em>Mesh Motion</em> card). That material’s stressfree
+state, as specified by this model, will rotate about an axis that is located at [1.0,
+1.0, 0] at 25 radians/sec (assuming seconds are the time scale of the problem).</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>This capability is often used when problems require a force or a boundary condition to
+be applied to a solid material that is moving relative to the source, or the desired frame
+of reference. Such constraints arise mainly in fluid-structure interaction problems
+where one solid material is moving relative to another, with a fluid material in between,
+e.g. deformable blade or knife metering/pushing liquid over a flat or round substrate.
+These models have also been used in porous-material translation relative to a drying
+source (see references below).</p>
+<p>Specification of any model but <strong>NONE</strong> on this card produces the left-hand-side term in
+the equation for quasi static equilibrium:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/358_goma_physics.png"><img alt="../../_images/358_goma_physics.png" src="../../_images/358_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p><span class="math notranslate nohighlight">\(\sigma\)</span> is the Cauchy stress tensor of the solid material, and f is the body force per unit
+volume. The first term is a result of the specified advection of the stress-free state. <span class="math notranslate nohighlight">\(v_m^0\)</span>,
+which depends solely on the user-prescribed velocity and the current state of
+deformation, is by definition</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/359_goma_physics.png"><img alt="../../_images/359_goma_physics.png" src="../../_images/359_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(F_m\)</span> is the material deformation gradient tensor (computed somewhat differently
+depending on the formulation, as described in the references below), and <span class="math notranslate nohighlight">\(v_sfs\)</span> is the
+stress-free state velocity field specified by this card.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+<p>GT-005.3: THE NEW TOTAL-ARBITRARY-LAGRANGIAN-EULERIAN (TALE)
+CAPABILITY and its applicability to coating with/on deformable media, August 6,
+1999, P. R. Schunk</p>
+<p>SAND2000-0807: TALE: An Arbitrary Lagrangian-Eulerian Approach to Fluid-
+Structure Interaction Problems, P. R. Schunk (May 2000)</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

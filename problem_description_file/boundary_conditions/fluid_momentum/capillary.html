@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CAPILLARY &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>CAPILLARY</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/fluid_momentum/capillary.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="capillary">
+<h1><strong>CAPILLARY</strong><a class="headerlink" href="#capillary" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">CAPILLARY</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">integer</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition card is used to apply capillary forces (surface tension) to the
+momentum equation on a free-surface.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CAPILLARY</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span>, surface tension or capillary term multiplier.
+<strong>IMPORTANT NOTE: if no Surface Tension card appears in the material
+file, this parameter is the surface tension value used here. If
+Surface Tension is set in the material file, however, this float
+value will multiply the surface tension value from the
+material file prior to it’s application in this boundary
+condition. Best practice is to set this parameter to 1.0 and
+set the surface tension value in the material file.</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(P_{ex}\)</span>, the external applied isotropic pressure on the free
+surface.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(P_r\)</span>, deprecated capability. Always set to zero.</p></td>
+</tr>
+<tr class="row-odd"><td><p>[integer]</p></td>
+<td><p>Optional integer value indicating the element block id from
+which to apply the boundary condition. This is used to force
+the capillary stresses to be applied from within a phase
+where the momentum equations are defined.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">CAPILLARY</span> <span class="n">SS</span> <span class="mi">12</span>   <span class="mf">1.0</span> <span class="mf">10.0</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+<p>This card specifies that capillary forces be applied to the free surface on side set 12. If a
+surface tension material parameter value or model is supplied, this is the surface
+tension value used. If not, the surface tension value used is 1.0. An external isotropic
+pressure of 10.0 is applied from the surrounding environment.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>One of the primary characteristics of a free-surface is the presence of surface
+tension-related forces. This boundary condition permits application of such forces.
+The forces on the fluid at the free-surface are set via the following relation:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/101_goma_physics.png"><img alt="../../../_images/101_goma_physics.png" src="../../../_images/101_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>n</em> is the outward normal to the surface, <em>T</em> is the fluid stress tensor,
+<span class="math notranslate nohighlight">\(P_{ex}\)</span> is the
+external applied pressure described above, <em>H</em> is the surface curvature defined as,
+H = –<span class="math notranslate nohighlight">\(\Delta_s\)</span> ⋅ n ⁄ 2, <span class="math notranslate nohighlight">\(\sigma\)</span> is the surface tension, and <span class="math notranslate nohighlight">\(\Delta_s\)</span>
+is the surface divergence operator defined as <span class="math notranslate nohighlight">\(\Delta_s^f\)</span> = (I – nn) ⋅
+<span class="math notranslate nohighlight">\(\Delta\)</span> f .</p>
+<ul class="simple">
+<li><p>Typical usage of this boundary condition is in conjunction with a <em>KINEMATIC</em>
+boundary condition. The latter enforces no penetration of fluid through a free
+surface by deforming the mesh and this boundary condition acts on the fluid
+momentum equation to enforce the capillary jump condition given above.</p></li>
+<li><p>No end of confusion results from use of this card primarily because of overloading
+the surface tension parameter. To reiterate, the value for surface tension that
+appears on this card is the actual (constant) value of surface tension that is used <em>if a
+surface tension model has NOT been specified explicitly in the material file</em>. If
+such a model has been identified, the surface tension parameter in the <em>CAPILLARY</em>
+card is a <em>multiplier</em> to the surface tension. The best practice is to simply always use
+1.0 for this parameter and set the surface tension in the material file.</p></li>
+<li><p>The optional (integer) element block ID corresponds to the material numbers given
+in the <em>Problem Description</em> section of the input file.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Physical Properties &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Mechanical Properties and Constitutive Equations" href="mechanical_and_constitutive.html" />
+    <link rel="prev" title="Material Files" href="../material_files.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../material_files.html">Material Files</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Physical Properties</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#default-database"><strong>Default Database</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#density"><strong>Density</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mechanical_and_constitutive.html">Mechanical Properties and Constitutive Equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="thermal_properties.html">Thermal Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="electrical.html">Electrical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="microstructure.html">Microstructure Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="species.html">Species Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source_terms.html">Source Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shell_equation.html">Shell Equation Properties and Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moments.html">Moment Properties</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../material_files.html">Material Files</a> &raquo;</li>
+      <li>Physical Properties</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/material_file/physical_properties.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="physical-properties">
+<h1>Physical Properties<a class="headerlink" href="#physical-properties" title="Permalink to this headline"></a></h1>
+<p>The intrinsic property of materials essential to <em>Goma</em> is the density. As <em>Goma</em> presumes that all
+materials are incompressible, density is a constant in the governing differential equations.
+However, several options for models of density are present in the code because numerous
+processes lead to density changes, though during any analysis cycle, the density is constant.</p>
+<section id="default-database">
+<h2><strong>Default Database</strong><a class="headerlink" href="#default-database" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Default</span> <span class="n">Database</span> <span class="o">=</span> <span class="p">{</span><span class="n">GOMA_MAT</span> <span class="o">|</span> <span class="n">CHEMKIN_MAT</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This card sets the default material database type. The default for this card is
+GOMA_MAT. In that case, all material properties for the current material are obtained
+from the current material file being read. If the default database is Chemkin, then the
+Chemkin 3 linking files are read in, and initialization of most of the methods and data
+for thermodynamic function evaluation, the stoichiometry and names of species and
+elements, the homogeneous and heterogeneous source terms for chemical reactions and
+their coupling into the energy equation, and transport property evaluations occurs.
+Many fields in the materials database file that were required now are optional. After
+Chemkin initialization, the rest of the materials database file is then read in. At that
+time, some fields containing methods and data that were initialized with Chemkin
+methods and data may be overwritten with methods and data specified by the material
+file. Other fields not initialized or even handled by Chemkin (such as surface tension)
+must be initialized for the first time by the materials file. Thus, the use of Chemkin
+materials database doesn’t mitigate the need for a Goma materials file.</p>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Default</span> <span class="n">Database</span> <span class="o">=</span> <span class="n">CHEMKIN_MAT</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>Chemkin includes its own rigorous treatment of ideal gas thermodynamics and
+transport property evaluations, providing it with a solid foundation on which to build
+kinetics mechanisms and a rigorous treatment of gas phase transport property
+evaluation. In order to maintain internal consistency, the new treatment must be used in
+its entirety.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="density">
+<h2><strong>Density</strong><a class="headerlink" href="#density" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span>  <span class="p">[</span><span class="n">M</span><span class="o">/</span><span class="n">L3</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the model, and all associated parameters, for
+density. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 88%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the density model. This parameter can have one of the following values:
+<strong>CONSTANT, USER, FILL, SUSPENSION, IDEAL_GAS, THERMAL_BATTERY, LEVEL_SET,</strong>
+<strong>CONST_PHASE_FUNCTION, FOAM, REACTIVE_FOAM, or SOLVENT_POLYMER.</strong>
+Boussinesq models can be selected through the <em>Navier-Stokes Source</em> card.</p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt; whose interpretation is
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Thus, choices for {model_name} and the accompanying parameter list are given
+below; additional guidance to the user can be found in the Technical Discussion section
+following the Examples.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>For the <strong>CONSTANT</strong> density model,
+{float_list} is a single value:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Density [M/L3 ]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>USER</strong> &lt;float1&gt; … &lt;floatn&gt;</p></td>
+<td><p>For a user-defined model, the set of
+parameters specified as &lt;float1&gt; through
+&lt;floatn&gt; are defined in the
+function usr_density.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>FILL</strong> &lt;float1&gt; &lt;float2&gt;</p></td>
+<td><p>The model is used with the fill equation when
+the location of the free surface between two
+fluids is tracked with a volume-of-fluid
+method. The {float_list} contains two values
+for this model, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Density of the fluid in phase
+1, denoted by F=1</p></li>
+<li><p>&lt;float2&gt; - Density of the fluid in phase
+2, denoted by F=0</p></li>
+</ul>
+</div></blockquote>
+<p>This card is required when using the FILL
+momentum source model (Navier-Stokes Source
+in Source Terms section of manual) since it
+makes use of this model to
+compute the value of the density.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>SUSPENSION</strong> &lt;float1&gt; &lt;float2&gt; &lt;float3&gt;</p></td>
+<td><p>The option is used to model a suspension
+where the solid particle phase and the
+carrier fluid have different densities. The
+{float_list} contains three values for this
+model, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Species number associated with
+the solid particulate phase (the parser
+reads this as a float but it is cast as
+an integer when assigned).</p></li>
+<li><p>&lt;float2&gt; - Density of the fluid in the
+carrier fluid, <span class="math notranslate nohighlight">\(\rho_f\)</span> .</p></li>
+<li><p>&lt;float3&gt; - Density of the solid
+particulate phase, <span class="math notranslate nohighlight">\(rho_s\)</span> .</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>THERMAL_BATTERY</strong> &lt;float1&gt; &lt;float2&gt;</p></td>
+<td><p>This model is used to relate electrolyte
+density to field variables such as mole
+fraction. A simple empirical form is used,
+with two constants in the {float_list}:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Base Electrolyte Density,
+<span class="math notranslate nohighlight">\(p_0\)</span>.</p></li>
+<li><p>&lt;float2&gt; - Constant, <span class="math notranslate nohighlight">\(\alpha\)</span> .</p></li>
+</ul>
+</div></blockquote>
+<p>(See Technical Discussion.)</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>SOLVENT_POLYMER &lt;float1&gt;</strong></p></td>
+<td><p>This density model is used primarily in
+problems involving drying of polymeric
+solutions. The single float parameter on this
+card is specific volume of the solvent
+material. Note that the numerical value for
+this parameter must be chosen to be
+consistent with the specific volumes for each
+species in the solution set with the Specific
+Volumes card in the material file
+(discussed below).</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>LEVEL_SET &lt;float1&gt; &lt;float2&gt; &lt;float3&gt;</strong></p></td>
+<td><p>This model is used to vary the density in the
+flow regime when following an interface
+between two fluids using level set interface
+tracking. This choice assures a smooth
+transition in density across the zero level
+set contour. The {float_list} contains three
+values for this model, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Fluid density in the negative
+regions of the level set function,
+<span class="math notranslate nohighlight">\(\rho_–\)</span></p></li>
+<li><p>&lt;float2&gt; - Fluid density in the positive
+regions of the level set function,
+<span class="math notranslate nohighlight">\(\rho_+\)</span></p></li>
+<li><p>&lt;float3&gt; - Length scale over which the
+transition occurs, <span class="math notranslate nohighlight">\(\alpha\)</span> . If
+this parameter is set to zero, it will
+default to one-half the Level Set Length
+Scale value already specified.</p></li>
+</ul>
+</div></blockquote>
+<p>This card is required when using the
+LEVEL_SET momentum source model
+(Navier-Stokes Source in Source Terms section
+of manual) since it makes use of this model
+to compute the value of the density.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>CONST_PHASE_FUNCTION &lt;floatlist&gt; &lt;float1&gt; &lt;float2&gt;</strong></p></td>
+<td><p>This model is used to vary the density in the
+flow regime when using phase function
+tracking of muliple phases. This choice
+assures a smooth transition in density across
+the phase boundaries. The {float_list}
+contains a variable number of values that
+depend on the number phase functions being
+tracked, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;floatlist&gt; list of float variables equal
+to the number of phase functions. These
+are the constant densities of each phase
+in order from 1 to number of phase
+functions that are represented by each
+phase function.</p></li>
+<li><p>&lt;float1&gt; Length scale over which the
+transition between one phases density to
+the other occurs, <span class="math notranslate nohighlight">\(\alpha\)</span> . If this
+parameter is set to zero, it will default
+to one-half the Level Set Length Scale
+value already specified.</p></li>
+<li><p>&lt;float3&gt; The “null” value for density.
+This is the value for density which will
+be assigned to those regions of the flow
+where all the phase functions are less
+than or equal to zero.</p></li>
+</ul>
+</div></blockquote>
+<p>This card is required when using the
+PHASE_FUNCTION momentum source model
+(Navier-Stokes Source in Source Terms section
+of manual) since it makes use of this model
+to compute the value of the density.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>REACTIVE_FOAM &lt;float1&gt;</strong></p></td>
+<td><p>This model is used when a constant density
+assumption does not apply in the model of
+interest, as with reactive mixtures. While
+this model was implemented for foam
+applications, the form of the density
+equation is quite universal. One important
+assumption in this model is that the volume
+change upon mixing is zero. The single
+float input is the specific volume of the N+1
+species (not modeled in the problem).</p>
+<p>This model choice requires the use of the
+FOAM species source model - Goma will fail if
+it is not specified. Please see the Species
+Source section for instructions on specifying
+the FOAM model.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>Following are some sample input cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1000.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="o">=</span> <span class="n">LEVEL_SET</span> <span class="mf">0.05</span> <span class="mf">0.0001</span> <span class="mf">0.25</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">DENSITY</span> <span class="o">=</span> <span class="n">CONST_PHASE_FUNCTION</span> <span class="mf">0.9</span> <span class="mf">0.001</span> <span class="mf">12.0</span> <span class="mf">0.0</span> <span class="mf">0.00001</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p>The <strong>CONSTANT</strong> density model prescribes an unchanging value for an
+incompressible fluid; only a single value need be specified by the user.</p></li>
+<li><p>The <strong>USER</strong> model provides a means for the user to create a custom density model
+for his/her problem. This user-defined model must be incorporated by modifying
+the usr_density function in the file user_mp.c. The parameters needed by this
+model are entered in the {float_list} and are passed to the usr_density routine
+as an array.</p></li>
+<li><p>The <strong>FILL</strong> model is used when the location of the interface between two fluids is
+tracked with an explicit volume-of-fluid method. The value of density is defined
+from the following:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/341_goma_physics.png"><img alt="../_images/341_goma_physics.png" src="../_images/341_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\rho_1\)</span> and <span class="math notranslate nohighlight">\(\rho_0\)</span> are the phase densities obtained from the FILL density card,
+F is the value of the fill color function. As can be seen, <span class="math notranslate nohighlight">\(\rho_1\)</span> is the density value
+when F = 1 while <span class="math notranslate nohighlight">\(\rho_0\)</span> is the density value when F = 0. In the transition zone
+between these to extremes of F, the density will simply be a weighted average
+of the two values.</p>
+<ul class="simple">
+<li><p>The <strong>SUSPENSION</strong> model is used to model a suspension where the solid particle
+phase and the carrier fluid have different densities. The concentration of the
+continuum mixture is defined by the following relationship:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/342_goma_physics.png"><img alt="../_images/342_goma_physics.png" src="../_images/342_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\phi\)</span> is the volume fraction of the solid particulate phase, <span class="math notranslate nohighlight">\(\rho_f\)</span> , is the density
+of the fluid in the carrier fluid and <span class="math notranslate nohighlight">\(\rho_s\)</span>, is the density of the solid particulate
+phase. The solid particulate phase has an associated species number as this is
+designates the species equation being solved for this component.</p>
+<ul class="simple">
+<li><p>The <strong>THERMAL_BATTERY</strong> model is used to relate electrolyte density to field
+variables such as mole fraction. A simple empirical form is used with the density
+of the system being specified by the following equation,:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/343_goma_physics.png"><img alt="../_images/343_goma_physics.png" src="../_images/343_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(x_i\)</span> is the mole fraction of ionic species <em>i</em>, <span class="math notranslate nohighlight">\(\rho_0\)</span> is the base electrolyte
+density and is <em>a</em> constant.</p>
+<ul class="simple">
+<li><p>The <strong>LEVEL_SET</strong> density model is used to vary the density in the flow regime
+from one phase to the other when the interface between two fluids is being
+followed by level set interface tracking. The model assures a smooth transition in
+density across the zero level set contour. The density as a function of the level set
+function value, <span class="math notranslate nohighlight">\(\phi\)</span>, is as follows:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/344_goma_physics.png"><img alt="../_images/344_goma_physics.png" src="../_images/344_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/345_goma_physics.png"><img alt="../_images/345_goma_physics.png" src="../_images/345_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>is a smooth Heaviside function, <span class="math notranslate nohighlight">\(\phi\)</span> is the value of the level set function, <span class="math notranslate nohighlight">\(\rho_+\)</span> and
+<span class="math notranslate nohighlight">\(\rho_-\)</span> are density values of the fluids assigned positive or negative values of the
+level set function, respectively, and α is the density transition length scale, that is, half the width of
+the transition zone between density values. Note that this value may differ from the level set length
+scale parameter set elsewhere.</p>
+<ul class="simple">
+<li><p>The <strong>CONST_PHASE_FUNCTION</strong> model computes the density at a given point
+with the following relation:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/346_goma_physics.png"><img alt="../_images/346_goma_physics.png" src="../_images/346_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\rho_i\)</span> are the individual phase function ( <span class="math notranslate nohighlight">\(\phi_i\)</span> ) densities, <span class="math notranslate nohighlight">\(H_a( \phi_i )\)</span> , is the
+smoothed Heaviside function using the length scale specified on the card.
+The parameter <span class="math notranslate nohighlight">\(\rho_theta\)</span> is the null density and will only come into play at points
+were all phase function values are less than zero. In theory, this shouldn’t
+happen for well posed problems, but in practice it is not uncommon.</p>
+<ul class="simple">
+<li><p>The <strong>SPECIES_SOURCE</strong> and <strong>REACTIVE_FOAM</strong> models both employ the following density formula:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/347_goma_physics.png"><img alt="../_images/347_goma_physics.png" src="../_images/347_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(w_j\)</span> is the mass fraction of component j and <span class="math notranslate nohighlight">\(V_j\)</span> is the specific volume of
+species j; these two parameters are set by the Specific Volume cards in the
+material file. The variable N is the total number of bulk species. The variable
+<span class="math notranslate nohighlight">\(V_n+1\)</span> is the specific volume specified in the density card.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../material_files.html" class="btn btn-neutral float-left" title="Material Files" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mechanical_and_constitutive.html" class="btn btn-neutral float-right" title="Mechanical Properties and Constitutive Equations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

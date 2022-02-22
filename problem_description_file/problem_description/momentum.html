@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>momentum &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>momentum</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/problem_description/momentum.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="momentum">
+<h1><strong>momentum</strong><a class="headerlink" href="#momentum" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EQ</span> <span class="o">=</span> <span class="n">momentum</span><span class="p">{</span><span class="mi">1</span><span class="o">|</span><span class="mi">2</span><span class="o">|</span><span class="mi">3</span><span class="p">}</span> <span class="p">{</span><span class="n">Galerkin_wt</span><span class="p">}</span> <span class="p">{</span><span class="n">U1</span><span class="o">|</span><span class="n">U2</span><span class="o">|</span><span class="n">U3</span><span class="p">}</span> <span class="p">{</span><span class="n">Interpol_fnc</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card provides information for solving a differential equation for one component of
+a vector momentum equation. Definitions of the input parameters are defined below.
+Note that &lt;floatlist&gt; contains six constants for the Momentum equation defining the
+constant multipliers for each type of term in the equation. The Galerkin weight and the
+interpolation function must be the same for the code to work properly.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 43%" />
+<col style="width: 57%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>momentum1 | momentum2 | momentum3</strong></p></td>
+<td><p>Name of the equation to be solved, where the 1,2
+and 3 components correspond to one of the
+principal coordinate directions, e.g. X, Y and Z
+for Cartesian geometry.</p></td>
+</tr>
+<tr class="row-even"><td><p>{Galerkin_wt}</p></td>
+<td><p>Two- or four-character value that defines the
+type of weighting function for this equation,
+where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Q1</strong>-Linear</p></li>
+<li><p><strong>Q2</strong>-Quadratic</p></li>
+<li><p><strong>Q1_D</strong>-Standard linear interpolation with
+special allowance for discontinuous degrees of
+freedom at interfaces.</p></li>
+<li><p><strong>Q2_D</strong>-Standard quadratic interpolation with
+special allowance for discontinuous degrees of
+freedom at interfaces.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>U1 | U2 | U3</strong></p></td>
+<td><p>Name of the variable associated with the 1, 2 or
+3 principal coordinate direction for this
+component equation.</p></td>
+</tr>
+<tr class="row-even"><td><p>{Interpol_fnc}</p></td>
+<td><p>Two- or four-character value that defines the
+interpolation function used to represent the
+variable <strong>U1</strong>, <strong>U2</strong> or <strong>U3</strong> where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Q1</strong>-Linear Continuous</p></li>
+<li><p><strong>Q2</strong>-Quadratic Continuous</p></li>
+<li><p><strong>Q1_D</strong>-Standard linear interpolation with
+special allowance for discontinuous degrees of
+freedom at interfaces.</p></li>
+<li><p><strong>Q2_D</strong>-Standard quadratic interpolation with
+special allowance for discontinuous degrees of
+freedom at interfaces.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Multiplier on mass matrix term ( d ⁄dt ).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p>Multiplier on advective term.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float3&gt;</p></td>
+<td><p>Multiplier on boundary term
+( <span class="math notranslate nohighlight">\(\underline{n}\)</span> • flux  ).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float4&gt;</p></td>
+<td><p>Multiplier on diffusion term.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float5&gt;</p></td>
+<td><p>Multiplier on source term.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float6&gt;</p></td>
+<td><p>Multiplier on porous term (linear source).</p></td>
+</tr>
+</tbody>
+</table>
+<p>Note: These multipliers are intended to provide a means of activating or deactivating
+terms of an equation, and hence should be set to zero or one. If a multiplier is zero, the
+section of code that evaluates the corresponding term will be skipped.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample card that uses quadratic continuous velocity interpolation
+and weight function and turns on all equation term multipliers except for the mass
+matrix and the porous term:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EQ</span> <span class="o">=</span> <span class="n">momentum1</span> <span class="n">Q2</span> <span class="n">U1</span> <span class="n">Q2</span> <span class="mf">0.</span> <span class="mf">1.</span> <span class="mf">1.</span> <span class="mf">1.</span> <span class="mf">1.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>No Discussion.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>No References.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

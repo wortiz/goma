@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solid Constitutive Equation &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Solid Constitutive Equation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/mechanical_and_constitutive/solid_constitutive_equation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="solid-constitutive-equation">
+<h1>Solid Constitutive Equation<a class="headerlink" href="#solid-constitutive-equation" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card specifies the constitutive equation used to control mesh motion and/
+or the constitutive model describing solid material stress response to deformation. The
+single input parameter is defined as</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 88%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>The name of the constitutive equation. The permissible values for {model_name} are
+dependent on the selection for the Mesh Motion type, that being one of ARBITRARY,
+LAGRANGIAN/DYNAMIC_LAGRANGIAN, or TOTAL_ALE.</p>
+<p>For an ARBITRARY <em>Mesh Motion</em>, {model_name} can be one of the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>LINEAR</strong> - a linear elastic model for which the deformations are assumed to be
+small, thus simplifying the analysis of strain and stress.</p></li>
+<li><p><strong>NONLINEAR</strong> - a nonlinear neo-Hookean elastic model for which the deformations can
+be large without loss of frame invariance. This is the recommended model (and all
+materials currently default to NONLINEAR if the mesh is arbitrary).</p></li>
+</ul>
+</div></blockquote>
+<p>For a LAGRANGIAN, DYNAMIC_LAGRANGIAN, or TOTAL_ALE <em>Mesh Motion</em>, {model_name} can be
+one of the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>LINEAR</strong> - a linear elastic model for which the deformations are assumed to be
+small, thus simplifying the analysis of strain and stress.</p></li>
+<li><p><strong>NONLINEAR</strong> - a nonlinear neo-Hookean model applicable for 2D, 3D, and CYLINDRICAL
+coordinates.</p></li>
+<li><p><strong>HOOKEAN_PSTRAIN</strong> - a nonlinear neo-Hookean model with plane strain for which the
+deformations can be large without loss of frame invariance (2D only).</p></li>
+<li><p><strong>HOOKEAN_PSTRESS</strong> - a nonlinear neo-Hookean model with plane stress (not activated
+in <em>Goma</em> 4.0).</p></li>
+<li><p><strong>INCOMP_PSTRAIN</strong> - An incompressible nonlinear neo-Hookean model with plane strain
+and a Lagrangian pressure constraint on the volume.</p></li>
+<li><p><strong>INCOMP_PSTRESS</strong> - An incompressible nonlinear neo-Hookean model with plane stress
+and a Lagrangian pressure constraint on the volume (not activated in <em>Goma</em> 4.0).</p></li>
+<li><p><strong>INCOMP_3D</strong> - Incompressible version of the neo-Hookean solid in a special
+Segalman formulation that removes the volume-change from the strain tensor (like the
+<em>INCOMP_PSTRAIN</em> model above), and is specifically designed for 3D applications (not
+widely used).</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The functional form of each of these equations is provided in the Technical Discussion
+with some important details.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">LINEAR</span>
+</pre></div>
+</div>
+<p>This equation type requires two elastic constants be specified, <em>Lame Lambda</em> and <em>Lame
+Mu</em>. This constitutive equation can be used for all <em>Mesh Motion</em> types. It is not
+recommended for large mesh deformations, even for ALE problems, because of
+spurious stresses generated by solid body translation or rotation.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The general compressible form of Hooke’s Law, which applies to the <em>LINEAR,
+NONLINEAR</em> and <em>HOOKEAN_PSTRAIN</em> options, can be written as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/348_goma_physics.png"><img alt="../../_images/348_goma_physics.png" src="../../_images/348_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here <span class="math notranslate nohighlight">\(\lambda\)</span> is the Lame coefficient for volume expansion, <span class="math notranslate nohighlight">\(\varepsilon\)</span> is the volume strain measure
+whose definition depends on the model chosen, <span class="math notranslate nohighlight">\(\mu\)</span> is another elastic Lame coefficient
+for shear deformation, <span class="math notranslate nohighlight">\(\underline {E}\)</span> and is the chosen strain tensor, the form of which also
+depends on the constitutive model chosen.</p>
+<p>The general incompressible form of Hooke’s Law, which applies to all <em>INCOMP*</em>
+options, can be written as:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/349_goma_physics.png"><img alt="../../_images/349_goma_physics.png" src="../../_images/349_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>with <em>p</em> being the solid phase pressure. An additional continuity equation is required in
+this case to account for the pressure (see <em>Continuity</em> equation card). Note, for these
+model options one must set the <em>Lame LAMBDA</em> coefficient to zero, or the pressure term
+and the expansion term are added together.</p>
+<p>The volume change and strain tensors depend on the chosen solid constitutive equation
+and are as follows:</p>
+<p>For the <em>LINEAR</em> option:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/350_goma_physics.png"><img alt="../../_images/350_goma_physics.png" src="../../_images/350_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/351_goma_physics.png"><img alt="../../_images/351_goma_physics.png" src="../../_images/351_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\underline {d}\)</span> is the displacement field vector, tr is the tensor trace operator, and the gradient operator (<span class="math notranslate nohighlight">\(\Delta\)</span>) is with respect to the deformed coordinates.</p>
+<p>For all <em>NONLINEAR</em> models, we use the deformation gradient tensor as a building
+block:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/352_goma_physics.png"><img alt="../../_images/352_goma_physics.png" src="../../_images/352_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The “material coordinates” are <span class="math notranslate nohighlight">\(\underline {X}\)</span> and describe the original locations of all parcels of material in the domain; and the “current configuration/spatial coordinates”
+<span class="math notranslate nohighlight">\(\underline {x}\)</span> are the deformed mesh coordinates. Of course we have</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/353_goma_physics.png"><img alt="../../_images/353_goma_physics.png" src="../../_images/353_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>for all <em>LAGRANGIAN</em> mesh motion cases. We define a Cauchy-Green tensor as:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/354_goma_physics.png"><img alt="../../_images/354_goma_physics.png" src="../../_images/354_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and invoke the linearized small strain theory (viz. that <span class="math notranslate nohighlight">\(\Delta_x\)</span> <span class="math notranslate nohighlight">\(\underline{d}\)</span>
+<span class="math notranslate nohighlight">\(\equiv\)</span> <span class="math notranslate nohighlight">\(\Delta_x\)</span> <span class="math notranslate nohighlight">\(\underline {d}\)</span>), and write</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/355_goma_physics.png"><img alt="../../_images/355_goma_physics.png" src="../../_images/355_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>With these quantities, we form the volume strain and strain tensor for the various
+models:</p>
+<p>For <em>NONLINEAR, INCOMP_PSTRAIN, INCOMP_3D,</em> and <em>HOOKEAN_PSTRAIN</em>:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/356_goma_physics.png"><img alt="../../_images/356_goma_physics.png" src="../../_images/356_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>For <em>INCOMP_PSTRAIN</em> and <em>INCOMP_3D</em> we use:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/357_goma_physics.png"><img alt="../../_images/357_goma_physics.png" src="../../_images/357_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>For all other models we use <span class="math notranslate nohighlight">\(\underline {E}\)</span> = <span class="math notranslate nohighlight">\(\underline {C}\)</span>. It is noteworthy that we use the linearized small strain theory for parts of the strain tensor, but the real Lagrangian deformation gradient for the volumetric strain. For elastoviscoplastic models and <em>TOTAL_ALE</em> solid mechanics, we do not invoke the linearized small strain theory.</p>
+<p>Also noteworthy is that the elastic constants <span class="math notranslate nohighlight">\(\lambda\)</span> and <span class="math notranslate nohighlight">\(\mu\)</span> are related to the more well known bulk and Young’s moduli and the Poisson’s ratio by simple expressions (see
+<em>Lame Mu</em> and <em>Lame Lambda</em> cards).</p>
+</section>
+<section id="theory">
+<h2><strong>Theory</strong><a class="headerlink" href="#theory" title="Permalink to this headline"></a></h2>
+<p>The incompressible options (i.e., INCOMP_PSTRAIN and INCOMP_PSTRESS
+and INCOMP_3D) use the theory of Segalman, et. al. (1992) to control mesh motion
+and couple the volume dilation to changes in solvent content. Plane strain implies that
+there is no deformation in the z-direction; plane stress implies there is no stress change
+in the z-direction.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-005.3: THE NEW TOTAL-ARBITRARY-LAGRANGIAN-EULERIAN (TALE)
+CAPABILITY and its applicability to coating with/on deformable media, August 6,
+1999, P. R. Schunk</p>
+<p>SAND2000-0807: TALE: An Arbitrary Lagrangian-Eulerian Approach to Fluid-
+Structure Interaction Problems, P. R. Schunk (May 2000)</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+<p>Segalman, D., W. Witkowski, D. Adolf, M. Shahinpoor, “Theory and Application of
+Electrically Controlled Polymeric Gels”, Smart Mater. Struct. 1:95-100 (1992).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

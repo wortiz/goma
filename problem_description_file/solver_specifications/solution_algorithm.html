@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solution Algorithm &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Solution Algorithm</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/solver_specifications/solution_algorithm.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="solution-algorithm">
+<h1>Solution Algorithm<a class="headerlink" href="#solution-algorithm" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solution</span> <span class="n">Algorithm</span> <span class="o">=</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card selects an algorithm for the solution of the linear matrix system that
+arises at each Newton iteration (either for a steady-state solution or for the solution at
+each discrete time). Please note that at the time of this writing, new solver capabilities
+were being generated; although the following information was complete and accurate,
+it will likely be out of date by the time of publishing. Users should consult the CD
+version of this document in the Goma Documentation System for up to date options.</p>
+<p>There are three major matrix solver packages accessible in <em>Goma</em>, two direct
+factorization collections and an iterative solver package. The first collection of direct
+factorization methods in <em>Goma</em> include the Sparse1.3 package (Kundert and
+Sangiovanni-Vincentelli, 1988) and Y12M direct factorization technique (Zlatev,
+Wasniewski and Schaumburg, 1981) accessible via the Aztec linear solver package.
+The second collection of direct factorization methods include two frontal solvers,
+SNL_MPFRONT, an adaptation of R. Benner’s implementation of Hood’s (1976)
+frontal method, and UMFPACK (Davis and Duff, 1997). SNL_MPFRONT is a
+traditional frontal method while UMFPACK is a multi-frontal solver.</p>
+<p>The Aztec 2.x linear solver package (Tuminaro, et. al., 1999) is the iterative solver
+component of <em>Goma</em>. A successor to the krysolve 1.0 package (Schunk and Shadid,
+1992) and the Aztec 1.0 package (Hutchinson, Shadid and Tuminaro, 1995), Aztec 2.x
+includes support for distributed memory architectures and for matrices in either a
+modified sparse row (MSR) format or a variable block row (VBR) format, as well as
+their distributed memory extensions. Generally, convergence of these iterative methods can be accelerated by judicious use of a preconditioner (which many of the other <em>Solver
+Specifications</em> cards address).</p>
+<p>The options for this input card are listed below, but additional usage comments are
+included as part of the Technical Discussion section of this card. These comments
+provide assistance in choosing the <em>Solution Algorithm</em> for your problem.</p>
+<p>Valid options for {char_string} are as follows:</p>
+<dl>
+<dt>lu</dt><dd><p>Direct factorization via Gaussian elimination using Sparse 1.3. This solver
+is robust even for poorly conditioned matrix systems. It is unavailable
+when running <em>Goma</em> on multiple processors.</p>
+</dd>
+<dt>front</dt><dd><p>Direct factorization based on Benner’s SNL_MPFRONT that eliminates
+equations and variables as the fully assembled rows of the matrix are
+acquired. This is the latest solver installed within <em>Goma</em> and users are
+encouraged to report their successes and failures with this option as part
+of testing. It is unavailable when running <em>Goma</em> on multiple processors.</p>
+</dd>
+<dt>umf/umff</dt><dd><p>Direct factorization using UMFPACK. This multi-frontal solver has been
+hardwired to perform elimination only upon complete assembly. The <strong>umff</strong>
+option forces a full factorization every time, whereas <strong>umf</strong> does not. It
+is unavailable when running <em>Goma</em> on multiple processors.</p>
+</dd>
+<dt>y12m</dt><dd><p>Direct factorization using the Y12M package. This package is accessible
+through the Aztec matrix solver interface and cannot be used for multiple
+processor computations. Other direct solvers are recommended against this
+one.</p>
+</dd>
+<dt>gmres</dt><dd><p>Iterative solver from the Aztec package using the restarted generalized
+minimum residual method. Iterative solver options are important to
+convergence of this method, e.g. <em>Preconditioner, Size of Krylov subspace,
+Matrix,</em> etc.</p>
+</dd>
+<dt>cg</dt><dd><p>Iterative solver from the Aztec package using the conjugate gradient
+method. Like other iterative solvers, the successful convergence of the
+conjugate gradient method for a linear system depends on preconditioners
+and other cards in the <em>Solver Specifications</em> section.</p>
+</dd>
+<dt>cgs</dt><dd><p>Iterative solver from the Aztec package using the conjugate gradient
+squared method. Convergence of this method is frequently contingent on the
+linear system and on the choice of other cards in the <em>Solver
+Specifications</em> section.</p>
+</dd>
+<dt>tfqmr</dt><dd><p>Iterative solver from the Aztec package using the transposefree
+quasi-minimum residual method. Convergence of this method is frequently
+contingent on the linear system and on the choice of other cards in the
+<em>Solver Specifications</em> section.</p>
+</dd>
+<dt>bicgstab</dt><dd><p>Iterative solver from the Aztec package using the biconjugate gradient with
+stabilization. Convergence of this method is frequently contingent on the
+linear system and on the choice of other cards in the Solver Specifications
+section.</p>
+</dd>
+<dt>amesos</dt><dd><p>Allows access to direct solver options implemented in parallel. Please see
+the user-notes below for Goma build options that must be exercised. This
+package is part of the Trilinos 6.0 framework. With this option, you must
+add an additional input card to specify the parallel direct solvers:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Amesos</span> <span class="n">Solver</span> <span class="n">Package</span> <span class="o">=</span> <span class="p">{</span><span class="n">superlu</span> <span class="o">|</span> <span class="n">mumps</span> <span class="o">|</span> <span class="n">klu</span> <span class="o">|</span> <span class="n">umfpack</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Of these four options, we currently recommend <strong>mumps</strong>.
+All options can be run in parallel.</p>
+</dd>
+<dt>stratimikos</dt><dd><p>Interface to Trilino’s Stratimikos package
+requires:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Matrix</span> <span class="n">storage</span> <span class="nb">format</span> <span class="o">=</span> <span class="n">epetra</span>
+</pre></div>
+</div>
+<p>Allows block solvers, see also ref:<cite>Stratimikos File</cite></p>
+</dd>
+<dt>petsc</dt><dd><p>PETSc solver and preconditioner, will use <cite>petscrc</cite> file or <cite>-petsc</cite>
+command line, see Technical Discussion for more information</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solution</span> <span class="n">Algorithm</span> <span class="o">=</span> <span class="n">lu</span>
+</pre></div>
+</div>
+<p>Another example (two cards) shows how to invoke a parallel direct solver:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solution</span> <span class="n">Algorithm</span> <span class="o">=</span> <span class="n">amesos</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Amesos</span> <span class="n">Solver</span> <span class="n">Package</span> <span class="o">=</span> <span class="n">superlu</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The direct factorization options are the most robust but consume the most
+computational resources (CPU time and memory, particularly for large and 3D
+problems). The iterative methods consume less resources but may take some
+experimentation to obtain convergence to the solution of the linear system. For
+example, a poorly conditioned linear system may require a lot of preconditioning. The
+conjugate gradient method may not be very useful on linear systems that are not symmetric
+positive definite. Although the following guidelines are useful, selection of
+the “right” linear solver requires experience, understanding and sometimes, luck.</p>
+<ul>
+<li><p><strong>lu</strong> - The Sparse1.3 direct solver, is the most robust solver in <em>Goma</em> in terms of
+obtaining successful convergence for even poorly conditioned matrix systems. A significant
+disadvantage, however, is that it can be computationally expensive for
+large problems. Not only do the memory and CPU requirements grow with
+problem size, but the initial symbolic factorization that seeks optimal reordering
+also consumes greater CPU resources with larger problem sizes. For example, a
+problem with 70,000 degrees of freedom that required 22 hours of CPU for the
+initial factorization required only 1/2 hour for subsequent factorizations.
+Furthermore, this solver is unavailable when <em>Goma</em> is run on multiple processors.
+Its robustness makes it an excellent choice for small- and medium-sized problems.</p></li>
+<li><p><strong>front</strong> - This solver is an adaptation for <em>Goma</em> of R. Benner’s frontal solver, which
+itself includes considerable improvements compared to the pioneering frontal
+solvers (Irons, 1970; Hood, 1976). The SNL_MPFRONT library is compiled and linked into <em>Goma</em>
+only by choice. Direct factorization is done as the fully
+assembled rows of the matrix are acquired. The frontal solver consumes CPU time
+roughly comparable to Sparse 1.3, with the noted advantage of eliminating intraelement
+fully summed equations as they are encountered and only keeping the
+active working matrix in-core, thereby reducing memory requirements and
+possible storage of matrix components to disk.</p></li>
+<li><p><strong>umf/umff</strong> - UMFPACK 2.0d is a powerful direct solver that is generally faster
+than Sparse 1.3a, though it might lack the robustness of the latter on infrequent
+occasions. The implementation of UMFPACK within <em>Goma</em> is only barebones, i.e.
+the multi-frontal solver has been hardwired to perform elimination only upon
+complete assembly. Finally, usage of UMFPACK is governed by a license that limits usage to
+educational, research and benchmarking purposes by nonprofit
+organizations and the U.S. government. Please refer to the license statement
+contained in the UMFPACK distribution for exact details. This solver was
+implemented prior to <strong>front</strong> so it was the only direct solver alternative to lu for a
+period of time. User’s should now evaluate performance of this solver against <strong>front</strong> on a case by case basis.</p></li>
+<li><p><strong>gmres, cg, cgs, tfqmr, bicgstab</strong> - The convergence of each of these iterative
+solvers is highly influenced by the kind of preconditioning selected. Often, the
+method(s) will not converge at all without an appropriate level of preconditioning.
+GMRES is considered one of the best iterative methods available, although there
+are instances where each of the others is superior. It is a Krylov-based method and has an
+additional input card, <em>Size of Krylov subspace</em>. As mentioned earlier, CG
+should only be used on systems that are symmetric positive definite. See the <em>Matrix
+subdomain</em>
+solver card, and other <em>Solver Specifications</em> cards for guidance
+on appropriate use of preconditioners; also consult Schunk, et. al. (2002).</p></li>
+<li><p><strong>amesos</strong>: superlu, klu, umfpack - These solvers are all direct (not iterative, but
+based on Gaussian elimination) and can be run in parallel with mpi. We
+recommend these solvers when robustness is required over iterative solvers and
+when the matrix assembly time is excessive, which is often the case when
+overloaded equations like species diffusion, porous media equations, etc. are used.
+This option also performs well for three-dimensional problems of small to
+moderate size.</p></li>
+<li><p><strong>stratimikos</strong>: mostly used for interfacing with Trilino’s <cite>Teko</cite> but can also call
+full solver suite that is supported in Trilinos through xml files</p></li>
+<li><p><strong>petsc</strong>: There are quite a lot of linear solvers and preconditioners available through
+PETSc and most are configured through either command line arguments using <cite>-petsc</cite> or
+using a <cite>petscrc</cite> file in your goma problem directory specifying petsc options</p>
+<p>Options are specified using the usual <cite>ksp_type</cite> and <cite>pc_type</cite> etc</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">ksp_type</span> <span class="n">gmres</span>
+<span class="o">-</span><span class="n">pc_type</span> <span class="n">asm</span>
+<span class="o">...</span> <span class="n">etc</span>
+</pre></div>
+</div>
+<p>When in a segregated solve <cite>ksp</cite> and <cite>pc</cite> options should be prefixed with a 0-indexed <cite>-sys#</cite>
+corresponding to each matrix</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">sys0_ksp_type</span> <span class="n">gmres</span>
+<span class="o">-</span><span class="n">sys0_pc_type</span> <span class="n">asm</span>
+<span class="o">-</span><span class="n">sys1_ksp_type</span> <span class="n">gmres</span>
+<span class="o">-</span><span class="n">sys1_pc_type</span> <span class="n">hypre</span>
+<span class="o">...</span> <span class="n">etc</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>SAND2001-3512J: Iterative Solvers and Preconditioners for Fully-coupled Finite
+Element Formulations of Incompressible Fluid Mechanics and Related Transport
+Problems, P. R. Schunk, M. A. Heroux, R. R. Rao, T. A. Baer, S. R. Subia and A. C.
+Sun, March 2002.</p>
+<p>G. H. Golub and C. F. V. Loan, Matrix Computations, Johns Hopkins University Press,
+Baltimore, MD 3rd ed. (1996)</p>
+<p>For all other references, please see <em>References</em> at the end of this manual.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CAP_ENDFORCE &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>CAP_ENDFORCE</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/fluid_momentum/cap_endforce.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="cap-endforce">
+<h1><strong>CAP_ENDFORCE</strong><a class="headerlink" href="#cap-endforce" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">CAP_ENDFORCE</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(SPECIAL/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition card adds surface tangent forces to the momentum equations
+at the endpoint of a free-surface. There are four values to be input for the &lt;
+float_list&gt;; definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 78%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CAP_ENDFORCE</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>NS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong>
+denotes node set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (node
+set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>X-component of surface tangent vector at end point.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>Y-component of surface tangent vector at end point.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>Z-component of surface tangent vector at end point.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p>Equilibrium surface tension value. (See Technical
+Discussion.)</p></td>
+</tr>
+</tbody>
+</table>
+<p>This condition need only be applied at the intersection of outflow or inflow surfaces
+and the free-surface. The sign on the tangent vector depends on whether the computed
+tangent vector is facing inward or outward. This can be figured by t = n × k.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card using several APREPRO variables:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">CAP_ENDFORCE</span> <span class="n">NS</span> <span class="mi">100</span>   <span class="p">{</span><span class="n">sind</span><span class="p">(</span><span class="n">th2</span><span class="p">)}</span> <span class="p">{</span><span class="o">-</span><span class="n">cosd</span><span class="p">(</span><span class="n">th2</span><span class="p">)}</span> <span class="mf">0.0</span> <span class="p">{</span><span class="n">surf_tens</span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>The need for this boundary condition appears out of the formulation used to apply
+capillary forces to surfaces. The surface divergence theorem is used to simplify the
+curvature term in the capillary stress jump condition. This produces integrals of the
+form:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/107_goma_physics.png"><img alt="../../../_images/107_goma_physics.png" src="../../../_images/107_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>C</em> is the bounding curve of the capillary free surface, <span class="math notranslate nohighlight">\(\sigma\)</span> is the surface
+tension, <span class="math notranslate nohighlight">\(\phi_i\)</span> is a finite element shape function and <em>m</em> is a vector that is at once
+normal to the capillary surface and also normal to the curve <em>C</em>. It always points
+outward from the domain in question. While this is completely general for threedimensions,
+a surface can be reduced to a curve for two-dimensions and the
+divergence theorem still applies (for this boundary condition).</p>
+<ul class="simple">
+<li><p>This card or the <em>CAP_ENDFORCE_SCALAR</em> is used in conjunction with the
+<em>CAPILLARY</em> card to complete (as indicated above) the treatment of capillarity
+conditions. It is only required when an inflow or outflow boundary intersects a free
+surface.</p></li>
+<li><p>The <em>CAP_ENDFORCE</em> boundary condition is applied through function
+fapply_ST (in file <em>mm_ns_bc.c</em>). The boundary term is computed as the product
+of the surface tension supplied on this card (&lt;float4&gt;) and the value supplied on
+the <em>Surface Tension</em> card in the material file. When the latter card is missing,
+<em>Goma</em> defaults its value to 1.0.</p></li>
+<li><p>This card was previously called <em>SURFTANG</em> for the surface tangent component of
+the capillary force. Old input decks can be updated simply by changing the name
+of the boundary condition without changing the parameters.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post Processing Particle Traces &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Volumetric Integration" href="post_processing_volume.html" />
+    <link rel="prev" title="Post Processing Fluxes and Data" href="post_processing_fluxes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="file_specifications.html">File Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="general_specifications.html">General Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="level_set.html">Level Set Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phase_field.html">Phase Field Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description.html">Problem Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing.html">Post Processing Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Post Processing Particle Traces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1"><strong>Post Processing Particle Traces</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#particle"><strong>PARTICLE</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#end-of-particles"><strong>END OF PARTICLES</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id9"><strong>References</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_volume.html">Volumetric Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../problem_description_file.html">Problem Description (Input File)</a> &raquo;</li>
+      <li>Post Processing Particle Traces</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/problem_description_file/post_processing_particle.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="post-processing-particle-traces">
+<h1>Post Processing Particle Traces<a class="headerlink" href="#post-processing-particle-traces" title="Permalink to this headline"></a></h1>
+<p>This option enables the calculation of particle trajectories and computed quantities along the
+trajectories. The coordinates of the trajectory starting point and time-stepping parameters are
+input using the cards in this section. The computation of quantities along the trajectories and their
+subsequent output is controlled through the <em>usr_ptracking</em> routine in user_post.c.</p>
+<section id="id1">
+<h2><strong>Post Processing Particle Traces</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Post</span> <span class="n">Processing</span> <span class="n">Particle</span> <span class="n">Traces</span> <span class="o">=</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This card indicates that the cards between this and an <em>END OF PARTICLES</em> card are to
+be read and processed. If this card (<em>Post Processing Particle Traces</em>) is not present,
+<em>PARTICLE</em> cards will be ignored.</p>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>There are no input parameters for this card, which always appears as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Post</span> <span class="n">Processing</span> <span class="n">Particle</span> <span class="n">Traces</span> <span class="o">=</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="particle">
+<h2><strong>PARTICLE</strong><a class="headerlink" href="#particle" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PARTICLE</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id2">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>Each <em>PARTICLE</em> card represents a separate particle trajectory. As many of these cards
+as desired can be input to direct <em>Goma</em> to compute a particle trajectory.</p>
+<p>There are eleven values to specify in the &lt;float_list&gt;; definitions of the input
+parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p><strong>xpt</strong>, the X-coordinate of the origin of the trajectory.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p><strong>ypt</strong>, the Y-coordinate of the origin of the trajectory.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float3&gt;</p></td>
+<td><p><strong>zpt</strong>, the Z-coordinate of the origin of the trajectory.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float4&gt;</p></td>
+<td><p><strong>initial_time</strong>, the start time for computing the trajectory (a
+value in units consistent with rest of the problem, i.e. length
+scale/velocity scale).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float5&gt;</p></td>
+<td><p><strong>end_time</strong>, the end time for computing the trajectory. The
+trajectory will be computed until the end time is reached or
+until the particle trajectory leaves the computational domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float6&gt;</p></td>
+<td><p><strong>point_spacing</strong>, the desired distance between successive
+points on the trajectory. The point spacing may be decreased
+below this value if required by the trajectory calculation but
+it will not exceed it.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float7&gt;</p></td>
+<td><p><strong>mobility</strong>, the mobility of the particle when particles with
+inertia are desired. Enter zero for inertia-less trajectories.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float8&gt;</p></td>
+<td><p><strong>mass</strong>, the mass of the particle. If the trajectory of an inertialess
+particle is desired, a value of 0.0 should be entered.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float9&gt;</p></td>
+<td><p><strong>force_x</strong>, the X-component of an external force (such as
+gravity) which is to be applied to the particle (with mass).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float10&gt;</p></td>
+<td><p><strong>force_y</strong>, the Y-component of an external force (such as
+gravity) which is to be applied to the particle (with mass).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float11&gt;</p></td>
+<td><p><strong>force_z</strong>, the Z-component of an external force (such as
+gravity) which is to be applied to the particle (with mass).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;file_name&gt;</p></td>
+<td><p>A character string corresponding to a file name into which
+the output should be printed.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Thus, the particle trajectory starts at the coordinates defined by <strong>xpt, ypt,</strong> and <strong>zpt</strong>. The
+trajectory of the particle is computed starting at a time value of <strong>initial_time</strong> and
+continuing until <strong>end_time</strong> is reached or until the particle exits the computational
+domain. The time step is adjusted so that the distance between successive points on the
+trajectory is, at most, equal to the <strong>point_spacing</strong> (it may be less if the time-stepping
+algorithm requires it). At each point along the trajectory, the <em>usr_ptracking</em> routine is
+called which the user may modify to control the output to <strong>file_name</strong>.</p>
+</section>
+<section id="id3">
+<h3><strong>Examples</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>Here is an example of an input deck with 6 trajectory cards.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Post</span> <span class="n">Processing</span> <span class="n">Particle</span> <span class="n">Traces</span> <span class="o">=</span>
+<span class="n">PARTICLE</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.8</span> <span class="o">-</span><span class="mf">0.1</span> <span class="mf">3.0</span> <span class="mi">0</span> <span class="mi">10000</span> <span class="mf">0.02</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="n">part1</span><span class="o">.</span><span class="n">out</span>
+<span class="n">PARTICLE</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.8</span> <span class="o">-</span><span class="mf">0.1</span> <span class="mf">3.0</span> <span class="mi">0</span> <span class="mi">1000</span> <span class="mf">0.02</span> <span class="p">{</span><span class="n">mob1</span><span class="p">}</span> <span class="p">{</span><span class="n">mass1</span><span class="p">}</span> <span class="mi">0</span> <span class="p">{</span><span class="o">-</span><span class="n">f1</span><span class="p">}</span> <span class="mi">0</span> <span class="n">part1</span><span class="o">.</span><span class="n">out</span>
+<span class="n">PARTICLE</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.8</span> <span class="o">-</span><span class="mf">0.1</span> <span class="mf">3.0</span> <span class="mi">0</span> <span class="mi">1000</span> <span class="mf">0.02</span> <span class="p">{</span><span class="n">mob2</span><span class="p">}</span> <span class="p">{</span><span class="n">mass2</span><span class="p">}</span> <span class="mi">0</span> <span class="p">{</span><span class="o">-</span><span class="n">f2</span><span class="p">}</span> <span class="mi">0</span> <span class="n">part1</span><span class="o">.</span><span class="n">out</span>
+<span class="n">PARTICLE</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.8</span> <span class="o">-</span><span class="mf">0.15</span> <span class="mf">3.0</span> <span class="mi">0</span> <span class="mi">10000</span> <span class="mf">0.02</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="n">part2</span><span class="o">.</span><span class="n">out</span>
+<span class="n">PARTICLE</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.8</span> <span class="o">-</span><span class="mf">0.15</span> <span class="mf">3.0</span> <span class="mi">0</span> <span class="mi">1000</span> <span class="mf">0.02</span> <span class="p">{</span><span class="n">mob1</span><span class="p">}</span> <span class="p">{</span><span class="n">mass1</span><span class="p">}</span> <span class="mi">0</span> <span class="p">{</span><span class="o">-</span><span class="n">f1</span><span class="p">}</span> <span class="mi">0</span> <span class="n">part2</span><span class="o">.</span><span class="n">out</span>
+<span class="n">PARTICLE</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.8</span> <span class="o">-</span><span class="mf">0.15</span> <span class="mf">3.0</span> <span class="mi">0</span> <span class="mi">1000</span> <span class="mf">0.02</span> <span class="p">{</span><span class="n">mob2</span><span class="p">}</span> <span class="p">{</span><span class="n">mass2</span><span class="p">}</span> <span class="mi">0</span> <span class="p">{</span><span class="o">-</span><span class="n">f2</span><span class="p">}</span> <span class="mi">0</span> <span class="n">part2</span><span class="o">.</span><span class="n">out</span>
+<span class="n">END</span> <span class="n">OF</span> <span class="n">PARTICLES</span>
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>The vorticity vector function, <span class="math notranslate nohighlight">\(\underline\omega\)</span> , is defined in terms of the velocity <span class="math notranslate nohighlight">\(\underline\upsilon\)</span> as:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/337_goma_physics.png"><img alt="../_images/337_goma_physics.png" src="../_images/337_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Trapezoidal rule time integration is utilized with Euler prediction.</p>
+<p>For trajectories with particle inertia (i.e. when the product of mass and mobility is
+greater than zero), the following evolution equation is used:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/338_goma_physics.png"><img alt="../_images/338_goma_physics.png" src="../_images/338_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\omega\)</span> is the particle mobility (e.g. 1 ⁄ (<span class="math notranslate nohighlight">\(6\pi\mu r\)</span>)  for a sphere of radius <em>r</em>
+in a liquid of viscosity <span class="math notranslate nohighlight">\(\mu\)</span> ), m is the particle mass, and <strong>f</strong> is the external force vector acting on the particle.</p>
+<p>The trajectory is computed using a coupled set of ordinary differential equations:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/339_goma_physics.png"><img alt="../_images/339_goma_physics.png" src="../_images/339_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id5">
+<h3><strong>References</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>Russel, Saville, and Schowalter, Colloidal Dispersions, pp. 374-377.</p>
+</section>
+</section>
+<section id="end-of-particles">
+<h2><strong>END OF PARTICLES</strong><a class="headerlink" href="#end-of-particles" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">END</span> <span class="n">OF</span> <span class="n">PARTICLES</span>
+</pre></div>
+</div>
+<section id="id6">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>This card is used to denote the end of a set of <em>PARTICLE</em> cards and is only used when
+the <em>Post Processing Particle Traces</em> card is present and one or more <em>PARTICLE</em> cards
+are specified.</p>
+</section>
+<section id="id7">
+<h3><strong>Examples</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>The <em>PARTICLE</em> card shows an example of using this card in context. Because the card
+has no input parameters, it always appears as</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">END</span> <span class="n">OF</span> <span class="n">PARTICLES</span>
+</pre></div>
+</div>
+</section>
+<section id="id8">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id9">
+<h3><strong>References</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="post_processing_fluxes.html" class="btn btn-neutral float-left" title="Post Processing Fluxes and Data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="post_processing_volume.html" class="btn btn-neutral float-right" title="Volumetric Integration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

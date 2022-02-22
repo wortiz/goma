@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Material Files &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Physical Properties" href="material_file/physical_properties.html" />
+    <link rel="prev" title="Volumetric Integration" href="problem_description_file/post_processing_volume.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Goma User Manual
+            <img src="_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Material Files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="material_file/physical_properties.html">Physical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material_file/mechanical_and_constitutive.html">Mechanical Properties and Constitutive Equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material_file/thermal_properties.html">Thermal Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material_file/electrical.html">Electrical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material_file/microstructure.html">Microstructure Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material_file/species.html">Species Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material_file/source_terms.html">Source Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material_file/shell_equation.html">Shell Equation Properties and Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material_file/moments.html">Moment Properties</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Material Files</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/material_files.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="material-files">
+<h1>Material Files<a class="headerlink" href="#material-files" title="Permalink to this headline"></a></h1>
+<p>The material (“mat”) file for <em>Goma</em> contains a description or specification of all the properties
+required for the multi-physics capabilities of <em>Goma</em>. A separate <em>.mat</em> file must be developed for
+each material present in each simulation. The <em>mat</em> file (see Figure 5) is split into seven sections:
+(1) Physical Properties (Section 5.1), (2) Mechanical Properties and Constitutive Equations
+(Section 5.2), (3) Thermal Properties (Section 5.3), (4) Electrical Properties (Section 5.4), (5)
+Microstructure Properties (Section 5.5), (6) Species Properties (Section 5.6), and (7) Source
+Terms (Section 5.7).</p>
+<p>Each section in this chapter discusses a separate part of the material file specification and it
+indicates the data cards or input records that may be used, followed by the options available for
+each individual record (or line in the file) and the necessary input data/parameters. All input data
+are specified in a free field format with successive data items separated by blanks or tabs. In this
+version of the user’s manual, a new format has been instituted in which each record is presented in
+a template structure. This template has eight parts: 1) a title, which is also the card name, 2) a
+syntax, which is enclosed in a framed box and shows the proper contents of the card, 3) a
+Description/Usage section, which presents the user options and descriptions of proper input
+records, 4) an Example, 5) a Technical Discussion to provide relevant information to help the user
+understand how to select from among various options or how to properly determine the desired
+parameters, 6) a Theory to provide an understanding of the physics and mechanics that have been
+implemented or are being exercised, 7) a FAQs section to present important user experience, and
+8) a Reference section to identify citations and/or provide background information to the user.
+This is a more lengthly but a more complete form for documenting and instructing users of <em>Goma</em>.</p>
+<p>The syntax entry denotes a unique string for each input record which <em>Goma</em> parses in the input
+file. All words in these unique strings are separated by a single white space and because the code
+parses for these exact strings, the parser becomes case sensitive. The identifying string for a
+particular specification is followed by an ‘=’ character. Following this character will be all
+additional data for that record, if any. In the syntax box, this additional data is symbolically
+represented by one or more variables with some appropriate delimiters. Typically, the user will
+find a variable called <em>model_name</em> enclosed in <strong>curly braces</strong> ‘{}’; this would then be followed by
+a description of specific options for <em>model_name</em> in the Description/Usage section. The curly
+braces indicate a required input and that the user must select one of the offered options for
+<em>model_name</em>. <strong>Required parameters</strong>, if any, for the model option are enclosed in <strong>angle brackets</strong> ‘&lt;
+&gt;’, while <strong>optional parameters</strong> for model_name are enclosed in <strong>square brackets</strong> ‘[ ]’. Following
+the ‘=’ character, the user may use white space freely between and among the remaining
+parameters on the command line.</p>
+<p>Figure 4 illustrates a typical material file. The section <em>headers</em>, e.g., “— Physical Properties”, are
+user comments that are not processed by the input parser. In all sections of this chapter,
+<em>model_name</em> is a character string and <em>floating_point_const_list</em> is a list of floating point numbers
+of arbitrary length separated by a comma or one or more white spaces. The remainder of this
+chapter covers each card (line) of the material-description file in detail. For each parameter that is
+not dimensionless, base units are indicated in square brackets ( [ ] ) at the end of the syntax line;
+the base units are those indicated in the Nomenclature section of this document. Empty brackets (
+[ ] ) denote dimensionless parameters, while those without units or brackets are simply model
+names, other strings, or integers. Several model parameters, e.g., Diffusivity, where the model
+options include other than the <strong>CONSTANT</strong> type with a single input value, identify the units as
+[<strong>varied</strong>]. In these cases, the parameter units will be listed for the <strong>CONSTANT</strong> model option and
+the units for individual input parameters will be identified in the parameter description.</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/340_goma_physics.png"><img alt="_images/340_goma_physics.png" src="_images/340_goma_physics.png" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Sample material-description file format. Lines highlighted in bold-face type are required.</span><a class="headerlink" href="#id1" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>All property models will eventually have a <strong>USER</strong> and a <strong>USER_GEN</strong> option. When the former is
+selected, the user must add the user model to the appropriate routine in the file <em>user_mp.c.</em> This
+file contains a template to simplify the implementation of a model in a full-Newton context, but
+has the restriction that none of the models can contain a dependence on gradients of variables. For
+more complex models, which contain such dependencies, the user must resort to the more
+sophisticated mechanism that comprise the routines in <em>user_mp_gen.c</em></p>
+<p>A relatively new capability/model available on many of the properties is a table-lookup feature.
+That is, if the model is of type <strong>TABLE</strong>, then a linear or bilinear interpolation is used to extract the
+material property value from a table of numbers representing the dependence. The best way to
+explain this is with an example. Often times a property is dependent on temperature, or related
+dependent variable. If discrete data is available of the property value at various temperatures, as
+from a spreadsheet, then such a table can be read and with appropriate interpolation operations the
+property value is determined. Throughout the material property options, the reader might see aat
+<strong>TABLE</strong> option. The syntax for the input of that option is as follows:</p>
+<p>&lt;<strong>Property name</strong>&gt; = <strong>TABLE</strong> <em>&lt;integer1&gt; &lt;character_string1&gt; [character_string2] {LINEAR |
+BILINEAR} [integer2] [FILE = filenm]</em></p>
+<p>Here, the integers, character strings and floats are defined as follows:</p>
+<p>&lt;integer1&gt; - the number N of columns in the table. The first N-1 columns are the values of the
+independent variables (e.g. temperature, concentration, etc.) and the final Nth column is the
+property value. This number is usually 2.</p>
+<p>&lt;character_string1&gt; - Required variable name for first column. Valid variable names are
+<strong>TEMPERATURE, MASS_FRACTION, SPECIES, CAP_PRES, FAUX_PLASTIC,</strong> and
+<strong>LOWER_DISTANCE</strong>. The last three are specific to the Saturation model of porous flow,
+the LAME Mu model, and the Lubrication Height function model, respectively.
+Temperature and mass fraction dependence are available in all properties with a <strong>TABLE</strong> option
+which make sense.</p>
+<p>[character_string2] - Optional second variable name for bi-linear lookup dependence. This is
+exploratory.</p>
+<p>{<em>LINEAR | BILINEAR</em>} - type of interpolation</p>
+<p>[<em>integer2</em>] - species number required only for MASS_FRACTION, SPECIES, and
+FAUX_PLASTICITY variables.</p>
+<p>[<em>FILE = &lt;filenm&gt;</em>] - The optional keyword ‘FILE=’ indicates that the table data is to be read
+from a separate file identified by &lt;filenm&gt;. Each row of the table corresponds to one variable
+value, and is input in free form CSV or space separated values. Note that if this ‘FILE=’ option is
+not present then the data will be read from the input material file itself following the TABLE
+model card. The end of the table is signaled by the keyword “END TABLE” (see example below).</p>
+<p>Some examples are in order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lame</span> <span class="n">MU</span> <span class="o">=</span> <span class="n">TABLE</span> <span class="mi">2</span> <span class="n">FAUX_PLASTIC</span> <span class="mi">0</span> <span class="n">LINEAR</span> <span class="n">FILE</span><span class="o">=</span><span class="n">stress_strain_comp</span><span class="o">.</span><span class="n">txt</span>
+<span class="o">...</span>
+<span class="n">Lame</span> <span class="n">MU</span> <span class="o">=</span> <span class="n">TABLE</span> <span class="mi">2</span> <span class="n">TEMPERATURE</span> <span class="n">LINEAR</span>
+<span class="mf">1.</span> <span class="mi">293</span>
+<span class="mf">2.</span> <span class="mi">300</span>
+<span class="mf">3.</span> <span class="mf">425.</span>
+<span class="n">END</span> <span class="n">TABLE</span>
+</pre></div>
+</div>
+<p>Finally, before we get started, the following is an option added to allow existing Chemkin
+material property databases to be read in, basically obviating the need to even read the material
+(mat) file. The detailed description of input records provided in this chapter thus applies to the
+case when the Default Database is set to GOMA_MAT.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="material_file/physical_properties.html">Physical Properties</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_file/mechanical_and_constitutive.html">Mechanical Properties and Constitutive Equations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_file/thermal_properties.html">Thermal Properties</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_file/electrical.html">Electrical Properties</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_file/microstructure.html">Microstructure Properties</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_file/species.html">Species Properties</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_file/source_terms.html">Source Terms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_file/shell_equation.html">Shell Equation Properties and Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_file/moments.html">Moment Properties</a></li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="problem_description_file/post_processing_volume.html" class="btn btn-neutral float-left" title="Volumetric Integration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="material_file/physical_properties.html" class="btn btn-neutral float-right" title="Physical Properties" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

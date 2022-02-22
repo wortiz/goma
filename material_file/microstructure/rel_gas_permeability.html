@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rel Gas Permeability &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Rel Gas Permeability</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/microstructure/rel_gas_permeability.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="rel-gas-permeability">
+<h1><strong>Rel Gas Permeability</strong><a class="headerlink" href="#rel-gas-permeability" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Rel</span> <span class="n">Gas</span> <span class="n">Permeability</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card specifies the model for the relative gas phase permeability for flow in a
+partially saturated porous media, such that the gas flow is the pressure gradient in the
+gas times the permeability times the relative gas phase permeability divided by the gas
+viscosity. This card rests on a consistency in the specification of the relative liquid
+permeability (see models on the <em>Rel Liq Permeability</em> card) and this, the relative gas
+permeability. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>{model_name} for constant relative gas phase permeability with a single input value:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - the gas phase viscosity. For this model, one must account for the gas
+viscosity in the specification of this value.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>CONSTANT</strong> model is rarely used, as it is dependent on the saturation
+level and the relative liquid permeability value. Please see the <em>Rel Liq
+Permeability</em> card.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>SUM_TO_ONE</strong></p></td>
+<td><p>{model_name} for the relative gas phase permeability. This model assumes that the
+relative liquid permeability and relative gas permeability add to one.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - the value of the gas phase viscosity.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Rel</span> <span class="n">Gas</span> <span class="n">Permeability</span> <span class="o">=</span> <span class="n">SUM_TO_ONE</span> <span class="mf">0.0001</span>
+</pre></div>
+</div>
+<p>This card specifies that the relative gas permeability in Darcy’s law for the gas flux is to
+depend on the liquid phase relative permeability such that the two sum-to-one. The
+gas viscosity here is specified to be 0.0001, in the appropriate viscosity units of M/L/t.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>This card is only required for <em>Media Type</em> <strong>POROUS_TWO_PHASE</strong>. Darcy’s law for
+gas flow is, in its simplest form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/411_goma_physics.png"><img alt="../../_images/411_goma_physics.png" src="../../_images/411_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where, the Darcy velocity is proportional to the gradient in gas pressure, with k being
+the permeability, krelg being the relative gas permeability and μgas the viscosity of the
+gas. For the <strong>SUM_TO_ONE</strong> option above, the floating point constant is the gas phase
+viscosity, and the gas-phase relative permeability is calculated using</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/412_goma_physics.png"><img alt="../../_images/412_goma_physics.png" src="../../_images/412_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>For the <strong>CONSTANT</strong> option the floating point constant must include the effect of
+viscosity, viz. the constant represents krelg/μgas</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

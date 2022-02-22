@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Porosity &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Porosity</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/microstructure/porosity.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="porosity">
+<h1><strong>Porosity</strong><a class="headerlink" href="#porosity" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porosity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card is used to specify the model for the porosity, which is required for the
+Brinkman or Darcy formulations for flow through porous media, viz. for
+<strong>POROUS_BRINKMAN, POROUS_TWO_PHASE, POROUS_SATURATED,</strong>
+and <strong>POROUS_UNSATURATED</strong> media types (see <em>Media Type</em> card).</p>
+<p>Definitions of the {model_name} and &lt;float&gt; parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name {model_name} of the constant porosity model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - Value of porosity.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>DEFORM</strong></p></td>
+<td><p>Name {model_name} of the model for a porosity that varies with deformation
+of the porous medium. A conservation balance is required for the solid
+material skeleton and is invoked in the equation specification section
+(see <em>EQ</em> section).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - Value of porosity (in the stress-free-state, i.e.,
+undeformed state).</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porosity</span> <span class="o">=</span> <span class="n">DEFORM</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<p>This model will result in a porosity of 0.5 (volume fraction of the interstitial space of a
+porous skeleton) in the undeformed or stress-free state, but will allow the porosity to
+vary affinely with the volume change invariant of the deformation gradient tensor (see
+technical discussion). As mentioned above, the <strong>DEFORM</strong> model requires a field
+equation for the mass-conservation of the solid matrix through the porous_deform
+equation.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Porosity is a microstructural attribute of a porous medium which describes the fraction
+of volume not occupied by the solid skeleton. For rigid porous media, it is a parameter
+that weights the capacitance term (time-derivative term) of the Darcy flow equations
+for liquid solvent and gas “solvent” concentrations. It often affects the Saturation
+function (see <em>Saturation</em> card) and the permeability function (see <em>Permeability</em> card).
+The references cited below elucidate the role of the porosity parameter in these
+equations.</p>
+<p>For deformable porous media, <em>Goma</em> uses the porosity as a measure of fraction solid
+concentration, as a part of a mass balance for the solid skeleton. The reason this
+equation is required is a result of the lack of an overall conservation law for the
+mixture. Instead, we close the system by individual conservation equations for all
+species components in the medium, including the solid; the liquid and gas phase
+components are accounted for with individual Darcy flow equations. The conservation
+law which governs the porosity assumes there is an affine deformation of the pores
+with the overall deformation of the solid, and hence can be written as:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/401_goma_physics.png"><img alt="../../_images/401_goma_physics.png" src="../../_images/401_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where F˜ is the deformation gradient tensor, φ0 is the initial porosity, and φ is the
+porosity. This equation is invoked with the <em>porous_deform</em> option on the <em>EQ</em>
+specifications.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

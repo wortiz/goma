@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Porous Vapor Pressure &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Porous Vapor Pressure</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/microstructure/porous_vapor_pressure.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="porous-vapor-pressure">
+<h1><strong>Porous Vapor Pressure</strong><a class="headerlink" href="#porous-vapor-pressure" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Vapor</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">integer</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">M</span><span class="o">/</span><span class="n">L</span><span class="o">-</span><span class="n">t2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>Used to specify the model for the vapor pressure for each multiphase flow component
+in the porous medium that is activated for <em>Media Type</em> <strong>POROUS_UNSATURATED</strong> or
+<strong>POROUS_TWO_PHASE</strong>.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>The permissible values for the model in this class are <strong>KELVIN</strong> and <strong>FLAT</strong> for a
+volatile liquid, and <strong>NON_VOLATILE</strong> for a non-volatile liquid.</p></td>
+</tr>
+<tr class="row-even"><td><p>{integer}</p></td>
+<td><p>All models require an integer field after the model name which is the species_number;
+always set to zero until a multicomponent capability exists.</p></td>
+</tr>
+<tr class="row-odd"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Porous vapor pressure model choices and their parameters are presented below; consult
+the Technical Discussion for relevant details.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>KELVIN</strong> &lt;integer&gt; &lt;float1&gt;
+&lt;float2&gt;… &lt;float5&gt;</p></td>
+<td><p>For the <strong>KELVIN</strong> porous vapor pressure model, the {float_list} has a five values:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - p*v, vapor pressure on a flat interface</p></li>
+<li><p>&lt;float2&gt; - ρl, the liquid density</p></li>
+<li><p>&lt;float3&gt; - Mw , molecular weight of liquid</p></li>
+<li><p>&lt;float4&gt; - R, the gas law constant</p></li>
+<li><p>&lt;float5&gt; - T, the operating temperature</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>FLAT</strong> &lt;integer&gt; &lt;float1&gt;
+&lt;float2&gt;… &lt;float5&gt;</p></td>
+<td><p>For the <strong>FLAT</strong> porous vapor pressure model, the {float_list} has a five values
+(same as <strong>KELVIN</strong> above):</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - p*v, vapor pressure on a flat interface</p></li>
+<li><p>&lt;float2&gt; - ρl, the liquid density</p></li>
+<li><p>&lt;float3&gt; - Mw , molecular weight of liquid</p></li>
+<li><p>&lt;float4&gt; - R, the gas law constant</p></li>
+<li><p>&lt;float5&gt; - T, the operating temperature</p></li>
+</ul>
+</div></blockquote>
+<p>The <strong>FLAT</strong> option requires the same parameters as the <strong>KELVIN</strong> model but leaves
+out the exponential function.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>NON_VOLATILE</strong> &lt;integer&gt;</p></td>
+<td><p>The <strong>NON_VOLATILE</strong> model requires no additional input.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Vapor</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="n">FLAT</span> <span class="mi">0</span> <span class="p">{</span><span class="n">Vap_Pres</span><span class="p">}</span> <span class="p">{</span><span class="n">density</span><span class="p">}</span> <span class="p">{</span><span class="mf">30.</span><span class="p">}</span> <span class="p">{</span><span class="n">Rgas</span><span class="p">}</span> <span class="p">{</span><span class="n">T</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>applies the <strong>FLAT</strong> model as described above to vapor-liquid equilibrium (assumed to be
+single component for now) using all APREPRO-defined parameters.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The <strong>KELVIN</strong> option is used to include the effect of vapor-pressure lowering that
+results in equilibrium over high curvature menisci, i.e., small pores. The equation form
+of this is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/421_goma_physics.png"><img alt="../../_images/421_goma_physics.png" src="../../_images/421_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The <strong>FLAT</strong> option requires the same parameters but leaves out the exponential function.
+The constants are still needed so that the gas-phase concentration can be calculated
+with the ideal gas law. The functional form is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/422_goma_physics.png"><img alt="../../_images/422_goma_physics.png" src="../../_images/422_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where S is the local saturation, and ρgv is the gas phase density of vapor. This model is
+ad-hoc but nonetheless leads to some interesting results. It basically says that as
+saturation increases, the gas-liquid menisci, and correspondingly the interfacial area
+available for evaporation, become more concentrated and hence the gas-phase vapor
+concentration increases.</p>
+<p>The <strong>NON_VOLATILE</strong> option should be set if no gas-phase transport of vapor of the
+liquid phase component is desired, as if the liquid phase were non-volatile. Goma, with
+this choice, sets the gas phase concentration of liquid vapor to zero.</p>
+<p>For nonvolatile pore liquids, the vapor pressure on a flat interface, viz. the first required
+floating point on this card, should be set to zero. As of 6/13/02 this card has only been
+implemented for pure liquid solvents, so that no equilibrium solvent partitioning across
+the interface is present.</p>
+</section>
+<section id="faqs">
+<h2><strong>FAQs</strong><a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h2>
+<p>Sometimes system aborts can happen with the Kelvin model because of real large,
+negative capillary pressures. In this case, the exponential term can exceed the machine
+limit. This can happen well into a transient run. The user should be aware of this;
+consult GT-009.3 for tips related to dealing with this problem.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

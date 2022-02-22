@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stress Free Solvent Vol Frac &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Stress Free Solvent Vol Frac</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/mechanical_and_constitutive/stress_free_solvent_vol_frac.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="stress-free-solvent-vol-frac">
+<h1>Stress Free Solvent Vol Frac<a class="headerlink" href="#stress-free-solvent-vol-frac" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Stress</span> <span class="n">Free</span> <span class="n">Solvent</span> <span class="n">Vol</span> <span class="n">Frac</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card is used to specify the model for the stress-free solvent volume
+fraction, which is the volume fraction of solvents in the solid material in its stress-free
+state. This card is used exclusively in materials of <em>LAGRANGIAN</em> or <em>TOTAL_ALE</em>
+Mesh Motion types (see <em>Mesh Motion</em> card) which are being modeled as gelled solids
+laden with solvent. At the gel-point, the solid is considered to be stress free, after which
+a reduction of solvent leads to volume shrinkage and hence a rising stress state.
+Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 89%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for the stress-free solvent volume fraction.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float&gt;</p></td>
+<td><p>The value of the stress-free solvent volume fraction; this value is unitless.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Stress</span> <span class="n">Free</span> <span class="n">Solvent</span> <span class="n">Vol</span> <span class="n">Frac</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<p>This specification sets the volume fraction of solvent in the material to 50 per cent.
+That volume fraction is tantamount to the gel point of the material.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The stress free state volume fraction of solvent is basically the solvent fraction at which
+a material gels, viz., the state at which the material solidifies from a liquid state. This
+quantity is used in the continuity equation for incompressible solid materials, through
+which is transported by a variety of diffusion models (see <em>Diffusivity</em> card). The
+continuity equation, viz., <em>EQ = continuity</em>, is applied as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/369_goma_physics.png"><img alt="../../_images/369_goma_physics.png" src="../../_images/369_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where the dependent variable is the solid phase pressure (see <em>Solid Constitutive
+Equation</em> card). Here <em>det</em> <strong>F</strong> is the determinant of the deformation gradient tensor, yi is
+the volume fraction of component i (specified by the <em>EQ = species_bulk</em> card), and y0 is
+the volume fraction of total solvents at the stress free state. Clearly, as the solvent
+concentration decreases the local volume of solid decreases, creating a rising stress.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-001.4: GOMA and SEAMS tutorial for new users, February 18, 2002, P. R. Schunk
+and D. A. Labreche</p>
+<p>GT-019.1: Elastoviscoplastic (EVP) Constitutive Model in GOMA: Theory, Testing,
+and Tutorial, P. R. Schunk, A. Sun, S. Y. Tam (Imation Corp.) and K. S. Chen, January
+11, 2001</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

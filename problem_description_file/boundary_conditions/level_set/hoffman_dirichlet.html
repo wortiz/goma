@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOFFMAN_DIRICHLET &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>HOFFMAN_DIRICHLET</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/level_set/hoffman_dirichlet.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="hoffman-dirichlet">
+<h1><strong>HOFFMAN_DIRICHLET</strong><a class="headerlink" href="#hoffman-dirichlet" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">HOFFMAN_DIRICHLET</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(SIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. It is an alternative to the
+WETTING_SPEED_HOFFMAN boundary condition which does not require the
+VELO_SLIP_LS or VELO_SLIP_FILL BC’s on the wetting boundary. As the name
+implies, this boundary condition differs from WETTING_SPEED_HOFFMAN in that
+wetting velocity is in a strong fashion on the wetting boundary.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 73%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>HOFFMAN_DIRICHLET</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location
+(side set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degress.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span>, the surface tension. Note that this
+parameter will be scaled by the surface tension value
+supplied in the material file. (F/L)</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><em>w</em>, is the width of the interface wetting region. It
+defaults to the level set length scale if zero of less.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\tau\)</span>, stability parameter (T).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sx}\)</span>, x-component of substrate velocity.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sy}\)</span>, y-component of substrate velocity (L/T).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sz}\)</span>, z-component of substrate velocity.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Here is an example card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">HOFFMAN_DIRICHLET</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mi">0</span> <span class="mf">72.0</span> <span class="mf">0.0</span> <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The technical details of the application of this boundary differ not at all from those
+described for the BLAKE_DIRICHLET boundary condition. The user is referred to
+that section for further details. This boundary condition differs only in the model used
+to determine the wetting velocity. This is described below and in the
+VELO_THETA_HOFFMAN card.</p>
+</section>
+<section id="theory">
+<h2><strong>Theory</strong><a class="headerlink" href="#theory" title="Permalink to this headline"></a></h2>
+<p>Derivation of this boundary condition starts with a relation that represents the Hoffman
+wetting correlation</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/241_goma_physics.png"><img alt="../../../_images/241_goma_physics.png" src="../../../_images/241_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>See VELO_THETA_HOFFMAN for details of the Hoffman function g. Note that the
+convention for contact angles in this relation is that values of <span class="math notranslate nohighlight">\(\theta\)</span> near to zero indicate a
+high degree of wetting and values of <span class="math notranslate nohighlight">\(\theta\)</span> near 180 ° indicate the opposite. This is mapped
+to a stress value by analogy with Navier’s slip relation,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/242_goma_physics.png"><img alt="../../../_images/242_goma_physics.png" src="../../../_images/242_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>Stephan F. Kistler 1993. “Hydrodynamics of Wetting” in Wettability, edited by John
+Berg, Surfactant Science Series, 49, Marcel Dekker, NewYork, NY, pp. 311-429.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

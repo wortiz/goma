@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Total Density of Solvents in Porous Media &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Total Density of Solvents in Porous Media</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/post_processing/total_density_of_solvents_in_porous_media.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="total-density-of-solvents-in-porous-media">
+<h1><strong>Total Density of Solvents in Porous Media</strong><a class="headerlink" href="#total-density-of-solvents-in-porous-media" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Total</span> <span class="n">density</span> <span class="n">of</span> <span class="n">solvents</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This post processing option can be used to trigger the computation and output of the
+total density of solvents as a nodal field variable to the output EXODUS II file. Three
+nodal variables are written, <strong>Rho_Total_Liq, Rho_Total_air</strong> and <strong>Rho_Total_solid</strong>.
+The mathematical details are given below in the technical discussion. This option
+applies to media types of <em>POROUS_SATURATED, POROUS_UNSATURATED</em>, and
+<em>POROUS_TWO_PHASE</em> (see <em>Media Type</em> card). The options are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate and write the total solvent densities as a
+postprocessing variable to the output EXODUSII file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the total solvent densities.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Total</span> <span class="n">density</span> <span class="n">of</span> <span class="n">solvents</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+<p>This card will result in the calculation and output of the mixture density of solvent
+(viz., phase mixture of liquid solvent in vapor form, liquid form, and the form adsorbed
+in the solid skeleton for partially saturated porous flows). The form of that mixture
+density is given in the technical discussion.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>In saturated flow cases, viz. for <em>Media Type</em> selection <em>POROUS_SATURATED</em>, the total
+solvent density is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/325_goma_physics.png"><img alt="../../_images/325_goma_physics.png" src="../../_images/325_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\rho_1\)</span> is the pure liquid density and <span class="math notranslate nohighlight">\(\phi\)</span> is the porosity. Here we have assumed that no liquid solvent is adsorbed into the solid struts (currently the assumption used
+throughout <em>Goma</em>).</p>
+<p>For partially saturated flows, viz. for <em>Media Type</em> selection <em>POROUS_UNSATURATED</em>
+or <em>POROUS_TWO_PHASE</em>, the total density is given by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/326_goma_physics.png"><img alt="../../_images/326_goma_physics.png" src="../../_images/326_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\rho_{gv}\)</span> is the density of solvent vapor in the total gas-solvent vapor mixture (see
+<em>Density of solvents in gas phase in porous media card</em>), <em>S</em> is the saturation (see <em>Porous
+Saturation</em> card), and <span class="math notranslate nohighlight">\(\chi_{ls}\)</span> is the volume fraction of solvent in liquid phase (including any condensed species component). When calculating the total density of the liquid
+(<strong>Rho_Total_liq</strong>), the liquid vapor density comes from a Kelvin vapor-liquid
+equilibrium relation. The total density of the gas phase (<strong>Rho_Total_gas</strong>) will use a
+vapor density fro air and a volume fraction of zero (0) since air is insoluble. The total
+density of the solid in the gas (<strong>Rho_Total_solid</strong>) is zero (0).</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

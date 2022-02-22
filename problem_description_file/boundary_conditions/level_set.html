@@ -1,0 +1,2888 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Category 15: Level Set Interfaces &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Category 15: Level Set Interfaces</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/boundary_conditions/level_set.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="category-15-level-set-interfaces">
+<h1>Category 15: Level Set Interfaces<a class="headerlink" href="#category-15-level-set-interfaces" title="Permalink to this headline"></a></h1>
+<p>These boundary conditions are designed to apply conditions in materials along surfaces whose
+position is monitored using Level Set Interface Tracking.</p>
+<section id="ls-adc">
+<h2><strong>LS_ADC</strong><a class="headerlink" href="#ls-adc" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_ADC</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p><strong>(Special/LEVEL SET)</strong></p>
+<p>This boundary condition is used exclusively with level set interface tracking. It is used
+to simulate contact and dewetting events. It employs a probabilistic model applied to
+elements on a boundary that contain an interface to determine whether contact or
+dewetting occurs there. It then uses a direct, brute force algortihm to manipulate the
+level set field to enforce contact or dewetting.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_ADC</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>This string indicates that this boundary is applied to a
+sideset.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>This is a sideset id where contact or dewetting processes are
+anticipated. Only elements that border this sideset will be
+considered as possibilities for ADC events.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_c\)</span>, the capture angle in degrees.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\alpha_c\)</span>, the capture distance (L)</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(N_c\)</span>, the capture rate ( 1/ <span class="math notranslate nohighlight">\(L^2\)</span> -T)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_ADC</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">15.0</span>   <span class="mf">0.2</span>   <span class="mf">100.0</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>It has been found that level set interface tracking problems that involve contact or
+dewetting of the interfacial representation pose special problems for our numerical
+method. To a certain extent, we can model this type of event by making special
+modifications to the slipping properties of the boundary in question, however, this does
+not always work, especially in the case of dewetting events.</p>
+<p>What seems to be the trouble is that we are attempting to use continuum-based models
+to simulate phenomena that essentially are due to molecular forces being expressed
+over non-molecular length scales. These length scales, while big with respect to
+molecules, are small with respect to our problem size. Hence, they are difficult to
+include in the context of reasonable mesh spacing.</p>
+<p>The approach this boundary condition takes to inclusion of contact and dewetting
+phenomena is not attempt to model the finer details, but to simply note that they are due
+to “molecular weirdness” and thus take place outside of ordinary continuum
+mechanics. Therefore, there is some justification for, very briefly and in a localized
+area, dispensing with continuum mechanics assumption and simply imposing a contact
+or dewetting event. We refer to these as ADC events and will describe them in more
+detail later.</p>
+<p>The parameters supplied with the card are used to determine where and when such an
+ADC event occurs. We have chosen to introduce a probabalistic model for this
+purpose. The reasoning for this comes from reflecting on the dewetting problem. If
+one imagines a thin sheet of fluid on a wetting substrate, it is clear that dewetting will
+occur eventually at some point on that sheet. Where that event occurs is somewhat
+random for a detached perspective. Introduction of a probability model for ADC
+events attempts to capture this.</p>
+<p>Whether an ADC event occurs at an element on the sideset is determined by the
+following requirements:</p>
+<ul class="simple">
+<li><p>The interface surface passes through the element.</p></li>
+<li><p>There isn’t a contact line in the element.</p></li>
+<li><p>The angle between the interface normal and the sideset surface normal is less than
+or equal to the capture angle, <span class="math notranslate nohighlight">\(\theta_c\)</span>.</p></li>
+<li><p>A random number in the range (0,1) determined by the standard C rand()
+function is less than a probability, <em>P</em>, given by</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/195_goma_physics.png"><img alt="../../_images/195_goma_physics.png" src="../../_images/195_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>d</em> is the average distance of the interface to the sideset in that element, Dt is the
+time step size, and <em>h</em> is the side length of the element (Note for 2D problems <span class="math notranslate nohighlight">\(h^2\)</span> is
+replaced by <em>h</em> where the other dimension is assumed unity in the <em>z</em> direction).</p>
+<p>Interpretation of this probability relation might take the following course. Given that
+the fluid interface lies within <span class="math notranslate nohighlight">\(\alpha)c\)</span> of the surface, the length of time necessary before and
+ADC event is certain to occur is given by 1/ <span class="math notranslate nohighlight">\(N_ch^2\)</span> . Hence, the bigger the capture rate
+parameter the faster this is likely to occur. The functional form for the case of <em>d</em> &gt;
+<span class="math notranslate nohighlight">\(\alpha_c\)</span> is
+included merely to ensure that the probability drops smoothly to zero as quickly as
+possible. One might point out that the probability at a specific element tends towards
+zero as the element size decreases. Of course, in that context, the number of elements
+should increase in number so that the overall probability of an ADC event should not
+be a function of the degree of mesh refinement. A second point is that this boundary
+condition can be made to function as means to initiate contact without delay by simply
+choosing a capture rate that is large enought with respect to the current time step.</p>
+<p>Application of an ADC event in a element that meets the preceding criteria is illustrated
+in the cartoon below:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/196_goma_physics.png"><img alt="../../_images/196_goma_physics.png" src="../../_images/196_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>It is a simple manipulation of the level set values in that element so that the interface
+will follow the path indicated by the dashed curve in the lower figure. No effort is
+made in preservation of volume when this is done. The assumption is that these events
+will occur infrequently enough that this is not a significant problem. However, the user
+should be aware of this assumption and be careful that these events do not occur on a
+regular basis as then the mass loss might be more significant.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-ca-h">
+<h2><strong>LS_CA_H</strong><a class="headerlink" href="#ls-ca-h" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_CA_H</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/SCALAR CURVATURE)</strong></p>
+<p>This boundary condition is used only in conjunction with level set interface tracking
+and the LS_CAP_CURVE embedded surface tension source term. Its function is
+impose a contact angle condition on that boundary.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 86%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_CA_H</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float&gt;</p></td>
+<td><p>A float value that is the imposed contact angle in degrees.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_CA_H</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">45.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>The projection equation operator for solving for the curvature degree of freedom from a
+level set field is a Laplacian. It is standard to integrate these operators by parts but in
+the process one always generates a boundary integral. In this case the integral takes the
+form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/197_goma_physics.png"><img alt="../../_images/197_goma_physics.png" src="../../_images/197_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(n_w\)</span> is the wall surface normal and <span class="math notranslate nohighlight">\(n_{fs}\)</span> is the normal to free surface (zero contour
+of the level set function ). This is a convenient event because it allows us to impose a
+contact angle condition on a sideset using this boundary integral by making the
+assignment</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/198_goma_physics.png"><img alt="../../_images/198_goma_physics.png" src="../../_images/198_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\theta\)</span> is the contact angle specified on the card.</p>
+<p>The effect of this boundary condition is impose a disturbance in the curvature field
+near the boundary that has the effect of accelerating or decelerating the fluid near the
+wall in response to whether the actual contact angle is greater or less than the imposed
+value. Thus, over time, given no other outside influences, the contact angle should
+evolve from its initial value (that presumably is different than the imposed value) to the
+value imposed on this card. The user should expect that the contact angle will
+instantaneously jumped to the imposed value.</p>
+</section>
+<section id="id4">
+<h3><strong>References</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-capillary">
+<h2><strong>LS_CAPILLARY</strong><a class="headerlink" href="#ls-capillary" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_CAPILLARY</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition applies an “embedded” surface tension source term when
+solving capillary hydrodynamics problems with level set interface tracking. It can be
+used both when subgrid or subelement integration is being used. The surface tension
+value used in this boundary condition is obtained from the Surface Tension material
+parameter defined in the mat file.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 78%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_CAPILLARY</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the surface tension forces are applied to the
+negative phase, both phase, or the positive phase,
+respectively. Details are given below.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id6">
+<h3><strong>Examples</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_CAPILLARY</span> <span class="n">LS</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p><em>First, a warning: If subelement integration is off, make sure there is a nonzero levelset
+length scale or no surface forces term will be applied.</em></p>
+<p>Surface tension forces at a level set representation of an interfacial boundary are
+applied solely via this boundary condition. An additional divergence of stress tensor
+term <span class="math notranslate nohighlight">\(\Delta\)</span> ⋅ <span class="math notranslate nohighlight">\(T_{cap}\)</span> is added to the fluid momentum equation. Following Jacqmin the
+form of this tensor is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/199_goma_physics.png"><img alt="../../_images/199_goma_physics.png" src="../../_images/199_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where s is the (isotropic) surface tension, I is the identity tensor, <em>n</em> is the vector normal
+to the interface and <span class="math notranslate nohighlight">\(\zeta_a\)</span> ( <span class="math notranslate nohighlight">\(\phi\)</span> ) is the smoothed Dirac delta function. The surface tension
+value used in this expression is obtained from the Surface Tension card found in the
+material file.</p>
+<p>The actual implementation in Goma integrates the divergence term by parts so the
+expression that is added to the weak form of the momentum equation is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/200_goma_physics.png"><img alt="../../_images/200_goma_physics.png" src="../../_images/200_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This fact introduces the issue of integration error into the problem. As obvious above,
+this source term involves the non-linear Dirac delta function factor. Conventional
+numerical integration methods often do not offer adequate accuracy in evaluating this
+integral, especially if if the interface width is a fraction of the average element size.
+This has led to introduction the level-set-specific integration methods: subelement
+integration and subgrid integration. In the latter case, more integration points are
+clustered around the interface (in essence) to improve accuracy. The integer parameter
+on the card should be set to zero to signify that the surface tension forces are distributed
+in equal measure on both sides of the interfacial curve.</p>
+<p>In the subelement integration case, however, an actual subelement mesh is place on
+each of the interface-containing elements which is made to conform to the interface
+curve. That is, the interface curve itself is covered by these subelement boundaries.
+This allows the volume integral to be collapsed into a line integral and the line integral
+evaluated along the subelement boundaries. This, however, introduces the problem of
+identifying which side of the element the surface tension forces should actually be
+applied to. Applying them to both simultaneously while either result in a cancellation
+or a doubling of the surface tension effect. For these cases, the integer parameter on
+this card is set to a -1 or a +1 to signify that the surface tension forces are applied to the
+negative or positive side of the interface curve, respectively.</p>
+</section>
+<section id="id8">
+<h3><strong>References</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-cap-denner-diff">
+<h2>LS_CAP_DENNER_DIFF<a class="headerlink" href="#ls-cap-denner-diff" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_CAP_DENNER_DIFF</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">double</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id9">
+<h3>Description / Usage<a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is expected to be paired with another boundary
+condition that represents the surface tension term.</p>
+<p>e.g.</p>
+<p>LS_CAPILLARY
+LS_CAP_DIV_N
+etc..</p>
+<p>And should not be used with LS_CAP_HYSING</p>
+<p>Embedded boundary condition for applying a diffusion to the level set
+capillary boundary condition.  A time scaled diffusion term to aid
+with reducing spurious currents.</p>
+<p>Not compatible with subelement integration.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 69%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>LS_CAP_DENNER_DIFF</p></td>
+<td><p>Boundary condition name</p></td>
+</tr>
+<tr class="row-even"><td><p>LS</p></td>
+<td><p>Indicator that this is a level set boundary
+condition</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;double&gt;</p></td>
+<td><p>Scaling of the diffusive term</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id10">
+<h3>Examples<a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_CAP_DENNER_DIFF</span> <span class="n">LS</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id11">
+<h3>Technical Discussion<a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>Adds the following embedded boundary condition to the momentum
+equations:</p>
+<div class="math notranslate nohighlight">
+\[- \beta \Delta t^{n+1} \int \nabla_s \mathbf{v} : (\sigma \delta_{\alpha}(\phi) \nabla_s \mathbf{u}^{n+1}) d\mathbf{x}\]</div>
+<p>And</p>
+<div class="math notranslate nohighlight">
+\[\nabla_s f = \nabla f - \mathbf{\hat{n}}^n (\mathbf{\hat{n}}^n \cdot \nabla f)\]</div>
+<p>Where, <span class="math notranslate nohighlight">\(\beta\)</span> is a scaling term, <span class="math notranslate nohighlight">\(n\)</span> represents a
+timestep, and <span class="math notranslate nohighlight">\(\mathbf{\hat{n}}\)</span> represents the normal found
+from the level set function (or from the normal equations when
+enabled), and <span class="math notranslate nohighlight">\(\mathbf{u}\)</span> is the velocity.</p>
+</section>
+<section id="theory">
+<h3>Theory<a class="headerlink" href="#theory" title="Permalink to this headline"></a></h3>
+<p>No Theory.</p>
+</section>
+<section id="faqs">
+<h3>FAQs<a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h3>
+<p>No FAQs.</p>
+</section>
+<section id="id12">
+<h3>References<a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>Denner, F., Evrard, F., Serfaty, R. and van Wachem,
+B.G., 2017. Artificial viscosity model to mitigate numerical artefacts
+at fluid interfaces with surface tension. Computers &amp; Fluids, 143,
+pp.59-72.</p>
+</section>
+</section>
+<section id="ls-cap-hysing">
+<h2>LS_CAP_HYSING<a class="headerlink" href="#ls-cap-hysing" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_CAP_HYSING</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">double</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id13">
+<h3>Description / Usage<a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/VECTOR MOMENTUM)</strong></p>
+<p>Embedded boundary condition for applying a surface tension source term
+with level set.  Has the added advantage of a time scaled diffusion
+term to aid with reducing spurious currents.The surface tension value
+used in this boundary condition is obtained from the Surface Tension
+material parameter defined in the mat file.</p>
+<p>Not compatible with subelement integration.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 69%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>LS_CAP_HYSING</p></td>
+<td><p>Boundary condition name</p></td>
+</tr>
+<tr class="row-even"><td><p>LS</p></td>
+<td><p>Indicator that this is a level set boundary
+condition</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;double&gt;</p></td>
+<td><p>Scaling of the diffusive term</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id14">
+<h3>Examples<a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_CAP_HYSING</span> <span class="n">LS</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id15">
+<h3>Technical Discussion<a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p>Adds the following embedded boundary condition to the momentum equations:</p>
+<div class="math notranslate nohighlight">
+\[- \int \nabla \mathbf{v} : (\mathbf{I} - \mathbf{\hat{n}}^n \mathbf{\hat{n}}^n) d\mathbf{x}
+- \beta \Delta t^{n+1} \int \nabla_s \mathbf{v} : (\sigma \delta_{\alpha}(\phi) \nabla_s \mathbf{u}^{n+1}) d\mathbf{x}\]</div>
+<p>Where, <span class="math notranslate nohighlight">\(\beta\)</span> is a scaling term, <span class="math notranslate nohighlight">\(n\)</span> represents a timestep, and <span class="math notranslate nohighlight">\(\mathbf{\hat{n}}\)</span> represents the normal
+found from the level set function, and <span class="math notranslate nohighlight">\(\mathbf{u}\)</span> is the velocity.</p>
+</section>
+<section id="id16">
+<h3>Theory<a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>No Theory.</p>
+</section>
+<section id="id17">
+<h3>FAQs<a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>No FAQs.</p>
+</section>
+<section id="id18">
+<h3>References<a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>Hysing, S.R., Turek, S., Kuzmin, D., Parolini, N., Burman, E.,
+Ganesan, S. and Tobiska, L., 2009. Quantitative benchmark computations
+of two‐dimensional bubble dynamics. International Journal for
+Numerical Methods in Fluids, 60(11), pp.1259-1288.</p>
+</section>
+</section>
+<section id="ls-flow-pressure">
+<h2><strong>LS_FLOW_PRESSURE</strong><a class="headerlink" href="#ls-flow-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_FLOW_PRESSURE</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id19">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id19" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition applies a scalar pressure value as an “embedded” source term
+on the fluid momentum equation at the zero level set contour. It can be used both when
+subgrid or subelement integration is being used.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_FLOW_PRESSURE</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the pressure value is applied to the negative
+phase, both phase, or the positive phase, respectively.
+Details are given below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><em>P</em>, The constant value of pressure to be applied at the zero
+level set contour.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id20">
+<h3><strong>Examples</strong><a class="headerlink" href="#id20" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_FLOW_PRESSURE</span> <span class="n">LS</span> <span class="mi">0</span> <span class="mf">1013250.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id21">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id21" title="Permalink to this headline"></a></h3>
+<p>This boundary condition is somewhat analogous to the FLOW_PRESSURE boundary
+condition used quite often in ALE problems. It applies a scalar pressure at the
+interfacial curve as an embedded boundary condtion. It can be used in by subgrid and
+subelement methods. In the case of the former, a distributed volume integral of the
+form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/201_goma_physics.png"><img alt="../../_images/201_goma_physics.png" src="../../_images/201_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\vec{n}_{fs}\)</span> is the normal to the level set contour
+<span class="math notranslate nohighlight">\(\delta_\alpha\)</span> (<span class="math notranslate nohighlight">\(\phi\)</span>) and is the familiar smoothed
+Dirac delta function with width parameter <span class="math notranslate nohighlight">\(\alpha\)</span>. When subelement integration is used this
+width parameter goes to zero and the volume integral becomes a surface integral along
+the zero level set contour (Note: as of Oct 2005 subelement integration is not
+supported for three dimensional problems).</p>
+<p>When using this boundary condition concurrent with subgrid integration, the integer
+parameter that appears on the card should be consistently set to zero. This ensures the
+volume source will be applied symmetrically. However, when using subelement
+integration this integer parameter must be entire a +1 or a -1 so that the pressure force
+will be applied to only on side of the interface and not both which would result in
+cancellation. This is much the same as was seen for the LS_CAPILLARY boundary
+condition and the reader is referred to that card for a more detailed discussion.</p>
+</section>
+<section id="id22">
+<h3><strong>References</strong><a class="headerlink" href="#id22" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-fluid-solid-contact">
+<h2><strong>LS_FLUID_SOLID_CONTACT</strong><a class="headerlink" href="#ls-fluid-solid-contact" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_FLUID_SOLID_CONTACT</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id23">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id23" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/MOMENTUM)</strong></p>
+<p>This boundary condition applies a fluid-solid stress balance at a level set interface that
+is slaved to an overset mesh (see GT-026.3). It is applied as an “embedded” source
+term on the fluid momentum equations at the zero level set contour. <strong>NOTE</strong>: <em>This
+boundary condition has been deprecated in favor of the</em> <strong>BAAIJENS_SOLID_FLUID</strong>
+<em>and</em> <strong>BAAIJENS_FLUID_SOLID</strong> <em>boundary conditions, as described in the memo</em>.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 71%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_FLUID_SOLID_CONTACT</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the mass flux value is applied to the negative
+phase, both phase, or the positive phase, respectively.
+Details are given below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p><em>Not used. Set to zero.</em></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id24">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id24" title="Permalink to this headline"></a></h3>
+<p>We discourage use of this experimental boundary condition.</p>
+</section>
+<section id="id25">
+<h3><strong>References</strong><a class="headerlink" href="#id25" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-inlet">
+<h2><strong>LS_INLET</strong><a class="headerlink" href="#ls-inlet" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_INLET</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id26">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id26" title="Permalink to this headline"></a></h3>
+<p><strong>(PCC/LEVEL SET)</strong></p>
+<p>This boundary condition is used to set the values of the level set function on a sideset.
+Most of this is done on an inlet or outlet boundary to elminate the potential for
+oscillations in the level set field at those points from introducing spurious interfacial
+(zero contours) .</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_INLET</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>This string indicates what this boundary is applied to.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the surface tension forces are applied to the
+negative phase, both phase, or the positive phase,
+respectively. Details are given below.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id27">
+<h3><strong>Examples</strong><a class="headerlink" href="#id27" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_INLET</span> <span class="n">SS</span> <span class="mi">10</span>
+</pre></div>
+</div>
+</section>
+<section id="id28">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id28" title="Permalink to this headline"></a></h3>
+<p>Surface tension forces at a level set representation of an interfacial boundary are
+applied solely via this boundary condition. An additional divergence of stress tensor
+term <span class="math notranslate nohighlight">\(\Delta\)</span> ⋅ <span class="math notranslate nohighlight">\(T_{cap}\)</span> is added to the fluid momentum equation. Following Jacqmin the form of this tensor is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/202_goma_physics.png"><img alt="../../_images/202_goma_physics.png" src="../../_images/202_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where s is the (isotropic) surface tension, I is the identity tensor, n is the vector normal to the interface and <span class="math notranslate nohighlight">\(\delta_\alpha\)</span> (<span class="math notranslate nohighlight">\(\phi\)</span>) is the smoothed Dirac delta function. The surface tension
+value used in this expression is obtained from the Surface Tension card found in the
+material file.</p>
+<p>The actual implementation in Goma integrates the divergence term by parts so the
+expression that is added to the weak form of the momentum equation is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/203_goma_physics.png"><img alt="../../_images/203_goma_physics.png" src="../../_images/203_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This fact introduces the issue of integration error into the problem. As obvious above,
+this source term involves the non-linear Dirac delta function factor. Conventional
+numerical integration methods often do not offer adequate accuracy in evaluating this
+integral, especially if if the interface width is a fraction of the average element size.
+This has led to introduction the level-set-specific integration methods: subelement
+integration and subgrid integration. In the latter case, more integration points are
+clustered around the interface (in essence) to improve accuracy. The integer parameter
+on the card should be set to zero to signify that the surface tension forces are
+distributed in equal measure on both sides of the interfacial curve.</p>
+<p>In the subelement integration case, however, an actual subelement mesh is place on
+each of the interface-containing elements which is made to conform to the interface
+curve. That is, the interface curve itself is covered by these subelement boundaries.
+This allows the volume integral to be collapsed into a line integral and the line integral
+evaluated along the subelement boundaries. This, however, introduces the problem of
+identifying which side of the element the surface tension forces should actually be
+applied to. Applying them to both simultaneously while either result in a cancellation
+or a doubling of the surface tension effect. For these cases, the integer parameter on
+this card is set to a -1 or a +1 to signify that the surface tension forces are applied
+to the negative or positive side of the interface curve, respectively.</p>
+</section>
+<section id="id29">
+<h3><strong>References</strong><a class="headerlink" href="#id29" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-no-slip">
+<h2><strong>LS_NO_SLIP</strong><a class="headerlink" href="#ls-no-slip" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_NO_SLIP</span> <span class="n">PF</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id30">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id30" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to enforce the fluid/solid kinematic constraint for 1)
+overset grid applications in which 2) the solid material is assumed rigid and therefore
+has no internal stresses. It requires 3) a slaved phase function be defined along with 4)
+a vector field of Lagrange multipliers.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_NO_SLIP</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>PF</strong></p></td>
+<td><p>This string indicates that this boundary condition is going to
+be applied along the zero contour of an embedded phase
+function (PF) field.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>This integer identifies the specific phase function field that
+is defining the contour. At the present time this integer
+should always be one.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id31">
+<h3><strong>Examples</strong><a class="headerlink" href="#id31" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_NO_SLIP</span> <span class="n">PF</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="id32">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id32" title="Permalink to this headline"></a></h3>
+<p>This boundary condition is used in the context of Goma’s overset grid capability. A
+thorough treatment of this method is provided in the Goma document (GT-026.3) and
+the user is directed there. However, a brief discussion of the nature of this boundary
+condition is in order at this point.</p>
+<p>The overset grid capability is used in problems in which a solid material is passing
+through a fluid material. The solid and fluid materials both have there own meshes. In
+the general problem, stresses and velocities must be transferred between each phase
+and therefore there is two-coupling of the respective momentum and continuity
+equations. This boundary condition, however, is used in the restricted case in which
+the solid material is assumed to be rigid and having a prescribed motion. Therefore, the
+coupling only proceeds in one direction : solid to fluid.</p>
+<p>This boundary condition concerns itself with enforcing the kinematic constraint:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/204_goma_physics.png"><img alt="../../_images/204_goma_physics.png" src="../../_images/204_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>between the solid material with prescribed motion, <span class="math notranslate nohighlight">\(\underline {\dot{x}}\)</span> , and the fluid whose velocity is, <span class="math notranslate nohighlight">\(\gamma\)</span>. This kinematic constraint represents a new set of equations in the model for which
+unknowns must be associated. In this case, we introduce a Lagrange multiplier vector
+field, <span class="math notranslate nohighlight">\(\underline{\gamma}\)</span> , at each node in the mesh. For fluid elements that do not intersect the fluid/
+solid interface, these Lagrange multipliers are identically zero. They are non zero only
+for those fluid elements that are crossed by the fluid/solid boundary. These Lagrange
+multiplier fields couple the influence of the solid material on the fluid through body
+force terms in the fluid momentum equations of the form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/205_goma_physics.png"><img alt="../../_images/205_goma_physics.png" src="../../_images/205_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>When applying this boundary condition it is necessary to include Lagrange multiplier
+equations equal to the number of dimensions in the problem. These are specified in the
+equation section of the input deck. The shape and weight functions for these fields are
+generally simple P0 functions. If one were to vector plot the components of the
+Lagrange multiplier components, you get a general picture of the force interaction field
+between the liquid and solid. This is sometimes informative.</p>
+<p>A slaved phase function field is used to imprint the contour of the solid material on the
+liquid mesh. The zero contour of this function is then used to evaluate the above line
+integral. This phase function field is slaved to the solid material and is not evolved in
+the conventional sense. Nonetheless, a single phase function field equation must be
+included with the set of equations solved. In the phase function parameters section of
+the input deck, the user must indicate that this phase function is slaved and also must
+identify the sideset number of the boundary on the solid material which is the fluid/
+solid interface.</p>
+</section>
+<section id="id33">
+<h3><strong>References</strong><a class="headerlink" href="#id33" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-q">
+<h2><strong>LS_Q</strong><a class="headerlink" href="#ls-q" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_Q</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id34">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id34" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/ENERGY)</strong></p>
+<p>This boundary condition applies a scalar heat flux value as an “embedded” source term
+on the heat conservation equation at the zero level set contour. It can be used both
+when subgrid or subelement integration is being used.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_Q</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the heat flux value is applied to the negative
+phase, both phase, or the positive phase, respectively.
+Details are given below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><em>q</em>, The constant value of heat flux to be applied at the zero
+level set contour.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id35">
+<h3><strong>Examples</strong><a class="headerlink" href="#id35" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_Q</span> <span class="n">LS</span> <span class="mi">0</span> <span class="o">-</span><span class="mf">1.1e-3</span>
+</pre></div>
+</div>
+</section>
+<section id="id36">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id36" title="Permalink to this headline"></a></h3>
+<p>This boundary condition is somewhat analogous to the QSIDE boundary condition
+used quite often in non-level set problems. It applies a scalar heat flux at the interfacial
+curve as an embedded boundary condtion. It can be used in by subgrid and subelement
+methods. In the case of the former, a distributed volume integral of the form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/206_goma_physics.png"><img alt="../../_images/206_goma_physics.png" src="../../_images/206_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\Delta\)</span> ⋅ <span class="math notranslate nohighlight">\(T_{cap}\)</span> is the familiar smoothed Dirac delta function with width parameter <span class="math notranslate nohighlight">\(\alpha\)</span>.
+When subelement integration is used this width parameter goes to zero and the volume
+integral becomes a surface integral along the zero level set contour (Note: as of Oct
+2005 subelement integration is not supported for three dimensional problems).</p>
+<p>When using this boundary condition concurrent with subgrid integration, the integer
+parameter that appears on the card should be consistently set to zero. This ensures the
+volume source will be applied symmetrically. However, when using subelement
+integration this integer parameter must be entire a +1 or a -1 so that the heat flux will be
+applied only on side of the interface and not both which would result in cancellation.
+This is much the same as was seen for the LS_CAPILLARY boundary condition and
+the reader is referred to that card for a more detailed discussion.</p>
+</section>
+<section id="id37">
+<h3><strong>References</strong><a class="headerlink" href="#id37" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-qrad">
+<h2><strong>LS_QRAD</strong><a class="headerlink" href="#ls-qrad" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_QRAD</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float4</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id38">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id38" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/ENERGY)</strong></p>
+<p>This boundary condition card specifies heat flux using both convective and radiative
+terms. This heat flux value is applied as an “embedded” source term on the heat
+conservation equation at the zero level set contour (cf. <em>BC = QRAD</em> for ALE surfaces).
+It can be used both when subgrid or subelement integration is being used. The
+&lt;float_list&gt; has four parameters; definitions of the input parameters are as follows:</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_QRAD</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the heat flux value is applied to the negative
+phase, both phase, or the positive phase, respectively.
+Details are given below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><em>h</em>, convective heat transfer coefficient.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(T_s\)</span>, sink temperature.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\varepsilon\)</span>, total hemispherical emissivity.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span>, Stefan-Boltzmann constant.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id39">
+<h3><strong>Examples</strong><a class="headerlink" href="#id39" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_QRAD</span> <span class="n">LS</span> <span class="mi">0</span> <span class="mf">10.0</span> <span class="mf">273.0</span> <span class="mf">0.3</span> <span class="mf">5.6697e-8</span>
+</pre></div>
+</div>
+</section>
+<section id="id40">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id40" title="Permalink to this headline"></a></h3>
+<p>This is the level-set counterpart to <em>BC = QRAD</em> which is the same boundary condition
+applied to a parameterized mesh surface. Please see the discussion of that input record
+for the functional form of this boundary condition.</p>
+</section>
+<section id="id41">
+<h3><strong>References</strong><a class="headerlink" href="#id41" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-qlaser">
+<h2><strong>LS_QLASER</strong><a class="headerlink" href="#ls-qlaser" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_QLASER</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float4</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id42">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id42" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/ENERGY)</strong></p>
+<p>This boundary condition card specifies heat flux model derived from a laser welding
+application. This heat flux value is applied as an “embedded” source term on the heat
+conservation equation at the zero level set contour (cf. <em>BC = Q_LASER_WELD</em> for
+ALE surfaces). It can be used both when subgrid or subelement integration is being
+used. The &lt;float_list&gt; has twenty-seven parameters; definitions of the input parameters
+are as follows:</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_QLASER</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the heat flux value is applied to the negative
+phase, both phase, or the positive phase, respectively.
+Details are given below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 1&gt;</p></td>
+<td><p>Nominal power of laser.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 2&gt;</p></td>
+<td><p>Power of laser at base state (simmer).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 3&gt;</p></td>
+<td><p>Base value of surface absorptivity.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 4&gt;</p></td>
+<td><p>Switch to allow tracking of normal component of liquid
+surface relative to laser beam axis for surface absorption
+(0 = OFF, 1 = ON)</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 5&gt;</p></td>
+<td><p>Cutoff time for laser power.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 6&gt;</p></td>
+<td><p>Time at which laser power drops to 1/e.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 7&gt;</p></td>
+<td><p>For pulse weld, the laser power overshoot (%) of peak
+power at time to reach peak laser power.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 8&gt;</p></td>
+<td><p>Radius of laser beam.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 9&gt;</p></td>
+<td><p>For pulse weld, the time for laser pulse to reach peak power.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 10&gt;</p></td>
+<td><p>For pulse weld, the time for laser pulse to reach steady
+state in power.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 11&gt;</p></td>
+<td><p>Switch to either activate laser power distribution from
+beam center based on absolute distance (0) or based on
+radial distance in 2D plane (1).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 12&gt;</p></td>
+<td><p>Location of laser beam center (x-coordinate).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 13&gt;</p></td>
+<td><p>Location of laser beam center (y-coordinate).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 14&gt;</p></td>
+<td><p>Location of laser beam center (z-coordinate).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 15&gt;</p></td>
+<td><p>Laser beam orientation, normal to x-coordinate of body.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 16&gt;</p></td>
+<td><p>Laser beam orientation, normal to y-coordinate of body.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 17&gt;</p></td>
+<td><p>Laser beam orientation, normal to z-coordinate of body.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 18&gt;</p></td>
+<td><p>For pulse weld, spot frequency.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 19&gt;</p></td>
+<td><p>For pulse weld, total number of spots to simulate.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 20&gt;</p></td>
+<td><p>Switch to set type of weld simulation. (0=pulse weld,
+1=linear continuous weld, -1=pseudo pulse weld,
+2=sinusoidal continous weld)</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 21&gt;</p></td>
+<td><p>For pulse weld, spacing of spots.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 22&gt;</p></td>
+<td><p>For radial traverse continuous weld, radius of beam travel.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 23&gt;</p></td>
+<td><p>Switch to activate beam shadowing for lap weld
+(0=OFF, 1=ON). Currently only active for ALE simulations.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 24&gt;</p></td>
+<td><p>Not active, should be set to zero.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 25&gt;</p></td>
+<td><p>For continuous weld, laser beam travel speed in xdirection
+(u velocity).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float 26&gt;</p></td>
+<td><p>For continuous weld, laser beam travel speed in ydirection
+(v velocity).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float 27&gt;</p></td>
+<td><p>For continuous weld, laser beam travel speed in zdirection
+(w velocity).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id43">
+<h3><strong>Examples</strong><a class="headerlink" href="#id43" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_QLASER</span> <span class="n">LS</span> <span class="o">-</span><span class="mi">1</span> <span class="mf">4.774648293</span> <span class="mi">0</span> <span class="mf">0.4</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mf">1.01</span> <span class="mf">4.774648293</span> <span class="mf">0.2</span>
+<span class="mf">0.01</span> <span class="mf">0.01</span> <span class="mi">1</span> <span class="mf">0.005</span> <span class="mi">0</span> <span class="o">-</span><span class="mf">0.198</span> <span class="o">-</span><span class="mi">1</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mf">0.025</span> <span class="mi">1</span> <span class="mi">1</span> <span class="mf">0.2032</span> <span class="o">-</span><span class="mi">1000</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+<span class="mf">0.0254</span>
+</pre></div>
+</div>
+</section>
+<section id="id44">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id44" title="Permalink to this headline"></a></h3>
+<p>This is the level-set counterpart to <em>BC = Q_LASER</em> which is the same boundary
+condition applied to a parameterized mesh surface. Please see the discussion of that
+input record for the functional form of this boundary condition.</p>
+</section>
+<section id="id45">
+<h3><strong>References</strong><a class="headerlink" href="#id45" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-recoil-pressure">
+<h2><strong>LS_RECOIL_PRESSURE</strong><a class="headerlink" href="#ls-recoil-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_RECOIL_PRESSURE</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float4</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id46">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id46" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition card specifies heat flux model derived from a laser welding
+application.. This heat flux value is applied as an “embedded” source term on the heat
+conservation equation at the zero level set contour (cf. <em>BC = CAP_RECOIL_PRESS</em> for
+ALE surfaces). It can be used both when subgrid or subelement integration is being
+used. The &lt;float_list&gt; has seven parameters; definitions of the input parameters are as
+follows:</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 73%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_RECOIL_PRESSURE</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the heat flux value is applied to the negative
+phase, both phase, or the positive phase, respectively.
+Details are given below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>This float is currently disabled.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>This float is currently disabled.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>This float is currently disabled.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p>Disabled. The boiling temperature is set to the melting
+point of the solidus. Use the material property “Solidus
+Temperature” card for this.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p>This float is currently disabled.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p>Conversion scale for pressure.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p>Conversion scale for temperature.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id47">
+<h3><strong>Examples</strong><a class="headerlink" href="#id47" title="Permalink to this headline"></a></h3>
+</section>
+<section id="id48">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id48" title="Permalink to this headline"></a></h3>
+<p>Currently this boundary condition has coefficients for only iron and water. Several
+required pieces of information to use this boundary condition are not in final form, and
+the user can expect future changes and improvements. This boundary condition is
+designed for use with <em>LS_QLASER</em>.</p>
+</section>
+<section id="id49">
+<h3><strong>References</strong><a class="headerlink" href="#id49" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-vapor-ls-qvapor">
+<h2><strong>LS_VAPOR/LS_QVAPOR</strong><a class="headerlink" href="#ls-vapor-ls-qvapor" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_VAPOR</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float4</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id50">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id50" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/ENERGY)</strong></p>
+<p>This boundary condition card specifies heat flux model derived from a laser welding
+application. This particular contribution accounts for the energy lost by vapor flux.
+This heat flux value is applied as an “embedded” source term on the heat conservation
+equation at the zero level set contour (cf. <em>BC = Q_LASER_WELD</em> for ALE surfaces).
+It can be used both when subgrid or subelement integration is being used. The
+&lt;float_list&gt; has four parameters; definitions of the input parameters are as follows:</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_VAPOR</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the heat flux value is applied to the negative
+phase, both phase, or the positive phase, respectively.
+Details are given below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>T_scale. Temperature scaling.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>q_scale. Heat flux scaling.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id51">
+<h3><strong>Examples</strong><a class="headerlink" href="#id51" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_VAPOR</span> <span class="n">LS</span> <span class="mi">0</span> <span class="mf">273.</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+</section>
+<section id="id52">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id52" title="Permalink to this headline"></a></h3>
+<p>Currently this BC is hardwired to parameters (viz. heat capacitance, etc.) for iron. The
+melting point temperature is taken from the material property “Liquidus Temperature”.
+This boundary condition is still in the developmental stage. In using it is advisable to
+be working with the Sandia Goma code team.</p>
+</section>
+<section id="id53">
+<h3><strong>References</strong><a class="headerlink" href="#id53" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="ls-yflux">
+<h2><strong>LS_YFLUX</strong><a class="headerlink" href="#ls-yflux" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_YFLUX</span> <span class="n">LS</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id54">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id54" title="Permalink to this headline"></a></h3>
+<p><strong>(EMB/ENERGY)</strong></p>
+<p>This boundary condition applies a scalar mass flux value as an “embedded” source
+term on a species conservation equation at the zero level set contour. It can be used
+both when subgrid or subelement integration is being used.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LS_YFLUX</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LS</strong></p></td>
+<td><p>This string is used to indicated that this is a “boundary”
+condition is applied at an internal phase boundary defined
+by the zero contour of the level set function.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>An integer parameter than is permitted to take one of three
+values -1, 0, or 1. Depending upon the choice of this
+parameter the mass flux value is applied to the negative
+phase, both phase, or the positive phase, respectively.
+Details are given below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p><em>w</em>, This the species equation index to which this boundary
+condition is applied.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(h_c\)</span>, a constant value for the mass transfer
+coefficient at the interface.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(Y_c\)</span>, the “bulk” concentration of species used in
+conjunction with the mass transfer coefficient to compute
+the mass flux.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id55">
+<h3><strong>Examples</strong><a class="headerlink" href="#id55" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LS_YFLUX</span> <span class="n">LS</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mf">1.e-2</span> <span class="mf">0.75</span>
+</pre></div>
+</div>
+</section>
+<section id="id56">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id56" title="Permalink to this headline"></a></h3>
+<p>This boundary condition is somewhat analogous to the YFLUX boundary condition
+used quite often in non-level set problems to apply a scalar species flux at a at boundary
+defined by a side set. It applies a scalar mass transfer flux at the interfacial curve as an
+embedded boundary condtion. It can be used in by subgrid and subelement methods.
+In the case of the former, a distributed volume integral of the form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/207_goma_physics.png"><img alt="../../_images/207_goma_physics.png" src="../../_images/207_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\delta_\alpha\)</span> (<span class="math notranslate nohighlight">\(\phi\)</span>) is the familiar smoothed Dirac delta function with width parameter <span class="math notranslate nohighlight">\(\alpha\)</span> and the mass flux , J, is given by the typical relation:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/208_goma_physics.png"><img alt="../../_images/208_goma_physics.png" src="../../_images/208_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>When subelement integration is used this width parameter goes to zero and the volume
+integral becomes a surface integral along the zero level set contour (Note: as of Oct
+2005 subelement integration is not supported for three dimensional problems).</p>
+<p>When using this boundary condition concurrent with subgrid integration, the integer
+parameter that appears on the card should be consistently set to zero. This ensures the
+volume source will be applied symmetrically. However, when using subelement
+integration this integer parameter must be entire a +1 or a -1 so that the mass flux will
+be applied only on side of the interface and not both which would result in cancellation.
+This is much the same as was seen for the LS_CAPILLARY boundary condition and
+the reader is referred to that card for a more detailed discussion.</p>
+</section>
+<section id="id57">
+<h3><strong>References</strong><a class="headerlink" href="#id57" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="sharp-blake-velocity">
+<h2><strong>SHARP_BLAKE_VELOCITY</strong><a class="headerlink" href="#sharp-blake-velocity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_BLAKE_VELOCITY</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span>
+</pre></div>
+</div>
+<section id="id58">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id58" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. Its formulation is identical to the
+WETTING_SPEED_BLAKE boundary condition, but it is applied as a single point
+source on the boundary instead of a distributed stress.</p>
+<p>This boundary condition can only be used for two-dimensional problems.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 80%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>SHARP_BLAKE_VELOCITY</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location
+(side set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degress.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>V_0 is a pre-exponential velocity factor (see functional
+form below).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>g is a thermally scaled surface tension, i.e. <span class="math notranslate nohighlight">\(\sigma\)</span>
+/2nkT.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(t_{relax}\)</span> is a relaxation time which can be used to
+smooth the imposed contact point velocity for transient problems. Set to zero for no smoothing.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(V_{old}\)</span> is an initial velocity used in velocity
+smoothing for transient problems. Set to zero when
+smoothing is not used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id59">
+<h3><strong>Examples</strong><a class="headerlink" href="#id59" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_BLAKE_VELOCITY</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">0.1</span> <span class="mf">8.</span> <span class="mf">0.001</span> <span class="mi">0</span>   <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id60">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id60" title="Permalink to this headline"></a></h3>
+<p>The implementation for this wetting condition is identical to that of
+SHARP_WETLIN_VELOCITY, but the wetting velocity dependence is different.
+Because the wetting stress is not applied at a point, it is most appropriate for use when
+using subelement integration which similarly collapses the surface tension sources
+associated with the interface onto the interfacial curve.</p>
+<p>Note also that this boundary condition is strictly for use with two-dimensional
+problems. Attempting to apply it to a three dimensional problem will result in an error
+message.</p>
+</section>
+<section id="id61">
+<h3><strong>Theory</strong><a class="headerlink" href="#id61" title="Permalink to this headline"></a></h3>
+<p>Derivation of the force condition for this boundary condition starts with a simple
+relation for wetting line velocity</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/209_goma_physics.png"><img alt="../../_images/209_goma_physics.png" src="../../_images/209_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Note that the convention for contact angles in this relation is that values of θ near to
+zero indicate a high degree of wetting and values of θ near 180 ° indicate the opposite.
+This is mapped to a stress value by analogy with Navier’s slip relation and has the
+following form when the velocity smoothing is not used,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/210_goma_physics.png"><img alt="../../_images/210_goma_physics.png" src="../../_images/210_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id62">
+<h3><strong>References</strong><a class="headerlink" href="#id62" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="sharp-ca-2d">
+<h2><strong>SHARP_CA_2D</strong><a class="headerlink" href="#sharp-ca-2d" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_CA_2D</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id63">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id63" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to impose a contact angle on a boundary when using
+<em>Level Set Interface Tracking</em>. It can only be used for two-dimensional problems.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>FILL_CA</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta\)</span>, the contact angle imposed, in degrees.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id64">
+<h3><strong>Examples</strong><a class="headerlink" href="#id64" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_CA_2D</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id65">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id65" title="Permalink to this headline"></a></h3>
+<p>This boundary condition must be used in conjunction with the <em>VELO_SLIP_FILL</em> or
+<em>VELO_SLIP_LS</em> boundary condition. These latter conditions permits the fluid to slip in
+the vicinity of the contact line. The SHARP_CA_2D acts by imposing a force on the
+momentum equation. The size of this force is more or less in proportion between the
+actual contact angle on the boundary and the value specified on the card and scales
+directly with the applied surface tension material parameter. In this manner, it is very
+similar to the FILL_CA boundary condition.</p>
+<p>The manner in which is applied differs. In this case, the applied force is not distributed
+around the contact line using a smooth delta function weighting in a weak integrated
+context, but instead the delta function is used to resolve the line integral and the
+force is applied directly at a point on the sideset set. Hence, this boundary condition
+is most appropriate for use in conjunction with subelement integration which performs a
+similar transformation of the volumetric surface tension source terms. Further, the
+logic use to identify the point of application on the boundary functions only in
+twodimensions. Hence, this boundary condition is stricly limited to two-dimensional
+problems.</p>
+</section>
+<section id="id66">
+<h3><strong>References</strong><a class="headerlink" href="#id66" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="sharp-cox-velocity">
+<h2><strong>SHARP_COX_VELOCITY</strong><a class="headerlink" href="#sharp-cox-velocity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_COX_VELOCITY</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span>
+</pre></div>
+</div>
+<section id="id67">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id67" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. Its formulation is identical to the
+WETTING_SPEED_COX boundary condition, but it is applied as a single point source
+on the boundary instead of a distributed stress.</p>
+<p>This boundary condition can only be used for two-dimensional problems.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>SHARP_COX_VELOCITY</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side
+set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degress.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span> is the surface tension.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\varepsilon_s\)</span> is the dimensionless slip length,
+i.e. the ratio of the slip length to the characteristic
+length scale of the macroscopic flow.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(t_{relax}\)</span> is a relaxation time which can be used
+to smooth the imposed contact point velocity for transient problems. Set to zero for no smoothing.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(V_{old}\)</span> is an initial velocity used in velocity smoothing
+for transient problems. Set to zero when smoothing is not used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id68">
+<h3><strong>Examples</strong><a class="headerlink" href="#id68" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_COX_VELOCITY</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">72.0</span> <span class="mf">0.01</span> <span class="mf">0.1</span>   <span class="mi">0</span>   <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id69">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id69" title="Permalink to this headline"></a></h3>
+<p>The implementation for this wetting condition is identical to that of
+SHARP_WETLIN_VELOCITY, but the wetting velocity dependence is different.
+Because the wetting stress is not applied at a point, it is most appropriate for use when
+using subelement integration which similarly collapses the surface tension sources
+associated with the interface onto the interfacial curve.</p>
+<p>Note also that this boundary condition is strictly for use with two-dimensional
+problems. Attempting to apply it to a three dimensional problem will result in an error
+message.</p>
+</section>
+<section id="id70">
+<h3><strong>Theory</strong><a class="headerlink" href="#id70" title="Permalink to this headline"></a></h3>
+<p>Derivation of the force condition for this boundary condition starts with a relation for
+wetting line velocity</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/211_goma_physics.png"><img alt="../../_images/211_goma_physics.png" src="../../_images/211_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(V_{Cox}\)</span> is computed from the Cox hydrodynamic wetting theory;</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/212_goma_physics.png"><img alt="../../_images/212_goma_physics.png" src="../../_images/212_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>See VELO_THETA_COX for details of the Cox functions f and g. Note that the
+parameters <span class="math notranslate nohighlight">\(\lambda\)</span>, <span class="math notranslate nohighlight">\(q_{inner}\)</span>, and <span class="math notranslate nohighlight">\(q_{outer}\)</span> are currently not accessible from the input card and are
+hard-set to zero. <span class="math notranslate nohighlight">\(\lambda\)</span> is the ratio of gas viscosity to liquid viscosity whereas <span class="math notranslate nohighlight">\(q_{inner}\)</span> and
+<span class="math notranslate nohighlight">\(q_{outer}\)</span> represent influences from the inner and outer flow regions.</p>
+<p>Note that the convention for contact angles in this relation is that values of θ near to
+zero indicate a high degree of wetting and values of <span class="math notranslate nohighlight">\(\theta\)</span> near 180 ° indicate the opposite.
+This is mapped to a stress value by analogy with Navier’s slip relation and has the
+following form when the velocity smoothing is not used,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/213_goma_physics.png"><img alt="../../_images/213_goma_physics.png" src="../../_images/213_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The Cox wetting velocity requires evaluation of integrals for the function
+g(<span class="math notranslate nohighlight">\(\theta\)</span>, <span class="math notranslate nohighlight">\(\lambda\)</span>) which
+is currently done numerically using 10-point Gaussian quadrature. As such the
+evaluation of the integrals is expected to become inaccurate as either
+<span class="math notranslate nohighlight">\(\theta_s\)</span> tends toward
+zero or <span class="math notranslate nohighlight">\(\theta\)</span> tends toward 180 degrees. Note that the integrand becomes singular as <span class="math notranslate nohighlight">\(\theta\)</span> tends toward 0 or 180 degrees.</p>
+</section>
+<section id="id71">
+<h3><strong>References</strong><a class="headerlink" href="#id71" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="sharp-hoffman-velocity">
+<h2><strong>SHARP_HOFFMAN_VELOCITY</strong><a class="headerlink" href="#sharp-hoffman-velocity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_HOFFMAN_VELOCITY</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span>
+</pre></div>
+</div>
+<section id="id72">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id72" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. Its formulation is identical to the
+WETTING_SPEED_HOFFMAN boundary condition, but it is applied as a single point
+source on the boundary instead of a distributed stress.</p>
+<p>This boundary condition can only be used for two-dimensional problems.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>SHARP_HOFFMAN_VELOCITY</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degress.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span> is the surface tension.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(t_{relax}\)</span> is a relaxation time which can be used to
+smooth the imposed contact point velocity for transient problems. Set to zero for no smoothing.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(V_{old}\)</span> is an initial velocity used in velocity
+smoothing for transient problems. Set to zero when smoothing is not used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id73">
+<h3><strong>Examples</strong><a class="headerlink" href="#id73" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_HOFFMAN_VELOCITY</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">72.0</span> <span class="mf">0.1</span>   <span class="mi">0</span>   <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id74">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id74" title="Permalink to this headline"></a></h3>
+<p>The implementation for this wetting condition is identical to that of
+SHARP_WETLIN_VELOCITY, but the wetting velocity dependence is different.
+Because the wetting stress is not applied at a point, it is most appropriate for use when
+using subelement integration which similarly collapses the surface tension sources
+associated with the interface onto the interfacial curve.</p>
+<p>Note also that this boundary condition is strictly for use with two-dimensional
+problems. Attempting to apply it to a three dimensional problem will result in an error
+message.</p>
+</section>
+<section id="id75">
+<h3><strong>Theory</strong><a class="headerlink" href="#id75" title="Permalink to this headline"></a></h3>
+<p>Derivation of the force condition for this boundary condition starts with a relation for
+wetting line velocity</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/214_goma_physics.png"><img alt="../../_images/214_goma_physics.png" src="../../_images/214_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(V_{Hoffman}\)</span> is computed from the Hoffman correlation;</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/215_goma_physics.png"><img alt="../../_images/215_goma_physics.png" src="../../_images/215_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>See VELO_THETA_HOFFMAN for details of the Hoffman function g. Note that the
+convention for contact angles in this relation is that values of <span class="math notranslate nohighlight">\(\theta\)</span> near to zero indicate a
+high degree of wetting and values of <span class="math notranslate nohighlight">\(\theta\)</span> near 180 ° indicate the opposite. This is mapped
+to a stress value by analogy with Navier’s slip relation and has the following form
+when the velocity smoothing is not used,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/216_goma_physics.png"><img alt="../../_images/216_goma_physics.png" src="../../_images/216_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Because the Hoffman functions are implicit, iteration is required in the determination
+of the wetting velocity. As a result, for very high Capillary numbers, i.e.
+&gt; <span class="math notranslate nohighlight">\(10^6\)</span>, the
+iteration procedure in Goma may need to be modified.</p>
+</section>
+<section id="id76">
+<h3><strong>References</strong><a class="headerlink" href="#id76" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="sharp-wetlin-velocity">
+<h2><strong>SHARP_WETLIN_VELOCITY</strong><a class="headerlink" href="#sharp-wetlin-velocity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_WETLIN_VELOCITY</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span>
+</pre></div>
+</div>
+<section id="id77">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id77" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. Its formulation is identical to the
+WETTING_SPEED_LINEAR boundary condition, but it is applied as a single point
+source on the boundary instead of a distributed stress.</p>
+<p>This boundary condition can only be used for two-dimensional problems.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 69%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>SHARP_WETLIN_VELOCITY</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side
+set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degress.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(c_T\)</span>, proportionality constant as defined below</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>Currently not used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id78">
+<h3><strong>Examples</strong><a class="headerlink" href="#id78" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SHARP_WETLIN_VELOCITY</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">0.1</span> <span class="mf">0.</span> <span class="mf">0.001</span>
+</pre></div>
+</div>
+</section>
+<section id="id79">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id79" title="Permalink to this headline"></a></h3>
+<p>As noted above, this boundary condition imposes the same wetting stress dependence
+as the WETTING_SPEED_LINEAR boundary condition. However, its application in
+the FEM context is different. Instead of the wetting stress,
+<span class="math notranslate nohighlight">\(\tau_w\)</span>, being applied according to the formula:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/217_goma_physics.png"><img alt="../../_images/217_goma_physics.png" src="../../_images/217_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>as is the case for the WETTING_SPEED_LINEAR condition, the Dirac function is
+used to remove the integral and replace it with a point stress at the location where
+<span class="math notranslate nohighlight">\(\phi\)</span> = 0 on the boundary. Designating this point as
+<span class="math notranslate nohighlight">\(X_{cl}\)</span>, the vector applied to the momentum equation is given by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/218_goma_physics.png"><img alt="../../_images/218_goma_physics.png" src="../../_images/218_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Because the wetting stress is not applied at a point, it is most appropriate for use when
+using subelement integration which similarly collapses the surface tension sources
+associated with the interface onto the interfacial curve. Note that this method of
+application is identical to the SHARP_CA_2D boundary condition discussed
+elsewhere.</p>
+<p>Note also that this boundary condition is strictly for use with two-dimensional
+problems. Attempting to apply it to a three dimensional problem will result in an error
+message.</p>
+</section>
+<section id="id80">
+<h3><strong>Theory</strong><a class="headerlink" href="#id80" title="Permalink to this headline"></a></h3>
+<p>Derivation of the force condition for this boundary condition starts with a simple
+relation for wetting line velocity</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/219_goma_physics.png"><img alt="../../_images/219_goma_physics.png" src="../../_images/219_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Note that the convention for contact angles in this relation is that values of
+<span class="math notranslate nohighlight">\(\theta\)</span> near to
+zero indicate a high degree of wetting and values of <span class="math notranslate nohighlight">\(\theta\)</span> near 180 ° indicate the opposite.
+This is mapped to a stress value by analogy with Navier’s slip relation,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/220_goma_physics.png"><img alt="../../_images/220_goma_physics.png" src="../../_images/220_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>It should be noted that there is no distinction for this model in the function of
+<span class="math notranslate nohighlight">\(\beta\)</span> or <span class="math notranslate nohighlight">\(c_T\)</span>.
+The two parameters are interchangeable. In non-linear models, (see
+WETTING_SPEED_BLAKE) this is no longer true.</p>
+</section>
+<section id="id81">
+<h3><strong>References</strong><a class="headerlink" href="#id81" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="wetting-speed-blake">
+<h2><strong>WETTING_SPEED_BLAKE</strong><a class="headerlink" href="#wetting-speed-blake" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">WETTING_SPEED_BLAKE</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id82">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id82" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. It implements a version of the Blake-DeConinck
+molecular-kinetic theory wetting model.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 74%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>WETTING_SPEED_BLAKE</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle, degrees .</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>V_0 is a pre-exponential velocity factor (see functional
+form below).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>g is a thermally scaled surface tension, i.e. <span class="math notranslate nohighlight">\(\sigma\)</span>/2nkT.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><em>w</em>, width of interfacial region near contact line. Defaults to
+level set length scale if zero or less.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id83">
+<h3><strong>Examples</strong><a class="headerlink" href="#id83" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">WETTING_SPEED_BLAKE</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">20.1</span> <span class="mf">7.0</span> <span class="mf">0.</span>   <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id84">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id84" title="Permalink to this headline"></a></h3>
+<p>The implementation for this wetting condition is identical to that of
+WETTING_SPEED_LINEAR, but the wetting velocity dependence is different.</p>
+<p>Note that it is a requirement that when using this boundary condition that slip to some
+extent be allowed on this boundary. This is most often done by applying a
+VELO_SLIP_LS boundary condition in conjunction with this boundary condition. In
+addition, a no penetration condition on the velocity is need in either the form of a
+Dirichlet condition or a VELO_NORMAL condition. It is important to note that the
+slipping condition need not relax the no slip requirement completely. In fact, its
+parameters should be set so that no slip is for the most part satisfied on the boundary in
+regions away from the contact line. Near the contact line however the parameters in
+the slip condition and the WETTING_SPEED_BLAKE condition need to be fixed so
+that appreciable fluid velocity is induced. This is a trial and error process at the current
+time.</p>
+</section>
+<section id="id85">
+<h3><strong>Theory</strong><a class="headerlink" href="#id85" title="Permalink to this headline"></a></h3>
+<p>Derivation of this boundary condition starts with a relation propose by Blake and
+DeConinck for wetting line motion</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/221_goma_physics.png"><img alt="../../_images/221_goma_physics.png" src="../../_images/221_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This is mapped to a stress value by analogy with Navier’s slip relation,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/222_goma_physics.png"><img alt="../../_images/222_goma_physics.png" src="../../_images/222_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This relation contrasts with the “linear” relation applied by the
+WETTING_SPEED_LINEAR relation in that the rate of change of the wetting velocity
+with the contact angle decreases as the wetting angle deviates more and more from its
+static value. This is more consisten with physical behaviors that the linear model.</p>
+<p>In point of fact this condition is a vector condition so this scalar stress value multiplies
+the unit vector tangent to the surface and normal to the contact line,
+<span class="math notranslate nohighlight">\(\vec{t}\)</span> . This stress is
+then weighted by smooth Dirac function to restrict its location to being near the
+interface, weighted by a FEM shape function, integrated over the boundary sideset and
+added to the fluid momentum equation for the corresponding node j, vis:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/223_goma_physics.png"><img alt="../../_images/223_goma_physics.png" src="../../_images/223_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id86">
+<h3><strong>References</strong><a class="headerlink" href="#id86" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="wetting-speed-cox">
+<h2><strong>WETTING_SPEED_COX</strong><a class="headerlink" href="#wetting-speed-cox" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">WETTING_SPEED_COX</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span>
+</pre></div>
+</div>
+<section id="id87">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id87" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. It implements a version of the Cox hydrodynamic model
+of wetting.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>WETTING_SPEED_COX</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle, degrees.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\varepsilon_s\)</span> is the dimensionless slip length,
+i.e. the ratio of the slip length to the characteristic length
+scale of the macroscopic flow.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span> is the surface tension.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><em>w</em> ,width of interfacial region near contact line. Defaults to
+level set length scale if zero or less.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id88">
+<h3><strong>Examples</strong><a class="headerlink" href="#id88" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">WETTING_SPEED_COX</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">0.01</span> <span class="mf">72.0</span> <span class="mf">0.</span>   <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id89">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id89" title="Permalink to this headline"></a></h3>
+<p>The implementation for this wetting condition is identical to that of
+WETTING_SPEED_LINEAR, but the wetting velocity dependence is different.</p>
+<p>Note that it is a requirement that when using this boundary condition that slip to some
+extent be allowed on this boundary. This is most often done by applying a
+VELO_SLIP_LS boundary condition in conjunction with this boundary condition. In
+addition, a no penetration condition on the velocity is need in either the form of a
+Dirichlet condition or a VELO_NORMAL condition. It is important to note that the
+slipping condition need not relax the no slip requirement completely. In fact, its
+parameters should be set so that no slip is for the most part satisfied on the boundary in
+regions away from the contact line. Near the contact line however the parameters in
+the slip condition and the WETTING_SPEED_BLAKE condition need to be fixed so
+that appreciable fluid velocity is induced. This is a trial and error process at the
+current time.</p>
+</section>
+<section id="id90">
+<h3><strong>Theory</strong><a class="headerlink" href="#id90" title="Permalink to this headline"></a></h3>
+<p>Derivation of this boundary condition starts with a relation that represents the Cox
+hydrodynamic wetting model</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/224_goma_physics.png"><img alt="../../_images/224_goma_physics.png" src="../../_images/224_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>See VELO_THETA_HOFFMAN for details of the Hoffman function g. Note that the
+convention for contact angles in this relation is that values of <span class="math notranslate nohighlight">\(\theta\)</span> near to zero indicate a
+high degree of wetting and values of <span class="math notranslate nohighlight">\(\theta\)</span> near 180 ° indicate the opposite. This is mapped
+to a stress value by analogy with Navier’s slip relation,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/225_goma_physics.png"><img alt="../../_images/225_goma_physics.png" src="../../_images/225_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This relation contrasts with the “linear” relation applied by the
+WETTING_SPEED_LINEAR relation in that more consistent physical behavior
+should result.</p>
+<p>In point of fact this condition is a vector condition so this scalar stress value multiplies
+the unit vector tangent to the surface and normal to the contact line,
+<span class="math notranslate nohighlight">\(\vec{t}\)</span> . This stress is
+then weighted by smooth Dirac function to restrict its location to being near the
+interface, weighted by a FEM shape function, integrated over the boundary sideset and
+added to the fluid momentum equation for the corresponding node j, vis:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/226_goma_physics.png"><img alt="../../_images/226_goma_physics.png" src="../../_images/226_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id91">
+<h3><strong>References</strong><a class="headerlink" href="#id91" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="wetting-speed-hoffman">
+<h2><strong>WETTING_SPEED_HOFFMAN</strong><a class="headerlink" href="#wetting-speed-hoffman" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">WETTING_SPEED_HOFFMAN</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span>
+</pre></div>
+</div>
+<section id="id92">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id92" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. It implements a version of the Hoffman wetting
+correlation.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 69%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>WETTING_SPEED_HOFFMAN</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location
+(side set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle, degrees .</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span> is the surface tension.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><em>w</em>, width of interfacial region near contact line.
+Defaults to level set length scale if zero or less.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id93">
+<h3><strong>Examples</strong><a class="headerlink" href="#id93" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">WETTING_SPEED_HOFFMAN</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mi">0</span> <span class="mf">72.0</span>   <span class="mf">0.</span> <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id94">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id94" title="Permalink to this headline"></a></h3>
+<p>The implementation for this wetting condition is identical to that of
+WETTING_SPEED_LINEAR, but the wetting velocity dependence is different.</p>
+<p>Note that it is a requirement that when using this boundary condition that slip to some
+extent be allowed on this boundary. This is most often done by applying a
+VELO_SLIP_LS boundary condition in conjunction with this boundary condition. In
+addition, a no penetration condition on the velocity is need in either the form of a
+Dirichlet condition or a VELO_NORMAL condition. It is important to note that the
+slipping condition need not relax the no slip requirement completely. In fact, its
+parameters should be set so that no slip is for the most part satisfied on the boundary in
+regions away from the contact line. Near the contact line however the parameters in
+the slip condition and the WETTING_SPEED_BLAKE condition need to be fixed so
+that appreciable fluid velocity is induced. This is a trial and error process at the
+current time.</p>
+</section>
+<section id="id95">
+<h3><strong>Theory</strong><a class="headerlink" href="#id95" title="Permalink to this headline"></a></h3>
+<p>Derivation of this boundary condition starts with a relation that represents the Hoffman
+wetting correlation</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/230_goma_physics.png"><img alt="../../_images/230_goma_physics.png" src="../../_images/230_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>See VELO_THETA_HOFFMAN for details of the Hoffman function g. Note that the
+convention for contact angles in this relation is that values of <span class="math notranslate nohighlight">\(\theta\)</span> near to zero indicate a
+high degree of wetting and values of <span class="math notranslate nohighlight">\(\theta\)</span> near 180 ° indicate the opposite. This is mapped
+to a stress value by analogy with Navier’s slip relation,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/231_goma_physics.png"><img alt="../../_images/231_goma_physics.png" src="../../_images/231_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This relation contrasts with the “linear” relation applied by the
+WETTING_SPEED_LINEAR relation in that more consistent physical behavior
+should result.</p>
+<p>In point of fact this condition is a vector condition so this scalar stress value multiplies
+the unit vector tangent to the surface and normal to the contact line,
+<span class="math notranslate nohighlight">\(\vec{t}\)</span> . This stress is
+then weighted by smooth Dirac function to restrict its location to being near the
+interface, weighted by a FEM shape function, integrated over the boundary sideset and
+added to the fluid momentum equation for the corresponding node j, vis:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/232_goma_physics.png"><img alt="../../_images/232_goma_physics.png" src="../../_images/232_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id96">
+<h3><strong>References</strong><a class="headerlink" href="#id96" title="Permalink to this headline"></a></h3>
+<p>Stephan F. Kistler 1993. “Hydrodynamics of Wetting” in Wettability, edited by John
+Berg, Surfactant Science Series, 49, Marcel Dekker, NewYork, NY, pp. 311-429.</p>
+</section>
+</section>
+<section id="wetting-speed-linear">
+<h2><strong>WETTING_SPEED_LINEAR</strong><a class="headerlink" href="#wetting-speed-linear" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">WETTING_SPEED_LINEAR</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span>
+</pre></div>
+</div>
+<section id="id97">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id97" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 70%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>WETTING_SPEED_LINEAR</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location
+(side set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degrees.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(c_T\)</span>, proportionality constant as defined below</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><em>w</em> ,width of interfacial region near contact line.
+Defaults to level set length scale if zero or less (L).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id98">
+<h3><strong>Examples</strong><a class="headerlink" href="#id98" title="Permalink to this headline"></a></h3>
+<p>An example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">WETTING_SPEED_LINEAR</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">0.1</span> <span class="mf">0.</span> <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id99">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id99" title="Permalink to this headline"></a></h3>
+<p>The prescence of wetting or contact lines in problems using level set interface tracking
+introduces the problem of modeling the motion of the wetting line. This boundary
+condition presents one potential means for doing this. It adds a wall stress value at the
+boundary in a region near to the wetting line (this is set with the Level Set Length Scale
+discussed previously). This wall stress value depends upon the deviation of the
+apparent contact angle determined from the level set function and a set static contact
+angle. The bigger the deviation in principle the bigger the induced stress. The stress is
+modeled by analogy with Navier’s slip relation (with slip coefficient <span class="math notranslate nohighlight">\(\beta\)</span>).
+The stress will induce a fluid velocity at the boundary which it is hoped will move the contact line at a velocity that is consistent with the rest of the flow.</p>
+<p>An important note is that it is a requirement that when using this boundary condition
+that slip to some extent be allowed on this boundary. This is most often done by
+applying a VELO_SLIP_LS boundary condition in conjunction with this boundary
+condition. In addition, a no penetration condition on the velocity is need in either the
+form of a Dirichlet condition or a VELO_NORMAL condition. It is important to note
+that the slipping condition need not relax the no slip requirement completely. In fact,
+its parameters should be set so that no slip is for the most part satisfied on the boundary
+in regions away from the contact line. Near the contact line however the parameters in
+the slip condition and the WETTING_SPEED_LINEAR condition need to be fixed so
+that appreciable fluid velocity is induced. This is a trial and error process at the current
+time.</p>
+</section>
+<section id="id100">
+<h3><strong>Theory</strong><a class="headerlink" href="#id100" title="Permalink to this headline"></a></h3>
+<p>Derivation of this boundary condition starts with a simple relation for wetting line
+velocity</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/227_goma_physics.png"><img alt="../../_images/227_goma_physics.png" src="../../_images/227_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Note that the convention for contact angles in this relation is that values of
+<span class="math notranslate nohighlight">\(\theta\)</span> near to
+zero indicate a high degree of wetting and values of <span class="math notranslate nohighlight">\(\theta\)</span> near 180 ° indicate the opposite.
+This is mapped to a stress value by analogy with Navier’s slip relation</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/228_goma_physics.png"><img alt="../../_images/228_goma_physics.png" src="../../_images/228_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>It should be noted that there is no distinction for this model in the function of
+<span class="math notranslate nohighlight">\(\beta\)</span> or <span class="math notranslate nohighlight">\(c_T\)</span>.
+The two parameters are interchangeable. In non-linear models, (see
+WETTING_SPEED_BLAKE) this is no longer true.</p>
+<p>In point of fact this condition is a vector condition so this scalar stress value multiplies
+the unit vector tangent to the surface and normal to the contact line,
+<span class="math notranslate nohighlight">\(\vec{t}\)</span> . This stress is
+then weighted by smooth Dirac function to restrict its location to being near the
+interface, weighted by a FEM shape function, integrated over the boundary sideset and
+added to the fluid momentum equation for the corresponding node j, vis:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/229_goma_physics.png"><img alt="../../_images/229_goma_physics.png" src="../../_images/229_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id101">
+<h3><strong>References</strong><a class="headerlink" href="#id101" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="linear-wetting-sic">
+<h2><strong>LINEAR_WETTING_SIC</strong><a class="headerlink" href="#linear-wetting-sic" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LINEAR_WETTING_SIC</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id102">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id102" title="Permalink to this headline"></a></h3>
+<p><strong>(SIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. It is an alternative to the WETTING_SPEED_LINEAR
+BC which does not require the VELO_SLIP_LS or VELO_SLIP_FILL BC’s on the
+wetting boundary.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 74%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>LINEAR_WETTING_SIC</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location
+(side set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degress.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(c_T\)</span>, proportionality constant as defined below.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><em>w</em>, width of interfacial region near contact line. Defaults to
+level set length scale if zero or less (L).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span>, slip coefficient.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sx}\)</span>, x-component of substrate velocity.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sy}\)</span>, y-component of substrate velocity.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sz}\)</span>, z-component of substrate velocity.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\tau\)</span>, stability parameter.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id103">
+<h3><strong>Examples</strong><a class="headerlink" href="#id103" title="Permalink to this headline"></a></h3>
+<p>Here is an example card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">LINEAR_WETTING_SIC</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">0.1</span> <span class="mf">0.</span> <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id104">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id104" title="Permalink to this headline"></a></h3>
+<p>This boundary condition is an additional means to impose a wetting line velocity at the
+contact line for level set interface tracking problems. The boundary condition uses a
+form of the Navier-Stokes slip condition to impose a boundary shear stress term to the
+momentum equation:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/233_goma_physics.png"><img alt="../../_images/233_goma_physics.png" src="../../_images/233_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\vec{n}\)</span> and <span class="math notranslate nohighlight">\(\vec{t}\)</span> are the normal and tangent boundary vectors, respectively, <span class="math notranslate nohighlight">\(\beta\)</span> is the
+“slipping” parameter which in this context is used actually as a penalty parameter,
+<span class="math notranslate nohighlight">\(\vec{v}_s\)</span> is the substrate velocity, <span class="math notranslate nohighlight">\(\tau\)</span> is a stabilization parameter,
+<span class="math notranslate nohighlight">\(V_{wet}\)</span> is the wetting velocity given by the following relation</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/234_goma_physics.png"><img alt="../../_images/234_goma_physics.png" src="../../_images/234_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The masking function f(F) is given by the following relation as well:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/235_goma_physics.png"><img alt="../../_images/235_goma_physics.png" src="../../_images/235_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\alpha\)</span> is the width of the interfacial region near the contact line itself. It has the
+effect of “turning off” the wetting velocity at points on the boundary away from the
+interface.</p>
+<p>This constraint is then introduced into the fluid momentum equation via the weak
+natural boundary condition term:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/236_goma_physics.png"><img alt="../../_images/236_goma_physics.png" src="../../_images/236_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>When applying this boundary condition, the user should choose a value for
+<span class="math notranslate nohighlight">\(\beta\)</span> which is
+relatively small. Its size is dictated by the requirement that away from the interface this
+boundary condition should be imposing a no-slip condition on the fluid velocity.
+Conversely, in the vicinity of the wetting line this boundary condition will impose the
+wetting velocity as computed from the preceding equation.</p>
+<p>This boundary condition probably should be used in conjunction with a no penetration
+boundary condition, for example, a VELO_NORMAL condition on the same sideset or
+potentially a Dirichlet condition on velocity if the geometry permits this. In theory, this
+boundary condition can be used to impose no penetration as well, but this will require a
+very small value for <span class="math notranslate nohighlight">\(\beta\)</span>. The user should experiment with this.</p>
+<p>The stability parameter, <span class="math notranslate nohighlight">\(\tau\)</span>, as requires commentary. It is helpful to imagine that this
+parameter introduces a certain amount of inertia to motion of the contact line. With this
+term active (non-zero value for <span class="math notranslate nohighlight">\(\tau\)</span>), large changes of the contact line velocity with time
+are restricted. This can be quite helpful during startup when the intial contact angle is
+often very different from its equilibrium value and there can be very large velocities
+generated as a result. These may in turn lead to low time step size and other numerical
+problems.</p>
+<p>Although every situation is different, one should choose values for <span class="math notranslate nohighlight">\(\tau\)</span> which are on the
+order of 1 to 10 times the starting time step size of the simulation. One should also
+recognize that this term is not consistent from a physical standpoint and therefore one
+should endeavor to keep <span class="math notranslate nohighlight">\(\tau\)</span> as small as possible if not in fact equal to zero.</p>
+</section>
+<section id="id105">
+<h3><strong>References</strong><a class="headerlink" href="#id105" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="blake-dirichlet">
+<h2><strong>BLAKE_DIRICHLET</strong><a class="headerlink" href="#blake-dirichlet" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">BLAKE_DIRICHLET</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id106">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id106" title="Permalink to this headline"></a></h3>
+<p><strong>(SIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. It is an alternative to the WETTING_SPEED_BLAKE
+BC which does not require the VELO_SLIP_LS or VELO_SLIP_FILL BC’s on the
+wetting boundary. It uses a Blake-DeConninck relationship between apparent contact
+angle and wetting velocity. As the name implies, this boundary condition differs from
+WETTING_SPEED_BLAKE in that wetting velocity is in a strong fashion on the
+wetting boundary.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>BLAKE_DIRICHLET</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degrees.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(V_0\)</span> is a pre-exponential velocity factor
+(see functional form below). (L/T)</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><em>g</em> is a thermally scaled surface tension, i.e.
+<span class="math notranslate nohighlight">\(\sigma\)</span>/2nkT. Note that this parameter will be multiplied by the surface tension supplied in the material file when its used in the wetting velocity relation.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><em>w</em>, is the width of the interface wetting region. It defaults to
+the level set length scale if zero of less.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\tau\)</span>, stability parameter (T).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sx}\)</span>, x-component of substrate velocity.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sy}\)</span>, y-component of substrate velocity (L/T).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sz}\)</span>, z-component of substrate velocity.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id107">
+<h3><strong>Examples</strong><a class="headerlink" href="#id107" title="Permalink to this headline"></a></h3>
+<p>Here is an example card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">BLAKE_DIRICHLET</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">20.1</span> <span class="mf">7.0</span> <span class="mf">0.0</span> <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id108">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id108" title="Permalink to this headline"></a></h3>
+<p>This boundary condition is an additional means to impose a wetting line velocity at the
+contact line for level set interface tracking problems. It is related to the
+WETTING_SPEED_BLAKE condition in that it uses the same Blake-DeConninck
+relationship between contact angle and wetting speed, but it applies this relation to the
+computational setting in a different way.</p>
+<p>In this case, the following vector constraint is added to fluid momentum equation on
+the sideset to which this boundary condition is applied:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/237_goma_physics.png"><img alt="../../_images/237_goma_physics.png" src="../../_images/237_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The factor <em>P</em> is a large penalty parameter which swamps any contributions from the
+volumetric momentum equations. Thus, the velocity, <span class="math notranslate nohighlight">\(\sec{v}\)</span> , on this boundary will be set
+solely by the preceding constraint. In this sense, it is a Dirichlet condition (strictly
+speaking, Dirichlet conditions involve direct substitution of nodal degrees-of-freedom
+with corresponding elimination of its equation from the matrix which this boundary
+condition does NOT do).</p>
+<p>In the preceding, the vector <span class="math notranslate nohighlight">\(\sec{t}\)</span>, is a tangent vector to the surface and always points in the
+same direction of the level set gradient on the boundary (that is, from negative to
+positive). In three dimensions, <span class="math notranslate nohighlight">\(\sec{t}\)</span> will also be normal to the contact line curve as it
+intersects the surface itself.</p>
+<p>The masking function, f(<span class="math notranslate nohighlight">\(\phi\)</span>;w) , is used to limit the application of the wetting line
+velocity to only that region of the boundary that is the in immediate vicinity of the
+contact line. We use a simple “hat” function:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/238_goma_physics.png"><img alt="../../_images/238_goma_physics.png" src="../../_images/238_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Needless to say, f(<span class="math notranslate nohighlight">\(\phi\)</span>;w) is identically zero for level set values outside the
+interval (-<em>w</em>,*w*).</p>
+<p>The stabilization term, -<span class="math notranslate nohighlight">\(\tau\)</span> <span class="math notranslate nohighlight">\(\frac{∂v}{∂t}\)</span> , is intended to introduce something like inertia to the
+wetting line. That is to say, it’s primary effect is to limit the rate of change of the
+wetting line velocity to “reasonable” values. The <span class="math notranslate nohighlight">\(\tau\)</span> parameter should be chosen to be
+on the order of the smallest anticipated time step size in the problem. Setting it at zero,
+of course, will remove this term entirely.</p>
+<p>In general, this boundary condition can be used to exclusively to set both the wetting
+speed velocity and the no slip requirement on the indicated sideset set. This would also
+include the no penetration requirement. The user may, however, find it advantageous
+to apply this constraint directly with the VELO_NORMAL condition on the same side
+set.</p>
+<p>An additional note is that the “scaled viscosity” parameter g will be multiplied by the
+surface tension value supplied with Surface Tension card in the material file.</p>
+</section>
+<section id="id109">
+<h3><strong>Theory</strong><a class="headerlink" href="#id109" title="Permalink to this headline"></a></h3>
+<p>The wetting speed model for this boundary condition is the same used by the
+WETTING_SPEED_BLAKE card:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/239_goma_physics.png"><img alt="../../_images/239_goma_physics.png" src="../../_images/239_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id110">
+<h3><strong>References</strong><a class="headerlink" href="#id110" title="Permalink to this headline"></a></h3>
+<p>T. D. Blake and J. De Coninck 2002. “The Influence of Solid-Liquid Interactions on
+Dynamic Wetting”, Advances in Colloid and Interface Science, 96, 21-36.</p>
+</section>
+</section>
+<section id="cox-dirichlet">
+<h2><strong>COX_DIRICHLET</strong><a class="headerlink" href="#cox-dirichlet" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">COX_DIRICHLET</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id111">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id111" title="Permalink to this headline"></a></h3>
+<p><strong>(SIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. It is an alternative to the WETTING_SPEED_COX
+which does not require the VELO_SLIP_LS or VELO_SLIP_FILL BC’s on the wetting
+boundary. It implements a version of the Cox hydrodynamic model of wetting (see
+below). As the name implies, this boundary condition differs from
+WETTING_SPEED_COX in that wetting velocity is applied in a strong fashion on the
+wetting boundary.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 78%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>COX_DIRICHLET</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side
+set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degress.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\varepsilon_s\)</span> is the dimensionless slip length,
+i.e. the ratio of the slip
+length to the characteristic length scale of the
+macroscopic flow. (L)</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span> is the surface tension. Note this value
+will be scaled by the surface tension value supplied in
+the material file.(F/L)</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><em>w</em>, is the width of the interface wetting region. It
+defaults to the level set length scale if zero of less (L).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\tau\)</span>, stability parameter (T).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sx}\)</span>, x-component of substrate velocity.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sy}\)</span>, y-component of substrate velocity (L/T).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sz}\)</span>, z-component of substrate velocity.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id112">
+<h3><strong>Examples</strong><a class="headerlink" href="#id112" title="Permalink to this headline"></a></h3>
+<p>Here is an example card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">COX_DIRICHLET</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mf">0.01</span> <span class="mf">72.0</span>   <span class="mf">0.</span> <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id113">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id113" title="Permalink to this headline"></a></h3>
+<p>This boundary condition is applied in exactly the same manner as the
+BLAKE_DIRICHLET boundary condition. The only substantial difference is the
+model used to derive the wetting speeds relation to the local apparent contact angle.
+The reader is referred to the BLAKE_DIRICHLET section of the manual for further
+reference.</p>
+</section>
+<section id="id114">
+<h3><strong>Theory</strong><a class="headerlink" href="#id114" title="Permalink to this headline"></a></h3>
+<p>This boundary condition uses this relation that represents the Cox hydrodynamic
+wetting model</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/240_goma_physics.png"><img alt="../../_images/240_goma_physics.png" src="../../_images/240_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>See VELO_THETA_COX for details of the Cox functions f and g. Note that the
+parameters <span class="math notranslate nohighlight">\(\lambda\)</span>, <span class="math notranslate nohighlight">\(q_{inner}\)</span>, and <span class="math notranslate nohighlight">\(q_{outer}\)</span> are currently not accessible from the input card and are
+hard-set to zero. <span class="math notranslate nohighlight">\(\lambda\)</span> is the ratio of gas viscosity to liquid viscosity whereas <span class="math notranslate nohighlight">\(q_{inner}\)</span> and
+<span class="math notranslate nohighlight">\(q_{outer}\)</span> represent influences from the inner and outer flow regions.</p>
+</section>
+<section id="id115">
+<h3><strong>References</strong><a class="headerlink" href="#id115" title="Permalink to this headline"></a></h3>
+<p>Stephan F. Kistler 1993. “Hydrodynamics of Wetting” in Wettability, edited by John
+Berg, Surfactant Science Series, 49, Marcel Dekker, NewYork, NY, pp. 311-429.</p>
+</section>
+</section>
+<section id="hoffman-dirichlet">
+<h2><strong>HOFFMAN_DIRICHLET</strong><a class="headerlink" href="#hoffman-dirichlet" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">HOFFMAN_DIRICHLET</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id116">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id116" title="Permalink to this headline"></a></h3>
+<p><strong>(SIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is used to induce fluid velocity at a wetting line when using
+<em>Level Set Interface Tracking</em>. It is an alternative to the
+WETTING_SPEED_HOFFMAN boundary condition which does not require the
+VELO_SLIP_LS or VELO_SLIP_FILL BC’s on the wetting boundary. As the name
+implies, this boundary condition differs from WETTING_SPEED_HOFFMAN in that
+wetting velocity is in a strong fashion on the wetting boundary.</p>
+<p>A description of the input parameters follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 73%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>HOFFMAN_DIRICHLET</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location
+(side set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta_s\)</span>, the static contact angle in degress.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span>, the surface tension. Note that this
+parameter will be scaled by the surface tension value
+supplied in the material file. (F/L)</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><em>w</em>, is the width of the interface wetting region. It
+defaults to the level set length scale if zero of less.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\tau\)</span>, stability parameter (T).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sx}\)</span>, x-component of substrate velocity.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sy}\)</span>, y-component of substrate velocity (L/T).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{sz}\)</span>, z-component of substrate velocity.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id117">
+<h3><strong>Examples</strong><a class="headerlink" href="#id117" title="Permalink to this headline"></a></h3>
+<p>Here is an example card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">HOFFMAN_DIRICHLET</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">30.0</span> <span class="mi">0</span> <span class="mf">72.0</span> <span class="mf">0.0</span> <span class="mf">0.001</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id118">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id118" title="Permalink to this headline"></a></h3>
+<p>The technical details of the application of this boundary differ not at all from those
+described for the BLAKE_DIRICHLET boundary condition. The user is referred to
+that section for further details. This boundary condition differs only in the model used
+to determine the wetting velocity. This is described below and in the
+VELO_THETA_HOFFMAN card.</p>
+</section>
+<section id="id119">
+<h3><strong>Theory</strong><a class="headerlink" href="#id119" title="Permalink to this headline"></a></h3>
+<p>Derivation of this boundary condition starts with a relation that represents the Hoffman
+wetting correlation</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/241_goma_physics.png"><img alt="../../_images/241_goma_physics.png" src="../../_images/241_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>See VELO_THETA_HOFFMAN for details of the Hoffman function g. Note that the
+convention for contact angles in this relation is that values of <span class="math notranslate nohighlight">\(\theta\)</span> near to zero indicate a
+high degree of wetting and values of <span class="math notranslate nohighlight">\(\theta\)</span> near 180 ° indicate the opposite. This is mapped
+to a stress value by analogy with Navier’s slip relation,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/242_goma_physics.png"><img alt="../../_images/242_goma_physics.png" src="../../_images/242_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id120">
+<h3><strong>References</strong><a class="headerlink" href="#id120" title="Permalink to this headline"></a></h3>
+<p>Stephan F. Kistler 1993. “Hydrodynamics of Wetting” in Wettability, edited by John
+Berg, Surfactant Science Series, 49, Marcel Dekker, NewYork, NY, pp. 311-429.</p>
+</section>
+</section>
+<section id="velo-slip-ls">
+<h2><strong>VELO_SLIP_LS</strong><a class="headerlink" href="#velo-slip-ls" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VELO_SLIP_LS</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id121">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id121" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/VECTOR MOMENTUM)</strong></p>
+<p>This boundary condition is applied only in problems involving embedded interface
+tracking, that is, level set or volume of fluid. The boundary condition serves two major
+purposes: first to allow for slip in the vicinity of a moving contact line and second to
+facilitate impact of a dense fluid on a substrate, displacing a less dense fluid (e.g. water
+drop and air displacement). . Elsewhere, this boundary condition enforces a no-slip
+condition between fluid and substrate. A more detailed description is given below.</p>
+<p>This boundary condition is most often used in conjunction with the FILL_CA,
+WETTING_SPEED_LINEAR, or WETTING_SPEED_BLAKE boundary conditions.
+These apply forces to contact lines in order to simulate wetting line motion. These
+forces are applied in a weak sense to the same regions near the interface so it is
+necessary to use VELO_SLIP_LS with a large slipping coefficient so that effectively
+no-slip is relaxed completely near the interface.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>VELO_SLIP_LS</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><em>alpha</em>, or <em>slip_width</em>, a characteristic length scale around
+the contact line that will be used to apply Navier Slip
+Condition with <span class="math notranslate nohighlight">\(\beta\)</span> 0 coefficient. This length scale
+is also used to detect the thickness of light-phase (gas) between
+the substrate denoted by the sideset, and the zero-level-set
+contour (or the boundary between liquid and gas). If this
+distance is less than 8*slip_width, then perfect slip in the
+gas phase is allowed to help facilitate contact. See
+discussion below.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span> 0, the slip coefficient near the contact line.
+The inverse of <span class="math notranslate nohighlight">\(\beta\)</span> 0 defines the scaling between stress and
+slip. The parameter supplied on the input deck is used only within
+a lengthscale <em>slip_width</em> setting around the contact line..
+Elsewhere, the slip coefficient is uniformly set to <span class="math notranslate nohighlight">\(\beta\)</span> 1.
+Hence, this parameter is usually set to a large value to
+allow for perfect slip.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{s,x}\)</span>, the x-component of surface velocity vector. This
+would be the x-component of the fluid velocity if a noslip
+condition were applied.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v{s,y}\)</span>, the y-component of surface velocity vector. This
+would be the y-component of the fluid velocity if a noslip
+condition were applied.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(v_{s,z}\)</span>, the z-component of surface velocity vector. This
+would be the z-component of the fluid velocity if a noslip
+condition were applied.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\beta\)</span> 1, the slip coefficient away from the contact line. The
+inverse of <span class="math notranslate nohighlight">\(\beta\)</span> 1 defines the scaling between stress and slip.
+Hence, this parameter is usually set to a small value
+(like 1e-6) to allow for no-slip.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id122">
+<h3><strong>Examples</strong><a class="headerlink" href="#id122" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card without the optional parameters:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VELO_SLIP_LS</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mf">0.05</span> <span class="mf">100000.0</span> <span class="mf">0.0</span> <span class="mf">0.0</span> <span class="mf">1.e-6</span>
+</pre></div>
+</div>
+<p>The large value of slip coefficient ensures nearly perfect slip in the region around the
+interface, a region that has a half-width of 0.05 centered about the contact line. Away
+from the contact line (outside the hat function of width 0.05), the slip coefficient is 1.e-6, which corresponds to significantly less slip. Note also that if the substrate defined by SS 10 is in contact with gas (light phase), and a liquid front (zero-level set) is nearby, or within a distance 8 times 0.05, then the light phase is allowed to slip along the wall with a coefficient of 100000.0. This is to help facilitate contact.</p>
+</section>
+<section id="id123">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id123" title="Permalink to this headline"></a></h3>
+<p>This boundary condition was originally developed to allow for fluid slip near a
+dynamic contact line, a necessary condition for dynamic wetting line motion when the
+contact angle is not 180 degrees (viz. rolling motion condition). The slippage
+mechanism was deployed through the use of Navier’s slip condition, which basically
+goes as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/243_goma_physics.png"><img alt="../../_images/243_goma_physics.png" src="../../_images/243_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here <span class="math notranslate nohighlight">\(\beta\)</span> is the slip coefficient, which is taken to be variable depending on its proximity
+to the contact line (through the “slip_width” parameter). Note that the smaller the <span class="math notranslate nohighlight">\(\beta\)</span>, the
+more no-slip is enforced. The left hand side of this condition is the fluid traction on the
+substrate. <span class="math notranslate nohighlight">\(\underline{v}_s\)</span> is the velocity of the substrate, specified component-wise with {vx} {vy}
+{vz}. This base functionality of applying the Navier slip condition still exists in this
+condition, but in addition it was furbished to allow for complete slip on the boundary if
+a gas film is being displaced by liquid. In this latter case, complete slip is a mechanism
+(subgrid event) that allows for the otherwise infinite stress to be relieved so that the
+liquid can make contact with the solid. The perfect slip condition at the substrate/gas
+surface is activated by just setting the slip coefficient to the large value, as this
+condition does anyway in the vicinity of a contact line. The “gas phase” is determined
+by determining which phase is the lighter one based on the density specification. The
+figure below details more on how this condition works for wetting/dewetting and for
+incipient liquid/solid impact.</p>
+<p>Some more usage notes as follows:</p>
+<ul class="simple">
+<li><p>The slip coefficient function is computed as
+<span class="math notranslate nohighlight">\(\beta\)</span> = <span class="math notranslate nohighlight">\(\beta\)</span> 0 <span class="math notranslate nohighlight">\(\delta\)</span> ( <span class="math notranslate nohighlight">\(\phi\)</span> ) + <span class="math notranslate nohighlight">\(\beta_\infty\)</span>,
+where the delta
+function is a level-set hat function centered around the zero level set contour where
+it intersects the boundary. It has a length sacale associated with it which is called
+“alpha”, and that basically sets the length over which the <span class="math notranslate nohighlight">\(\beta\)</span> 0 is applied as the slip
+parameter and it is large, leading to a shear-stress-free or slippery region in both
+the gas and liquid phases. <span class="math notranslate nohighlight">\(\beta_{INF}\)</span> is taken as real small (typically 1.e-6 or less) and is
+applied away from the contact line, and hence forces a true “no-slip” condition.</p></li>
+<li><p>The most recent addition to this condition is the functionality that adds perfect slip
+to a wall in the gas phase as it is displaced during near contact state by a liquid
+phase. This capability is of course applicable only to level-set capillary
+hydrodynamics problems. Level-set methods have been plagued by the fact that it
+is hard to break down the displaced phase (e.g. gas phase) as a liquid phase surface
+flows towards a solid boundary. Theoretically this event requires an infinite stress,
+in the continuum. To relieve this stress and promote a collapse and wetting, we add
+perfect slip in the gas phase at near contact conditions, which reduces the
+lubrication pressure in the gas film and promotes breakdown. This of course
+introduces more length scales. First, the length scale over which slip is applied
+(this is the alpha parameter described above) and seond is the length scale over
+which “nearness” of the liquid phase to the substrate is considered to be “close
+enough” to allow for perfect slip. Right now this “nearness” length scale is
+arbitrarily set to 8*alpha. A third length scale is that which we use to declare
+contact. We currently have that set to 1.e-6*alpha. After contact is declared,
+VELO_SLIP_LS reverts to the form under the first bullet. The figure below
+hopefully clarifies the condition a little better.</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/244_goma_physics.png"><img alt="../../_images/244_goma_physics.png" src="../../_images/244_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

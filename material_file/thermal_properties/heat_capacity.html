@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heat Capacity &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Heat Capacity</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/thermal_properties/heat_capacity.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="heat-capacity">
+<h1><strong>Heat Capacity</strong><a class="headerlink" href="#heat-capacity" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Heat</span> <span class="n">Capacity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">E</span><span class="o">/</span><span class="n">MT</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card is used to specify the model for the heat capacity. Definitions of the
+input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 86%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the heat capacity. This parameter can have one of the following values: <strong>ONSTANT</strong>,
+<strong>USER</strong>, or <strong>ENTHALPY</strong>.</p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are determined by the selection
+for {model_name}. These are identified in the discussion of each model below.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Thus,</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float&gt;</p></td>
+<td><p>This option specifies a constant heat capacity. The {float_list} has a single value:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Heat capacity</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>USER</strong> &lt;float1&gt;…</p></td>
+<td><p>the heat capacity will be a user-defined model. This user-defined model must be incorporated by
+modifying the routine “usr_heat_capacity” in the file user_mp.c. The model parameters are entered in the
+{float_list} as &lt;float1&gt; through &lt;floatn&gt; and passed to the routine as an array.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>ENTHALPY</strong> &lt;float1&gt;</p></td>
+<td><p>a model of heat capacity that uses the latent heat of fusion parameter. The model goes as follows:
+Here the {float_list} requires two values, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Base heat capacity in the solid state, cp</p></li>
+<li><p>&lt;float2&gt; - Latent heat of fusion Hf</p></li>
+</ul>
+</div></blockquote>
+<p>The liquidus temperature Tl and the solidus temperature Ts are taken from the material file. This model
+is currently available for single species only, and is used for rapid melting problems in alloys.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>TABLE</strong> &lt;integer1&gt;
+&lt;character_string1&gt;
+{LINEAR | BILINEAR}
+[integer2]
+[FILE = filenm]</p></td>
+<td><p>Please see discussion at the beginning of the material properties chapter 5 for input description and
+options. Most often character_string1 will be <strong>TEMPERATURE</strong> or maybe <strong>MASS_FRACTION</strong>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Heat</span> <span class="n">Capacity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>When the <strong>ENTHALPY</strong> option is used, the liquidus (Tl) and solidus (Ts) temperatures
+must be added through the <em>Liquidus Temperature and Solidus Temperature</em> cards.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>No References.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

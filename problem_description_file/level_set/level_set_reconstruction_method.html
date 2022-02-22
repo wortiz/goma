@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Level Set Reconstruction Method &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Level Set Reconstruction Method</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/level_set/level_set_reconstruction_method.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="level-set-reconstruction-method">
+<h1>Level Set Reconstruction Method<a class="headerlink" href="#level-set-reconstruction-method" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Reconstruction</span> <span class="n">Method</span> <span class="o">=</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card indicates the method used to perform the Huygens renormalization of the
+level set function. This card applies only if <em>Level Set Renormalization Method</em> is set to
+<strong>Huygens</strong> or <strong>Huygens_Constrained.</strong> Permissible values of {char_string} are:</p>
+<dl class="simple">
+<dt>POINTS</dt><dd><p>A list of points on the interface is formed and the renormalized distance
+is computed as the distance to the nearest point in this list; this is the
+default method.</p>
+</dd>
+<dt>FACETS</dt><dd><p>A list of connected facets on the interface is formed and the renormalized
+distance is computed as the distance to the nearest point on the nearest
+facet in this list. Currently this option is not supported for
+3-dimensional calculations.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>This is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Reconstruction</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">FACETS</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>As described for the <em>Level Set Renormalization Method</em> card, Huygens based
+renormalization is performed by reconstructing the level set surface and computing the
+distance to the nearest point on this surface. Here, the method of reconstructing the
+level set surface is addressed. Either a set of points on the interface is formed or a
+connected set of facets is formed. The advantage to using connected facets is that the
+interface is better described between the points on the interface. However, the
+calculation of the faceted geometry is slightly more expensive computationally. Also,
+the current implementation is limited to 2-dimensional simulations.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

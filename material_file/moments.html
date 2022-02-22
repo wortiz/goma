@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moment Properties &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="References" href="../references.html" />
+    <link rel="prev" title="Shell Equation Properties and Models" href="shell_equation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../material_files.html">Material Files</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="physical_properties.html">Physical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mechanical_and_constitutive.html">Mechanical Properties and Constitutive Equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="thermal_properties.html">Thermal Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="electrical.html">Electrical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="microstructure.html">Microstructure Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="species.html">Species Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source_terms.html">Source Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shell_equation.html">Shell Equation Properties and Models</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Moment Properties</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#moment-weight-function">Moment Weight Function</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#moment-shock-function">Moment Shock Function</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#moment-growth-kernel">Moment Growth Kernel</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id5">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#moment-coalescence-kernel">Moment Coalescence Kernel</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id9">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id11">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../material_files.html">Material Files</a> &raquo;</li>
+      <li>Moment Properties</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/material_file/moments.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="moment-properties">
+<h1>Moment Properties<a class="headerlink" href="#moment-properties" title="Permalink to this headline"></a></h1>
+<p>Properties related to Population Balance Methods using Quadrature Method of Moments (QMOM)</p>
+<section id="moment-weight-function">
+<h2>Moment Weight Function<a class="headerlink" href="#moment-weight-function" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moment</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="p">{</span><span class="n">GALERKIN</span> <span class="o">|</span> <span class="n">SUPG</span> <span class="p">}</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This card specifies the weight function to be used on the weighted residual of the
+Moment equations. Definitions of the input
+parameters are as follows:</p>
+<dl class="simple">
+<dt>GALERKIN</dt><dd><p>Name of the model for the weight functions for a full Galerkin formulation. This is the default when this
+card is absent.
+* &lt;float&gt; - set but unused for Galerkin</p>
+</dd>
+<dt>SUPG</dt><dd><p>Name of the model for the weight functions for a streamwise upwinded Petrov-Galerkin formulation.</p>
+<ul class="simple">
+<li><p>&lt;float&gt; - the value of the weight function, a number between 0. and 1.; a value of 1. corresponds to a
+full <strong>SUPG</strong></p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moment</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">GALERKIN</span> <span class="mf">0.0</span>
+
+<span class="n">Moment</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">SUPG</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+</section>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="moment-shock-function">
+<h2>Moment Shock Function<a class="headerlink" href="#moment-shock-function" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moment</span> <span class="n">Shock</span> <span class="n">Function</span> <span class="o">=</span> <span class="p">{</span><span class="n">NONE</span> <span class="o">|</span> <span class="n">YZBETA</span> <span class="p">}</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3>Description / Usage<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>This card specifies the shock capturing function to be used on the
+Moment equations. Definitions of the input
+parameters are as follows:</p>
+<dl class="simple">
+<dt>NONE</dt><dd><p>No shock capturing is applied. This is the default when this
+card is absent</p>
+</dd>
+<dt>YZBETA</dt><dd><p>A YZBETA shock capturing term is applied.</p>
+<ul class="simple">
+<li><p>&lt;float&gt; - the value of the weight function, a number between 0. and 1.; a value of 1. corresponds to a
+full YZBETA shock capturing</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h3>Examples<a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moment</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">NONE</span> <span class="p">(</span><span class="n">default</span><span class="p">)</span>
+
+<span class="n">Moment</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">YZBETA</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3>Technical Discussion<a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+</section>
+<section id="id4">
+<h3>References<a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="moment-growth-kernel">
+<h2>Moment Growth Kernel<a class="headerlink" href="#moment-growth-kernel" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moment</span> <span class="n">Growth</span> <span class="n">Kernel</span> <span class="o">=</span> <span class="p">{</span><span class="n">CONSTANT</span> <span class="o">|</span> <span class="n">VISCOSITY_SCALED</span> <span class="o">|</span> <span class="n">VISCOSITY_PRESSURE_SCALED</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3>Description / Usage<a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>This card specifies the growth kernel to be used for the
+Moment equations. Currently only used for <cite>PMDI_10</cite> QMOM models.
+Definitions of the input parameters are as follows:</p>
+<dl class="simple">
+<dt>CONSTANT</dt><dd><p>Constant growth rate
+* &lt;float1&gt; the prefactor</p>
+</dd>
+<dt>VISCOSITY_SCALED</dt><dd><p>Growth rate scaled by viscosity <span class="math notranslate nohighlight">\(G = G_0 \eta_0 / \mu\)</span>, for use with <cite>PMDI_10</cite> models
+* &lt;float1&gt; - <span class="math notranslate nohighlight">\(G_0\)</span></p>
+</dd>
+<dt>VISCOSITY_PRESSURE_SCALED</dt><dd><p>Growth rate scaled by viscosity and pressure <span class="math notranslate nohighlight">\(G = G_0 (\eta_0 / \mu) / (p - p_ref)^2\)</span>, for use with <cite>PMDI_10</cite> models</p>
+<ul class="simple">
+<li><p>&lt;float1&gt; <span class="math notranslate nohighlight">\(G_0\)</span></p></li>
+<li><p>&lt;float2&gt; <span class="math notranslate nohighlight">\(p_ref\)</span></p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="id6">
+<h3>Examples<a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moment</span> <span class="n">Growth</span> <span class="n">Kernel</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1e-6</span>
+
+<span class="n">Moment</span> <span class="n">Growth</span> <span class="n">Kernel</span> <span class="o">=</span> <span class="n">VISCOSITY_SCALE</span> <span class="mf">1e-3</span>
+
+<span class="n">Moment</span> <span class="n">Growth</span> <span class="n">Kernel</span> <span class="o">=</span> <span class="n">VISCOSITY_PRESSURE_SCALED</span> <span class="mf">1e-8</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3>Technical Discussion<a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>Note this is multiplicative with the growth rate in the <cite>FOAM_PMDI_10</cite> moment source model</p>
+</section>
+<section id="id8">
+<h3>References<a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>Ortiz, Weston, et al. “Population balance modeling of polyurethane foam formation with pressure‐dependent growth kernel.” AIChE Journal (2021): e17529.</p>
+</section>
+</section>
+<section id="moment-coalescence-kernel">
+<h2>Moment Coalescence Kernel<a class="headerlink" href="#moment-coalescence-kernel" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moment</span> <span class="n">Coalescence</span> <span class="n">Kernel</span> <span class="o">=</span> <span class="p">{</span><span class="n">ADDITION</span> <span class="o">|</span> <span class="n">VISCOSITY_SCALED_ADDITION</span> <span class="o">|</span> <span class="n">VISCOSITY_ADDITION_BUBBLE_RATIO</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id9">
+<h3>Description / Usage<a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>This card specifies the coalescence kernel to be used for the
+Moment equations. Currently only used for <cite>PMDI_10</cite> QMOM models.
+Definitions of the input parameters are as follows:</p>
+<dl class="simple">
+<dt>ADDITION</dt><dd><p><span class="math notranslate nohighlight">\(\beta(v,v') = \beta_0 (v + v')\)</span>
+* &lt;float1&gt; <span class="math notranslate nohighlight">\(\beta_0\)</span></p>
+</dd>
+<dt>VISCOSITY_SCALED_ADDITION</dt><dd><p><span class="math notranslate nohighlight">\(\beta(v,v') = \beta_0 (\eta_0 / \mu) (v + v')\)</span>
+* &lt;float1&gt; <span class="math notranslate nohighlight">\(\beta_0\)</span></p>
+</dd>
+<dt>VISCOSITY_ADDITION_BUBBLE_RATIO</dt><dd><p><span class="math notranslate nohighlight">\(\beta(v,v') = \beta_0 (\eta_0 / \mu) (v + v') (v / (v' + \epsilon))\)</span>
+* &lt;float1&gt; <span class="math notranslate nohighlight">\(\beta_0\)</span></p>
+</dd>
+</dl>
+</section>
+<section id="id10">
+<h3>Examples<a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moment</span> <span class="n">Coalescence</span> <span class="n">Kernel</span> <span class="o">=</span> <span class="n">ADDITION</span> <span class="mf">1e-12</span>
+
+<span class="n">Moment</span> <span class="n">Coalescence</span> <span class="n">Kernel</span> <span class="o">=</span> <span class="n">VISCOSITY_SCALED_ADDITION</span> <span class="mf">1e-3</span>
+
+<span class="n">Moment</span> <span class="n">Coalescence</span> <span class="n">Kernel</span> <span class="o">=</span> <span class="n">VISCOSITY_ADDITION_BUBBLE_RATIO</span> <span class="mf">1e-8</span>
+</pre></div>
+</div>
+</section>
+<section id="id11">
+<h3>Technical Discussion<a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>Currently only for <cite>FOAM_PMDI_10</cite> moment source model</p>
+</section>
+<section id="id12">
+<h3>References<a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>Ortiz, Weston, et al. “Population balance modeling of polyurethane foam formation with pressure‐dependent growth kernel.” AIChE Journal (2021): e17529.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="shell_equation.html" class="btn btn-neutral float-left" title="Shell Equation Properties and Models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../references.html" class="btn btn-neutral float-right" title="References" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

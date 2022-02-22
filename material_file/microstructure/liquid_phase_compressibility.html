@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liquid phase compressibility &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Liquid phase compressibility</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/microstructure/liquid_phase_compressibility.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="liquid-phase-compressibility">
+<h1><strong>Liquid phase compressibility</strong><a class="headerlink" href="#liquid-phase-compressibility" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Permeability</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">L2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card specifies the model and model parameters for liquid-phase compressibility,
+and was specifically designed for use in porous-media flow problems that are partially
+saturated (viz. <em>Media Type</em> card values of <strong>POROUS_UNSATURATED</strong> or
+<strong>POROUS_TWO_PHASE</strong>). This feature was added partially for numerical
+convenience in rigid porous media to accommodate regimes where the saturation level
+is at or near unity; at these saturation levels the capacitance term (see Technical
+Discussion below) all but vanishes, viz. there is no sensitivity of the saturation level to
+liquid phase pressure, and the mathematical behavior can change type. This occurs in
+situations of low permeability, narrow pore-size distribution, and sudden pressure
+spikes during simulation startup.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for the compressibility coefficient, currently the only option. It
+requires a single parameter:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - Compressibility coefficient, in units of inverse pressure.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This card requires a companion card <em>Liquid phase reference pressure</em>.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The cards (using APREPRO variables)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">compressibility</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">beta_liquid</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">reference</span> <span class="n">pressure</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">p_not</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>leads to the application of a linearized compressibility model for the density of liquid in
+the time-derivative capacitance term. This is useful for rigid porous media when the
+conditions are such that the saturation front is sharp.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>For Cls the most part, we have needed the <em>Liquid Phase Compressibility</em> capability to ease
+the startup of impregnation problems, in which an external pressure load is impulsively
+applied to a liquid layer being forced into a rigid porous matrix. The capacitance term
+as the saturation level approaches 1.0 (S-&gt;1) in the porous Darcy flow equation appears
+in <em>Goma</em> as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/406_goma_physics.png"><img alt="../../_images/406_goma_physics.png" src="../../_images/406_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here is the liquid solvent concentration (in both gas and liquid phases), φ is the
+porosity, ρls and is the liquid phase density. Here we employ the linearized density
+model:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/407_goma_physics.png"><img alt="../../_images/407_goma_physics.png" src="../../_images/407_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where βls is the coefficient of compressibility entered on this card, viz. dρls ⁄ dPliq
+defined above, p0liq is the reference liquid pressure (see Liquid phase reference
+pressure* card)</p>
+</section>
+<section id="faqs">
+<h2><strong>FAQs</strong><a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h2>
+<p>The following troubleshooting tips regarding startup of partially saturated porous
+media problems are part of the authors experience presented in Schunk, 2002 (GT-
+009.3):</p>
+<p>-Linear elements, viz. Q1 elements, are better for saturation front startup at an external
+boundary if the difference between the boundary specified liquid-phase pressure and
+the medium-initialized liquid phase pressure are drastically different. Quadratic
+elements in this case can lead to zero or low Saturation values at all computational
+Gaussian integration points and the front may never penetrate.</p>
+<p>-Time stepping is all important. There are three relevant parameters: time-step scheme,
+initial time step size, and time-step error factor. The rules of thumb that can be
+established are as follows:</p>
+<p>If you are using Porous Mass Lumping, you must set the Time Step Parameter to 0.0, or
+your performance will suffer. In fact, it is always a good idea in steep penetration front
+problems to use backward Euler techniques.</p>
+<p>With mass lumping and first order time integration, you must control your step size
+with the tolerance setting. Too big of time step early on can propagate to large errors at
+later times when time stepping. You may need to experiment with the error tolerance on
+the Time step error card. Constantly scrutinize your results for correctness and suspect
+an error growth here.</p>
+<p>You must have a significant capacitance term on the first time step. If your capacitance
+term is small, then the problem is elliptic and will try to satisfy all boundary conditions,
+and this can mess up your penetration front.You can use <em>Liquid phase compressibility
+property</em> to help this for steep front startup.</p>
+<p>Are you getting stagnant calculations with time-step decreases but not change in
+iteration history? Problem is that you have lost your capacitance term. Compressibility
+of the liquid is sometimes a remedy, but also a more accurate predictor. Mass lumping
+can help too and accomplishes the same thing. Sometimes your initial time step can be
+too small for a good start. Try increasing it …</p>
+<p>-Another startup issue: Steep discontinuities at boundaries and internally for initial
+conditions are bad, obviously. If your time step is such that the front cannot penetrate
+beyond one element in one time step, then with linear elements the capacitance term is
+ineffective (small) upon reduced time steps. Somehow you have got to get the front
+beyond one or two elements before things work properly. I find that ramping up the
+initial boundary conditions helps. Sometimes a large first time step to kick it is good
+too.</p>
+<p>-On startup of a pressurized column of liquid penetrating into a porous substrate, I
+noticed that at zero-based p_liq, there was no problem elevating the applied pressure on
+the penetration, but at Atm-based p_liq we couldn’t start the problem without severe
+compressibility. However, compressibility affects the solution, and in fact allows you
+to push all of your column of liquid into a compressed layer in the substrate, with no
+Sat from propagation. So beware of poorly defined compressibility of liquid. Also,
+refinement in the porous layer helped the startup. But the most significant thing for the
+problem I was solving, don’t be surprised if just a little perturbation on externally
+applied pressure greatly affects the penetration rate. In fact, in one problem simply
+changing from p_ext of 1.01325e+6 to 1.11325+6 increases the penetration rate 2-fold
+initially. The steeper curves are harder to handle.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

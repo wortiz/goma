@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volumetric Integration &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Material Files" href="../material_files.html" />
+    <link rel="prev" title="Post Processing Particle Traces" href="post_processing_particle.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="file_specifications.html">File Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="general_specifications.html">General Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="level_set.html">Level Set Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phase_field.html">Phase Field Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description.html">Problem Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing.html">Post Processing Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_particle.html">Post Processing Particle Traces</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Volumetric Integration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#post-processing-volumetric-integration"><strong>Post Processing Volumetric Integration</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#volume-int"><strong>VOLUME_INT</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#end-of-volume-int"><strong>END OF VOLUME_INT</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id5"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>References</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../problem_description_file.html">Problem Description (Input File)</a> &raquo;</li>
+      <li>Volumetric Integration</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/problem_description_file/post_processing_volume.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="volumetric-integration">
+<h1>Volumetric Integration<a class="headerlink" href="#volumetric-integration" title="Permalink to this headline"></a></h1>
+<p>This option enables computation of overall integrated quantities for a specific volume. Several
+standard options are available and the user is permitted to define his/her own integrand to be
+evaluated in this section. However, the current implementation of these volumetric integrals is
+limited to generalized Newtonian fluids. Output is to a specified file.</p>
+<section id="post-processing-volumetric-integration">
+<h2><strong>Post Processing Volumetric Integration</strong><a class="headerlink" href="#post-processing-volumetric-integration" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Post</span> <span class="n">Processing</span> <span class="n">Volumetric</span> <span class="n">Integration</span> <span class="o">=</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This card indicates that the cards between this and an <em>END OF VOLUME_INT</em> card are
+to be read and processed. If this card (<em>Post Processing Volumetric Integration</em>) is not
+present, <em>VOLUME_INT</em> cards will be ignored.</p>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>There are no input parameters for this card, which always appears as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Post</span> <span class="n">Processing</span> <span class="n">Volumetric</span> <span class="n">Integration</span> <span class="o">=</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="volume-int">
+<h2><strong>VOLUME_INT</strong><a class="headerlink" href="#volume-int" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">VOLUME_INT</span> <span class="o">=</span> <span class="p">{</span><span class="n">volume_type</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">blk_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">species_no</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">file_string</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float_list</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>The VOLUME_INT card activates computation of specified volumetric integrals
+during post processing. As many of these VOLUME_INT cards as desired can be input
+to <em>Goma</em>. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 80%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>&lt;volume_type&gt;</p></td>
+<td><p>Several choices of volumetric integral are allowed and are
+referenced through this parameter. The permissible values
+and corresponding volume integral follow:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>VOLUME</strong>-Volume of the element block specified by &lt;blk_id&gt;.</p></li>
+<li><p><strong>DISSIPATION</strong>-Total viscous dissipation, <span class="math notranslate nohighlight">\(\tau\)</span>:
+<span class="math notranslate nohighlight">\(\Delta v\)</span> , in the element block specified
+by &lt;blk_id&gt;.</p></li>
+<li><p><strong>JOULE</strong>-Total Joule or Ohmic heating,
+<span class="math notranslate nohighlight">\(\frac{1}{\sigma}\)</span> (<span class="math notranslate nohighlight">\(\underline{J}\)</span> •
+<span class="math notranslate nohighlight">\(\underline{J}\)</span>) , in the element block specified
+by &lt;blk_id&gt;.</p></li>
+<li><p><strong>SPECIES_MASS</strong>-Integral of concentration of the
+component specified by &lt;species_no&gt; in the element
+block specified by &lt; blk_id&gt;.</p></li>
+<li><p><strong>MOMENTUMX, MOMENTUMY,</strong> or <strong>MOMENTUMZ</strong>-Integral of
+appropriate component of the momentum flux
+<span class="math notranslate nohighlight">\(\rho\vec{v}\)</span> over the element block &lt;blk_id&gt;.</p></li>
+<li><p><strong>STRESS_TRACE</strong>-Integral of the trace of the complete
+stress tensor (-<span class="math notranslate nohighlight">\(p\zeta + \tau\)</span>) over the element block
+<em>blk_id</em>.</p></li>
+<li><p><strong>HEAT_ENERGY</strong>-Integral of the sensible heat over
+&lt;blk_id&gt; ( not currently implemented).</p></li>
+<li><p><strong>POSITIVE_FILL, NEGATIVE_FILL</strong>-Volume
+integral of region occupied by positive (negative)
+values of the FILL variable in element block &lt; blk_id&gt;.
+Note, for either of these cards, [float_list] is required.
+<strong>NOTE for Level-Set users</strong>: There are numerous other
+quantities (too-lengthy and esoteric to list here) that can
+be integraded vis-a-vis level set fields. Please see code.</p></li>
+<li><p><strong>NEGATIVE_VX, NEGATIVE_VY, NEGATIVE_VZ</strong>-Velocity integral
+in one of the three directions over just
+the region occupied by negative values of the FILL
+variable in level set problems. Note, for any of these
+cards, the [float_list] is required.</p></li>
+<li><p><strong>POROUS_LIQ_INVENTORY</strong>-Volume integral of
+bulk liquid component density (gas and liquid phase) in
+a porous medium. Result is a total inventory of liquid
+in the porous phase.</p></li>
+<li><p><strong>SPEED_SQUARED</strong>-Volume integral of the square of
+the speed, viz. <span class="math notranslate nohighlight">\(\underline{v}\)</span> • <span class="math notranslate nohighlight">\(\underline{v}\)</span>
+. Used
+to measure norm of fluid kinetic energy level. Should tend
+to zero for a fluid at rest.</p></li>
+<li><p><strong>USER</strong>-Volume integral is supplied by the user (not
+currently implemented).</p></li>
+<li><p><strong>SURFACE_SPECIES</strong>-Generate locus of points which
+correspond to a surface of constant species
+concentration according to <span class="math notranslate nohighlight">\(Ac_1\)</span> + <span class="math notranslate nohighlight">\(Bc_2\)</span> +
+<span class="math notranslate nohighlight">\(Cc_3\)</span> + D=0.
+Currently only implemented for 3D linear elements.</p></li>
+<li><p><strong>LUB_LOAD</strong>-“Volume integral” of lubrication pressure
+over entire mesh shell block, which is useful for
+computing the overall lubrication load. This is
+actually an area integral over the shell, thereby yielding
+a force.</p></li>
+<li><p><strong>ELOADX; ELOADY; ELOADZ</strong>-Volume integral of
+electric field or the gradient of the electric potential for
+electrostatic problems.</p></li>
+<li><p><strong>RATE_OF_DEF_II</strong>-Volume integral of the second
+invariant of the rate-of-deformation tensor.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p>&lt;blk_id&gt;</p></td>
+<td><p>The element block id for which the volume integral is requested.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;species_no&gt;</p></td>
+<td><p>The species number for <strong>SPECIES_MASS</strong> volume integral.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;file_string&gt;</p></td>
+<td><p>A character string that corresponds to the name of the text
+file that will receive the results of the integration at each
+time step.</p></td>
+</tr>
+<tr class="row-odd"><td><p>[float_list]</p></td>
+<td><p>A floating point value that specifies the length scale of the
+smooth Heaviside function. This parameter is only used for
+<em>VOLUME_INT</em> cards in which the {volume_type} is
+<strong>{POSITIVE|NEGATIVE} _FILL</strong> or
+<strong>NEGATIVE_V{X|Y|Z}</strong>. The float list is also used for the
+constants A, B, C, etc in the <strong>SURFACE_SPECIES</strong> type.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>Here is an example of an input deck with 3 VOLUME_INT cards.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Post</span> <span class="n">Processing</span> <span class="n">Volumetric</span> <span class="n">Integration</span> <span class="o">=</span>
+<span class="n">VOLUME_INT</span> <span class="o">=</span> <span class="n">VOLUME</span> <span class="mi">1</span> <span class="mi">0</span> <span class="n">volume</span><span class="o">.</span><span class="n">out</span>
+<span class="n">VOLUME_INT</span> <span class="o">=</span> <span class="n">SPECIES_MASS</span> <span class="mi">2</span> <span class="mi">3</span> <span class="n">species3</span><span class="o">.</span><span class="n">out</span>
+<span class="n">VOLUME_INT</span> <span class="o">=</span> <span class="n">NEGATIVE_FILL</span> <span class="mi">1</span> <span class="mi">0</span> <span class="n">fill</span><span class="o">.</span><span class="n">out</span> <span class="mf">0.1</span>
+<span class="n">END</span> <span class="n">OF</span> <span class="n">VOLUME_INT</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>The volume integrations are carried out as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 72%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>volume_type</strong></p></td>
+<td><p><strong>volume integral</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>VOLUME</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> dV</p></td>
+</tr>
+<tr class="row-odd"><td><p>DISSIPATION</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> (-p <span class="math notranslate nohighlight">\(\zeta + \tau\)</span>) • <span class="math notranslate nohighlight">\(\Delta\)</span> vdV</p></td>
+</tr>
+<tr class="row-even"><td><p>JOULE</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> <span class="math notranslate nohighlight">\(\frac{1}{\sigma}\)</span> J • JdV</p></td>
+</tr>
+<tr class="row-odd"><td><p>SPECIES_MASS</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> <span class="math notranslate nohighlight">\(c_jdV\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>MOMENTUM_{X|Y|Z}</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> <span class="math notranslate nohighlight">\(\rho\)</span> (i|j|k) • vdV</p></td>
+</tr>
+<tr class="row-odd"><td><p>STRESS_TRACE</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> tr(-p <span class="math notranslate nohighlight">\(\zeta + \tau\)</span>) dV</p></td>
+</tr>
+<tr class="row-even"><td><p>{POSITIVE|NEGATIVE}_FILL</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> H(<span class="math notranslate nohighlight">\(\phi\)</span>) dV</p></td>
+</tr>
+<tr class="row-odd"><td><p>NEGATIVE_V{X|Y|Z}</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> H(<span class="math notranslate nohighlight">\(\phi\)</span>) {i|j|k} • vdV</p></td>
+</tr>
+<tr class="row-even"><td><p>POROUS_LIQ_INVENTORY</p></td>
+<td><p><span class="math notranslate nohighlight">\(\int\)</span> [<span class="math notranslate nohighlight">\(\rho_{gas}\)</span> <span class="math notranslate nohighlight">\(\phi\)</span> (1-S) +
+<span class="math notranslate nohighlight">\(\rho_{liq}\)</span> <span class="math notranslate nohighlight">\(\phi\)</span> S] dV</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id4">
+<h3><strong>References</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="end-of-volume-int">
+<h2><strong>END OF VOLUME_INT</strong><a class="headerlink" href="#end-of-volume-int" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">END</span> <span class="n">OF</span> <span class="n">VOLUME_INT</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>This card is used to denote the end of a set of <em>VOLUME_INT</em> cards and is only used
+when the <em>Post Processing Volumetric Integration</em> card is present and one or more
+<em>VOLUME_INT</em> cards are specified.</p>
+</section>
+<section id="id6">
+<h3><strong>Examples</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>The <em>VOLUME_INT</em> card shows an example of using this card in context. Because the
+card has no input parameters, it always appears as</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">END</span> <span class="n">OF</span> <span class="n">VOLUME_INT</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id8">
+<h3><strong>References</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="post_processing_particle.html" class="btn btn-neutral float-left" title="Post Processing Particle Traces" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../material_files.html" class="btn btn-neutral float-right" title="Material Files" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

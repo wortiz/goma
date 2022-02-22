@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>lagr_mult_1, lagr_mult_2, lagr_mult_3 &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>lagr_mult_1, lagr_mult_2, lagr_mult_3</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/problem_description/lagr_mult_1_lagr_mult_2_lagr_mult_3.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="lagr-mult-1-lagr-mult-2-lagr-mult-3">
+<h1><strong>lagr_mult_1, lagr_mult_2, lagr_mult_3</strong><a class="headerlink" href="#lagr-mult-1-lagr-mult-2-lagr-mult-3" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EQ</span> <span class="o">=</span> <span class="n">lagr_mult_</span><span class="p">{</span><span class="mi">1</span><span class="o">|</span><span class="mi">2</span><span class="o">|</span><span class="mi">3</span><span class="p">}</span> <span class="p">{</span><span class="n">Galerkin_wt</span><span class="p">}</span> <span class="n">LM</span><span class="p">{</span><span class="mi">1</span><span class="o">|</span><span class="mi">2</span><span class="o">|</span><span class="mi">3</span><span class="p">}</span> <span class="p">{</span><span class="n">Interpol_fnc</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card provides information for solving a Langrange multiplier vector equation for
+imposition of the kinematic boundary condition at a fluid/solid interface. It is used
+soley for the overset grid capability in Goma (cf. GT-026.2). Definitions of the input
+parameters are defined below. The Galerkin weight and the interpolation function must
+be the same for the code to work properly.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 51%" />
+<col style="width: 49%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>lagr_mult_1 | lagr_mult_2 | lagr_mult_3</strong></p></td>
+<td><p>Name of the equation to be solved. The
+appended number indexes with the
+dimension of the problem, viz.
+lagr_mult_1 and lagr_mult_2 equations
+are required for a
+two dimensional problem.</p></td>
+</tr>
+<tr class="row-even"><td><p>{Galerkin_wt}</p></td>
+<td><p>Two-character value that defines the type
+of weighting
+function for this equation, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>P0</strong>-Constant Discontinuous</p></li>
+<li><p><strong>P1</strong>-Linear Discontinuous</p></li>
+<li><p><strong>Q1</strong>-Linear Continuous</p></li>
+<li><p><strong>Q2</strong>-Quadratic Continuous</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>LM1 | LM2 | LM3</strong></p></td>
+<td><p>Name of the variable associated with
+this equation.</p></td>
+</tr>
+<tr class="row-even"><td><p>{Interpol_fnc}</p></td>
+<td><p>Two-character value that defines the
+interpolation function used to represent
+the variable <strong>P</strong>, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>P0</strong>-Constant Discontinuous</p></li>
+<li><p><strong>P1</strong>-Linear Discontinuous</p></li>
+<li><p><strong>Q1</strong>-Linear Continuous</p></li>
+<li><p><strong>Q2</strong>-Quadratic Continuous</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Basically when the level-set field (actually phase field 1, cf. F1 equation) that
+corresponds to solid/fluid boundary defined by an overset grid (using the Slave Level
+Set Card) intersects an element, the equations associated with that element will get the
+kinematic boundary condition for the fluid-structure interaction, which basically
+equates the fluid velocity to the solid velocity. In elements that don’t contain the solid/
+fluid boundary, the equations are trivialized so that they are condensed out of the
+system to be solved.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample cards are required for the overset grid capability for twodimensional problems. It is recommended that P0 (element constant) interpolation
+functions be used.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EQ</span> <span class="o">=</span> <span class="n">lagr_mult_1</span> <span class="n">P0</span> <span class="n">LM1</span> <span class="n">P0</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EQ</span> <span class="o">=</span> <span class="n">lagr_mult_2</span> <span class="n">P0</span> <span class="n">LM2</span> <span class="n">P0</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>No Discussion.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-026.3 GOMA’s Overset Mesh Method: User Tutorial. November 19, 2003. P. R.
+Schunk and E. D. Wilkes</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

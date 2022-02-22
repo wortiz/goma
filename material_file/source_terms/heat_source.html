@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heat Source &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Heat Source</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/source_terms/heat_source.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="heat-source">
+<h1><strong>Heat Source</strong><a class="headerlink" href="#heat-source" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Heat</span> <span class="n">Source</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">varies</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card is used to specify the model for the source term on the energy
+equation. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the source term on the energy equation. The permissible values
+are</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>CONSTANT</strong></p></li>
+<li><p><strong>USER</strong></p></li>
+<li><p><strong>USER_GEN</strong></p></li>
+<li><p><strong>JOULE</strong></p></li>
+<li><p><strong>EPOXY</strong></p></li>
+<li><p><strong>VISC_DISS</strong></p></li>
+<li><p><strong>BUTLER_VOLMER</strong></p></li>
+<li><p><strong>ELECTRODE_KINETICS</strong></p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p>&lt;float_list&gt;</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}. Note that not all models have a
+&lt;float_list&gt;.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Source-term model choices and their parameters are discussed below. WARNING:
+make sure the equation term multipliers for the source terms are set to unity (see the
+Equation Cards segment in the previous chapter).</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>The constant source model adds a constant homogenous source term [E/L3t] to the heat
+equations. The &lt;float_list&gt; has a single value: &lt;float1&gt; - Heat source.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>USER</strong> &lt;float1&gt;…
+&lt;floatn&gt;</p></td>
+<td><p>The <strong>USER</strong> option indicates that a user-defined model has been introduced into the
+usr_heat_source routine in the user_mp.c file. The &lt;float_list&gt; is of arbitrary
+length subject to the user’s requirements to parameterize the model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>USER_GEN</strong> &lt;float1&gt;…
+&lt;floatn&gt;</p></td>
+<td><p>The <strong>USER_GEN</strong> option provides a user-defined model with low-level, general
+capabilities. For this option one must make the appropriate modifications to the
+routine usr_heat_source_gen in the user_mp_gen.c file. The difference between the
+<strong>USER</strong> and <strong>USER_GEN</strong> capabilities is described at the beginning of this chapter.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>JOULE</strong></p></td>
+<td><p>The <strong>JOULE</strong> model is used to specify a Joule heating source term. No input is
+required for this model as the sole independent parameter of the model for the
+voltage equation is the “Electrical Conductivity”, which is specified in the material
+file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>EPOXY</strong> &lt;float1&gt;</p></td>
+<td><p>The <strong>EPOXY</strong> model is used to specify the heat generated by an epoxy curing
+reaction. The single input value is the:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - heat of reaction due to curing</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>VISC_DISS</strong> &lt;float&gt;</p></td>
+<td><p>The <strong>VISC_DISS</strong> model is used to specify the heat generated by viscous dissipation.
+The &lt;float_list&gt; has a single value:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - A multiplier to facilitate different unit combinations. Selection of
+this option activates its use.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>BUTLER_VOLMER</strong>
+&lt;integer&gt; &lt;float1&gt;
+&lt;float2&gt; &lt;float3&gt; &lt;float4&gt;
+&lt;float5&gt; &lt;float6&gt; &lt;float7&gt;
+&lt;float8&gt;</p></td>
+<td><p>The <strong>BUTLER_VOLMER</strong> model is used to specify the current source or sink due to a
+homogeneuous electrochemical reaction involving a single species (e.g., the hydrogen
+oxidation and oxygen reduction reactions in a hydrogen-feuled polymerelectrolyte-
+membrane fuel cell), which is computed using the Butler-Volmer kinetic model (as
+described in the Theory section of the <strong>BUTLER_VOLMER</strong> current source card). This
+is due to that the voltage equation is used to solve for the electrical potential in
+the liquid electrolyte phase whereas the energy equation is utilized to solve for the
+electrical potential in the solid-electrode phase such that the electrode potential
+unknowns is represented by the temperature unknown. Parameters required for this
+<strong>BUTLER_VOLMER</strong> heat source model are the same as those for the <strong>BUTLER_VOLMER</strong>
+current source model; accordingly, detailed description of the model parameters can
+be found in the Current Source section of this manual.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>ELECTRODE_KINETICS</strong></p></td>
+<td><p>The <strong>ELECTRODE_KINETICS</strong> model is used to specify the current generated or consumed
+in the solid electrode phase in electrochemical processes involving concentrated
+electrolyte solution and multiple species as in thermal batteries. As in the
+case of the <strong>BUTLER_VOLMER</strong> model, this is due to that the voltage equation is used
+to solve for the electrical potential in the liquid electrolyte phase whereas the
+energy equation is utilized to solve for the electrical potential in the solid-
+electrode phase such that the electrode potential unknowns is represented by the
+temperature unknown. The {model_name} <strong>ELECTRODE_KINETICS</strong> toggles on the option in
+the equation assembly; no parameters are required.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Heat</span> <span class="n">Source</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The energy equation solved by <em>Goma</em>, which can be found elsewhere, is a convectionconduction
+equation given by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/471_goma_physics.png"><img alt="../../_images/471_goma_physics.png" src="../../_images/471_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The heat source-term model represented by H is specified by this input record. The
+<strong>CONSTANT, USER</strong> and <strong>USER_GEN</strong> options provide the standard means of
+specifying model input and will not be discussed.</p>
+<p><strong>JOULE Model</strong>: The <strong>JOULE</strong> model is used to specify a Joule heating term. It is based
+on heat generation in a medium of specified electrical resistance subjected to an
+electrical voltage potential. It computes the heat source as:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/472_goma_physics.png"><img alt="../../_images/472_goma_physics.png" src="../../_images/472_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>J</em> is the current flux density which is represented as –σ∇φ and φ is represented
+using the voltage equation. No input is required for this model since the <em>Electrical
+Conductivity</em> is specified in the material file for the voltage equation.</p>
+<p><strong>EPOXY Model</strong>: The <strong>EPOXY</strong> model is used to specify the heat generated by a
+condensation reaction, which is the heat of reaction, ΔHrxn, multiplied by the reaction
+rate as measured by the extent of reaction. The form of the equation is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/473_goma_physics.png"><img alt="../../_images/473_goma_physics.png" src="../../_images/473_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This card is used in conjunction with the EPOXY Species Source so that the reaction
+rate Rα can be determined.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/474_goma_physics.png"><img alt="../../_images/474_goma_physics.png" src="../../_images/474_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p><strong>VISC_DISS Model</strong>: In heat transfer problems that are accompanied by fluid flow, the
+energy balance equation contains a term which represents the (rate of) work done on
+the fluid by viscous forces. These forces have the potential to raise the fluid
+temperature and therefore it may be necessary to include these forces in your analysis.
+Typically, problems in which this term is significant may be characterized as highspeed
+flows with large velocity gradients, rapid extrusion and lubrication problems.
+The Brinkman number (Br = (μV2) ⁄ (kΔT)) is an indicator of the importance of
+viscous heating relative to the heat flow caused by temperature gradients.</p>
+<p>Mathematically, the Heat Source term, <em>H</em>, in the energy equation is given by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/475_goma_physics.png"><img alt="../../_images/475_goma_physics.png" src="../../_images/475_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where (( •) indicates a double dot product. This mechanism is an irreversible
+process whereby mechanical energy is degraded into thermal energy, as the right hand
+side expands to the sum of quadratic terms which will always be positive, at least for
+Newtonian fluids. In <em>Goma</em>, the <strong>VISC_DISS</strong> model computes the source term in
+function <strong>visc_diss_heat_source</strong> in <em>mm_std_models.c</em>; the expression looks like</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/476_goma_physics.png"><img alt="../../_images/476_goma_physics.png" src="../../_images/476_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where μ is the viscosity and γ is the shear rate.</p>
+<p>The <em>multiplier</em> allows the user the flexibility to choose appropriate units for the
+momentum and energy equations. For example, for many problems the momentum
+equations are scaled appropriately using viscosity units of psi-sec. But in the absence of
+this multiplier, this would force the energy equation to be in units of psi/sec; in other
+words, (<em>density*heat capacity</em>) would need to be in units of psi/(deg C) and thermal
+conductivity would need to be in units of psi-in2/(sec-deg C) - these aren’t exactly
+common units! Instead, we can set the multiplier to 6891 (i.e., 6891 Pa = 1 psi) in order
+to have the energy equation in units of J/sec - i.e. leaving (<em>density*heat capacity</em>) in
+units of J/(m3 deg C) and thermal conductivity in terms of J/(m-sec deg C). Another use
+of the multiplier is to allow appropriate scales when the momentum equation is
+diffusion-dominated and the thermal equation is convection-dominated. Suppose we
+keep all quantities in MKS units. The convection terms in the thermal equation can
+then be scaled to roughly order unity by dividing through by (<em>density*heat capacity</em>) -
+i.e. set <em>heat capacity=1/density, thermal conductivity = thermal diffusivity</em>, and set the
+dissipation multiplier to <em>1/(density*heat capacity).</em></p>
+<p>So, in essence, this multiplier allows flexibility in the choice of mechanical and thermal
+units in a convenient manner - i.e. it’s on the term that couples the energy and
+momentum equations.</p>
+<p><strong>BUTLER_VOLMER</strong> and <strong>ELECTRODE_KINETIC Models</strong>: As mentioned above,
+these two models are used to specify the current generated or consumed in the solid
+electrode phase in electrochemical processes such as polymer-electrolyte-membrane
+fuel cells and thermal batteries. This is due to that the voltage equation is used to solve
+for the electrical potential in the liquid electrolyte phase whereas the energy equation is
+utilized to solve for the electrical potential in the solid-electrode phase such that the
+electrode potential unknown is actually represented by the temperature unknown.
+Further details for the <strong>BUTLER_VOLMER</strong> model are presented in the current source
+model section of this manual and that for the <strong>ELECTRODE_KINETIC</strong> model can be
+found in the reference provided below (Chen et al. 2000).</p>
+<p><strong>VARIABLE_DENSITY Model</strong>: Work was begun on a <strong>VARIABLE_DENSITY</strong>
+model for drying problems but has not been completed. The roots for this may be found
+in the source code but the model is not yet functional; it was not listed above as a valid
+Heat Source option.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>SAND2000-0207: Final Report on LDRD Project: A Phenomenological Model for
+Multicomponent Transport with Simultaneous Electrochemical Reactions in
+Concentrated Solutions, K. S. Chen, G. H. Evans, R. S. Larson, D. R. Noble and W. G.
+Houf, January 2000.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

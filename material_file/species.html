@@ -1,0 +1,3051 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Species Properties &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Source Terms" href="source_terms.html" />
+    <link rel="prev" title="Microstructure Properties" href="microstructure.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../material_files.html">Material Files</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="physical_properties.html">Physical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mechanical_and_constitutive.html">Mechanical Properties and Constitutive Equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="thermal_properties.html">Thermal Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="electrical.html">Electrical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="microstructure.html">Microstructure Properties</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Species Properties</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#number-of-species"><strong>Number of Species</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#diffusion-constitutive-equation"><strong>Diffusion Constitutive Equation</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#species-weight-function"><strong>Species Weight Function</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id5"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#number-of-chemical-reactions"><strong>Number of Chemical Reactions</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id9"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id11"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#reaction-rate"><strong>Reaction Rate</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id13"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id14"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id15"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id16"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#thermodynamic-potential"><strong>Thermodynamic Potential</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id17"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id18"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id19"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#interfacial-area"><strong>Interfacial Area</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id20"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id21"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id22"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id23"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#butler-volmer-j"><strong>Butler_Volmer_j</strong></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#butler-volmer-ij"><strong>Butler_Volmer_ij</strong></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#solution-temperature"><strong>Solution Temperature</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id24"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id25"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id26"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id27"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porosity"><strong>Porosity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id28"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id29"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id30"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id31"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#diffusivity"><strong>Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id32"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id33"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id34"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#faqs"><strong>FAQs</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id35"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#shear-rate-diffusivity"><strong>Shear Rate Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id36"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id37"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id38"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id39"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#viscosity-diffusivity"><strong>Viscosity Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id40"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id41"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id42"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id43"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#curvature-diffusivity"><strong>Curvature Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id44"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id45"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id46"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id47"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#fickian-diffusivity"><strong>Fickian Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id48"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id49"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id50"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id51"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#gravity-based-diffusivity"><strong>Gravity-based Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id52"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id53"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id54"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id55"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#q-tensor-diffusivity"><strong>Q Tensor Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id56"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id57"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id58"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id59"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#species-time-integration"><strong>Species Time Integration</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id60"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id61"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id62"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id63"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#advective-scaling"><strong>Advective Scaling</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id64"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id65"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id66"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id67"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#latent-heat-vaporization"><strong>Latent Heat Vaporization</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id68"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id69"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id70"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id71"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#latent-heat-fusion"><strong>Latent Heat Fusion</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id72"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id73"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id74"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id75"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#vapor-pressure"><strong>Vapor Pressure</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id76"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id77"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id78"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id79"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#species-volume-expansion"><strong>Species Volume Expansion</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id80"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id81"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id82"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id83"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#standard-state-chemical-potential"><strong>Standard State Chemical Potential</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id84"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id85"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id86"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id87"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#pure-species-chemical-potential"><strong>Pure Species Chemical Potential</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id88"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id89"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id90"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id91"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#chemical-potential"><strong>Chemical Potential</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id92"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id93"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id94"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id95"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#reference-concentration"><strong>Reference Concentration</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id96"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id97"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id98"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id99"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#molecular-weight"><strong>Molecular Weight</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id100"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id101"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id102"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id103"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#specific-volume"><strong>Specific Volume</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id104"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id105"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id106"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id107"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#molar-volume"><strong>Molar Volume</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id108"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id109"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id110"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id111"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#charge-number"><strong>Charge Number</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id112"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id113"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id114"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id115"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#non-condensable-molecular-weight"><strong>Non-condensable Molecular Weight</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id116"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id117"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id118"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id119"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#non-volatile-molar-volume"><strong>Non-volatile Molar Volume</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id120"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id121"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id122"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id123"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#non-volatile-specific-volume"><strong>Non-volatile Specific Volume</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id124"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id125"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id126"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id127"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#flory-huggins-parameters"><strong>Flory-Huggins parameters</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id128"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id129"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id130"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id131"><strong>References</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="source_terms.html">Source Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shell_equation.html">Shell Equation Properties and Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moments.html">Moment Properties</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../material_files.html">Material Files</a> &raquo;</li>
+      <li>Species Properties</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/material_file/species.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="species-properties">
+<h1>Species Properties<a class="headerlink" href="#species-properties" title="Permalink to this headline"></a></h1>
+<p>The section of material properties defines the models and parameters governing diffusive mass
+transport, whether it be ordinary, forced or thermal diffusion of species. Included in those
+generalizations are electrical potential-driven species movements. Models include those for single
+species, especially particle-laden suspensions, binary species and multi-component systems.
+Models for various equations of mass transport are included, various models of diffusion
+properties, different representations of species by means of molar, mass or volume concentrations,
+various models of vapor pressure for multiphase flow and on material boundaries for lumped
+parameter analyses, and properties for charged species.</p>
+<section id="number-of-species">
+<h2><strong>Number of Species</strong><a class="headerlink" href="#number-of-species" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Number</span> <span class="n">of</span> <span class="n">Species</span> <span class="o">=</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This card is no longer used. It may be removed from the Material file.</p>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>No Example.</p>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>The <em>Number of Species</em> is now determined by <em>Goma</em> from the <em>Problem Specification</em> for
+each material in the <em>Goma</em> input file.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="diffusion-constitutive-equation">
+<h2><strong>Diffusion Constitutive Equation</strong><a class="headerlink" href="#diffusion-constitutive-equation" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusion</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the constitutive equation governing mass transport.
+Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the diffusion constitutive equation. The currently supported options are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>NONE</strong></p></li>
+<li><p><strong>FICKIAN</strong></p></li>
+<li><p><strong>DARCY</strong></p></li>
+<li><p><strong>DARCY_FICKIAN</strong></p></li>
+<li><p><strong>HYDRODYNAMIC</strong></p></li>
+<li><p><strong>GENERALIZED_FICKIAN</strong></p></li>
+<li><p><strong>FICKIAN_CHARGED</strong></p></li>
+<li><p><strong>STEFAN_MAXWELL</strong></p></li>
+<li><p><strong>STEFAN_MAXWELL_CHARGED</strong></p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This card requires only the specification of a {model_name}. The Technical Discussion
+subsection below presents each of these models.</p>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusion</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">DARCY</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p><strong>NONE</strong> indicates that the material block to which this material file applies is a nondiffusing
+material. <strong>FICKIAN</strong> implies that the rate of diffusion is proportional to the
+gradient in volume fraction and the diffusion coefficient of each species. <strong>DARCY</strong>
+implies that mass transport occurs by pressure-driven flow through a porous medium.
+<strong>DARCY_FICKIAN</strong> implies that mass transport occurs by both diffusion and pressuredriven
+flow in a porous medium.</p>
+<p><strong>HYDRODYNAMIC</strong> implies that mass transport of at least one species is driven by
+gradients in the second invariant of the rate of deformation tensor (shear rate) and
+gradients in viscosity (Phillips, et.al. 1992). This model also includes a sedimentation
+flux term to account for the motion of non-neutrally buoyant particles resulting from
+gravitation (Zhang and Acrivos, 1994) and a curvature-driven flux term from the
+normal component of the acceleration vector (Krishnan et al., 1996). This model is
+used in predicting the particle distributions of particulate suspensions undergoing flow.
+For this model, the mass flux vector J is given by the following:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/423_goma_physics.png"><img alt="../_images/423_goma_physics.png" src="../_images/423_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/424_goma_physics.png"><img alt="../_images/424_goma_physics.png" src="../_images/424_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/425_goma_physics.png"><img alt="../_images/425_goma_physics.png" src="../_images/425_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where Ci is the particulate phase volume fraction, i is the species number designation of
+the particulate phase, the shear rate, μ the viscosity, the normal unit acceleration
+vector, r the curvature of streamlines, Dc, Dμ, Dr and Dg the “diffusivity” parameters,
+ρs and ρf the particle and fluid phase densities, respectively, and , the gravitational
+acceleration vector.</p>
+<p><strong>GENERALIZED_FICKIAN</strong> is based on the generalized-Fick’s law (Taylor and
+Krishna, 1993). The mass transport of each species is influenced by all of the species in
+the mixture.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/426_goma_physics.png"><img alt="../_images/426_goma_physics.png" src="../_images/426_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>ρ is the mass-concentration of species. The elements along the diagonal, Dii, are selfdiffusivities,
+while Dij are mutual-diffusivities between species i and j. Note that
+mutual diffusivities in generalized formulation can be both positive and negative.</p>
+<p><strong>FICKIAN_CHARGED</strong> indicates a model for multicomponent transport (diffusion
+and migration) of charged species in dilute electrolyte solutions will be used. The
+Fickian diffusivity of species i, Di, as defined in the following Fickian flux model (cf.
+Newman 1991; Chen 2000)</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/427_goma_physics.png"><img alt="../_images/427_goma_physics.png" src="../_images/427_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>is taken to be constant. Here, ci is molar concentration of species i, Φ is electrical
+potential in electrolyte solution, zi is charge number of species i, F is the Faraday
+constant (96487 C/mole), R is the universal gas constant (8.314 J/mole-K), and T the
+electrolyte solution temperature.</p>
+<p><strong>STEFAN-MAXWELL</strong> activates a model for multicomponent diffusion of neutral
+species in concentrated solutions. The Stefan-Maxwell diffusivities, Dij, as defined in
+the following Stefan-Maxwell flux model (cf. Chen et al. 2000, Chen et al. 1998):</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/428_goma_physics.png"><img alt="../_images/428_goma_physics.png" src="../_images/428_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>are taken to be constant. Here, xi is mole fraction of species i, Ji the molar flux of
+species i, and c the total molar concentration. Since Dij = Dji and Dii are not defined,
+only n(n-1)/2 Stefan-Maxwell diffusivities are required (here, n is the total number of
+diffusing species). For example, for n = 3 (i.e., a solution having three species), three
+Stefan-Maxwell diffusivities are needed: D12, D13, and D23.</p>
+<p><strong>STEFAN-MAXWELL_CHARGED</strong> For multicomponent transport (diffusion and
+migration) of charged species in concentrated electrolyte solutions. The Stefan-
+Maxwell diffusivities, Dij, as defined in the following Stefan-Maxwell flux model (cf.
+Chen et al. 2000, Chen et al. 1998)</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/429_goma_physics.png"><img alt="../_images/429_goma_physics.png" src="../_images/429_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>are taken to be constant, as in the case of multicomponent diffusion of neutral species
+in concentrated solutions. Here, the charged species definitions are the same as for the
+<strong>FICKIAN_CHARGED</strong> model.</p>
+</section>
+<section id="id4">
+<h3><strong>References</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>GTM-025.0: Chen, K. S., “Modeling diffusion and migration transport of charged
+species in dilute electrolyte solutions: GOMA implementation and sample computed
+predictions from a case study of electroplating”, Sandia memorandum, September 21,
+2000.</p>
+<p>Chen, K. S., Evans, G. H., Larson, R. S., Noble, D. R., and Houf, W. G. “Final Report
+on LDRD Project: A Phenomenological Model for Multicomponent Transport with
+Simultaneous Electrochemical Reactions in Concentrated Solutions”, SAND2000-
+0207, Sandia National Laboratories Technical Report (2000).</p>
+<p>Chen, K. S., Evans, G. H., Larson, R. S., Coltrin, M. E., and Newman, J. “Multidimensional
+modeling of thermal batteries using the Stefan-Maxwell formulation and
+the finite-element method”, in Electrochemical Society Proceedings, Volume 98-15, p.
+138-149 (1998).</p>
+<p>Krishnan, G. P., S. Beimfohr, and D. Leighton, 1996. “Shear-induced radial segregation
+in bidisperse suspensions,” J. Fluid Mech. 321, 371</p>
+<p>Newman, J. S., Electrochemical Systems, Prentice Hall, Inc., Englewood Cliffs, New
+Jersey (1991).</p>
+<p>Phillips, R.J., R.C. Armstrong, and R.A. Brown, 1992, “A constitutive equation for
+concentrated suspensions that accounts for shear-induced particle migration,” Physics
+of Fluids A, 4(1), 30-40.</p>
+<p>Taylor, R. and R. Krishna. 1993. Multicomponent Mass Transfer. John Wiley &amp; Sons,
+New York.</p>
+<p>Zhang K., and A. Acrivos, 1994, “Viscous resuspension in fully-developed laminar
+pipe flows,” Int. J. Multiphase Flow, (20)3, 579-591.</p>
+</section>
+</section>
+<section id="species-weight-function">
+<h2><strong>Species Weight Function</strong><a class="headerlink" href="#species-weight-function" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Species</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>This optional card is used to specify the weight functions to be used on the weighted
+residual of the species convective diffusion equations. For high Peclet number cases,
+you may want to use a Petrov-Galerkin formulation rather than a Galerkin formulation.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the formulation model. Valid entries are <strong>GALERKIN</strong>, for a full Galerkin
+formulation, <strong>SUPG</strong>, for a streamwise upwinded Petrov-Galerkin formulation.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - the weight function parameter, chosen between 0. and 1.. The value 0.
+corresponds to <strong>GALERKIN</strong> weighting and 1. corresponds to a full <strong>SUPG</strong>.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>When this card is absent, the default {model_name} is <strong>GALERKIN</strong>.</p>
+</section>
+<section id="id6">
+<h3><strong>Examples</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Species</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">SUPG</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id8">
+<h3><strong>References</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="number-of-chemical-reactions">
+<h2><strong>Number of Chemical Reactions</strong><a class="headerlink" href="#number-of-chemical-reactions" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Number</span> <span class="n">of</span> <span class="n">chemical</span> <span class="n">reactions</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id9">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the number of electrochemical reactions being modeled in
+an electrode (anode or cathode), as in a thermal-battery cell.</p>
+</section>
+<section id="id10">
+<h3><strong>Examples</strong><a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Number</span> <span class="n">of</span> <span class="n">chemical</span> <span class="n">reactions</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="id11">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id12">
+<h3><strong>References</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="reaction-rate">
+<h2><strong>Reaction Rate</strong><a class="headerlink" href="#reaction-rate" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reaction</span> <span class="n">Rate</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">model_name</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id13">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify rates of species electrochemical reactions in the anode and
+cathode regions in a LiSi/LiCl-KCl/FeS2 thermal battery cell using Butler-Volmer
+kinetics.</p>
+<p>This property currently allows for a single {model_name} which has two parameters:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>ELECTRODE_KINETICS</strong></p></td>
+<td><p>the name of reaction rate model</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Anodic direction transfer coefficient</p></li>
+<li><p>&lt;float2&gt; - Cathodic direction transfer coefficient</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Two companion cards, <em>THERMODYNAMIC POTENTIAL</em> and <em>INTERFACIAL AREA</em>
+are required to complete the specification of parameters present in the Butler-Volmer
+kinetic model of current density.</p>
+</section>
+<section id="id14">
+<h3><strong>Examples</strong><a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>The following are two sample cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reaction</span> <span class="n">Rate</span> <span class="o">=</span> <span class="n">ELECTRODE_KINETICS</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reaction</span> <span class="n">Rate</span> <span class="o">=</span> <span class="n">ELECTRODE_KINETICS</span> <span class="mf">1.0</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id15">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id16">
+<h3><strong>References</strong><a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="thermodynamic-potential">
+<h2><strong>Thermodynamic Potential</strong><a class="headerlink" href="#thermodynamic-potential" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermodynamic</span> <span class="n">Potential</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id17">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the anodic or cathodic thermodynamic potential in a
+thermal battery cell.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of thermodynamic potential model. Currently, two thermodynamic potential models
+are available, namely <strong>LiSi</strong> and <strong>FeS2</strong>. Each of these and their accompanying
+input parameters (the &lt;float_list&gt;) is given below:</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LiSi</strong></p></td>
+<td><p>This model requires seven floating-point parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Limit of electrode utilization for the first anode reaction.</p></li>
+<li><p>&lt;float2&gt; - Limit of electrode utilization for the second anode reaction.</p></li>
+<li><p>&lt;float3&gt; - Anode thickness.</p></li>
+<li><p>&lt;float4&gt; - Anode porosity.</p></li>
+<li><p>&lt;float5&gt; - Molar volume of active anode material.</p></li>
+<li><p>&lt;float6&gt; - Current density output by the thermal battery cell.</p></li>
+<li><p>&lt;float7&gt; - Number of electrons involved in anode reactions.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>FeS2</strong></p></td>
+<td><p>This model requires eight floating-point parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Limit of electrode utilization for the first cathode reaction.</p></li>
+<li><p>&lt;float2&gt; - Limit of electrode utilization for the second cathode reaction.</p></li>
+<li><p>&lt;float3&gt; - Limit of electrode utilization for the third cathode reaction.</p></li>
+<li><p>&lt;float4&gt; - Cathode thickness.</p></li>
+<li><p>&lt;float5&gt; - Cathode porosity.</p></li>
+<li><p>&lt;float6&gt; - Molar volume of active cathode material.</p></li>
+<li><p>&lt;float7&gt; - Current density output by the thermal battery cell.</p></li>
+<li><p>&lt;float8&gt; - Number of electrons involved in cathode reactions.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id18">
+<h3><strong>Examples</strong><a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>The following are two sample input cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermodynamic</span> <span class="n">Potential</span> <span class="o">=</span> <span class="n">LiSi</span> <span class="mf">0.283</span> <span class="mf">0.474</span> <span class="mf">0.088</span> <span class="mf">0.275</span> <span class="mf">54.61</span> <span class="mf">0.0246</span> <span class="mf">3.25</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermodynamic</span> <span class="n">Potential</span> <span class="o">=</span> <span class="n">FeS2</span> <span class="mf">0.375</span> <span class="mf">0.434</span> <span class="mf">0.5</span> <span class="mf">0.046</span> <span class="mf">0.244</span> <span class="mf">23.93</span> <span class="mf">0.0246</span> <span class="mf">4.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id19">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id19" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+</section>
+<section id="interfacial-area">
+<h2><strong>Interfacial Area</strong><a class="headerlink" href="#interfacial-area" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Interfacial</span> <span class="n">Area</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id20">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id20" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the product of interfacial area per unit volume by exchange
+current density (i.e., ai0) in the Butler-Volmer kinetic model of current density.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for interfacial area, of which there are currently two available,
+namely <strong>CONSTANT</strong> and <strong>THERMAL_BATTERY</strong>.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>constant value of Interfacial Area</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - the value of the product of interfacial area per unit volume and
+exchange current density.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>THERMAL_BATTERY</strong></p></td>
+<td><p>this option requires the following nine parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Initial value of the product of interfacial area per unit volume by
+exchange current density.</p></li>
+<li><p>&lt;float2&gt; - Limit of electrode utilization beyond which ai0 = 0.</p></li>
+<li><p>&lt;float3&gt; - Activation energy for the Arrhenius dependency of ai0 on temperature.</p></li>
+<li><p>&lt;float4&gt; - Initial electrode/electrolyte temperature.</p></li>
+<li><p>&lt;float5&gt; - Cathode thickness.</p></li>
+<li><p>&lt;float6&gt; - Cathode porosity.</p></li>
+<li><p>&lt;float7&gt; - Molar volume of active cathode material.</p></li>
+<li><p>&lt;float8&gt; - Current density output by the thermal battery cell.</p></li>
+<li><p>&lt;float9&gt; - Number of electrons involved in cathode reactions.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id21">
+<h3><strong>Examples</strong><a class="headerlink" href="#id21" title="Permalink to this headline"></a></h3>
+<p>The following are two sample input cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Interfacial</span> <span class="n">Area</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Interfacial</span> <span class="n">Area</span> <span class="o">=</span> <span class="n">THERMAL_BATTERY</span> <span class="mf">20.0</span> <span class="mf">0.375</span> <span class="mf">20000.0</span> <span class="mf">846.0</span> <span class="mf">0.046</span> <span class="mf">0.244</span> <span class="mf">23.93</span> <span class="mf">0.0246</span> <span class="mf">4.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id22">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id22" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id23">
+<h3><strong>References</strong><a class="headerlink" href="#id23" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="butler-volmer-j">
+<h2><strong>Butler_Volmer_j</strong><a class="headerlink" href="#butler-volmer-j" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kc">None</span>
+</pre></div>
+</div>
+<p>Unused; has been removed from <em>Goma</em> as of 12/20/2001</p>
+</section>
+<section id="butler-volmer-ij">
+<h2><strong>Butler_Volmer_ij</strong><a class="headerlink" href="#butler-volmer-ij" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kc">None</span>
+</pre></div>
+</div>
+<p>Unused; has been removed from <em>Goma</em> as of 12/20/2001</p>
+</section>
+<section id="solution-temperature">
+<h2><strong>Solution Temperature</strong><a class="headerlink" href="#solution-temperature" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solution</span> <span class="n">Temperature</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id24">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id24" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the temperature of an electrolyte solution (i.e., when
+diffusion and migration transport of charged species is involved).</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the electrolyte-solution model, for which there are currently two options:
+<strong>CONSTANT</strong> and <strong>THERMAL_BATTERY</strong>; the former model has a single parameter in the
+&lt;float_list&gt; while the latter has six.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>A constant model of the solution temperature.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - the value of electrolyte-solution temperature.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>THERMAL_BATTERY</strong></p></td>
+<td><p>A specialized model of electrolyte solutions for Thermal Batteries
+(Chen, et. al., 2000).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Initial electrolyte solution temperature ( K )</p></li>
+<li><p>&lt;float2&gt; - Ambient temperature ( K )</p></li>
+<li><p>&lt;float3&gt; - Cross-sectional area from which heat is lost to ambient ( m2</p></li>
+<li><p>&lt;float4&gt; - Heat transfer coefficient ( W/m2/K )</p></li>
+<li><p>&lt;float5&gt; - Mass of battery cell ( kg )</p></li>
+<li><p>&lt;float6&gt; - Heat capacity of electrolyte solution ( J/kg/K)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id25">
+<h3><strong>Examples</strong><a class="headerlink" href="#id25" title="Permalink to this headline"></a></h3>
+<p>The following are two sample input cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solution</span> <span class="n">Temperature</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">313.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solution</span> <span class="n">Temperature</span> <span class="o">=</span> <span class="n">THERMAL_BATTERY</span> <span class="mf">846.</span> <span class="mf">298.</span> <span class="mf">0.0316</span> <span class="mf">7.7</span> <span class="mf">0.6</span> <span class="mf">1030.</span>
+</pre></div>
+</div>
+</section>
+<section id="id26">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id26" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id27">
+<h3><strong>References</strong><a class="headerlink" href="#id27" title="Permalink to this headline"></a></h3>
+<p>SAND2000-0207: Final Report on LDRD Project: A Phenomenological Model for
+Multicomponent Transport with Simultaneous Electrochemical Reactions in
+Concentrated Solutions, Chen, K. S., Evans, G. H., Larson, R. S., Noble, D. R., and
+Houf, W. G., January 2000.</p>
+</section>
+</section>
+<section id="porosity">
+<h2><strong>Porosity</strong><a class="headerlink" href="#porosity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porosity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id28">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id28" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the porosity model for the anode or separator or cathode
+region in a thermal battery cell.</p>
+<p>Definitions of the {model_name} and the associated input parameters (&lt;float&gt;) are as
+follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>the name of the porosity model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>{float1} - the porosity value.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>THERMAL_BATTERY</strong></p></td>
+<td><p>the name of the porosity model.</p>
+<blockquote>
+<div><ul>
+<li><p>&lt;float1&gt; - the initial value of porosity</p></li>
+<li><p>&lt;float2&gt; - specifies the change of molar volume in the anode or cathode electrode
+material per electron transferred, as stated in</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/430_goma_physics.png"><img alt="../_images/430_goma_physics.png" src="../_images/430_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where si is stoichiometric coefficient of species or phase i, V is molar volume of
+species or phase i, n is the number of electrons transfer in the anodic or
+cathodic electrochemical reaction, and the summation is over the number of solid
+phases.</p>
+</li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id29">
+<h3><strong>Examples</strong><a class="headerlink" href="#id29" title="Permalink to this headline"></a></h3>
+<p>A sample input card for this material property might look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porosity</span> <span class="o">=</span> <span class="n">THERMAL_BATTERY</span> <span class="mf">0.244</span> <span class="mf">8.1185</span>
+</pre></div>
+</div>
+</section>
+<section id="id30">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id30" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p>This is a porosity model for a special application in which the model for the
+diffusion constitutive equation is <em>STEFAN_MAXWELL_CHARGED</em>, which
+enables modeling the transport of multiple charged species with simultaneous
+electrochemical reaction(s) in a concentrated solution, as in a thermal-battery cell.</p></li>
+<li><p>See the reference below for a discussion of Thermal Battery modeling with <em>Goma</em>.</p></li>
+</ul>
+</section>
+<section id="id31">
+<h3><strong>References</strong><a class="headerlink" href="#id31" title="Permalink to this headline"></a></h3>
+<p>SAND2000-0207: Final Report on LDRD Project: A Phenomenological Model for
+Multicomponent Transport with Simultaneous Electrochemical Reactions in
+Concentrated Solutions, K. S. Chen, G. H. Evans, R. S. Larson, D. R. Noble and W. G.
+Houf, January 2000.</p>
+</section>
+</section>
+<section id="diffusivity">
+<h2><strong>Diffusivity</strong><a class="headerlink" href="#diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">varies</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id32">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id32" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the model for the diffusivity for each species.
+Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the diffusivity model. This parameter can have one of the following values:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>CONSTANT</strong></p></li>
+<li><p><strong>USER</strong></p></li>
+<li><p><strong>POROUS</strong></p></li>
+<li><p><strong>GENERALIZED</strong></p></li>
+<li><p><strong>FREE_VOL</strong></p></li>
+<li><p><strong>GENERALIZED_FREE_VOL</strong></p></li>
+<li><p><strong>HYDRO</strong></p></li>
+<li><p><strong>ARRHENIUS</strong></p></li>
+<li><p><strong>TABLE</strong></p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p>&lt;species&gt;</p></td>
+<td><p>An integer designating the species equation.</p></td>
+</tr>
+<tr class="row-odd"><td><p>{float_list}</p></td>
+<td><p>the name of the porosity model.</p>
+<p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt; whose value is
+determined by the selection for {model_name}. Note that not all the models employ a
+{float_list}.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Thus, choices for {model_name} and the accompanying input parameter list are
+dependent on the {model_name} selected for the <em>Diffusion Constitutive Equation</em>. In
+some cases, the above model choices have special definitions, while for others some of
+the above choices do not exist. Thus, the presentation below is keyed to the value
+chosen for the <em>Diffusion Constitutive Equation</em> model.</p>
+<p>When the <em>Diffusion Constitutive Equation</em> model is set to <strong>NONE</strong>, meaning the material
+block to which this material file applies is a non-diffusing material, this <em>Diffusivity</em> card
+should be present in the Material file specification but the model and its parameters will
+not be used.</p>
+<p>For the <strong>FICKIAN, GENERALIZED_FICKIAN, DARCY</strong> and <strong>DARCY_FICKIAN</strong>
+flux models, the following options are valid choices for the Diffusivity {model_name}
+and accompanying parameter lists.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 78%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;species&gt;
+&lt;float1&gt;</p></td>
+<td><p>a constant diffusivity model</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating species i</p></li>
+<li><p>&lt;float1&gt; - Diffusivity of species i, in units [L2/t]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>USER</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>a user-defined model, the &lt;species&gt; is specified and the set of parameters &lt;float1&gt;
+through &lt;floatn&gt; is defined by the function usr_diffusivity in the file user_mp.c.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>POROUS</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>a diffusivity that depends on the saturation and porosity in a porous medium. For
+two-phase or unsaturated flow in a porous medium, the diffusivity calculated by this
+model is the diffusivity of solvent vapor through the gas phase in the pore-space</p>
+<p>This model has been deprecated as the porous equation rewrite has proceeded; it is
+not recommended for use!</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>GENERALIZED</strong>
+&lt;species&gt; &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>For constant diffusivities used by generalized Fick’s law. The {float_list} consists
+of two values for each species i or i-j species pair:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating species i</p></li>
+<li><p>&lt;float1&gt; - Dii, the self-diffusivity</p></li>
+<li><p>&lt;float2&gt; - Dij; the mutual diffusivities</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>FREE_VOL</strong> &lt;species&gt;
+&lt;floatlist&gt;</p></td>
+<td><p>For a diffusivity determined by free volume theory. The {float_list} for this model
+contains twelve values:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating species i</p></li>
+<li><p>&lt;float1&gt; - V*1, solvent specific critical-hole volume</p></li>
+<li><p>&lt;float2&gt; - V*2, polymer specific critical-hole volume</p></li>
+<li><p>&lt;float3&gt; - K11/γ, solvent free volume parameter</p></li>
+<li><p>&lt;float4&gt; - K12/γ, solvent free volume parameter</p></li>
+<li><p>&lt;float5&gt; - K21 - Tg1, free volume/transition parameter</p></li>
+<li><p>&lt;float6&gt; - K22 - Tg2, free volume/transition parameter</p></li>
+<li><p>&lt;float7&gt; - χ, Flory-Huggins polymer/solvent interaction parameter</p></li>
+<li><p>&lt;float8&gt; - ξ, ratio of solvent and polymer jumping units</p></li>
+<li><p>&lt;float9&gt; - D01, binary diffusivity for 0-1 system [L2/t]</p></li>
+<li><p>&lt;float10&gt; - E/R, ratio of activation energy to gas constant</p></li>
+<li><p>&lt;float11&gt; - V01, solvent specific volume</p></li>
+<li><p>&lt;float12&gt; - V02, polymer specific volume</p></li>
+</ul>
+</div></blockquote>
+<p>Note, this model can be run only with a single species equation, i.e., two components</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>GENERALIZED_FREE_VOL</strong>
+&lt;species&gt; &lt;floatlist&gt;</p></td>
+<td><p>For constant diffusivities used by generalized Fick’s law. The {float_list} consists
+of two values for each species i or i-j species pair:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating species i</p></li>
+<li><p>&lt;float1&gt; - Dii, the self-diffusivity</p></li>
+<li><p>&lt;float2&gt; - Dij; the mutual diffusivities</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>FREE_VOL</strong> &lt;species&gt;
+&lt;floatlist&gt;</p></td>
+<td><p>For a diffusivity determined by free volume theory. The {float_list} for this model
+contains twelve values:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating species i</p></li>
+<li><p>&lt;float1&gt; - V* 1, solvent specific critical-hole volume</p></li>
+<li><p>&lt;float2&gt; - V* 2, polymer specific critical-hole volume</p></li>
+<li><p>&lt;float3&gt; - K11/γ, solvent free volume parameter</p></li>
+<li><p>&lt;float4&gt; - K12/γ, solvent free volume parameter</p></li>
+<li><p>&lt;float5&gt; - K21 - Tg1, free volume/transition parameter</p></li>
+<li><p>&lt;float6&gt; - K22 - Tg2, free volume/transition parameter</p></li>
+<li><p>&lt;float7&gt; - χ, Flory-Huggins polymer/solvent interaction parameter</p></li>
+<li><p>&lt;float8&gt; - ξ, ratio of solvent and polymer jumping units</p></li>
+<li><p>&lt;float9&gt; - D01, binary diffusivity for 0-1 system [L2/t]</p></li>
+<li><p>&lt;float10&gt; - E/R, ratio of activation energy to gas constant</p></li>
+<li><p>&lt;float11&gt; - V01, solvent specific volume</p></li>
+<li><p>&lt;float12&gt; - V02, polymer specific volume</p></li>
+</ul>
+</div></blockquote>
+<p>Note, this model can be run only with a single species equation, i.e., two components</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>GENERALIZED_FREE_VOL</strong>
+&lt;species&gt; &lt;floatlist&gt;</p></td>
+<td><p>a diffusivity model based on free volume theory and the generalized Fick’s law. This
+is similar to the <strong>FREE_VOL</strong> model except it is for a ternary mixture of solvent
+(1), solvent (2), and polymer (3). A concentration-dependent self-diffusivity is
+specified. The &lt;species&gt; is defined and the {float_list}, consisting of 12 parameters
+is identical to and can be specified in the exact same order as in the binary case;
+see FREE_VOL model above for input parameter list.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>TABLE</strong> &lt;integer1&gt;
+&lt;character_string1&gt;
+{LINEAR | BILINEAR}
+[integer2]
+[FILE = filenm]</p></td>
+<td><p>Please see discussion at the beginning of the material properties Chapter 5 for input
+description and options. Most likely character_string1 will be <strong>MASS_FRACTION</strong> or
+<strong>TEMPERATURE</strong>.</p></td>
+</tr>
+</tbody>
+</table>
+<p>For the <strong>HYDRODYNAMIC</strong> flux model (<em>Diffusion Constitutive Equation</em>), there is
+only one valid choice for the <em>Diffusivity</em> {model_name}, i.e., <strong>HYDRO</strong>. There are no
+accompanying parameters but several additional cards are required to define different
+portions of the model; these cards are identified below. The user is referred to each
+individual card (identified by italic typeset) definition for the associated model choices
+and parameter lists.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 78%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>HYDRO</strong></p></td>
+<td><p>For mass transport driven by the hydrodynamic field. No &lt;species&gt; or {float_list} is
+required, although five additional input cards are required with this diffusivity
+model. The first specifies Dc in the Shear Rate Diffusivity card. The second
+specifies Dμ in the Viscosity Diffusivity card. The third specifies Dr in the
+Curvature Diffusivity card. The fourth specifies the diffusivity of a purely Fickian
+diffusion mode in the Fickian Diffusivity card; it is usually set to zero. The last
+card specifies Dg, in the Gravity-based Diffusivity card for the flotation term in
+variable density transport problems.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>ARRHENIUS</strong> &lt;integer 1
+&lt;integer 2&gt; &lt;float1&gt;
+&lt;float2&gt; &lt;float3&gt;</p></td>
+<td><p>This is a model for describing effect of temperature on Stefan-Maxwell diffusivities
+for application in modeling thermal batteries and thus it is used in conjunction with
+the <strong>STEFAN_MAXWELL_CHARGED</strong> or <strong>STEFAN_MAXWELL</strong> flux model (<em>Diffusion
+Constitutive Equation</em>). Two integers and three floats are required for this
+diffusivity model:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer 1&gt; index for species i.</p></li>
+<li><p>&lt;integer 2&gt; index for species j.</p></li>
+<li><p>&lt;float 1&gt; Stefan-Maxwell diffusivity, dij in units [L2/t].</p></li>
+<li><p>&lt;float 2&gt; activation energy, ED .</p></li>
+<li><p>&lt;float 3&gt; reference temperature, T0 .</p></li>
+<li><p>Note: the units of ED and T0 are such that is dimensionless with R being the
+universal gas constant.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>For the <strong>FICKIAN_CHARGED</strong> flux model (<em>Diffusion Constitutive Equation</em>), only
+constant diffusivities are allowed. So the <em>Diffusivity</em> model option is:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 78%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;species&gt;
+&lt;float1&gt;</p></td>
+<td><p>a constant diffusivity model</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating species i</p></li>
+<li><p>&lt;float1&gt; - Diffusivity of species i, in units [L2/t]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>In addition, the <em>Charge Number</em> and <em>Solution Temperature</em> cards must also be specified
+in the material file so that the migration flux may be calculated.</p>
+<p>The <strong>STEFAN_MAXWELL</strong> and <strong>STEFAN_MAXWELL_CHARGED</strong> flux models
+(<em>Diffusion Constitutive Equation</em>) should be used to model the transport of two or more
+species only. The diffusivity model for species in these transport problems is currently
+limited to being <strong>CONSTANT</strong> and <strong>ARRHENIUS</strong>. In the <strong>CONSTANT&amp;</strong> Stefan-
+Maxwell diffusivity model, a set (only n(n-1)/2 values since Dij = Dji and Dii are not
+defined) of diffusivities, Dij, is required:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 78%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;species&gt;
+&lt;float1&gt;</p></td>
+<td><p>a constant diffusivity model</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating species i</p></li>
+<li><p>&lt;species&gt; - an integer designating species j</p></li>
+<li><p>&lt;float1&gt; - Dij, mutual diffusivity of species i and j, in units [L2/t]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>In addition, the <em>Charge Number, Molecular Weight</em> and <em>Solution Temperature</em> cards
+must also be specified in the material file so that the migration flux may be calculated.</p>
+</section>
+<section id="id33">
+<h3><strong>Examples</strong><a class="headerlink" href="#id33" title="Permalink to this headline"></a></h3>
+<p>Sections of material input files are shown below for several of the Diffusivity model
+options presented above.</p>
+<p>Following is a sample input card for the <strong>CONSTANT</strong> <em>Diffusivity</em> model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<p>Following is a sample section of the material file for the <strong>HYDRO</strong> <em>Diffusivity</em> model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusion</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">HYDRODYNAMIC</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">HYDRO</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shear</span> <span class="n">Rate</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">LINEAR</span> <span class="mi">0</span> <span class="mf">6.0313e-5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Viscosity</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">LINEAR</span> <span class="mi">0</span> <span class="mf">6.0313e-5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Curvature</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="o">-</span><span class="mf">48.02e-6</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fickian</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">ANISOTROPIC</span> <span class="mi">0</span> <span class="mf">0.</span> <span class="mf">0.1e-5</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gravity</span><span class="o">-</span><span class="n">based</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">RZBISECTION</span> <span class="mi">0</span> <span class="mf">2.14e-5</span> <span class="mf">5.1</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<p>Following is a sample section of the material file for the
+<strong>GENERALIZED_FREE_VOL</strong> <em>Diffusivity</em> model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusion</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">GENERALIZED_FICKIAN</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">GENERALIZED_FREE_VOL</span> <span class="mi">1</span> <span class="mf">0.943</span> <span class="mf">1.004</span> <span class="mf">0.000983</span> <span class="mf">0.000239</span> <span class="o">-</span><span class="mf">12.12</span> <span class="o">-</span><span class="mf">96.4</span> <span class="mf">0.395</span> <span class="mf">0.266</span> <span class="mf">0.00143</span> <span class="mi">0</span> <span class="mf">1.265983036</span> <span class="mf">0.9233610342</span>
+</pre></div>
+</div>
+<p>Sample section of the material file for the <strong>STEFAN_MAXWELL_CHARGED</strong>
+<em>Diffusion Constitutive Equation</em> with the CONSTANT <em>Diffusivity</em> model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusion</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">STEFAN_MAXWELL_CHARGED</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">CONSTANT</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">0</span> <span class="mi">1</span> <span class="mf">2.0e-05</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">0</span> <span class="mi">2</span> <span class="mf">2.0e-05</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span> <span class="mi">2</span> <span class="mf">2.0e-05</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Solution</span> <span class="n">Temperature</span> <span class="o">=</span> <span class="n">THERMAL_BATTERY</span> <span class="mf">846.</span> <span class="mf">298.</span> <span class="mf">.03</span> <span class="mf">7.7</span> <span class="mf">0.6</span> <span class="mf">1030.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Molecular</span> <span class="n">Weight</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">6.939</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Charge</span> <span class="n">Number</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Molecular</span> <span class="n">Weight</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">1</span> <span class="mf">39.098</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Charge</span> <span class="n">Number</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">1</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Molecular</span> <span class="n">Weight</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">2</span> <span class="mf">35.4</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Charge</span> <span class="n">Number</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">2</span> <span class="o">-</span><span class="mf">1.0</span>
+</pre></div>
+</div>
+<p>Sample section of the material file for the <strong>STEFAN_MAXWELL_CHARGED</strong>
+<em>Diffusion Constitutive Equation</em> with the <strong>ARRHENIUS</strong> <em>Diffusivity</em> model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">0</span> <span class="mi">1</span> <span class="mf">1.5e-05</span> <span class="mf">80000.0</span> <span class="mf">846.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">0</span> <span class="mi">2</span> <span class="mf">1.5e-05</span> <span class="mf">80000.0</span> <span class="mf">846.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span> <span class="mi">2</span> <span class="mf">1.5e-05</span> <span class="mf">80000.0</span> <span class="mf">846.0</span>
+</pre></div>
+</div>
+<p>(the <em>Charge Number, Molecular Weight</em> and <em>Solution Temperature</em> cards are
+similarly specified as above in the <strong>CONSANT</strong> <em>Diffusivity</em> case)</p>
+</section>
+<section id="id34">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id34" title="Permalink to this headline"></a></h3>
+<p>Following are brief comments on the various <em>Diffusivity</em> models.</p>
+<p><strong>POROUS</strong> For this model, diffusivity depends on the saturation and porosity in a
+porous medium. For two-phase or unsaturated flow in a porous medium, the diffusivity
+calculated by this model is the diffusivity of solvent vapor through the gas phase in the
+pore-space (see Martinez, 1995). However as indicated above, this model is not
+recommended for use at his time.</p>
+<p><strong>GENERALIZED</strong> This model generalizes Fick’s Law for multicomponent diffusion.
+The elements along the diagonal, Dii, are self-diffusivities, while Dij are mutual
+diffusivities between species i and j. Note that mutual diffusivities in generalized
+formulation can be both positive and negative, and are constant values.</p>
+<p><strong>FREE_VOL</strong> For a diffusivity determined by free volume theory (cf. Duda et al. 1982).
+In mathematical form, the binary mutual diffusion coefficient (solvent diffusion in a
+polymeric solution), using the free volume theory, is given by:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/431_goma_physics.png"><img alt="../_images/431_goma_physics.png" src="../_images/431_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/432_goma_physics.png"><img alt="../_images/432_goma_physics.png" src="../_images/432_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here, ω1 is the solvent weight fraction, ω2 polymer weight fraction; V0
+1 and V02 are, respectively, solvent and polymer specific volumes; φ1 solvent volume fraction, φ2
+polymer volume fraction; γ overlap factor to account for shared free volume; Tg1 and
+Tg2 respectively solvent and polymer glass transition temperature, T absolute
+temperature; K11, K12, K21 and K22 solvent free-volume parameters; V*
+1 and V*2 respectively, solvent and polymer specific critical-hole volumes; D01 constant preexponential
+factor when E is presumed to be zero (E is energy required to overcome
+attractive forces from neighboring molecules); ξ ratio of solvent and polymer jumping
+units; and χ Flory-Huggins polymer/solvent interaction parameter. In general, D01
+should be expressed as D01 e- E/RT with R being the universal gas constant. Dependence
+of diffusivity, D, on temperature and mass fraction can be determined once the above
+twelve parameters are specified.</p>
+<p><em>Note: This model (FREE_VOL) can be run ONLY with 1 species equation, i.e., with two
+components.</em></p>
+<p><strong>GENERALIZED_FREE_VOL</strong> This is a diffusivity model based on free volume
+theory and the generalized Fick’s law. For a ternary mixture of solvent (1), solvent (2),
+and polymer (3), the concentration-dependent self-diffusivity is given by (Vrentas, et.
+al., 1984):</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/433_goma_physics.png"><img alt="../_images/433_goma_physics.png" src="../_images/433_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/434_goma_physics.png"><img alt="../_images/434_goma_physics.png" src="../_images/434_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The parameters for this model are the same twelve parameters as for the binary
+<strong>FREE_VOL</strong> model and so can be specified in the exact same order. The mutual
+diffusivities required to fill the cross-terms are also concentration-dependent. In
+addition, the gradient in chemical potential is also accounted for (Alsoy and Duda,
+1999; Zielinski and Hanley, 1999).</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/435_goma_physics.png"><img alt="../_images/435_goma_physics.png" src="../_images/435_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>ai is the activity of species i, which can be written in terms of the activity coefficient,
+γi, and volume fraction, φi. The current implementation of species activity is based on
+the Flory-Huggins model for multicomponent polymer-solvent mixtures (Flory, 1953).</p>
+<p><strong>HYDRO</strong> implies that mass transport of at least one species is driven by gradients in the
+second invariant of the rate of deformation tensor (shear rate) and gradients in viscosity
+(Phillips, et.al. 1992). This model also includes a sedimentation flux term to account
+for the motion of non-neutrally buoyant particles resulting from gravitation (Zhang and
+Acrivos, 1994) and a curvature-driven flux term from normal component of the
+acceleration vector (Krishnan, et. al., 1996). This model is used in predicting the
+particle distributions of particulate suspensions undergoing flow. For this model, the
+mass flux vector J is given by the following:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/436_goma_physics.png"><img alt="../_images/436_goma_physics.png" src="../_images/436_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/437_goma_physics.png"><img alt="../_images/437_goma_physics.png" src="../_images/437_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where Ci is the particulate phase volume fraction, i is the species number designation of
+the particulate phase, the shear rate, μ the viscosity, the normal unit acceleration
+vector, r the curvature of streamlines, Dc, Dμ, Dr and Dg the “diffusivity” parameters,
+ρs and ρf the particle and fluid phase densities, respectively, and , the gravitational
+acceleration vector.</p>
+<p><strong>ARRHENIUS</strong> Diffusivities can be strongly dependent on temperature as in processes
+such as thermal batteries. Such temperature dependency can be described using the
+following constitutive model that makes use of Arrhenius temperature dependency:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/438_goma_physics.png"><img alt="../_images/438_goma_physics.png" src="../_images/438_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where Dij are the Stefan-Maxwell diffusivities as defined in Equations 13 and 14.
+are the reference Stefan-Maxwell diffusivities at reference temperature T0; ED is the
+activation energy that controls the temperature dependency and R is the universal gas
+constant; and T is temperature. The units of ED, R and T are such that is
+dimensionless.</p>
+<p><strong>STEFAN-MAXWELL</strong> For multicomponent diffusion of neutral species in
+concentrated solutions. The Stefan-Maxwell diffusivities, Dij, as defined in the
+following Stefan-Maxwell flux model (cf. Chen, et. al., 2000, Chen, et. al., 1998):</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/439_goma_physics.png"><img alt="../_images/439_goma_physics.png" src="../_images/439_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>are taken to be constant. Here, xi is mole fraction of species i, Ji the molar flux of
+species i, and c the total molar concentration. Since Dij = Dji and Dii are not defined,
+only n(n-1)/2 Stefan-Maxwell diffusivities are required (here, n is the total number of
+diffusing species). For example, for n = 3 (i.e., a solution having three species), three
+Stefan-Maxwell diffusivities are needed: D12, D13, and D23.</p>
+<p><strong>STEFAN-MAXWELL_CHARGED</strong> For multicomponent transport (diffusion and
+migration) of charged species in concentrated electrolyte solutions. The Stefan-
+Maxwell diffusivities, Dij, as defined in the following Stefan-Maxwell flux model (cf.
+Chen et al. 2002, Chen, et. al., 2000, Chen, et. al., 1998):</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/440_goma_physics.png"><img alt="../_images/440_goma_physics.png" src="../_images/440_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>are taken to be constant, as in the case of multicomponent diffusion of neutral species
+in concentrated solutions. Here, Φ is electrical potential in electrolyte solution, zi
+charge number of species i, F Faraday constant (96487 C/mole), R universal gas
+constant (8.314 J/mole-K), and T electrolyte solution temperature.</p>
+<p><strong>FICKIAN_CHARGED</strong> For multicomponent transport (diffusion and migration) of
+charged species in dilute electrolyte solutions. The Fickian diffusivity of species i, Di,
+as defined in the following Fickian flux model (cf. Newman, 1991; Chen, et. al., 2000):</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/441_goma_physics.png"><img alt="../_images/441_goma_physics.png" src="../_images/441_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>is taken to be constant. Here, ci is molar concentration of species i.</p>
+</section>
+<section id="faqs">
+<h3><strong>FAQs</strong><a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h3>
+<p>The following is a discussion of Units in <em>Goma</em> but covers several important Diffusionrelated
+items. It comes from some emails exchanged at Sandia during January 1998; while the discussions are relevant for each
+user of the code, the deficiencies or lack ofclarity have been since been remedied prior to <em>Goma</em> 4.0.</p>
+<p><strong>Unit Consistency in Goma (Jan 98)</strong></p>
+<p><strong>Question</strong>:… I know what you are calling volume flux is mass flux divided by density.
+The point I am trying to make is that the conservation equations in the books I am
+familiar with talk about mass, energy, momentum, and heat fluxes. Why do you not
+write your conservation equations in their naturally occurring form? If density just so
+happens to be common in all of the terms, then it will be obvious to the user that the
+problem does not depend on density. You get the same answer no matter whether you
+input rho=1.0 or rho=6.9834, provided of course this does not impact iterative
+convergence. This way, you write fluxes in terms of gradients with the transport
+properties (viscosity, thermal conductivity, diffusion coefficient, etc.) being in familiar
+units.</p>
+<p><strong>Answer</strong>: First let me state the only error in the manual that exists with regard to
+the convection-diffusion equation (CDE) is the following:</p>
+<p>Ji in the nomenclature table should be described as a volume flux with units of L/t, i.e. D ⋅ ∇yi, where D is in
+L2/t units.</p>
+<p>Now, this is actually stated correctly elsewhere, as it states the Ji is a diffusion flux
+(without being specific); to be more specific here, we should say it is a “volume flux of
+species i.” So, in this case D is in L ⋅ L ⁄ t units, yi is dimensionless and it is immaterial
+that the CDE is multiplied by density or not, <em>as long as density is constant</em>.</p>
+<p>Now, in <em>Goma</em> we actually code it with no densities anywhere for the FICKIAN
+diffusion model. For the HYDRO diffusion model, we actually compute a Ji ⁄ ρ in the
+code, and handle variable density changes through that . In that case Ji as computed
+in <em>Goma</em> is a mass flux vector, not a volume flux vector, but by dividing it by and
+sending it back up to the CDE it changes back into a volume flux. i. e., everything is the
+same.</p>
+<p>Concerning the units of the mass transfer coefficient on the YFLUX boundary
+condition, the above discussion now sets those. <em>Goma</em> clearly needs the flux in the
+following form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/442_goma_physics.png"><img alt="../_images/442_goma_physics.png" src="../_images/442_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and dimensionally for the left hand side</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/443_goma_physics.png"><img alt="../_images/443_goma_physics.png" src="../_images/443_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where D is in units L2 ⁄ t, the gradient operator has units of 1 ⁄ L so K has to be in units
+of L ⁄ t (period!) because yi is a fraction.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/444_goma_physics.png"><img alt="../_images/444_goma_physics.png" src="../_images/444_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>then K’s units will have to accommodate for the relationship between p1 and y1 in the
+liquid, hopefully a linear one as in Raoult’s law, i.e. if pi = PVyi where pv is the vapor
+pressure, then</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/445_goma_physics.png"><img alt="../_images/445_goma_physics.png" src="../_images/445_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and so K on the YFLUX command has to be KPv ….and so on.</p>
+<p>Finally, you will note, since we do not multiply through by density, you will have to
+take care of that, i. e., in the Price paper (viz., Price, et. al., 1997) he gives K in units of
+t ⁄ L. So, that must be converted as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/446_goma_physics.png"><img alt="../_images/446_goma_physics.png" src="../_images/446_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This checks out!</p>
+</section>
+<section id="id35">
+<h3><strong>References</strong><a class="headerlink" href="#id35" title="Permalink to this headline"></a></h3>
+<p>Alsoy, S. and Duda, J. L., 1999. “Modeling of Multicomponent Drying of Polymer
+Films.” AIChE Journal, (45)4, 896-905.</p>
+<p>Chen, K. S., Evans, G. H., Larson, R. S., Noble, D. R. and Houf, W. G. “Final Report on
+LDRD Project: A Phenomenological Model for Multicomponent Transport with
+Simultaneous Electrochemical Reactions in Concentrated Solutions”, SAND2000-
+0207, Sandia National Laboratories Technical Report (2000).</p>
+<p>Chen, K. S., Evans, G. H., Larson, R. S., Coltrin, M. E. and Newman, J. “Multidimensional
+modeling of thermal batteries using the Stefan-Maxwell formulation and
+the finite-element method”, in Electrochemical Society Proceedings, Volume 98-15, p.
+138-149 (1998).</p>
+<p>Chen, K. S., “Modeling diffusion and migration transport of charged species in dilute
+electrolyte solutions: GOMA implementation and sample computed predictions from a
+case study of electroplating”, Sandia memorandum, September 21, 2000.</p>
+<p>Chen, K. S., Evans, G. H., and Larson, R. S., “First-principle-based finite-element
+modeling of a Li(Si)/LiCl-KCl/FeS2 thermal battery cell”, in Electrochem. Soc. Proc.
+Vol. 2002-30, p. 100 (2002).</p>
+<p>Duda, J. L., Vrentas, J. S., Ju, S. T. and Liu, H. T. 1982. “Prediction of Diffusion
+Coefficients for Polymer-Solvent Systems”, AIChE Journal, 28(2), 279-284.</p>
+<p>P.J. Flory, Principles of Polymer Chemistry, Cornell University Press, 1953.
+Krishnan, G. P., S. Beimfohr and D. Leighton, 1996. “Shear-induced radial segregation
+in bidisperse suspensions,” J. Fluid Mech. 321, 371.</p>
+<p>Martinez, M. M., Mathematical and Numerical Formulation of Nonisothermal
+Multicomponent Three-Phase Flow in Porous Media, SAND95-1247, Sandia National
+Laboratories Technical Report, 1995.</p>
+<p>Newman, J. S., Electrochemical Systems, Prentice Hall, Inc., Englewood Cliffs, New
+Jersey (1991).</p>
+<p>Phillips, R.J., R.C. Armstrong and R.A. Brown, 1992, “A constitutive equation for
+concentrated suspensions that accounts for shear-induced particle migration,” Physics
+of Fluids A, 4(1), 30-40.</p>
+<p>Price, P. E., Jr., S. Wang, I. H. Romdhane, “Extracting Effective Diffusion Parameters
+from Drying Experiments,” AIChE Journal, 43, 8, 1925-1934 (1997)</p>
+<p>Vrentas, J.S., J.L. Duda and H.-C. Ling, 1984. “Self-Diffusion in Polymer-Solvent-
+Solvent Systems” Journal of Polymer Sciences: Polymer Physics edition, (22), 459-
+469.</p>
+<p>Zhang K. and A. Acrivos, 1994, “Viscous resuspension in fully-developed laminar pipe
+flows,” Int. J. Multiphase Flow, (20)3, 579-591.</p>
+<p>Zielinski, J.M. and B.F. Hanley, 1999. “Practical Friction-Based Approach to Modeling
+Multicomponent Diffusion.” AIChE Journal, (45)1, 1-12.</p>
+</section>
+</section>
+<section id="shear-rate-diffusivity">
+<h2><strong>Shear Rate Diffusivity</strong><a class="headerlink" href="#shear-rate-diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shear</span> <span class="n">Rate</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id36">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id36" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the coefficient for the shear-rate gradient term when
+<strong>HYDRO</strong> is specified in the <em>Diffusivity</em> card. Definitions of the input parameters follow
+for the {model_name} options <strong>CONSTANT</strong> and <strong>LINEAR</strong> based on the model:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/447_goma_physics.png"><img alt="../_images/447_goma_physics.png" src="../_images/447_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for constant shear rate diffusivity.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - Dc when there is no concentration dependency.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>LINEAR</strong></p></td>
+<td><p>Name of the model in which shear rate diffusivity is a linear function of
+concentration.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - kc when the diffusivity is a linear function of concentration.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id37">
+<h3><strong>Examples</strong><a class="headerlink" href="#id37" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Shear</span> <span class="n">Rate</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id38">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id38" title="Permalink to this headline"></a></h3>
+<p>Please refer to the technical discussion given under <strong>HYDRO</strong> section of the <em>Diffusivity</em> card.</p>
+</section>
+<section id="id39">
+<h3><strong>References</strong><a class="headerlink" href="#id39" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="viscosity-diffusivity">
+<h2><strong>Viscosity Diffusivity</strong><a class="headerlink" href="#viscosity-diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Viscosity</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id40">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id40" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify Dr when the model in the <em>Diffusivity</em> card is <strong>HYDRO</strong>.
+Definitions of the input parameters follow for the {model_name} options <strong>CONSTANT</strong>
+and <strong>LINEAR</strong> based on the model:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/449_goma_physics.png"><img alt="../_images/449_goma_physics.png" src="../_images/449_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for a constant curvature diffusivity.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - An integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - Dμ when there is no concentration dependency.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>LINEAR</strong></p></td>
+<td><p>Name of the model in which the diffusivity is a linear function of concentration.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - kμ when the diffusivity is a linear function of concentration.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id41">
+<h3><strong>Examples</strong><a class="headerlink" href="#id41" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Viscosity</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id42">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id42" title="Permalink to this headline"></a></h3>
+<p>Please refer to the technical discussion given under <strong>HYDRO</strong> section of the Diffusivity
+card.</p>
+</section>
+<section id="id43">
+<h3><strong>References</strong><a class="headerlink" href="#id43" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="curvature-diffusivity">
+<h2><strong>Curvature Diffusivity</strong><a class="headerlink" href="#curvature-diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Curvature</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id44">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id44" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify Dr when the model in the <em>Diffusivity</em> card is <strong>HYDRO</strong>.
+Definitions of the input parameters follow for the {model_name} options <strong>CONSTANT</strong>
+and <strong>LINEAR</strong> based on the model:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/448_goma_physics.png"><img alt="../_images/448_goma_physics.png" src="../_images/448_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for a constant curvature diffusivity.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - An integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - Dr when there is no concentration dependency.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>LINEAR</strong></p></td>
+<td><p>Name of the model in which the diffusivity is a linear function of concentration.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - kr when the diffusivity is a linear function of concentration.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id45">
+<h3><strong>Examples</strong><a class="headerlink" href="#id45" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Curvature</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id46">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id46" title="Permalink to this headline"></a></h3>
+<p>It was proposed that adding a curvature contribution of the diffusive flux for
+suspension particles would correct suspension migration behavior in parallel-plate and
+cone-and-plate. However, this correction term is not frame-invariant; hence, it cannot
+be used in generalized flow geometry. It is therefore not recommended.</p>
+</section>
+<section id="id47">
+<h3><strong>References</strong><a class="headerlink" href="#id47" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="fickian-diffusivity">
+<h2><strong>Fickian Diffusivity</strong><a class="headerlink" href="#fickian-diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fickian</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id48">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id48" title="Permalink to this headline"></a></h3>
+<p>This card allows the user to select a Fickian diffusion mode when the model in the
+<em>Diffusivity</em> card is <strong>HYDRO</strong>. There are two {model_name} options for this mode;
+definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>ANISOTROPIC</strong></p></td>
+<td><p>an anisotropic Fickian diffusion.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float1&gt; - the value of the diffusivity for the X direction, Dx.</p></li>
+<li><p>&lt;float2&gt; - the value of the diffusivity for the Y direction, Dy.</p></li>
+<li><p>&lt;float3&gt; - the value of the diffusivity for the Z direction, Dz.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXP_DECAY</strong></p></td>
+<td><p>an exponential decay of flux.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float1&gt; - the coefficient to the exponential decay, Do</p></li>
+<li><p>&lt;float2&gt; - the exponent value for exponential decay, D1</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id49">
+<h3><strong>Examples</strong><a class="headerlink" href="#id49" title="Permalink to this headline"></a></h3>
+<p>Following are two sample cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fickian</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">ANISOTROPIC</span> <span class="mi">0</span> <span class="mf">2.e-6</span> <span class="mf">2.e-6</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fickian</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">EXP_DECAY</span> <span class="mi">0</span> <span class="mf">0.01</span> <span class="mf">1.e-3</span>
+</pre></div>
+</div>
+</section>
+<section id="id50">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id50" title="Permalink to this headline"></a></h3>
+<p>In modeling suspension flow, often a sharp concentration gradient is encountered, and
+the numerical convergence becomes very poor. This card should be used for numerical
+stability (smooth out the wiggles) and should only be introduced as a last resort. The
+magnitudes should remain small relative to shear rate and viscosity diffusivities.</p>
+<p>As the name implied, anisotropic Fickian diffusivity defines an additional flux
+contribution much like a classic Fickian diffusion term; i.e.,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/450_goma_physics.png"><img alt="../_images/450_goma_physics.png" src="../_images/450_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>If the exponential decay option is used, the flux vector has the form,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/451_goma_physics.png"><img alt="../_images/451_goma_physics.png" src="../_images/451_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where C and Cmax are volume fractions of suspension locally and at maximum packing.</p>
+</section>
+<section id="id51">
+<h3><strong>References</strong><a class="headerlink" href="#id51" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="gravity-based-diffusivity">
+<h2><strong>Gravity-based Diffusivity</strong><a class="headerlink" href="#gravity-based-diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gravity</span><span class="o">-</span><span class="n">based</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id52">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id52" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify Dg when the model in the <em>Diffusivity</em> card is <strong>HYDRO</strong>.
+There are two {model_name} options for this mode; definitions of the input parameters
+are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>constant gravity-based diffusivity.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt;- the value of Dg.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>RICHARDSON_ZAKI</strong></p></td>
+<td><p>constant gravity-based diffusivity.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float1&gt; - the value of Dg.</p></li>
+<li><p>&lt;float2&gt; - the exponent in the Richardson-Zaki hindered settling function.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id53">
+<h3><strong>Examples</strong><a class="headerlink" href="#id53" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gravity</span><span class="o">-</span><span class="n">based</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">8.88e-7</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gravity</span><span class="o">-</span><span class="n">based</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">RICHARDSON_ZAKI</span> <span class="mi">0</span> <span class="mf">8.88e-7</span> <span class="mf">5.1</span>
+</pre></div>
+</div>
+</section>
+<section id="id54">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id54" title="Permalink to this headline"></a></h3>
+<p>When a suspension of particles settles or floats in a fluid, particle-particle interactions
+serve to slow the terminal velocity of all the particles relative to the Stokes velocity.
+The terminal velocity is then corrected by what is known as the hindered settling
+function. If a <strong>CONSTANT</strong> model is chosen, the form of this function is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/452_goma_physics.png"><img alt="../_images/452_goma_physics.png" src="../_images/452_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where φ is the volume fraction of suspension, η(φ) is the relative viscosity of the
+mixture, μ0 is the viscosity of the pure fluid.</p>
+<p>On the other hand if <strong>RICHARDSON_ZAKI</strong> is chosen for the function,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/453_goma_physics.png"><img alt="../_images/453_goma_physics.png" src="../_images/453_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where n is the exponent specified by the user. n=5.1 has been found to fit well for
+suspensions of monodisperse spherical particles at low Reynolds number by Garside
+and Al-Dibouni (1977). Richardson-Zaki approach will not yield a zero f(φ) if φ
+approaches maximum packing, so it is recommended that <strong>CONSTANT</strong> is used.</p>
+</section>
+<section id="id55">
+<h3><strong>References</strong><a class="headerlink" href="#id55" title="Permalink to this headline"></a></h3>
+<p>GTM-010.0: The Hindered Settling Function for a Glass Microballoon Suspension,
+March 3, 1999, C. A. Romero.</p>
+<p>Garside, J. and M.R. Al-Dibouni, “Velocity-voidage relationship for fluidization and
+sedimentation in solid-liquid systems,” Ind. Eng. Chem. Process Des. Dev., 16, 206
+(1977).</p>
+</section>
+</section>
+<section id="q-tensor-diffusivity">
+<h2><strong>Q Tensor Diffusivity</strong><a class="headerlink" href="#q-tensor-diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Q</span> <span class="n">Tensor</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id56">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id56" title="Permalink to this headline"></a></h3>
+<p>This card specifies the coefficients for use in the Q-tensor suspension rheology model.
+The &lt;float_list&gt; has three values, one for each direction, so the input parameters are
+defined as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species number for suspension volume fraction.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>Coefficient of eigenvectors in the flow direction.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>Coefficient of eigenvectors in the gradient direction.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>Coefficient of eigenvector in the vorticity direction.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id57">
+<h3><strong>Examples</strong><a class="headerlink" href="#id57" title="Permalink to this headline"></a></h3>
+<p>The current best selection of coefficients is given by:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Q</span> <span class="n">Tensor</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="mi">0</span> <span class="mf">1.0</span> <span class="mf">1.0</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+</section>
+<section id="id58">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id58" title="Permalink to this headline"></a></h3>
+<p>The three directions (1, 2, 3) are often called the (flow, gradient, vorticity) directions.
+Here, vorticity is <em>not</em> curl(u), but defined (along with the other three) for a particular set
+of circumstances: steady simple shear flow. Their analogous definitions in other
+regimes, as well as the selection of the coefficients, is an active area of research. The
+interested reader should review the references listed below.</p>
+</section>
+<section id="id59">
+<h3><strong>References</strong><a class="headerlink" href="#id59" title="Permalink to this headline"></a></h3>
+<p>Brady, J. F. and Morris J. F., “Microstructure of strongly sheared suspensions and its
+impact on rheology and diffusion,” J. of Fluid Mechanics, v. 348 pp.103-139, Oct 10,
+1997.</p>
+<p>Fang, Z. W., Mammoli, A. A., Brady, J.F., Ingber, M.S., Mondy, L.A. and Graham,
+A.L., “Flow-aligned tensor models for suspension flows,” Int. J. of Multiphase Flow, v.
+28(#1) pp. 137-166, January 2002.</p>
+<p>Hopkins, M. M., Mondy, L. A., Rao, R. R., Altobelli, S. A., Fang, Z., Mammoli, A. A.
+and Ingber, M. S., 2001. “Three-Dimensional Modeling of Suspension Flows with a
+Flow-Aligned Tensor Model”, The 3rd Pacific Rim Conference on Rheology, July 8-
+13, 2001, Vancouver, B.C., Canada.</p>
+<p>Morris, J. F. and Boulay, F., “Curvilinear flows of noncolloidal suspensions: The role of
+normal stresses,” J. of Rheology, v. 43(#5) pp. 1213-1237 Sep-Oct 1999.</p>
+</section>
+</section>
+<section id="species-time-integration">
+<h2><strong>Species Time Integration</strong><a class="headerlink" href="#species-time-integration" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Species</span> <span class="n">Time</span> <span class="n">Integration</span><span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id60">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id60" title="Permalink to this headline"></a></h3>
+<p>Sharp gradients are often a feature of convective-diffusive computations involving
+species. Traditional Galerkin time integration is not optimal under these circumstances.
+This optional card is used to change the species time integration scheme to be different
+from the global time integration. Each species equation can use a different time
+integration. The new time integration schemes are based upon a Taylor-Galerkin
+formulation which has better behavior when sharp fronts are present.</p>
+<p>Following are the {model_name} options for species time integration, each of which
+requires only a species designation to which the model should be applied:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>STANDARD</strong></p></td>
+<td><p>the input deck formulation, i.e., the global time integration scheme; this is the
+default.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - the index of the species equation.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>TAYLOR_GALERKIN</strong></p></td>
+<td><p>an implicit or semi-implicit Taylor-Galerkin time integration scheme</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - the index of the species equation.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>TAYLOR_GALERKIN_EXP</strong></p></td>
+<td><p>An explicit Taylor-Galerkin time integration scheme</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - the index of the species equation.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id61">
+<h3><strong>Examples</strong><a class="headerlink" href="#id61" title="Permalink to this headline"></a></h3>
+<p>The following sample input card invokes the explicit Taylor-Galerkin time integration of the species equation.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Species</span> <span class="n">Time</span> <span class="n">Integration</span> <span class="o">=</span> <span class="n">TAYLOR_GALERKIN_EXP</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id62">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id62" title="Permalink to this headline"></a></h3>
+<p>The Taylor-Galerkin schemes are designed for advection dominated problems with
+sharp fronts where rigorous mass conservation is important.</p>
+<ul class="simple">
+<li><p><strong>TAYLOR_GALERKIN</strong> uses an implicit or semi-implicit form of the Taylor-
+Galerkin time integrals depending on what is chosen in the input deck.</p></li>
+<li><p><strong>TAYLOR_GALERKIN_EXP</strong> uses an explicit form of the equations and is
+favored for volume-of-fluid simulations where the diffusive character of the
+implicit solver creates mass balance errors. The drawback of explicit time
+integration methods is that the time step used is governed by the Courant limit and
+must be quite small for stability.</p></li>
+</ul>
+</section>
+<section id="id63">
+<h3><strong>References</strong><a class="headerlink" href="#id63" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="advective-scaling">
+<h2><strong>Advective Scaling</strong><a class="headerlink" href="#advective-scaling" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Advective</span> <span class="n">Scaling</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id64">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id64" title="Permalink to this headline"></a></h3>
+<p>This material property card permits the user to scale only the advective terms in one or
+more of the species transport equations by a fixed constant. This may be useful when
+solving problems with non-standard concentrations or for stability reasons.</p>
+<p>A single {model_name} is available; it and its parameters are described below:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model used to specify the advective scaling.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - the index of the species equation to which the advective scaling will
+occur.</p></li>
+<li><p>&lt;float&gt; - scaling, the actual value for the multiplicative scaling factor.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id65">
+<h3><strong>Examples</strong><a class="headerlink" href="#id65" title="Permalink to this headline"></a></h3>
+<p>Here is an example of the card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Advective</span> <span class="n">Scaling</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+<p>In this case, the card is being used to eliminate the advective terms in the conservation
+equation for species 0.</p>
+</section>
+<section id="id66">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id66" title="Permalink to this headline"></a></h3>
+<p>The advective terms in the species conservation equations take the form, u ⋅ ∇c where
+c is the species concentration and u the fluid velocity.</p>
+</section>
+<section id="id67">
+<h3><strong>References</strong><a class="headerlink" href="#id67" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="latent-heat-vaporization">
+<h2><strong>Latent Heat Vaporization</strong><a class="headerlink" href="#latent-heat-vaporization" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Latent</span> <span class="n">Heat</span> <span class="n">Vaporization</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">E</span><span class="o">/</span><span class="n">M</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id68">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id68" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the model for the latent heat of vaporization for
+each species. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the constant latent heat of vaporization model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - the value of the latent heat of vaporization.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id69">
+<h3><strong>Examples</strong><a class="headerlink" href="#id69" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Latent</span> <span class="n">Heat</span> <span class="n">Vaporization</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id70">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id70" title="Permalink to this headline"></a></h3>
+<p>See the discussion for the <em>Latent Heat Fusion</em> model.</p>
+</section>
+<section id="id71">
+<h3><strong>References</strong><a class="headerlink" href="#id71" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="latent-heat-fusion">
+<h2><strong>Latent Heat Fusion</strong><a class="headerlink" href="#latent-heat-fusion" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Latent</span> <span class="n">Heat</span> <span class="n">Fusion</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">E</span><span class="o">/</span><span class="n">M</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id72">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id72" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the model for the latent heat of fusion for each species.
+Thus an input deck may include several of these cards. Definitions of the input
+parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the latent heat of fusion model, the only one available.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - the value of the latent heat of fusion.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id73">
+<h3><strong>Examples</strong><a class="headerlink" href="#id73" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Latent</span> <span class="n">Heat</span> <span class="n">Fusion</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id74">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id74" title="Permalink to this headline"></a></h3>
+<p>This card is used on a species-basis and is unrelated to the latent heat of fusion
+specification for the <strong>ENTHALPY</strong> model of heat capacity. It is used to calculate the
+standard state heat of formation for the species. A related important card is the <em>Latent
+Heat Vaporization</em>.</p>
+</section>
+<section id="id75">
+<h3><strong>References</strong><a class="headerlink" href="#id75" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="vapor-pressure">
+<h2><strong>Vapor Pressure</strong><a class="headerlink" href="#vapor-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Vapor</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">varies</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id76">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id76" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the model for the vapor pressure for each species;
+it has two main classes of use. The first class regards multiphase flow in porous media,
+which is activated when the media type is set to <strong>POROUS_UNSATURATED</strong> or
+<strong>TWO_PHASE</strong> (cf. the <em>Media Type</em> card). The second class of use of this data card is
+for specification of vapor pressure at the external boundary of a liquid domain, for
+which the bounding gas phase is modeled with a lumped parameter approach, or at an
+internal interface between a liquid and a gas. No curvature effects are included here.
+Eventually the models in this class will be supported in the porous-media cases.
+Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the vapor pressure, based on the class of use.</p>
+<p>For the first class of multiphase flows in porous media, {model_name} can be one of
+the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>KELVIN</strong> - for a volatile liquid</p></li>
+<li><p><strong>IDEAL_GAS</strong> - for a non-condensable gas</p></li>
+<li><p><strong>FLAT</strong> - for a volatile liquid</p></li>
+</ul>
+</div></blockquote>
+<p>For the second class regarding specification of vapor pressure at the external
+boundary of a liquid domain or the interface between a gas and a liquid, {model_name}
+can be one of the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>CONSTANT</strong> - for a constant vapor pressure model</p></li>
+<li><p><strong>ANTOINE</strong> - for temperature-dependent, nonideal gases</p></li>
+<li><p><strong>RIEDEL</strong> -for temperature-dependent, nonideal gases</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p>&lt;species&gt;</p></td>
+<td><p>An integer designating the species equation. Typically this value is zero if the
+problem is one of a single solvent in a partially saturated medium.</p></td>
+</tr>
+<tr class="row-odd"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/454_goma_physics.png"><img alt="../_images/454_goma_physics.png" src="../_images/454_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Vapor pressure model choices and their parameters are discussed below.</p>
+<p><em>Models in the first class…</em></p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 80%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>KELVIN</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The &lt;float_list&gt; for the <strong>KELVIN</strong> option specifies input values for seven parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Equilibrium vapor pressure across a flat interface</p></li>
+<li><p>&lt;float2&gt; - Liquid density</p></li>
+<li><p>&lt;float3&gt; - Molecular weight of the liquid</p></li>
+<li><p>&lt;float4&gt; - Gas law constant</p></li>
+<li><p>&lt;float5&gt; - Operating temperature</p></li>
+<li><p>&lt;float6&gt; - Molecular weight of air or gas phase</p></li>
+<li><p>&lt;float7&gt; - Ambient pressure of that gas phase</p></li>
+</ul>
+</div></blockquote>
+<p>The <strong>KELVIN</strong> option is used to include the effect of vapor-pressure lowering that
+results in equilibrium over high curvature menisci, i.e., small pores. The equation form
+of this is</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>FLAT</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The <strong>FLAT</strong> option requires the same seven parameters as the <strong>KELVIN</strong> model but leaves
+off the exponential function, i.e., the vapor pressure is independent of the level of
+capillary pressure. The constants are still needed so that the gas-phase concentration can
+be calculated with the ideal gas law. See the <strong>KELVIN</strong> option above for definition of
+the &lt;float_list&gt; values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>IDEAL_GAS</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The &lt;float_list&gt; for this model has three values, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Molecular weight of the gas</p></li>
+<li><p>&lt;float2&gt; - Gas law constant</p></li>
+<li><p>&lt;float3&gt; - Operating temperature</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p><em>Models in the second class..</em></p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 80%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;species&gt;
+&lt;float1&gt;</p></td>
+<td><p>This model is used for a constant species source such as a homogeneous reaction term. The
+&lt;float_list&gt; has a single value:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Vapor pressure</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ANTOINE</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The <strong>ANTOINE</strong> model for vapor pressure is used in conjunction with the <em>VL_EQUIL</em>
+boundary condition. If specified, a temperature-dependent vapor pressure for species i is
+calculated.</p>
+<p>The model requires six values in the &lt;float_list&gt;, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - A, the unit conversion factor for pressure based on the units in the
+material file</p></li>
+<li><p>&lt;float2&gt; - Bi, Antoine coefficient for species i</p></li>
+<li><p>&lt;float3&gt; - Ci, Antoine coefficient for species i</p></li>
+<li><p>&lt;float4&gt; - Di, Antoine coefficient for species i</p></li>
+<li><p>&lt;float5&gt; - Tmin, Minimum temperature of the range over which the Antoine relation will
+hold</p></li>
+<li><p>&lt;float6&gt; - Tmax, Maximum temperature of the range over which the Antoine relation will
+hold</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>RIEDEL</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The <strong>RIEDEL</strong> model for vapor pressure is used in conjunction with the <em>VL_EQUIL</em>
+boundary condition card. If specified, a temperature-dependent vapor pressure for species
+i is calculated.</p>
+<p>The model requires eight values in the &lt;float_list&gt;, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - A, the unit conversion factor for pressure based on the units in the
+material file</p></li>
+<li><p>&lt;float2&gt; - Bi, Riedel constant for species i</p></li>
+<li><p>&lt;float3&gt; - Ci, Riedel constant for species i</p></li>
+<li><p>&lt;float4&gt; - Di, Riedel constant for species i</p></li>
+<li><p>&lt;float5&gt; - Ei, Riedel constant for species i</p></li>
+<li><p>&lt;float6&gt; - Fi, Riedel constant for species i</p></li>
+<li><p>&lt;float7&gt; - Tmin, Minimum temperature of the range over which the relation will hold</p></li>
+<li><p>&lt;float8&gt; - Tmax, Maximum temperature of the range over which the relation will hold</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/455_goma_physics.png"><img alt="../_images/455_goma_physics.png" src="../_images/455_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/456_goma_physics.png"><img alt="../_images/456_goma_physics.png" src="../_images/456_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id77">
+<h3><strong>Examples</strong><a class="headerlink" href="#id77" title="Permalink to this headline"></a></h3>
+<p>An example use of the Antoine model for vapor pressure follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Vapor</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="n">ANTOINE</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mf">9.380340229</span> <span class="mf">3096.516433</span> <span class="o">-</span><span class="mf">53.668</span> <span class="mf">0.1</span> <span class="mi">1000</span>
+</pre></div>
+</div>
+</section>
+<section id="id78">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id78" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id79">
+<h3><strong>References</strong><a class="headerlink" href="#id79" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="species-volume-expansion">
+<h2><strong>Species Volume Expansion</strong><a class="headerlink" href="#species-volume-expansion" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Species</span> <span class="n">Volume</span> <span class="n">Expansion</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="mi">1</span><span class="o">/</span><span class="n">T</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id80">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id80" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the model for the coefficient of volume expansion
+associated with the concentration of a particular species. This property is optional for
+the <strong>BOUSS</strong> and <strong>BOUSSINESQ</strong> option on the <em>Navier-Stokes Source</em> card and, if
+nonzero, will result in a buoyancy term to be added to the Navier-Stokes equation that
+is apportioned to the species volume expansion coefficient, defined as the logarithmic
+sensitivity of density to concentration, or (dlnr) ⁄ (dC).</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the constant volume expansion coefficient model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - the value of the constant expansion coefficient.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id81">
+<h3><strong>Examples</strong><a class="headerlink" href="#id81" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Species</span> <span class="n">Volume</span> <span class="n">Expansion</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id82">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id82" title="Permalink to this headline"></a></h3>
+<p>WARNING: Please be aware that if the thermal volume expansion coefficient is also
+nonzero, the buoyancy force will be augmented.</p>
+</section>
+<section id="id83">
+<h3><strong>References</strong><a class="headerlink" href="#id83" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="standard-state-chemical-potential">
+<h2><strong>Standard State Chemical Potential</strong><a class="headerlink" href="#standard-state-chemical-potential" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Standard</span> <span class="n">State</span> <span class="n">Chemical</span> <span class="n">Potential</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id84">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id84" title="Permalink to this headline"></a></h3>
+<p>This card sets the standard state chemical potential of a species, &lt;integer&gt;, in the
+current material to a specified value, &lt;float&gt;. Currently, only the generic CONSTANT
+model is implemented. However, extensions to polynomial expressions in the
+temperature are easily implemented and forthcoming.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model name for the standard chemical state chemical potential model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt; - the value of the chemical potential</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The standard state chemical potential, μk, o(T) , which is defined to be only a function
+of the temperature, is used in the evaluation of the definition of the pure species
+chemical potential of species k, μk (T, P) , which in turn is used in the evaluation of
+the mixture chemical potential of species k, μk(T, P, Xi) .</p>
+</section>
+<section id="id85">
+<h3><strong>Examples</strong><a class="headerlink" href="#id85" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Standard</span> <span class="n">State</span> <span class="n">Chemical</span> <span class="n">Potential</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id86">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id86" title="Permalink to this headline"></a></h3>
+<p>The values in this card are currently only applicable to the <em>IS_EQUIL_PSEUDORXN</em>
+boundary condition.</p>
+</section>
+<section id="id87">
+<h3><strong>References</strong><a class="headerlink" href="#id87" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="pure-species-chemical-potential">
+<h2><strong>Pure Species Chemical Potential</strong><a class="headerlink" href="#pure-species-chemical-potential" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Pure</span> <span class="n">Species</span> <span class="n">Chemical</span> <span class="n">Potential</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id88">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id88" title="Permalink to this headline"></a></h3>
+<p>This card takes the specification of the standard state chemical potential, which is
+defined as a function of temperature only, and completes the definition of the pure
+species chemical potential by possibly adding in a pressure dependence. Two model
+values are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>PRESSURE_INDEPENDENCE</strong></p></td>
+<td><p>No pressure dependence to the pure species state when this value of {model_name} is
+specified. The standard state chemical potential is equal to the pure species
+chemical potential. The &lt;integer&gt; argument specifies the species subindex, k.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>PRESSURE_IDEALGAS</strong></p></td>
+<td><p>The following expression holds for the pressure dependence:</p>
+<blockquote>
+<div><p>μk*(T, P) μ= k, o(T) + RTln(P ⁄ 1 atm )</p>
+<p>The &lt;integer&gt; argument specifies the species subindex, k.</p>
+</div></blockquote>
+<p>The standard state chemical potential, μk, o(T), which is defined to be only a
+function of the temperature, is used in the evaluation of the definition of the pure
+species chemical potential of species k, μk*(T, P) , which in turn is used in the
+evaluation of the mixture chemical potential of species k, μk (T P Xi).</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id89">
+<h3><strong>Examples</strong><a class="headerlink" href="#id89" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Pure</span> <span class="n">Species</span> <span class="n">Chemical</span> <span class="n">Potential</span> <span class="o">=</span> <span class="n">PRESSURE</span> <span class="n">INDEPENDENT</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id90">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id90" title="Permalink to this headline"></a></h3>
+<p>The values in this card are only applicable to the <em>IS_EQUIL_PSEUDORXN</em> boundary
+condition currently.</p>
+</section>
+<section id="id91">
+<h3><strong>References</strong><a class="headerlink" href="#id91" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="chemical-potential">
+<h2><strong>Chemical Potential</strong><a class="headerlink" href="#chemical-potential" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Chemical</span> <span class="n">Potential</span> <span class="o">=</span> <span class="p">{</span><span class="n">IDEAL_SOLUTION</span> <span class="o">|</span> <span class="n">STOICHIOMETRIC_PHASE</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id92">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id92" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the formulation of the chemical potential for the phase. It is
+currently unconnected to <em>Goma’s</em> functionality. Two values are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>IDEAL_SOLUTION</strong></p></td>
+<td><p>Ideal solution thermodynamics</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>STOICHIOMETRIC_PHASE</strong></p></td>
+<td><p>Phase consists of fixed set of molecular composition</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id93">
+<h3><strong>Examples</strong><a class="headerlink" href="#id93" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Chemical</span> <span class="n">Potential</span> <span class="o">=</span> <span class="n">IDEAL_SOLUTION</span>
+</pre></div>
+</div>
+</section>
+<section id="id94">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id94" title="Permalink to this headline"></a></h3>
+<p>The chemical potential of species k in an ideal solution is given by the expression,
+[Denbigh, p. 249],</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/457_goma_physics.png"><img alt="../_images/457_goma_physics.png" src="../_images/457_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where μk*(T, P) is defined as the chemical potential of species k in its pure state (or a
+hypothetical pure state if a real pure state doesn’t exist) at temperature T and pressure
+P. μk*(T, P) is related to the standard state of species k in the phase, μk, o(T), which
+is independent of pressure, through specification of the pressure dependence of the
+pure species k. Xk is the mole fraction of species k in the phase.</p>
+<p>The chemical potential of species k (actually there is only one species!) in a
+stoichiometric phase is equal to</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/458_goma_physics.png"><img alt="../_images/458_goma_physics.png" src="../_images/458_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id95">
+<h3><strong>References</strong><a class="headerlink" href="#id95" title="Permalink to this headline"></a></h3>
+<p>Denbigh, K., The Principles of Chemical Equilibrium, 4th Ed., Cambridge University
+Press, 1981</p>
+</section>
+</section>
+<section id="reference-concentration">
+<h2><strong>Reference Concentration</strong><a class="headerlink" href="#reference-concentration" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reference</span> <span class="n">Concentration</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="id96">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id96" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the model for the reference concentration, which is
+required by the BOUSS option on the <em>Navier-Stokes Source</em> card. Definitions of the
+input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model for a constant reference concentration.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - the species equation to which this specification applies.</p></li>
+<li><p>&lt;float&gt; - the value of the reference concentration.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id97">
+<h3><strong>Examples</strong><a class="headerlink" href="#id97" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reference</span> <span class="n">Concentration</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id98">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id98" title="Permalink to this headline"></a></h3>
+<p>The Boussinesq model subtracts out the pressure head in its final equations. Thus, to
+zeroth order, hydrodynamic pressure field doesn’t include a static variation in the
+gravity direction due to the pressure head. But, the source term in the momentum
+equations then becomes –g(ρ – ρo) instead of simply –gρ. The reference
+concentration values entered via this card are used to evaluate ρo for use in calculating
+the natural convective force due to concentration differences.</p>
+<p>The card is also used in various places where a value for a species concentration is
+needed. However, the species unknown variable is not included in the solution vector.</p>
+</section>
+<section id="id99">
+<h3><strong>References</strong><a class="headerlink" href="#id99" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="molecular-weight">
+<h2><strong>Molecular Weight</strong><a class="headerlink" href="#molecular-weight" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Molecular</span> <span class="n">Weight</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id100">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id100" title="Permalink to this headline"></a></h3>
+<p>This card specifies the molecular weight of a species. It is required when the Stefan-
+Maxwell flux model is used in modeling multicomponent transport of neutral or
+charged species. It is also required when vapor-liquid phase equilibrium is considered
+at the material boundaries. Molecular weight is used to convert units of mass fraction to
+mole fraction in a species material balance.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Molecular weight model type.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - species number</p></li>
+<li><p>&lt;float&gt; - molecular weight of the species</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id101">
+<h3><strong>Examples</strong><a class="headerlink" href="#id101" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Molecular</span> <span class="n">Weight</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">6.939</span>
+</pre></div>
+</div>
+</section>
+<section id="id102">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id102" title="Permalink to this headline"></a></h3>
+<p>This card originated from the development of a multicomponent diffusion model based
+on the Stefan-Maxwell equation. However, it has been generalized to include problems
+where mole fractions are necessary for the consideration of phase equilibria. For
+example, when <em>YFLUX_EQUIL</em> is invoked in the input deck, an equilibrium problem is
+solved rigorously which requires gas and liquid mole fractions. The conversion from
+mass fraction to mole fraction requires molecular weight information.</p>
+</section>
+<section id="id103">
+<h3><strong>References</strong><a class="headerlink" href="#id103" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="specific-volume">
+<h2><strong>Specific Volume</strong><a class="headerlink" href="#specific-volume" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Specific</span> <span class="n">Volume</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id104">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id104" title="Permalink to this headline"></a></h3>
+<p>This card specifies the specific volume of a species. It is required when polymersolvent
+vapor-liquid phase equilibrium is considered at the material boundaries.
+Specific volume is used to convert units of mass fraction to volume fraction in species
+material balance.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Specific volume model type.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - species number</p></li>
+<li><p>&lt;float&gt; - pure component specific volume</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id105">
+<h3><strong>Examples</strong><a class="headerlink" href="#id105" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Specific</span> <span class="n">Volume</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">1.154734411</span>
+</pre></div>
+</div>
+</section>
+<section id="id106">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id106" title="Permalink to this headline"></a></h3>
+<p>This is the place where pure component density (inverse of specific volume)
+information is entered in the material property. When Flory-Huggins vapor-liquid
+equilibrium model was first developed in <em>Goma</em>, the equations were based on volume
+fractions, not mass fractions. In order to convert these units, the specific volume
+parameter is required for each component in the mixture.</p>
+<p>This card is used only in conjunction with Flory-Huggins nonideal liquid activity
+model for polymer-solvent mixtures. This occurs when two types of BCs are specified:
+1) when <em>VL_POLY</em> is specified at an discontinuous internal boundary and 2) when
+FLORY model under <em>YFLUX_EQUIL</em> boundary card is specified.</p>
+</section>
+<section id="id107">
+<h3><strong>References</strong><a class="headerlink" href="#id107" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="molar-volume">
+<h2><strong>Molar Volume</strong><a class="headerlink" href="#molar-volume" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Molar</span> <span class="n">Volume</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">L3</span><span class="o">/</span><span class="n">mole</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id108">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id108" title="Permalink to this headline"></a></h3>
+<p>This card is referred when molar based equilibrium models are used on the boundaries,
+such as <em>VL_POLY</em>. The float value specified is necessary for converting mass fractions
+to mole fractions.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model for converting mass to mole fractions.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - species number</p></li>
+<li><p>&lt;float&gt; - molar volume of the species. [L3/mole]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id109">
+<h3><strong>Examples</strong><a class="headerlink" href="#id109" title="Permalink to this headline"></a></h3>
+<p>An example usage for this card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Molar</span> <span class="n">Volume</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+</section>
+<section id="id110">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id110" title="Permalink to this headline"></a></h3>
+<p>The same conversion from mass fraction to mole fraction can be obtained through
+specification of the <em>Molecular Weight</em> and <em>Specific Volume</em>. The redundancy, which will
+be allowed to remain, arose through simultaneous additions to the code by developers
+working on different projects.</p>
+</section>
+<section id="id111">
+<h3><strong>References</strong><a class="headerlink" href="#id111" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="charge-number">
+<h2><strong>Charge Number</strong><a class="headerlink" href="#charge-number" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Charge</span> <span class="n">Number</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id112">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id112" title="Permalink to this headline"></a></h3>
+<p>This card is required when charged species are involved, e.g. when using the
+<strong>FICKIAN_CHARGED</strong> or the <strong>STEFAN_MAXWELL_CHARGED</strong> <em>Diffusion
+Constitutive Equation</em> card. It specifies the charge number (e.g., the charge number for
+Ni2+ is 2, and that for SO2-is -2) of a species.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model for specifying constant charge on species.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - species number</p></li>
+<li><p>&lt;float&gt; - charge number of the species</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id113">
+<h3><strong>Examples</strong><a class="headerlink" href="#id113" title="Permalink to this headline"></a></h3>
+<p>Sample usage for this card is shown belo</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Charge</span> <span class="n">Number</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id114">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id114" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id115">
+<h3><strong>References</strong><a class="headerlink" href="#id115" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="non-condensable-molecular-weight">
+<h2><strong>Non-condensable Molecular Weight</strong><a class="headerlink" href="#non-condensable-molecular-weight" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Non</span><span class="o">-</span><span class="n">condensable</span> <span class="n">Molecular</span> <span class="n">Weight</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id116">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id116" title="Permalink to this headline"></a></h3>
+<p>This card specifies the molecular weight of a species when the species is implicit in the
+mixture. This means that in most problems involving n+1 species, only n species are
+independent; i.e.,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/459_goma_physics.png"><img alt="../_images/459_goma_physics.png" src="../_images/459_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>It is required when Flory-Huggins vapor-liquid phase equilibrium is considered at the
+material boundaries, as used in <em>VL_POLY</em> and in <strong>FLORY</strong> under <em>YFLUX_EQUIL</em>. This
+is used to convert units of mass fraction to mole fraction in species material balance.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model for converting mass to mole fractions.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - species number</p></li>
+<li><p>&lt;float&gt; - molecular weight of the non-condensable species, usually the n+1
+component in <em>Goma</em> convention.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id117">
+<h3><strong>Examples</strong><a class="headerlink" href="#id117" title="Permalink to this headline"></a></h3>
+<p>The following is an example card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Non</span><span class="o">-</span><span class="n">condensable</span> <span class="n">Molecular</span> <span class="n">Weight</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">2</span> <span class="mf">36.</span>
+</pre></div>
+</div>
+<p>This example shows that two species are solved in the <em>Goma</em> problem explicitly:
+species 0 and species 1.</p>
+</section>
+<section id="id118">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id118" title="Permalink to this headline"></a></h3>
+<p>In the current set up, species balance in <em>Goma</em> considers the species to be independent
+of each other. However, the mass or volume fractions of all species must add up to
+unity in any mixtures. This means that some properties of the last species must be
+entered in the material file although that component is not solved explicitly in the
+problem. This is the case for molecular weight, molar volume, and specific volume
+specifications, which are required for calculating Flory-Huggins liquid activity.</p>
+</section>
+<section id="id119">
+<h3><strong>References</strong><a class="headerlink" href="#id119" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="non-volatile-molar-volume">
+<h2><strong>Non-volatile Molar Volume</strong><a class="headerlink" href="#non-volatile-molar-volume" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Non</span><span class="o">-</span><span class="n">volatile</span> <span class="n">Molar</span> <span class="n">Volume</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id120">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id120" title="Permalink to this headline"></a></h3>
+<p>This card specifies the molar volume of a species when the species is implicit in the
+mixture. This means that in most problems involving n+1 species, only n species are
+independent; i.e.,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/460_goma_physics.png"><img alt="../_images/460_goma_physics.png" src="../_images/460_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>IIt is required when Flory-Huggins vapor-liquid phase equilibrium is considered at the
+material boundaries, as used in <em>VL_POLY</em> and in <strong>FLORY</strong> under <em>YFLUX_EQUIL</em>. This
+is used to convert units of mass fraction to mole fraction in species material balance.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model for converting mass to mole fractions.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - species number</p></li>
+<li><p>&lt;float&gt; - molar volume of the non-volatile species, usually the n+1 component in
+<em>Goma</em> convention.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id121">
+<h3><strong>Examples</strong><a class="headerlink" href="#id121" title="Permalink to this headline"></a></h3>
+<p>The following is an example card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Non</span><span class="o">-</span><span class="n">volatile</span> <span class="n">Molar</span> <span class="n">Volume</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">2</span> <span class="mf">1.5e-3</span>
+</pre></div>
+</div>
+<p>This example shows that two species are solved in the <em>Goma</em> problem explicitly:
+species 0 and species 1.</p>
+</section>
+<section id="id122">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id122" title="Permalink to this headline"></a></h3>
+<p>In the current set up, species balance in <em>Goma</em> considers the species to be independent
+of each other. However, the mass or volume fractions of all species must add up to
+unity in any mixtures. This means that some properties of the last species must be
+entered in the material file although that component is not solved explicitly in the
+problem. This is the case for molecular weight, molar volume, and specific volume
+specifications, which are required to calculate Flory-Huggins liquid activity.</p>
+</section>
+<section id="id123">
+<h3><strong>References</strong><a class="headerlink" href="#id123" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="non-volatile-specific-volume">
+<h2><strong>Non-volatile Specific Volume</strong><a class="headerlink" href="#non-volatile-specific-volume" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Non</span><span class="o">-</span><span class="n">volatile</span> <span class="n">Specific</span> <span class="n">Volume</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id124">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id124" title="Permalink to this headline"></a></h3>
+<p>This card specifies the specific volume of a species when the species is implicit in the
+mixture. This means that in most problems involving n+1 species, only n species are
+independent; i.e.,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/461_goma_physics.png"><img alt="../_images/461_goma_physics.png" src="../_images/461_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>It is required when Flory-Huggins vapor-liquid phase equilibrium is considered at the
+material boundaries, as used in <em>VL_POLY</em> and in <strong>FLORY</strong> under <em>FLUX_EQUIL</em>. This
+is used to convert units of mass fraction to mole fraction in species material balance.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model for converting mass to mole fractions.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - species number</p></li>
+<li><p>&lt;float&gt; - specific volume of the non-volatile species, usually the n+1 component
+in <em>Goma</em> convention.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id125">
+<h3><strong>Examples</strong><a class="headerlink" href="#id125" title="Permalink to this headline"></a></h3>
+<p>The following is an example card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Non</span><span class="o">-</span><span class="n">volatile</span> <span class="n">Specific</span> <span class="n">Volume</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">2</span> <span class="mf">0.855e-3</span>
+</pre></div>
+</div>
+<p>This example shows that two species are solved in the <em>Goma</em> problem explicitly:
+species 0 and species 1.</p>
+</section>
+<section id="id126">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id126" title="Permalink to this headline"></a></h3>
+<p>In the current set up, species balance in <em>Goma</em> considers the species to be independent
+of each other. However, the mass or volume fractions of all species must add up to
+unity in any mixtures. This means that some properties of the last species must be
+entered in the material file although that component is not solved explicitly in the
+problem. This is the case for molecular weight, molar volume, and specific volume
+specifications, which are required for calculating Flory-Huggins liquid activity.</p>
+</section>
+<section id="id127">
+<h3><strong>References</strong><a class="headerlink" href="#id127" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="flory-huggins-parameters">
+<h2><strong>Flory-Huggins parameters</strong><a class="headerlink" href="#flory-huggins-parameters" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Flory</span><span class="o">-</span><span class="n">Huggins</span> <span class="n">parameters</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id128">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id128" title="Permalink to this headline"></a></h3>
+<p>This card specifies the Flory-Huggins binary interaction parameters. It is assumed that
+the binary parameters are symmetric; i.e.,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/462_goma_physics.png"><img alt="../_images/462_goma_physics.png" src="../_images/462_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Therefore, one set of i-j coefficients is sufficient to describe the binary interaction
+coefficients.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Model for constant Flory-Huggins parameters.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer1&gt; - first species number.</p></li>
+<li><p>&lt;integer2&gt; - second species number.</p></li>
+<li><p>&lt;float&gt; - Flory-Huggins binary interaction coefficient.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id129">
+<h3><strong>Examples</strong><a class="headerlink" href="#id129" title="Permalink to this headline"></a></h3>
+<p>Following is an example set of cards for a three-species mixture:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Flory</span><span class="o">-</span><span class="n">Huggins</span> <span class="n">parameters</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mf">0.3</span>
+<span class="n">Flory</span><span class="o">-</span><span class="n">Huggins</span> <span class="n">parameters</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mi">2</span> <span class="mf">0.3</span>
+<span class="n">Flory</span><span class="o">-</span><span class="n">Huggins</span> <span class="n">parameters</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mf">0.3</span>
+</pre></div>
+</div>
+<p>This example shows that two species are solved in the <em>Goma</em> problem explicitly:
+species 0 and species 1.</p>
+</section>
+<section id="id130">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id130" title="Permalink to this headline"></a></h3>
+<p>No discussion; see Sun (1998).</p>
+</section>
+<section id="id131">
+<h3><strong>References</strong><a class="headerlink" href="#id131" title="Permalink to this headline"></a></h3>
+<p>GTM-007.1: New Multicomponent Vapor-Liquid Equilibrium Capabilities in GOMA,
+December 10, 1998, A. C. Sun</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="microstructure.html" class="btn btn-neutral float-left" title="Microstructure Properties" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="source_terms.html" class="btn btn-neutral float-right" title="Source Terms" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Permeability &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Permeability</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/microstructure/permeability.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="permeability">
+<h1><strong>Permeability</strong><a class="headerlink" href="#permeability" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Permeability</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">L2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card is used to specify the model for permeability, which is required for the
+Brinkman and Darcy formulations for flow through porous media. Definitions of the
+input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the permissible models for permeability: <strong>CONSTANT, TENSOR, KOZENY_CARMEN,</strong>
+<strong>SOLIDIFICATION</strong> and <strong>PSD_VOL, PSD_WEXP,</strong> or <strong>PSD_SEXP</strong>. (No USER model as of
+6/13/2002; contact Developers for this addition).</p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Permeability model choices and their parameters are discussed below.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>Model for constant permeability with a single parameter. This model is allowed for
+all Media Types (cf. <em>Media Type</em> card).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - k, Permeability [L2]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>TENSOR</strong> &lt;float1&gt; &lt;float2&gt;
+&lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>Model for a two dimensional, constant anisotropic permeability; it has not been
+implemented in three dimensions. All media types (cf. Media Type card) except
+<strong>POROUS_BRINKMAN</strong> may use this model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - <span class="math notranslate nohighlight">\(k_{xx}\)</span> permeability [L2]</p></li>
+<li><p>&lt;float2&gt; - <span class="math notranslate nohighlight">\(k_{yy}\)</span> permeability [L2]</p></li>
+<li><p>&lt;float3&gt; - <span class="math notranslate nohighlight">\(k_{xy}\)</span> permeability [L2]</p></li>
+<li><p>&lt;float4&gt; - <span class="math notranslate nohighlight">\(k_{yx}\)</span> permeability [L2]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>PSD_VOL</strong> &lt;float1&gt; &lt;float2&gt;
+&lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>This is a model of a deformable medium with a probabilistic distribution of pore
+sizes; see Technical Discussion section. Four parameters are required for the
+<strong>PSD_VOL</strong> model:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - φ0, porosity in undeformed state</p></li>
+<li><p>&lt;float2&gt; - rmax(φ0), maximum pore radius in undeformed state</p></li>
+<li><p>&lt;float3&gt; - α, ratio of smallest pore size to largest pore size</p></li>
+<li><p>&lt;float4&gt; - 1 ⁄ τ2, a geometric tortuosity factor</p></li>
+</ul>
+</div></blockquote>
+<p>All media types (cf. <em>Media Type</em> card) except <strong>POROUS_BRINKMAN</strong> may use this model</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>PSD_WEXP</strong> &lt;float1&gt;
+&lt;float2&gt; &lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>Same &lt;float&gt; specifications as <strong>PSD_VOL</strong> model.
+This model is allowed for all media types except <strong>POROUS_BRINKMAN</strong>
+(cf. <em>Media Type</em> card).</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>PSD_SEXP</strong> &lt;float1&gt;
+&lt;float2&gt; &lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>Same &lt;float&gt; specifications as <strong>PSD_VOL</strong> model.
+This model is allowed for all media types except <strong>POROUS_BRINKMAN</strong>
+(cf. <em>Media Type</em> card).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SOLIDIFICATION</strong> &lt;float1&gt;</p></td>
+<td><p>Used to phase in a porous flow term in the liquid momentum equations for low volume
+fraction packing of particles in the Brinkman porous flow formulation (see discussion
+below). Used for Phillip’s model of suspensions for the <em>Liquid Constitutive
+Equation</em>, viz. <strong>CARREAU_SUSPENSION, SUSPENSION, FILLED_EPOXY</strong> or
+<strong>POWER_LAW_SUSPENSION</strong>.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - the species number of the suspension flow model; it is used to indicate
+that maximum packing, or solidification has occurred. (The float is converted to
+an integer).</p></li>
+</ul>
+</div></blockquote>
+<p>This model is <strong>ONLY</strong> allowed for media type <strong>POROUS_BRINKMAN</strong>
+(cf. <em>Media Type</em> card). The functional form is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/402_goma_physics.png"><img alt="../../_images/402_goma_physics.png" src="../../_images/402_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where μ0 is the clear fluid viscosity, φpart is the volume fraction of particles, or
+concentration divided by the maximum packing (0.68 for monodisperse spheres), and
+havg is the average element size.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>KOZENY_CARMAN</strong> &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>The Kozeny-Carman equation relates the permeability to the porosity for a porous
+medium and has been shown to fit well the experimental results in many cases. This.
+equation is easily derivable from the PSD_* models for the case of uniform
+pore-size distribution, viz. a delta distribution (cf. Cairncross, et. al., 1996 for
+derivation). The model is currently implemented in the isotropic media case and is
+useful for deformable problems in which the porosity changes with deformation (cf.
+<em>Porosity</em> card DEFORM model). The functional form for this model is as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/403_goma_physics.png"><img alt="../../_images/403_goma_physics.png" src="../../_images/403_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here φ is the porosity, c0 is a constant consisting of tortuosity and shape factor of
+the pores, and Sv is the surface area per solid volume. The float parameters are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - c0 , tortuosity and shape factor</p></li>
+<li><p>&lt;float2&gt; - Sv , surface area per solid volume</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXTERNAL_FIELD</strong> &lt;float1&gt;</p></td>
+<td><p>This model reads in an array of values for the porosity from an initial exodus file.
+This allows for spatial variations in the parameter value.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Scale factor for converting/scaling exodusII field.</p></li>
+</ul>
+</div></blockquote>
+<p>The ExodusII field variable name should be “PERM”, viz. External Field = PERM Q1
+name.exoII (see this card)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Permeability</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.001</span>
+</pre></div>
+</div>
+<p>This specification leads to a constant permeability of 0.001.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>For all models, this card provides the permeability, in units of [L2]. For saturated
+porous materials (viz. <strong>POROUS_BRINKMAN</strong> or <strong>POROUS_SATURATED</strong> media
+types), the viscosity from the <em>Viscosity</em> card is used to compute the porous conductivity,
+viz., permeability divided by viscosity. For unsaturated media types, the viscosity
+factor comes through the relative permeability cards (see <em>Rel Gas Permeability</em> and <em>Rel
+Liq Permeability</em> cards). Please consult the references below for the proper form of the
+equations.</p>
+<p>The <strong>PSD_VOL</strong> (Probability Size Distribution, PSD) model treats the medium as a
+bundle of capillary tubes with a distribution of pores such that over a range of porek
+sizes the volume of pores is evenly distributed. For such a model, the maximum poresize
+varies with the porosity:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/404_goma_physics.png"><img alt="../../_images/404_goma_physics.png" src="../../_images/404_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Then, the permeability is a function of the maximum pore-size and the pore-size
+distribution:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/405_goma_physics.png"><img alt="../../_images/405_goma_physics.png" src="../../_images/405_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The input parameters for the PSD models are φ0, rmax(φ0), α, and 1 ⁄ τ2. More
+detail on the deformable porous medium models is given in Cairncross, et. al., 1996.
+The <strong>PSD_WEXP</strong> and <strong>PSD_SEXP</strong> are similar pore-size distribution models to
+<strong>PSD_VOL</strong>. The references below should be consulted for details on how to use these
+models.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

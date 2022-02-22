@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VELO_NORMAL &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>VELO_NORMAL</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/fluid_momentum/velo_normal.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="velo-normal">
+<h1><strong>VELO_NORMAL</strong><a class="headerlink" href="#velo-normal" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VELO_NORMAL</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">integer</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(SIC/ROTATED MOMENTUM)</strong></p>
+<p>This boundary condition allows the user to set the outward velocity component normal
+to a surface.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 80%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>VELO_NORMAL</strong></p></td>
+<td><p>Boundary condition designation.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(V_n\)</span>, value of the normal velocity component. Note that
+this velocity component is relative to the motion of the
+underlying mesh.</p></td>
+</tr>
+<tr class="row-odd"><td><p>[integer]</p></td>
+<td><p><em>blk_id</em>, an optional parameter that is the element block
+number in conjugate problems that identifies the
+material region where the <em>VELO_NORMAL</em> condition
+will be applied (usually the liquid element block in
+solid/liquid conjugate problems). For external
+boundaries, this optional parameter can be set to unity to
+force the condition to be kept at a corner between two
+side sets (2D only). This is handy for corner conditions.
+Please see GTM-004.0 for details.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VELO_NORMAL</span> <span class="n">SS</span> <span class="mi">10</span>   <span class="mf">0.0</span>
+</pre></div>
+</div>
+<p>This boundary condition will enforce an impenetrability constraint over side set 10 as it
+excludes normal velocity of the fluid relative to the mesh. This is by far the most
+common context for this boundary condition.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>The actual weighted residual equation that is applied to a node, <em>j</em>, on the surface in
+question is as follows:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/076_goma_physics.png"><img alt="../../../_images/076_goma_physics.png" src="../../../_images/076_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\phi_j\)</span> is the finite element trial function, <em>n</em> the outward-pointing normal to the
+surface, <em>v</em> the fluid velocity, <span class="math notranslate nohighlight">\(v_s\)</span> the velocity of the underlying mesh, and <span class="math notranslate nohighlight">\(v_n\)</span>
+is the
+normal velocity set by <span class="math notranslate nohighlight">\(V_n\)</span> (the input value).</p>
+<ul class="simple">
+<li><p>This constraint is a rotated strongly integrated equation so that it will replace one
+of the rotated components of the fluid momentum equation. This component
+should generally always be the normal rotated component. In two dimensions, this
+replacement is automatic. In three dimensions, this replacement must be specified
+by a <em>ROT</em> condition.</p></li>
+<li><p>This card applies the identical constraint that is applied by the <em>KINEMATIC</em>
+boundary condition. The only difference is that this card replaces the normal
+component of the rotated <em>fluid momentum</em> equation, while the latter card replaces
+the normal component of the rotated (<em>pseudo-solid</em>) <em>mesh momentum</em> equation.</p></li>
+<li><p>In conjugate liquid/solid problems, the <em>VELO_NORMAL</em> condition is often used to
+enforce the impenetrability condition of the liquid/solid interface. The optional
+<em>blk_id</em> parameter can be used to insure that the <em>VELO_NORMAL</em> condition is
+correctly applied to the liquid side of the interface. <em>blk_id</em> should be set equal to the
+element block ID of the liquid in this case. This also applies to the <em>KINEMATIC</em>
+and <em>KINEMATIC_PETROV</em> boundary conditions.</p></li>
+</ul>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-001.4: GOMA and SEAMS tutorial for new users, February 18, 2002, P. R. Schunk
+and D. A. Labreche</p>
+<p>GTM-004.1: Corners and Outflow Boundary Conditions in Goma, April 24, 2001, P. R.
+Schunk</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VL_EQUIL_PSEUDORXN &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>VL_EQUIL_PSEUDORXN</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/mass/vl_equil_pseudorxn.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="vl-equil-pseudorxn">
+<h1><strong>VL_EQUIL_PSEUDORXN</strong><a class="headerlink" href="#vl-equil-pseudorxn" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VL_EQUIL_PSEUDORXN</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer_list</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card enforces vapor-liquid equilibrium between a gas phase
+and a liquid phase species component using Raoult’s law expressed via a finite-rate
+kinetics formalism. The condition only applies to problems containing internal
+interfaces with discontinuous (or multilevel) species unknown variables. The species
+unknown variable must employ the <strong>Q1_D</strong> or <strong>Q2_D</strong> interpolation functions in both
+adjacent element blocks. This boundary condition constrains the species equations on
+both sides of the interface (i.e., supplies a boundary condition) by specifying the
+interfacial mass flux on both sides.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 73%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>VL_EQUIL_PSEUDORXN</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element Block ID of the liquid phase.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer3&gt;</p></td>
+<td><p>Element Block ID of the gas phase.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float&gt;</p></td>
+<td><p>Rate constant for the forward reaction in units of length
+divided by time.</p></td>
+</tr>
+</tbody>
+</table>
+<p>This boundary condition is typically applied to multicomponent two-phase flows that
+have rapid mass exchange between phases. The best example of this is rapid
+evaporation of a liquid component into a gas.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following sample input card</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VL_EQUIL_PSEUDORXN</span> <span class="n">SS</span> <span class="mi">4</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+<p>demonstrates the following characteristics: species number is “0”; liquid phase element
+block id is “1”; gas phase element block id is “2”; a forward rate constant of 100.0 cm
+<span class="math notranslate nohighlight">\(s^{-1}\)</span>.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The <em>VL_EQUIL_PSEUDORXN</em> boundary condition uses the following equations
+representing a kinetic approach to equilibrium expressed by Raoult’s law, relating
+species <em>k</em> on the liquid side to species <em>k</em> on the gas side.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/159_goma_physics.png"><img alt="../../../_images/159_goma_physics.png" src="../../../_images/159_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/160_goma_physics.png"><img alt="../../../_images/160_goma_physics.png" src="../../../_images/160_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/161_goma_physics.png"><img alt="../../../_images/161_goma_physics.png" src="../../../_images/161_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/162_goma_physics.png"><img alt="../../../_images/162_goma_physics.png" src="../../../_images/162_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The usage of the same index, <em>k</em>, on either side of the interface is deliberate and
+represents a stoichiometric limitation to this type of boundary condition.
+<span class="math notranslate nohighlight">\(Y_k^l\)</span> and <span class="math notranslate nohighlight">\(Y_k^g\)</span>
+are the mass fraction of species <em>k</em> on the liquid and gas sides of the interface,
+respectively. <span class="math notranslate nohighlight">\(W_k^l\)</span> is the molecular weight of species <em>k</em>. <span class="math notranslate nohighlight">\(S_k^l\)</span> is the source term for
+creation of species <em>k</em> in the liquid phase at the interface (mol <span class="math notranslate nohighlight">\(cm^{-2}\)</span>
+<span class="math notranslate nohighlight">\(s^{-1}\)</span> ). is the pseudo
+reaction rate ( <span class="math notranslate nohighlight">\(cm s^{-1}\)</span> ) input from the boundary condition card.
+<span class="math notranslate nohighlight">\(K_k^c\)</span> is the concentration
+equilibrium constant, which for the restricted stoichiometry cases covered by this
+boundary condition, is unitless. <span class="math notranslate nohighlight">\(p_k^v\)</span> is the vapor pressure of gas species <em>k</em> above a liquid
+entirely consisting of liquid species <em>k</em>. It is a function of temperature.
+<span class="math notranslate nohighlight">\(\tilde{C}_l\)</span> is the average
+concentration in the liquid (mol <span class="math notranslate nohighlight">\(cm^{-3}\)</span>). <span class="math notranslate nohighlight">\(C_k^l\)</span> and <span class="math notranslate nohighlight">\(C_k^g\)</span> are the liquid and gas concentrations
+of species <em>k</em> (mol <span class="math notranslate nohighlight">\(cm^{-3}\)</span>).</p>
+<p>The choice for the independent variable is arbitrary, although it does change the actual equation formulation for the residual and Jacobian terms arising from the boundary condition. The internal variable Species_Var_Type in the
+Uniform_Problem_Description structure may be queried to determine what the
+actual species independent variable is. Also note, if mole fractions or molar
+concentration are chosen as the independent variable in the problem, the convention
+has been to formulate terms of the residuals in units of moles, cm, and seconds.
+Therefore, division of the equilibrium equations by <span class="math notranslate nohighlight">\(W_k\)</span> would occur before their inclusion into the residual. <span class="math notranslate nohighlight">\(j_k^l\)</span> and <span class="math notranslate nohighlight">\(j_k^g\)</span> are the diffusive flux of species k (gm <span class="math notranslate nohighlight">\(cm^{-2}\)</span> <span class="math notranslate nohighlight">\(s^{-1}\)</span> )
+relative to the mass averaged velocity. <span class="math notranslate nohighlight">\(u_s\)</span> is the velocity of the interface. A typical
+value of <span class="math notranslate nohighlight">\(k^f\)</span> that would lead to good numerical behavior would be 100 cm
+<span class="math notranslate nohighlight">\(s^{-1}\)</span>,
+equivalent to a reaction with a reactive sticking coefficient of 0.01 at 1 atm and 300 K for a molecule whose molecular weight is near to <span class="math notranslate nohighlight">\(N_2\)</span> or <span class="math notranslate nohighlight">\(H_2S\)</span>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

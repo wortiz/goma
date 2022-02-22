@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IS_EQUIL_PSEUDORXN &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>IS_EQUIL_PSEUDORXN</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/mass/is_equil_pseudorxn.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="is-equil-pseudorxn">
+<h1><strong>IS_EQUIL_PSEUDORXN</strong><a class="headerlink" href="#is-equil-pseudorxn" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">IS_EQUIL_PSEUDORXN</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer_list</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card enforces equilibrium between a species component in
+two ideal solution phases via a finite-rate kinetics formalism. The condition only
+applies to problems containing internal interfaces with discontinuous (or multilevel)
+species unknown variables. The species unknown variable must employ the <strong>Q1_D</strong> or
+<strong>Q2_D</strong> interpolation functions in both adjacent element blocks. This boundary
+condition constrains the species equations on both sides of the interface (i.e.,
+supplies a boundary condition) by specifying the interfacial mass flux on both sides.</p>
+<p><em>IS_EQUIL_PSEUDORXN</em> is equivalent to the <em>VL_EQUIL_PSEUDORXN</em> except for
+the fact that we do not assume that one side of the interface is a gas and the other is
+a liquid. Instead, we assume that both materials on either side of the interface are
+ideal solutions, then proceed to formulate an equilibrium expression consistent with
+that.</p>
+<p>The &lt;integer_list&gt; requires three values; definitions of the input parameters are as
+follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 74%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>IS_EQUIL_PSEUDORXN</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element Block ID of the first phase, the “+” phase.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer3&gt;</p></td>
+<td><p>Element Block ID of the second phase, the “-” phase.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float&gt;</p></td>
+<td><p>Rate constant for the forward reaction in units of length
+divided by time.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">IS_EQUIL_PSEUDORXN</span> <span class="n">SS</span> <span class="mi">4</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+<p>demonstrates the following characteristics: species number is “0”; the “+” phase
+element block id is “1”; the “-” phase element block id is “2”; a forward rate constant of 100. cm <span class="math notranslate nohighlight">\(s^{-1}\)</span>.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The <em>IS_EQUIL_PSEUDORXN</em> boundary condition uses the following equations
+representing a kinetic approach to equilibrium expressed by an ideal solution model for
+thermodynamics on either side of the interface. Initially, we relate species <em>k</em> on the + side to species <em>k</em> on the - side of the interface via a kinetic formulation, whose rate constant is fast enough to ensure equilibrium in practice. However, later we may extend the capability to more complicated stoichiometric formulations for equilibrium, since the formulation for the equilibrium expression is readily extensible, unlike <em>Goma’s</em> previous treatment.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/163_goma_physics.png"><img alt="../../../_images/163_goma_physics.png" src="../../../_images/163_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/164_goma_physics.png"><img alt="../../../_images/164_goma_physics.png" src="../../../_images/164_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/165_goma_physics.png"><img alt="../../../_images/165_goma_physics.png" src="../../../_images/165_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The “-” phase is defined as the reactants, while the “+” phase is defined to be the
+products. The expression for the concentration equilibrium constant, <span class="math notranslate nohighlight">\(K_k^c\)</span> , is based on the ideal solution expression for the chemical potentials for species <em>k</em> in the two phases [Denbigh, p. 249],</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/166_goma_physics.png"><img alt="../../../_images/166_goma_physics.png" src="../../../_images/166_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\mu_k^{+*}\)</span> (T,P) is defined as the chemical potential of species <em>k</em> in its pure state (or a
+hypothetical pure state if a real pure state doesn’t exist) at temperature <em>T</em> and pressure
+<em>P</em>. <span class="math notranslate nohighlight">\(\mu_k^{+*}\)</span> (T,P) is related to the standard state of species <em>k</em> in phase +, <span class="math notranslate nohighlight">\(\mu_k^+\)</span>, <span class="math notranslate nohighlight">\(\underline{o}\)</span> + (T) , which is
+independent of pressure, through specification of the pressure dependence of the pure
+species k. Two pressure dependencies are initially supported:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/167_goma_physics.png"><img alt="../../../_images/167_goma_physics.png" src="../../../_images/167_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/168_goma_physics.png"><img alt="../../../_images/168_goma_physics.png" src="../../../_images/168_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>With these definitions, <span class="math notranslate nohighlight">\(K_k^c\)</span> can be seen to be equal to</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/169_goma_physics.png"><img alt="../../../_images/169_goma_physics.png" src="../../../_images/169_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/170_goma_physics.png"><img alt="../../../_images/170_goma_physics.png" src="../../../_images/170_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The chemical potential for a species in a phase will be calculated either from
+CHEMKIN or from the <em>Chemical Potential, Pure Species Chemical Potential, and
+Standard State Chemical Potential cards</em> in the materials database file.</p>
+<p>The choice for the independent variable for the species unknown is relatively arbitrary,although it does change the actual equation formulation for the residual and Jacobian terms arising from the boundary condition. The internal variable Species_Var_Type in the Uniform_Problem_Description structure is queried to determine what the actual species independent variable is. A choice of SPECIES_UNDEFINED_FORM is
+unacceptable. If either mole fractions or molar concentration is chosen as the
+independent variable in the problem, the convention has been to formulate terms of the
+residuals in units of moles, cm, and seconds. Therefore, division of the equilibrium
+equations <span class="math notranslate nohighlight">\(W_k\)</span> by occurs before their inclusion into the residual.
+<span class="math notranslate nohighlight">\(J^l_k\)</span> and <span class="math notranslate nohighlight">\(J^g_k\)</span> are the
+diffusive flux of species <em>k</em>
+( gm <span class="math notranslate nohighlight">\(cm^{-2}\)</span>
+<span class="math notranslate nohighlight">\(s^{-1}\)</span> ) relative to the mass-averaged velocity.
+<span class="math notranslate nohighlight">\(u^s\)</span> is
+the velocity of the interface. A typical value of
+<span class="math notranslate nohighlight">\(k^f\)</span> that would lead to good numerical
+behavior would be 100 cm
+<span class="math notranslate nohighlight">\(s^{-1}\)</span>, equivalent to a reaction with a reactive sticking
+coefficient of 0.01 at 1 atm and 300 K for a molecule whose molecular weight is near to
+<span class="math notranslate nohighlight">\(N_2\)</span> or
+<span class="math notranslate nohighlight">\(H_2 S\)</span>.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>Denbigh, K., The Principles of Chemical Equilibrium, Cambridge University Press,
+Cambridge, 1981</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

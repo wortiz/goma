@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DISTNG &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>DISTNG</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/mesh/distng.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="distng">
+<h1><strong>DISTNG</strong><a class="headerlink" href="#distng" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">DISTNG</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(PCC/ROTATED MESH)</strong></p>
+<p>This boundary condition card is used to specify a distinguishing condition for mesh
+motion based on an isotherm, viz. the distinguishing condition forces the mesh
+boundary to which it is applied to take on a position such that the temperature is
+constant and at the specified value, all along the boundary. This condition causes the
+vector mesh motion equations (viz. <em>mesh1, mesh2, and mesh3</em> on <em>EQ</em> cards) to be
+rotated into normal-tangential form. In two dimensions, this condition is applied to the
+normal component automatically; in three dimensions it is suggested to put it on the
+normal component, as specified by the <em>ROT</em> conditions. Definitions of the input
+parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>DISTNG</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bcname&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where SS denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float&gt;</p></td>
+<td><p>Value of temperature/isotherm. To apply a variable
+temperature, e.g., as a function of the concentration, it is
+suggested that the user-defined boundary conditions be
+used, like <em>SPLINE</em> or <em>GEOM</em>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">DISTNG</span> <span class="n">SS</span> <span class="mi">123</span> <span class="mf">273.0</span>
+</pre></div>
+</div>
+<p>This card forces the boundary defined by EXODUS II side set number 123 to conform
+to the isotherm temperature of 273.0.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The mathematical form of this distinguishing condition is as follows:</p>
+<div class="math notranslate nohighlight">
+\[T - T_{\mathrm{mp}} = 0\]</div>
+<p>where <span class="math notranslate nohighlight">\(T_{\mathrm{mp}}\)</span> is the specified temperature parameter. This condition has been used
+extensively for macroscale and microscale melting problems, whereby one needs to
+distinguish a molten region from a solidified or mushy region with liquidus and solidus
+temperatures. In three dimensions, usage needs to be completed with a companion <em>ROT</em>
+input card which directs the equation application of the condition.</p>
+</section>
+<section id="faqs">
+<h2><strong>FAQs</strong><a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h2>
+<p>Continuation Strategies for Free Surface Flows In free surface problems, there exists
+one or more boundaries or internal surfaces whose position(s) are unknown a <em>priori</em>. As
+such, the geometry of the problem becomes part of the problem and must be
+determined together with the internal physics. Most problems of this sort cannot be
+solved with a trivial initial guess to the solution vector, mainly because the conditions
+which determine the surface position are closely coupled to the active physics in the
+bulk. Thus, these problems require continuation (zero or higher order) to achieve a
+converged solution to a desired state. The continuation strategy typically involves
+turning on and off the conditions which distinguish the position of the free surface(s);
+one such strategy is described in this FAQ.</p>
+<p>Distinguishing conditions in <em>Goma</em> serve two purposes: (1) they can be used to locate a
+surface whose position depends on internal and interfacial transport phenomena, and
+(2) they can be used to prescribe solid boundary position or motion. The first type of
+condition contains field variables needed to locate the interface or free surface position,
+and hence ties the mesh motion to the problem physics, i.e., mass, momentum, and
+energy transport phenomena. Currently, the side-set boundary conditions of type
+<em>DISTNG, KINEMATIC,</em> and <em>KIN_LEAK</em> fall into this class. The second type of
+condition requires only geometrical information from the mesh, and, although
+geometrically couples the mesh motion to the problem physics, it tends not to be so
+tightly coupled. Currently, boundary conditions <em>PLANE, PLANEX, PLANEY, PLANEZ,
+SPLINE, SPLINEX, SPLINEY,</em> and <em>SPLINEZ</em> fall into this class.</p>
+<p>In two dimensions, there is no need to use <em>PLANEX, PLANEY, PLANEZ, SPLINEX,
+SPLINEY,</em> and <em>SPLINEZ</em>. Because the code automatically rotates the mesh residual
+equations and the corresponding Jacobian entries into normal-tangential form on the
+boundary, <em>SPLINE, PLANE,</em> and <em>DISTNG</em> are the only cards required to specify the
+position of the boundary. Currently, in three dimensions, the logic for the same rotation
+concept is not totally functional, and one must use the <em>PLANEX</em>, etc. cards to designate
+which component of the mesh stress residual equation receives the distinguishing
+conditions.</p>
+<p>If cards <em>DISTNG, KINEMATIC,</em> and <em>KIN_LEAK</em>, i.e., distinguishing conditions of type
+1, are absent in any simulation, then any initial guess for the transport field equations,
+i.e., energy and momentum, has a chance of converging, as long as the initial mesh
+displacement guess is within the radius of convergence of the mesh equations and
+associated boundary conditions. For example, if the side sets of the EXODUS II
+database mesh correspond somewhat closely to what is prescribed with <em>PLANE</em> and
+<em>SPLINE</em>-type conditions, then an initial guess of the NULL vector has a good chance of
+converging, so long as the velocities and temperatures are within “converging
+distance.”</p>
+<p>When conditions from the first class are present, i.e., either <em>DISTNG, KIN_LEAK</em> or
+<em>KINEMATIC</em>, then the following procedure should be followed:</p>
+<ul class="simple">
+<li><p>Set the keyword for the <em>Initial Guess</em> character_string to <strong>zero</strong>, <strong>one</strong>, or <strong>random</strong>.</p></li>
+<li><p>Obtain a solution (run <em>Goma</em>) with the initial guess for the free surfaces
+distinguished as <em>KINEMATIC</em> (or other) coming from the EXODUS II database,
+but without the <em>KINEMATIC</em> (or other) card(s). That is, “fix” those surfaces with
+either a <em>PLANE</em> or <em>SPLINE</em> command, or simply place no distinguishing condition
+on them (this works only if the grid has not been previously “stressed”, i.e., all the
+displacements are zero). The rest of the “desired” physics should be maintained. If
+any surface is distinguished as <em>KINEMATIC</em>, then it is highly advantageous to
+place a <em>VELO_NORMAL</em> condition on that surface for startup, and set the
+corresponding floating point datum to zero. This effectively allows the fluid to
+“slip” along that boundary as if it were a shear free condition.</p></li>
+<li><p>Set the keyword in the <em>Initial Guess</em> character_string to <strong>read</strong>.</p></li>
+<li><p>Copy the file named in <em>SOLN file</em> into the file named in <em>GUESS file</em>.</p></li>
+<li><p>Release the free boundaries by taking off any current distinguishing condition
+cards and adding the appropriate <em>KINEMATIC</em> (or other) card. Adjust all other
+boundary conditions appropriately.</p></li>
+<li><p>Run <em>Goma</em>, using a relaxed Newton approach (factor less than unity but greater
+than zero - e.g., 0.1) for complex flows.</p></li>
+</ul>
+<p>When dealing with material surface boundaries distinguished by the kinematic
+boundary condition, the nature of that condition requires a non-zero and substantial
+component of velocity tangent to the surface upon start-up. In this case, it can be
+advantageous to use the <em>VELO_TANGENT</em> card to set the velocity along the free
+surface to some appropriate value prior to releasing the free surface (in the third step
+above). Of course this card will be removed in subsequent steps. Also, although not
+necessary, a smooth, “kinkless”, initial guess to the free surface shape is helpful
+because it reduces the amount of relaxation required on the Newton iteration.</p>
+<p>Obtaining start-up solutions of most coating flow configurations is still an art. The best
+way to start up a coating flow analysis may be to acquire a “template” developed from
+a previous analysis of some closely related flows.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>Allen Roach’s or Randy’s ESR tutorials. Perhaps these need to be put into the
+repository.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

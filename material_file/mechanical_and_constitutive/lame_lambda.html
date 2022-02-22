@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lame LAMBDA &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Lame LAMBDA</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/mechanical_and_constitutive/lame_lambda.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="lame-lambda">
+<h1>Lame LAMBDA<a class="headerlink" href="#lame-lambda" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lame</span> <span class="n">LAMBDA</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">M</span><span class="o">/</span><span class="n">Lt2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card is used to specify the model for the Lame coefficient λ for the solid
+constitutive equation (see Sackinger, et. al., 1995). When using a nonlinear constitutive
+equation for ALE mesh motion, this coefficient is related to the bulk modulus:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/366_goma_physics.png"><img alt="../../_images/366_goma_physics.png" src="../../_images/366_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 89%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the <em>Lame LAMBDA</em> model. This parameter can have one of the following values: <strong>CONSTANT, POWER_LAW, EXPONENTIAL or USER</strong>.</p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are determined by the selection for {model_name}. These
+are identified in the discussion of each model below.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The models are described here.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 46%" />
+<col style="width: 54%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>For the <strong>CONSTANT</strong> model, {float_list} is a single value (see <em>Lame MU</em> card for relationship to
+other more common elastic constants):</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Standard value of the elastic constant <span class="math notranslate nohighlight">\(\lambda\)</span></p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>POISSON_RATIO</strong> &lt;float1&gt;</p></td>
+<td><p>For any Lame MU model (see Lame MU card) this option uses the following formula to compute Lame
+Lame LAMBDA:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Poisson’s ratio nu.</p></li>
+</ul>
+</div></blockquote>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/367_goma_physics.png"><img alt="../../_images/367_goma_physics.png" src="../../_images/367_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>POWER_LAW</strong> &lt;float1&gt; &lt;float2&gt; &lt;float3&gt;</p></td>
+<td><p>The <strong>POWER_LAW</strong> model can be used in deformable porous media where the Lame coefficient varies as
+a power of the porosity, <span class="math notranslate nohighlight">\(\phi\)</span> (Scherer, 1992):</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/368_goma_physics.png"><img alt="../../_images/368_goma_physics.png" src="../../_images/368_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The {float_list} contains three values for this model, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - <span class="math notranslate nohighlight">\(\lambda_0\)</span> is the base <em>Lame LAMBDA</em> modulus at the initial porosity.</p></li>
+<li><p>&lt;float2&gt; - <span class="math notranslate nohighlight">\(\phi_0\)</span> is the porosity in the stress-free state</p></li>
+<li><p>&lt;float3&gt; - <em>m</em> is the powerlaw exponent, as shown</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>USER</strong> &lt;float1&gt;,…, &lt;floatn&gt;</p></td>
+<td><p>For the <strong>USER</strong> model, {float_list} is of arbitrary length, and the values are used through the
+param[] array in usr_lame_lambda function to parameterize a userdefined model. See examples in
+user_mp.c.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lame</span> <span class="n">LAMBDA</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Please see the <em>Solid Constitutive Equation</em> card for details on the use of this parameter.
+Special consideration is required for <em>INCOMP*</em> type constitutive equations. The
+isotropic stress term, or pressure, in that case is added onto the constitutive equation,
+and so this parameter must be set to zero so as to prevent any compressibility.</p>
+<p>Important note that when one desires an incompressible solid through the use of
+<em>INCOMP_PSTRAIN</em> type models, by using an incompressible continuity equation in a
+<em>LAGRANGIAN</em> mesh region (see <em>EQ = continuity</em>), then the bulk modulus, or Lame
+Lambda expansion term is also added on. So to get a truly incompressible response,
+one must set the <em>Lame LAMBDA</em> coefficient to zero.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>Sackinger, P. A., Schunk, P. R. and Rao, R. R. 1995. “A Newton-Raphson Pseudo-Solid
+Domain Mapping Technique for Free and Moving Boundary Problems: A Finite
+Element Implementation”, J. Comp. Phys., 125 (1996) 83-103.</p>
+<p>Scherer, G.W., 1992, “Recent Progress in Drying of Gels”, J. of Non-Crystalline Solids,
+147&amp;148, 363-374</p>
+<p>GT-001.4: GOMA and SEAMS tutorial for new users, February 18, 2002, P. R. Schunk
+and D. A. Labreche</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

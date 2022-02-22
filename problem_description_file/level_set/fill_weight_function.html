@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fill Weight Function &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Fill Weight Function</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/level_set/fill_weight_function.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fill-weight-function">
+<h1>Fill Weight Function<a class="headerlink" href="#fill-weight-function" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fill</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="p">{</span><span class="n">Galerkin</span> <span class="o">|</span> <span class="n">Taylor</span><span class="o">-</span><span class="n">Galerkin</span> <span class="o">|</span> <span class="n">SUPG</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>Sets the weight function used for the <em>FILL</em> equation for either the VOF or Level Set
+methods. The options for this card are as follows:</p>
+<dl class="simple">
+<dt>Galerkin</dt><dd><p>Name of the weight function formulation. This option requests a standard
+Galerkin finite element weighted residual treatment. A floating point
+parameter is not used for this option.</p>
+</dd>
+<dt>Taylor-Galerkin</dt><dd><p>Name of the weight function formulation</p>
+</dd>
+<dt>SUPG</dt><dd><p>Name of the weight function formulation. This option requests a Streamwise
+Upwinding Petrov Galerkin formulation. No floating point parameter is
+required.</p>
+</dd>
+</dl>
+<p>The default value for the <em>Fill Weight Function</em> is Taylor-Galerkin.</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>This is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fill</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">Galerkin</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>This card selects the integration/weight function used in solving for the VOF color
+function or the level set distance function (i.e., the <em>FILL</em> unknown). The user should
+refer to the tutorial on Level Set Computations for a detailed description of level set
+interface tracking. (See References.)</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+<p>A. N. Brooks and T. J. R. Hughes, “Streamline Upwind/Petrov-Galerkin Formulations
+for Convection Dominated Flows with Particular Emphasis on the Incompressible
+Navier-Stokes Equations,” Comp. Math. In Appl. Mechanics and Eng., 32, 199 - 259
+(1992).</p>
+<p>A. J. A. Unger, P. A. Forsyth and E. A. Sudicky, “Variable spatial and temporal
+weighting schemes for use in multi-phase compositional problems,” Advances in Water
+Resources, 19, 1 - 27 (1996).</p>
+<p>R. Helmig and R. Huber, “Comparison of Galerkin-type discretization techniques for
+two-phase flow in heterogeneous porous media,” Advances in Water Resources, 21,
+697-711 (1998).</p>
+<p>E. Gundersen and H. P. Langtangen, “Finite Element Methods for Two-Phase Flow in
+Heterogeneous Porous Media,” in Numerical Methods and Software Tools in Industrial
+Mathematics, Morten Daehlen, Aslak Tveito, Eds., Birkhauser, Boston, 1997.</p>
+<p>S. F. Bradford and N. D. Katopodes, “The anti-dissipative, non-monotone behavior of
+Petrov-Galerkin Upwinding,” International J. for Numerical Methods in Fluids, v. 33,
+583-608 (2000).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

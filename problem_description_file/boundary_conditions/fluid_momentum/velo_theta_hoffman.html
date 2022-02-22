@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VELO_THETA_HOFFMAN &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>VELO_THETA_HOFFMAN</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/fluid_momentum/velo_theta_hoffman.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="velo-theta-hoffman">
+<h1><strong>VELO_THETA_HOFFMAN</strong><a class="headerlink" href="#velo-theta-hoffman" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VELO_THETA_HOFFMAN</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">integer</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(PCC/R_MOM_TANG1)</strong></p>
+<p>This boundary condition card applies a dynamic contact angle dependent velocity
+condition in a similiar fashion to VELO_THETA_TPL, but the functional form of the
+velocity is different. The functional form stems not from a theory of wetting, but
+instead, from a correlation of many empirical measurements.</p>
+<p>The &lt;float_list&gt; for this boundary condition has eight values; definitions of the input
+parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 74%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>VELO_THETA_HOFFMAN</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>NS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong>
+denotes node set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location
+(node set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\theta\)</span>, equilibrium (static) contact angle
+subtended by wall normal and free surface normal,
+in units of degrees.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(n_x\)</span> , x-component of normal vector to the geometry
+boundary (see important note below regarding variable wall
+normals, viz. non-planar solid walls).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(n_y\)</span> , y-component of normal vector to the geometry
+boundary. (see important note below regarding variable wall
+normals, viz. non-planar solid walls).</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(n_z\)</span> , z-component of normal vector to the geometry
+boundary. (see important note below regarding variable wall
+normals, viz. non-planar solid walls).</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p>currently not used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sigma\)</span> is the surface tension. This value is
+multiplied by the surface tension value stipulated by
+the surface tension material model.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(t_{relax}\)</span> is a relaxation time which can be
+used to smooth the imposed contact point velocity for
+transient problems. Set to zero for no smoothing.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(V_{old}\)</span> is an initial velocity used in velocity
+smoothing for transient problems. Set to zero when
+smoothing is not used.</p></td>
+</tr>
+<tr class="row-even"><td><p>[integer]</p></td>
+<td><p><em>blk_id</em>, an optional parameter that is the element block
+number in conjugate problems that identifies the material
+region to which the contact angle applies (usually the
+liquid element block in solid/liquid conjugate problems).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VELO_THETA_HOFFMAN</span> <span class="n">NS</span>   <span class="mi">100</span>   <span class="p">{</span><span class="mi">45</span><span class="p">}</span>   <span class="mf">0.</span>   <span class="mf">1.</span>   <span class="mf">0.</span>   <span class="mf">0.</span>   <span class="mf">72.0</span>   <span class="mi">0</span>   <span class="mi">0</span>   <span class="mi">2</span>
+</pre></div>
+</div>
+<p>This condition applies a contact angle of 45 degrees between the free surface normal at
+the 100 nodeset and the vector (0,1,0). The surface tension is 72 and the dynamic
+contact angle is taken from element block 2. Normally, this latter vector is the normal
+to the solid surface in contact with the free surface at this point.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>The constraint that is imposed at the nodeset node is as follows:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/123_goma_physics.png"><img alt="../../../_images/123_goma_physics.png" src="../../../_images/123_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(v_{Hoffman}\)</span> is computed from the implicit solution of the Hoffman correlation;</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/124_goma_physics.png"><img alt="../../../_images/124_goma_physics.png" src="../../../_images/124_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>or</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/125_goma_physics.png"><img alt="../../../_images/125_goma_physics.png" src="../../../_images/125_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where the Hoffman functions, fHoff and gHoff, which are inverses of each other are
+given by;</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/126_goma_physics.png"><img alt="../../../_images/126_goma_physics.png" src="../../../_images/126_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/127_goma_physics.png"><img alt="../../../_images/127_goma_physics.png" src="../../../_images/127_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>When smoothing is not used, i.e. <span class="math notranslate nohighlight">\(t_{relax}\)</span> = 0 , the imposed velocity is equal
+to that stipulated by the Hoffman correlation. Also see WETTING_SPEED_HOFFMAN
+and SHARP_HOFFMAN_VELOCITY for level-set versions.</p>
+<ul class="simple">
+<li><p>For steady problems, the substrate velocity will be extracted from adjoining
+VELO_TANGENT, VELO_SLIP, or VELO_SLIP_ROT boundary conditions.</p></li>
+<li><p>Because the Hoffman functions are implicit, iteration is required in the
+determination of the wetting velocity. As a result, for very high capillary numbers,
+i.e. &gt; <span class="math notranslate nohighlight">\(10^6\)</span>, the iteration procedure in Goma may need to be modified.</p></li>
+<li><p>This condition was motivated by the Hoffman empirical correlation (cf. Stephan F.
+Kistler, “Hydrodynamics of Wetting,” in Wettability edited by John Berg, 1993).</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

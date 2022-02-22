@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Surface Tension &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Surface Tension</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/mechanical_and_constitutive/surface_tension.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="surface-tension">
+<h1><strong>Surface Tension</strong><a class="headerlink" href="#surface-tension" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Surface</span> <span class="n">Tension</span> <span class="o">=</span> <span class="p">{</span><span class="n">CONSTANT</span> <span class="o">|</span> <span class="n">DILATION</span> <span class="o">|</span> <span class="n">USER</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">M</span><span class="o">/</span><span class="n">t2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card is used to specify the interfacial surface tension of the fluid which enters into
+the <em>CAPILLARY</em> boundary condition and <em>CAP_ENDFORCE</em> boundary condition cards.
+The surface tension, albeit a property of an interface and not of a bulk material, is
+sometimes influenced by thermophysical phenomena associated with a material, hence
+the inclusion of this card in the material file. It should be mentioned that this card is
+optional, and if it does not appear the surface tension is taken off the aforementioned
+boundary condition cards. <em>PLEASE see the important technical discussion below if you
+plan on using this card</em>. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 86%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for a constant value of interfacial surface tension of the fluid:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - constant value of surface tension</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>DILATION</strong></p></td>
+<td><p>Name of a surface tension model that depends on mesh dilation (only useful if the free surface is
+constrained to be a material surface both normally and tangentially, see Schwartz ,et. al. 1996). The model
+mathematically is</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>USER</strong></p></td>
+<td><p>A user-defined surface tension model that is defined in the user-supplied routine usr_surface_tension in the
+file user_mp.c. This model will have an arbitrary number of user-defined parameters (&lt;float1&gt; to floatn&gt;).</p></td>
+</tr>
+</tbody>
+</table>
+<p><em>WARNING: When specifying surface tension on this card, be sure the surface
+tension (multiplier) on the boundary condition CAPILLARY card is set to 1. In other
+words, the value of surface tension on the boundary condition cards is multiplied
+with the value on this card before the calculation is carried out.</em></p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Surface</span> <span class="n">Tension</span> <span class="o">=</span> <span class="n">DILATION</span> <span class="mf">70.0</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Please read and understand the warning issued above regarding the proper place to
+specify surface tension. Basically, for constant surface tension models, it is a good idea
+to leave this card out and simply enter the proper surface tension value for the current
+surface on the boundary condition cards <strong>CAPILLARY</strong> and <strong>CAP_ENDFORCE</strong>. For
+variable models, please set the surface tension values on these BC cards to 1.0, and
+then handle your model through this card. The surface tension is a thermodynamic
+property of the interface and actually depends on the chemical composition of the
+fluids (or fluid/solids) of the bounding phases. The property controls the importance of
+the capillary stress jump on a curved interface on the hydrodynamics of the flow and
+the meniscus position and motion.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-001.4: GOMA and SEAMS tutorial for new users, February 18, 2002, P. R. Schunk
+and D. A. Labreche</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

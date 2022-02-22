@@ -1,0 +1,2073 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Microstructure Properties &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Species Properties" href="species.html" />
+    <link rel="prev" title="Electrical Properties" href="electrical.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../material_files.html">Material Files</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="physical_properties.html">Physical Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mechanical_and_constitutive.html">Mechanical Properties and Constitutive Equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="thermal_properties.html">Thermal Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="electrical.html">Electrical Properties</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Microstructure Properties</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#media-type"><strong>Media Type</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porosity"><strong>Porosity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#permeability"><strong>Permeability</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id5"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#liquid-phase-compressibility"><strong>Liquid phase compressibility</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id9"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id11"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#faqs"><strong>FAQs</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#liquid-phase-reference-pressure"><strong>Liquid phase reference pressure</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id13"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id14"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id15"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id16"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#flowing-liquid-viscosity"><strong>Flowing Liquid Viscosity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id17"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id18"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id19"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id20"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#inertia-coefficient"><strong>Inertia Coefficient</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id21"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id22"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id23"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id24"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#capillary-network-stress"><strong>Capillary Network Stress</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id25"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id26"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id27"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id28"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#rel-gas-permeability"><strong>Rel Gas Permeability</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id29"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id30"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id31"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id32"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#rel-liq-permeability"><strong>Rel Liq Permeability</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id33"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id34"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id35"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id36"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#saturation"><strong>Saturation</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id37"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id38"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id39"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id40"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-weight-function"><strong>Porous Weight Function</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id41"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id42"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id43"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id44"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-mass-lumping"><strong>Porous Mass Lumping</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id45"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id46"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id47"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id48"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-diffusion-constitutive-equation"><strong>Porous Diffusion Constitutive Equation</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id49"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id50"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id51"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id52"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-gas-diffusivity"><strong>Porous Gas Diffusivity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id53"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id54"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id55"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id56"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-latent-heat-vaporization"><strong>Porous Latent Heat Vaporization</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id57"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id58"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id59"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id60"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-latent-heat-fusion"><strong>Porous Latent Heat Fusion</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id61"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id62"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id63"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id64"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-vapor-pressure"><strong>Porous Vapor Pressure</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id65"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id66"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id67"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id68"><strong>FAQs</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id69"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-liquid-volume-expansion"><strong>Porous Liquid Volume Expansion</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id70"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id71"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id72"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id73"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-gas-constants"><strong>Porous Gas Constants</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id74"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id75"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id76"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id77"><strong>References</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="species.html">Species Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source_terms.html">Source Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shell_equation.html">Shell Equation Properties and Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moments.html">Moment Properties</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../material_files.html">Material Files</a> &raquo;</li>
+      <li>Microstructure Properties</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/material_file/microstructure.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="microstructure-properties">
+<h1>Microstructure Properties<a class="headerlink" href="#microstructure-properties" title="Permalink to this headline"></a></h1>
+<p>Microstructure property models address material parameters and constitutive equations required
+for multiphase continuum approaches to flow in porous media, viz. fluid flow in partially or fully
+saturated porous media. Actually, only a few of these model/property cards pertain directly to
+media structure or microstructure, but all are affected by intrinsic material properties of all
+involved phases. Cards or records typically appearing in this section fall into one of three
+categories: microstructural or flow-property specification, numerical treatment specification, and
+species transport property specifications. These “sections” appear in this order in most of the
+sample input files.</p>
+<section id="media-type">
+<h2><strong>Media Type</strong><a class="headerlink" href="#media-type" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Media</span> <span class="n">Type</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This card is used to designate the characteristic medium type for solid materials so that
+the proper microstructural features/models may be imposed. Basically, the choices are
+dictated by whether the medium is to be modeled as <em>porous</em> (viz. a medium in which
+flow will be determined relative to the motion of a porous solid skeleton) or as
+<em>continuous</em> (viz., in which the mechanics equations apply to all parts of the medium and
+not weighted by a solid fraction). If porous flow through Darcy or Brinkman
+formulations are desired in the material, then the phase is designated as <em>continuous</em>.</p>
+<p>The input parameter is a {model_name} and has the following possible values:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 72%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>{model_name} Name of the media model; the choices are</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>CONTINUOUS</strong></p></li>
+<li><p><strong>POROUS_SATURATED</strong></p></li>
+<li><p><strong>POROUS_UNSATURATED</strong></p></li>
+<li><p><strong>POROUS_TWO_PHASE</strong></p></li>
+<li><p><strong>POROUS_BRINKMAN</strong></p></li>
+<li><p><strong>POROUS_SHELL_UNSATURATED</strong></p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Specific characteristics of these types are identified below, including other cards that
+must be present.</p>
+<ul class="simple">
+<li><p>If the type chosen is <strong>CONTINUOUS</strong>, then the material is assumed to be
+amorphous and no further microstructure properties need to be specified (next
+required card is the <em>Diffusion Constitutive Equation</em>).</p></li>
+<li><p>In a porous medium with one phase in the pores (i.e. a saturated medium), use
+<strong>POROUS_SATURATED</strong> then only the Porosity and Permeability cards are
+required. A <strong>POROUS_SATURATED</strong> medium model enables the user to solve the
+simplest porous flow equation for the liquid phase pressure only for rigid porous
+media (see the porous_sat or porous_liq equation cards). For deformable porous
+saturated media, one can employ a stress balance and porosity equation for
+deformable porous media (see mesh* equation cards and porous_deform equation
+card).</p></li>
+<li><p>In a porous medium with two phases in the pores (such as air-water, i.e., an
+unsaturated medium), two options exist - <strong>POROUS_UNSATURATED</strong>, a
+formulation of the porous flow problem using the capillary pressure as the field
+variable (gas pressure assumed to be uniform), and <strong>POROUS_TWO_PHASE</strong>, a
+formulation of the porous flow problem using the liquid pressure and gas pressure
+as field variables. All the cards in this Microstructure porous flow section, except
+the Brinkman cards (<em>FlowingLiquid Viscosity and Inertia Coefficient</em>), are needed
+for the unsaturated or two-phase models. As in the saturated case above, these
+options can also be chosen for deformable porous media, for which the Lagrangian
+mesh stress equations and the porosity equation are used to complete the effective
+stress principle formulation.</p></li>
+<li><p>The <strong>POROUS_BRINKMAN</strong> model is an extension of the Navier-Stokes
+equation for porous media. In addition, it has an inertia term intended to account
+for boundary and interface deficiencies at Reynold’s numbers greater than one
+(Re &gt; 1), a deficiency in all Darcy flow models (see, e.g., Gartling, et. al., 1996). It
+is a vector formulation (the momentum equations) of saturated flow in a porous
+medium which reduces to the Navier-Stokes equations as the porosity increases to
+one (φ → 1). For Brinkman flow, the input parameters (i.e., cards) that must be
+specified from this section are <em>Porosity, Permeability, FlowingLiquid Viscosity</em>,
+and <em>Inertia Coefficient</em>. Please note the use of two viscosities; for the Brinkman
+media type, the viscosity entered via the (<em>Mechanical Properties and Constitutive
+Equations</em>) Viscosity card is interpreted to be the Brinkman viscosity (μB) and is
+used to calculate the viscous stresses (see Gartling, et. al., 1996) while the
+<em>FlowingLiquid Viscosity</em> (μ) is used in the correction term for nonlinear drag
+forces in porous media. Brinkman viscosity is an effective value and can be taken
+as the porosity weighted average of the matrix and fluid. It is generally not correct
+to set it equal to the liquid viscosity (Martys, et. al., 1994; Givler and Altobelli,
+1994).</p></li>
+<li><p>The <strong>POROUS_SHELL_UNSATURATED</strong> model is used for thin shell, open
+pore, porous media, viz. the shell_sat_open equation. This media type
+instructs GOMA to obtain most of the media properties from the bulk continuum
+specifications just like <strong>POROUS_UNSATURATED</strong>. Exceptions are the
+Porous Shell Cross Permeability model and the Porous Shell
+Height material models. Please see the porous shell tutorial</p></li>
+</ul>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Media</span> <span class="n">Type</span> <span class="o">=</span> <span class="n">POROUS_TWO_PHASE</span>
+</pre></div>
+</div>
+<p>This card will require a plethora of material models for Darcy flow of liquid and gas in
+a porous medium. It also will require the use of two Darcy flow mass balances in the
+<em>Problem Description EQ</em> specification section, specifically <em>porous_liq</em> and <em>porous_gas</em>
+equations. See references below for details.</p>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>In solving porous medium problems, it is important to understand that each
+conservation equation represents a component, or species balance. The <em>porous_liq</em>
+equation is actually a species balance for the liquid phase primary component (e.g.
+water) for all phases in the medium, viz. liquid, gas, and solid. This is the case even
+though the dependent variable is the liquid phase pressure. This is the only required
+equation for rigid <strong>POROUS_SATURATED</strong> media. The same holds true for rigid
+<strong>POROUS_UNSATURATED</strong> media, as the liquid solvent is present in liquid and gas
+vapor form (it is actually taken as insoluble in the solid). For deformable media, one
+must add a stress balance through the <em>mesh*</em> equations (in <em>LAGRANGIAN</em> form, as
+described on the <em>Mesh Motion</em> card) and a solid phase “solvent” balance which is used
+to solve for the porosity, viz. the <em>porous_deform</em> equation. In these cases, the gas is
+taken to be at constant pressure. If pressure driven Darcy flow is important in the gas,
+an additional species balance for the primary gas component is required through the
+porous_gas equation. This last case is the so-called <strong>POROUS_TWO_PHASE</strong> media
+type.</p>
+<p>Options for representing the solid medium as rigid or deformable are discussed under
+the <em>Saturation, Permeability</em> and <em>Porosity</em> cards. When rigid porous media are
+modeled, both porosity and permeability are constant. In <em>Goma</em> 4.0, these concepts
+were being researched and improved, with much of the usage documentation residing
+in technical memos.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+<p>Gartling D. K., C. E. Hickox and R. C. Givler 1996. “Simulations of Coupled Viscous
+and Porous Flow Problems”, Comp. Fluid Dynamics, 7, 23-48.</p>
+<p>Givler, R. C. and S. A. Altobelli 1994. “A Determination of the Effective Viscosity for
+the Brinkman-Forchheimer Flow Model.” J. Fluid Mechanics, 258, 355-370.</p>
+<p>Martys, N., D. P. Bantz and E. J. Barboczi 1994. “Computer Simulation Study of the
+Effective Viscosity in Brinkman’s Equation.” Phys. Fluids, 6, 1434-1439</p>
+</section>
+</section>
+<section id="porosity">
+<h2><strong>Porosity</strong><a class="headerlink" href="#porosity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porosity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the model for the porosity, which is required for the
+Brinkman or Darcy formulations for flow through porous media, viz. for
+<strong>POROUS_BRINKMAN, POROUS_TWO_PHASE, POROUS_SATURATED,</strong>
+and <strong>POROUS_UNSATURATED</strong> media types (see <em>Media Type</em> card).</p>
+<p>Definitions of the {model_name} and &lt;float&gt; parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name {model_name} of the constant porosity model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - Value of porosity.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>DEFORM</strong></p></td>
+<td><p>Name {model_name} of the model for a porosity that varies with deformation
+of the porous medium. A conservation balance is required for the solid
+material skeleton and is invoked in the equation specification section
+(see <em>EQ</em> section).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - Value of porosity (in the stress-free-state, i.e.,
+undeformed state).</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porosity</span> <span class="o">=</span> <span class="n">DEFORM</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<p>This model will result in a porosity of 0.5 (volume fraction of the interstitial space of a
+porous skeleton) in the undeformed or stress-free state, but will allow the porosity to
+vary affinely with the volume change invariant of the deformation gradient tensor (see
+technical discussion). As mentioned above, the <strong>DEFORM</strong> model requires a field
+equation for the mass-conservation of the solid matrix through the porous_deform
+equation.</p>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>Porosity is a microstructural attribute of a porous medium which describes the fraction
+of volume not occupied by the solid skeleton. For rigid porous media, it is a parameter
+that weights the capacitance term (time-derivative term) of the Darcy flow equations
+for liquid solvent and gas “solvent” concentrations. It often affects the Saturation
+function (see <em>Saturation</em> card) and the permeability function (see <em>Permeability</em> card).
+The references cited below elucidate the role of the porosity parameter in these
+equations.</p>
+<p>For deformable porous media, <em>Goma</em> uses the porosity as a measure of fraction solid
+concentration, as a part of a mass balance for the solid skeleton. The reason this
+equation is required is a result of the lack of an overall conservation law for the
+mixture. Instead, we close the system by individual conservation equations for all
+species components in the medium, including the solid; the liquid and gas phase
+components are accounted for with individual Darcy flow equations. The conservation
+law which governs the porosity assumes there is an affine deformation of the pores
+with the overall deformation of the solid, and hence can be written as:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/401_goma_physics.png"><img alt="../_images/401_goma_physics.png" src="../_images/401_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where F˜ is the deformation gradient tensor, φ0 is the initial porosity, and φ is the
+porosity. This equation is invoked with the <em>porous_deform</em> option on the <em>EQ</em>
+specifications.</p>
+</section>
+<section id="id4">
+<h3><strong>References</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="permeability">
+<h2><strong>Permeability</strong><a class="headerlink" href="#permeability" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Permeability</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">L2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the model for permeability, which is required for the
+Brinkman and Darcy formulations for flow through porous media. Definitions of the
+input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the permissible models for permeability: <strong>CONSTANT, TENSOR, KOZENY_CARMEN,</strong>
+<strong>SOLIDIFICATION</strong> and <strong>PSD_VOL, PSD_WEXP,</strong> or <strong>PSD_SEXP</strong>. (No USER model as of
+6/13/2002; contact Developers for this addition).</p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Permeability model choices and their parameters are discussed below.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>Model for constant permeability with a single parameter. This model is allowed for
+all Media Types (cf. <em>Media Type</em> card).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - k, Permeability [L2]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>TENSOR</strong> &lt;float1&gt; &lt;float2&gt;
+&lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>Model for a two dimensional, constant anisotropic permeability; it has not been
+implemented in three dimensions. All media types (cf. Media Type card) except
+<strong>POROUS_BRINKMAN</strong> may use this model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - <span class="math notranslate nohighlight">\(k_{xx}\)</span> permeability [L2]</p></li>
+<li><p>&lt;float2&gt; - <span class="math notranslate nohighlight">\(k_{yy}\)</span> permeability [L2]</p></li>
+<li><p>&lt;float3&gt; - <span class="math notranslate nohighlight">\(k_{xy}\)</span> permeability [L2]</p></li>
+<li><p>&lt;float4&gt; - <span class="math notranslate nohighlight">\(k_{yx}\)</span> permeability [L2]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>PSD_VOL</strong> &lt;float1&gt; &lt;float2&gt;
+&lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>This is a model of a deformable medium with a probabilistic distribution of pore
+sizes; see Technical Discussion section. Four parameters are required for the
+<strong>PSD_VOL</strong> model:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - φ0, porosity in undeformed state</p></li>
+<li><p>&lt;float2&gt; - rmax(φ0), maximum pore radius in undeformed state</p></li>
+<li><p>&lt;float3&gt; - α, ratio of smallest pore size to largest pore size</p></li>
+<li><p>&lt;float4&gt; - 1 ⁄ τ2, a geometric tortuosity factor</p></li>
+</ul>
+</div></blockquote>
+<p>All media types (cf. <em>Media Type</em> card) except <strong>POROUS_BRINKMAN</strong> may use this model</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>PSD_WEXP</strong> &lt;float1&gt;
+&lt;float2&gt; &lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>Same &lt;float&gt; specifications as <strong>PSD_VOL</strong> model.
+This model is allowed for all media types except <strong>POROUS_BRINKMAN</strong>
+(cf. <em>Media Type</em> card).</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>PSD_SEXP</strong> &lt;float1&gt;
+&lt;float2&gt; &lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>Same &lt;float&gt; specifications as <strong>PSD_VOL</strong> model.
+This model is allowed for all media types except <strong>POROUS_BRINKMAN</strong>
+(cf. <em>Media Type</em> card).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SOLIDIFICATION</strong> &lt;float1&gt;</p></td>
+<td><p>Used to phase in a porous flow term in the liquid momentum equations for low volume
+fraction packing of particles in the Brinkman porous flow formulation (see discussion
+below). Used for Phillip’s model of suspensions for the <em>Liquid Constitutive
+Equation</em>, viz. <strong>CARREAU_SUSPENSION, SUSPENSION, FILLED_EPOXY</strong> or
+<strong>POWER_LAW_SUSPENSION</strong>.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - the species number of the suspension flow model; it is used to indicate
+that maximum packing, or solidification has occurred. (The float is converted to
+an integer).</p></li>
+</ul>
+</div></blockquote>
+<p>This model is <strong>ONLY</strong> allowed for media type <strong>POROUS_BRINKMAN</strong>
+(cf. <em>Media Type</em> card). The functional form is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/402_goma_physics.png"><img alt="../_images/402_goma_physics.png" src="../_images/402_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where μ0 is the clear fluid viscosity, φpart is the volume fraction of particles, or
+concentration divided by the maximum packing (0.68 for monodisperse spheres), and
+havg is the average element size.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>KOZENY_CARMAN</strong> &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>The Kozeny-Carman equation relates the permeability to the porosity for a porous
+medium and has been shown to fit well the experimental results in many cases. This.
+equation is easily derivable from the PSD_* models for the case of uniform
+pore-size distribution, viz. a delta distribution (cf. Cairncross, et. al., 1996 for
+derivation). The model is currently implemented in the isotropic media case and is
+useful for deformable problems in which the porosity changes with deformation (cf.
+<em>Porosity</em> card DEFORM model). The functional form for this model is as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/403_goma_physics.png"><img alt="../_images/403_goma_physics.png" src="../_images/403_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here φ is the porosity, c0 is a constant consisting of tortuosity and shape factor of
+the pores, and Sv is the surface area per solid volume. The float parameters are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - c0 , tortuosity and shape factor</p></li>
+<li><p>&lt;float2&gt; - Sv , surface area per solid volume</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>EXTERNAL_FIELD</strong> &lt;float1&gt;</p></td>
+<td><p>This model reads in an array of values for the porosity from an initial exodus file.
+This allows for spatial variations in the parameter value.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Scale factor for converting/scaling exodusII field.</p></li>
+</ul>
+</div></blockquote>
+<p>The ExodusII field variable name should be “PERM”, viz. External Field = PERM Q1
+name.exoII (see this card)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id6">
+<h3><strong>Examples</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Permeability</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.001</span>
+</pre></div>
+</div>
+<p>This specification leads to a constant permeability of 0.001.</p>
+</section>
+<section id="id7">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>For all models, this card provides the permeability, in units of [L2]. For saturated
+porous materials (viz. <strong>POROUS_BRINKMAN</strong> or <strong>POROUS_SATURATED</strong> media
+types), the viscosity from the <em>Viscosity</em> card is used to compute the porous conductivity,
+viz., permeability divided by viscosity. For unsaturated media types, the viscosity
+factor comes through the relative permeability cards (see <em>Rel Gas Permeability</em> and <em>Rel
+Liq Permeability</em> cards). Please consult the references below for the proper form of the
+equations.</p>
+<p>The <strong>PSD_VOL</strong> (Probability Size Distribution, PSD) model treats the medium as a
+bundle of capillary tubes with a distribution of pores such that over a range of porek
+sizes the volume of pores is evenly distributed. For such a model, the maximum poresize
+varies with the porosity:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/404_goma_physics.png"><img alt="../_images/404_goma_physics.png" src="../_images/404_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Then, the permeability is a function of the maximum pore-size and the pore-size
+distribution:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/405_goma_physics.png"><img alt="../_images/405_goma_physics.png" src="../_images/405_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The input parameters for the PSD models are φ0, rmax(φ0), α, and 1 ⁄ τ2. More
+detail on the deformable porous medium models is given in Cairncross, et. al., 1996.
+The <strong>PSD_WEXP</strong> and <strong>PSD_SEXP</strong> are similar pore-size distribution models to
+<strong>PSD_VOL</strong>. The references below should be consulted for details on how to use these
+models.</p>
+</section>
+<section id="id8">
+<h3><strong>References</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="liquid-phase-compressibility">
+<h2><strong>Liquid phase compressibility</strong><a class="headerlink" href="#liquid-phase-compressibility" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Permeability</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">L2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id9">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>This card specifies the model and model parameters for liquid-phase compressibility,
+and was specifically designed for use in porous-media flow problems that are partially
+saturated (viz. <em>Media Type</em> card values of <strong>POROUS_UNSATURATED</strong> or
+<strong>POROUS_TWO_PHASE</strong>). This feature was added partially for numerical
+convenience in rigid porous media to accommodate regimes where the saturation level
+is at or near unity; at these saturation levels the capacitance term (see Technical
+Discussion below) all but vanishes, viz. there is no sensitivity of the saturation level to
+liquid phase pressure, and the mathematical behavior can change type. This occurs in
+situations of low permeability, narrow pore-size distribution, and sudden pressure
+spikes during simulation startup.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for the compressibility coefficient, currently the only option. It
+requires a single parameter:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - Compressibility coefficient, in units of inverse pressure.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This card requires a companion card <em>Liquid phase reference pressure</em>.</p>
+</section>
+<section id="id10">
+<h3><strong>Examples</strong><a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>The cards (using APREPRO variables)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">compressibility</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">beta_liquid</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">reference</span> <span class="n">pressure</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">p_not</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>leads to the application of a linearized compressibility model for the density of liquid in
+the time-derivative capacitance term. This is useful for rigid porous media when the
+conditions are such that the saturation front is sharp.</p>
+</section>
+<section id="id11">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>For Cls the most part, we have needed the <em>Liquid Phase Compressibility</em> capability to ease
+the startup of impregnation problems, in which an external pressure load is impulsively
+applied to a liquid layer being forced into a rigid porous matrix. The capacitance term
+as the saturation level approaches 1.0 (S-&gt;1) in the porous Darcy flow equation appears
+in <em>Goma</em> as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/406_goma_physics.png"><img alt="../_images/406_goma_physics.png" src="../_images/406_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here is the liquid solvent concentration (in both gas and liquid phases), φ is the
+porosity, ρls and is the liquid phase density. Here we employ the linearized density
+model:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/407_goma_physics.png"><img alt="../_images/407_goma_physics.png" src="../_images/407_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where βls is the coefficient of compressibility entered on this card, viz. dρls ⁄ dPliq
+defined above, p0liq is the reference liquid pressure (see Liquid phase reference
+pressure* card)</p>
+</section>
+<section id="faqs">
+<h3><strong>FAQs</strong><a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h3>
+<p>The following troubleshooting tips regarding startup of partially saturated porous
+media problems are part of the authors experience presented in Schunk, 2002 (GT-
+009.3):</p>
+<p>-Linear elements, viz. Q1 elements, are better for saturation front startup at an external
+boundary if the difference between the boundary specified liquid-phase pressure and
+the medium-initialized liquid phase pressure are drastically different. Quadratic
+elements in this case can lead to zero or low Saturation values at all computational
+Gaussian integration points and the front may never penetrate.</p>
+<p>-Time stepping is all important. There are three relevant parameters: time-step scheme,
+initial time step size, and time-step error factor. The rules of thumb that can be
+established are as follows:</p>
+<p>If you are using Porous Mass Lumping, you must set the Time Step Parameter to 0.0, or
+your performance will suffer. In fact, it is always a good idea in steep penetration front
+problems to use backward Euler techniques.</p>
+<p>With mass lumping and first order time integration, you must control your step size
+with the tolerance setting. Too big of time step early on can propagate to large errors at
+later times when time stepping. You may need to experiment with the error tolerance on
+the Time step error card. Constantly scrutinize your results for correctness and suspect
+an error growth here.</p>
+<p>You must have a significant capacitance term on the first time step. If your capacitance
+term is small, then the problem is elliptic and will try to satisfy all boundary conditions,
+and this can mess up your penetration front.You can use <em>Liquid phase compressibility
+property</em> to help this for steep front startup.</p>
+<p>Are you getting stagnant calculations with time-step decreases but not change in
+iteration history? Problem is that you have lost your capacitance term. Compressibility
+of the liquid is sometimes a remedy, but also a more accurate predictor. Mass lumping
+can help too and accomplishes the same thing. Sometimes your initial time step can be
+too small for a good start. Try increasing it …</p>
+<p>-Another startup issue: Steep discontinuities at boundaries and internally for initial
+conditions are bad, obviously. If your time step is such that the front cannot penetrate
+beyond one element in one time step, then with linear elements the capacitance term is
+ineffective (small) upon reduced time steps. Somehow you have got to get the front
+beyond one or two elements before things work properly. I find that ramping up the
+initial boundary conditions helps. Sometimes a large first time step to kick it is good
+too.</p>
+<p>-On startup of a pressurized column of liquid penetrating into a porous substrate, I
+noticed that at zero-based p_liq, there was no problem elevating the applied pressure on
+the penetration, but at Atm-based p_liq we couldn’t start the problem without severe
+compressibility. However, compressibility affects the solution, and in fact allows you
+to push all of your column of liquid into a compressed layer in the substrate, with no
+Sat from propagation. So beware of poorly defined compressibility of liquid. Also,
+refinement in the porous layer helped the startup. But the most significant thing for the
+problem I was solving, don’t be surprised if just a little perturbation on externally
+applied pressure greatly affects the penetration rate. In fact, in one problem simply
+changing from p_ext of 1.01325e+6 to 1.11325+6 increases the penetration rate 2-fold
+initially. The steeper curves are harder to handle.</p>
+</section>
+<section id="id12">
+<h3><strong>References</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+<section id="liquid-phase-reference-pressure">
+<h2><strong>Liquid phase reference pressure</strong><a class="headerlink" href="#liquid-phase-reference-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">reference</span> <span class="n">pressure</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">M</span><span class="o">/</span><span class="n">L</span><span class="o">-</span><span class="n">t2</span><span class="p">]</span> <span class="ow">or</span> <span class="p">[</span><span class="n">N</span><span class="o">/</span><span class="n">L2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id13">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the model and model parameters for the liquid-phase
+compressibility reference pressure. See <em>Liquid phase compressibility</em> card for
+discussion and theory.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>model for the reference pressure, currently the only available option. It requires a
+single floating point value:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - The reference pressure, in units of pressure.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id14">
+<h3><strong>Examples</strong><a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>The cards</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">compressibility</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">beta_liquid</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">reference</span> <span class="n">pressure</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">p_not</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>leads to the application of a linearized compressibility model for the density of liquid in
+the time-derivative capacitance term. This is useful for rigid porous media when the
+conditions are such that the saturation front is sharp.</p>
+</section>
+<section id="id15">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p>See discussion on <em>Liquid phase compressibility</em> card.</p>
+</section>
+<section id="id16">
+<h3><strong>References</strong><a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+<section id="flowing-liquid-viscosity">
+<h2><strong>Flowing Liquid Viscosity</strong><a class="headerlink" href="#flowing-liquid-viscosity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">FlowingLiquid</span> <span class="n">Viscosity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">M</span><span class="o">/</span><span class="n">Lt</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id17">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the model for the viscosity of liquid flowing through pores
+with the Brinkman model of flow through porous media, viz. see <em>Media Type</em> card with
+<strong>POROUS_BRINKMAN</strong> option. In the Brinkman model, the viscosity input through
+the <em>Viscosity</em> card is used as the Brinkman viscosity, and the viscosity input through this
+card is used in determining the hydraulic resistance. Detailed discussion of these two
+viscosities can be found by consulting the references below.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name for the constant viscosity model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - The value of the viscosity.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id18">
+<h3><strong>Examples</strong><a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Flowing</span> <span class="n">Liquid</span> <span class="n">Viscosity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">101.0</span>
+</pre></div>
+</div>
+<p>This card is only applicable to the <strong>POROUS_BRINKMAN</strong> media type and results in a
+hydraulic resistance viscosity of 101.0.</p>
+</section>
+<section id="id19">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id19" title="Permalink to this headline"></a></h3>
+<p>See references below for discussion on use of this card.</p>
+</section>
+<section id="id20">
+<h3><strong>References</strong><a class="headerlink" href="#id20" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>Gartling, D. K., C. E. Hickox and R. C. Givler 1996. “Simulations of Coupled Viscous
+and Porous Flow Problems”, Comp. Fluid Dynamics, 7, 23-48.</p>
+</section>
+</section>
+<section id="inertia-coefficient">
+<h2><strong>Inertia Coefficient</strong><a class="headerlink" href="#inertia-coefficient" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Inertia</span> <span class="n">Coefficient</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="id21">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id21" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify the model for the inertia coefficient cˆ in the Brinkman
+formulation for flow through porous media, viz. see <strong>POROUS_BRINKMAN</strong> option
+on <em>Media Type</em> card. Detailed discussion of this coefficient can be found by consulting
+the references below. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for the inertia coefficient.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - The value of the inertia coefficient.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id22">
+<h3><strong>Examples</strong><a class="headerlink" href="#id22" title="Permalink to this headline"></a></h3>
+<p>Following is a sample input card that produces a weighting coefficient of 1.0 on the
+inertial term in the <strong>POROUS_BRINKMAN</strong> equations.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Inertia</span> <span class="n">Coefficient</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id23">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id23" title="Permalink to this headline"></a></h3>
+<p>See references below for discussion on use of this card.</p>
+</section>
+<section id="id24">
+<h3><strong>References</strong><a class="headerlink" href="#id24" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>Gartling, D. K., C. E. Hickox and R. C. Givler 1996. “Simulations of Coupled Viscous
+and Porous Flow Problems”, Comp. Fluid Dynamics, 7, 23-48.</p>
+</section>
+</section>
+<section id="capillary-network-stress">
+<h2><strong>Capillary Network Stress</strong><a class="headerlink" href="#capillary-network-stress" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Capillary</span> <span class="n">Network</span> <span class="n">Stress</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id25">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id25" title="Permalink to this headline"></a></h3>
+<p>This card specifies the mechanism by which capillary stress and capillary pressure in
+the liquid phase of a partially saturated porous medium is transferred to the solid
+network. This model is active only when the <em>porous_deform</em> equation (see <em>EQ</em> card) is
+active, and the drained network is deformable under liquid phase pressure. The
+principles of this card rest in the theory of the effective stress principle. In effect, the
+model specified here can be used to change the affinity of the pore liquid to the solid
+network (more discussion below). The input parameter is the model for capillary
+network stress.</p>
+<p>The options for {model_name} are the names of transfer mechanisms:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>WETTING</strong></p></td>
+<td><p>specifies that the porous skeleton has the same hydrostatic pressure as the liquid.
+This model has not been tested recently. See discussion below.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>PARTIALLY_WETTING</strong></p></td>
+<td><p>specifies that the porous skeleton has a hydrostatic pressure that is the average of
+the liquid and gas phase pressures, weighted by their saturations (see related report
+on drying of deformable porous media by Cairncross, et. al., 1996).</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>COMPRESSIBLE</strong></p></td>
+<td><p>functions the same as the <strong>PARTIALLY_WETTING</strong> option but includes a factor that
+accounts for the compressibility of the solid material, viz. the actual struts of the
+solid material, not the network (see Cairncross, et. al., 1996).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id26">
+<h3><strong>Examples</strong><a class="headerlink" href="#id26" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Capillary</span> <span class="n">Network</span> <span class="n">Stress</span> <span class="o">=</span> <span class="n">PARTIALLY_WETTING</span>
+</pre></div>
+</div>
+</section>
+<section id="id27">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id27" title="Permalink to this headline"></a></h3>
+<p>Basically, this card sets the functional form of the capillary stress contribution to the
+composite effective stress in a porous medium. The constitutive equation is as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/408_goma_physics.png"><img alt="../_images/408_goma_physics.png" src="../_images/408_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where ˜network is the drained network stress that would result in the absence of any
+pore fluid (gas or liquid). The function F depends on the model type specified on this
+card. For <strong>POROUS_SATURATED</strong> media types, this card is not used and F = pliq.
+For <strong>POROUS_UNSATURATED</strong> and <strong>POROUS_TWO_PHASE</strong> media types, F is as
+follows for different transfer mechanisms:</p>
+<ul class="simple">
+<li><p><strong>WETTING</strong>: The assumption here is that a thin liquid layer covers all surfaces.</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/409_goma_physics.png"><img alt="../_images/409_goma_physics.png" src="../_images/409_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<ul class="simple">
+<li><p><strong>PARTIALLY_WETTING</strong>: The most commonly used model.</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/410_goma_physics.png"><img alt="../_images/410_goma_physics.png" src="../_images/410_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<ul class="simple">
+<li><p><strong>COMPRESSIBLE</strong>: If the solid struts are also significantly compressible, viz. the
+solid bulk modulus Ks is of the same order of magnitude as the network skeleton
+bulk modulus, Kn, this model should be used. Not recently tested; please consult
+with Developers before using this option. PRS (6/13/2002)</p></li>
+</ul>
+</section>
+<section id="id28">
+<h3><strong>References</strong><a class="headerlink" href="#id28" title="Permalink to this headline"></a></h3>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="rel-gas-permeability">
+<h2><strong>Rel Gas Permeability</strong><a class="headerlink" href="#rel-gas-permeability" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Rel</span> <span class="n">Gas</span> <span class="n">Permeability</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="id29">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id29" title="Permalink to this headline"></a></h3>
+<p>This card specifies the model for the relative gas phase permeability for flow in a
+partially saturated porous media, such that the gas flow is the pressure gradient in the
+gas times the permeability times the relative gas phase permeability divided by the gas
+viscosity. This card rests on a consistency in the specification of the relative liquid
+permeability (see models on the <em>Rel Liq Permeability</em> card) and this, the relative gas
+permeability. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>{model_name} for constant relative gas phase permeability with a single input value:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - the gas phase viscosity. For this model, one must account for the gas
+viscosity in the specification of this value.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>CONSTANT</strong> model is rarely used, as it is dependent on the saturation
+level and the relative liquid permeability value. Please see the <em>Rel Liq
+Permeability</em> card.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>SUM_TO_ONE</strong></p></td>
+<td><p>{model_name} for the relative gas phase permeability. This model assumes that the
+relative liquid permeability and relative gas permeability add to one.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - the value of the gas phase viscosity.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id30">
+<h3><strong>Examples</strong><a class="headerlink" href="#id30" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Rel</span> <span class="n">Gas</span> <span class="n">Permeability</span> <span class="o">=</span> <span class="n">SUM_TO_ONE</span> <span class="mf">0.0001</span>
+</pre></div>
+</div>
+<p>This card specifies that the relative gas permeability in Darcy’s law for the gas flux is to
+depend on the liquid phase relative permeability such that the two sum-to-one. The
+gas viscosity here is specified to be 0.0001, in the appropriate viscosity units of M/L/t.</p>
+</section>
+<section id="id31">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id31" title="Permalink to this headline"></a></h3>
+<p>This card is only required for <em>Media Type</em> <strong>POROUS_TWO_PHASE</strong>. Darcy’s law for
+gas flow is, in its simplest form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/411_goma_physics.png"><img alt="../_images/411_goma_physics.png" src="../_images/411_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where, the Darcy velocity is proportional to the gradient in gas pressure, with k being
+the permeability, krelg being the relative gas permeability and μgas the viscosity of the
+gas. For the <strong>SUM_TO_ONE</strong> option above, the floating point constant is the gas phase
+viscosity, and the gas-phase relative permeability is calculated using</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/412_goma_physics.png"><img alt="../_images/412_goma_physics.png" src="../_images/412_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>For the <strong>CONSTANT</strong> option the floating point constant must include the effect of
+viscosity, viz. the constant represents krelg/μgas</p>
+</section>
+<section id="id32">
+<h3><strong>References</strong><a class="headerlink" href="#id32" title="Permalink to this headline"></a></h3>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="rel-liq-permeability">
+<h2><strong>Rel Liq Permeability</strong><a class="headerlink" href="#rel-liq-permeability" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Rel</span> <span class="n">Liq</span> <span class="n">Permeability</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="id33">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id33" title="Permalink to this headline"></a></h3>
+<p>This card is required for <em>Media Type</em> <strong>POROUS_TWO_PHASE</strong>. This card specifies
+the model for the relative liquid phase permeability for flow in a partially saturated
+porous media, such that the liquid flow is the pressure gradient in the liquid times the
+permeability times the relative liquid phase permeability divided by the liquid
+viscosity. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the relative gas phase permeability; the permissible values are
+<strong>CONSTANT, VAN_GENUCHTEN, PSD_VOL, PSD_WEXP, and PSD_SEX</strong>.</p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Permeability model choices and their parameters are discussed below.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>a constant relative liquid permeability; this is a rarelyused option.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - relative liquid permeability, obtained by dividing the relative
+permeability desired by the liquid-phase viscosity</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>VAN_GENUCHTEN</strong>
+&lt;float1&gt; &lt;float2&gt;
+&lt;float3&gt; &lt;float4&gt;</p></td>
+<td><p>assumes that the relative liquid permeability is a function of the saturation (as
+specified in the <em>Saturation</em> card). The {float_list} contains four values for this
+model, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Irreducible water saturation</p></li>
+<li><p>&lt;float2&gt; - Irreducible air saturation</p></li>
+<li><p>&lt;float3&gt; - Exponent ( λ = 1 – 1 ⁄ β ) in krel model</p></li>
+<li><p>&lt;float4&gt; - Liquid viscosity</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>PSD_VOL</strong> &lt;float1&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+saturation; a single input value isrequired:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Liquid phase viscosity</p></li>
+</ul>
+</div></blockquote>
+<p>All other parameters are loaded up from the <em>Saturation</em> and <em>Permeability</em> cards.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>PSD_WEXP</strong> &lt;float1&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+saturation; a single input value is required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Liquid phase viscosity</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>PSD_SEXP</strong> &lt;float1&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+saturation; a single input value is required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; -Liquid phase viscosity</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id34">
+<h3><strong>Examples</strong><a class="headerlink" href="#id34" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Rel</span> <span class="n">Liq</span> <span class="n">Permeability</span> <span class="o">=</span> <span class="n">VAN_GENUCHTEN</span> <span class="mf">0.01</span> <span class="mf">0.01</span> <span class="mf">0.667</span> <span class="mf">0.01</span>
+</pre></div>
+</div>
+</section>
+<section id="id35">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id35" title="Permalink to this headline"></a></h3>
+<p>The most often used model is that of VAN_GENUCHTEN. The functional form of
+this model is as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/413_goma_physics.png"><img alt="../_images/413_goma_physics.png" src="../_images/413_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/414_goma_physics.png"><img alt="../_images/414_goma_physics.png" src="../_images/414_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and is the viscosity. This function is clipped to zero as and clipped to one
+as Seff → 1.
+<strong>PSD_*</strong> model theory details can be found in the references cited below. These models
+bring in more explicit dependence on pore size and size distribution, as well as other
+microstructural features. In the <strong>VAN_GENUCHTEN</strong> model, such parameter effects
+are embodied in the Saturation dependence, which is empirically fit through the
+saturation function.</p>
+</section>
+<section id="id36">
+<h3><strong>References</strong><a class="headerlink" href="#id36" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="saturation">
+<h2><strong>Saturation</strong><a class="headerlink" href="#saturation" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Saturation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[]</span>
+</pre></div>
+</div>
+<section id="id37">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id37" title="Permalink to this headline"></a></h3>
+<p>This card specifies the model for the liquid saturation in a partially saturated porous
+media, which is frequently observed experimentally to be a function of the capillary
+pressure (gas pressure minus liquid pressure). This card is required for <em>Media Type</em>
+specifications of <strong>POROUS_PART_SAT, POROUS_UNSAT,</strong> and <strong>POROUS_TWO_PHASE</strong>. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the liquid in a partially saturated porous media. The
+permissible values are <strong>CONSTANT,VAN_GENUCHTEN, TANH, PSD_VOL, PSD_WEXP,</strong> and
+<strong>PSD_SEXP.</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Saturation model choices and their parameters are discussed below.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;float1&gt;</p></td>
+<td><p>For the constant value of saturation model. This model is rarely used, unless one
+wanted to study the flow of gas and liquid at some constant, pre-specified saturation
+as a function of gas and liquid phase pressure.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>VAN_GENUCHTEN</strong></p></td>
+<td><p>The <strong>VAN_GENUCHTEN</strong> model assumes that saturation is a function of the capillary
+pressure. The {float_list} contains four values, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Irreducible water saturation</p></li>
+<li><p>&lt;float2&gt; - Irreducible air saturation</p></li>
+<li><p>&lt;float3&gt; - An exponent β</p></li>
+<li><p>&lt;float4&gt; - A scaling to convert from capillary pressure to suction (α ⁄ ρl ⁄g)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>TANH</strong> &lt;float_list&gt;</p></td>
+<td><p>The first version of the <strong>TANH</strong> model assumes that saturation is only a function of
+capillary pressure. The {float_list} contains four values, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Irreducible water saturation, θw</p></li>
+<li><p>&lt;float2&gt; - Irreducible air saturation, θair</p></li>
+<li><p>&lt;float3&gt; - A constant c</p></li>
+<li><p>&lt;float3&gt; - A constant d</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>PSD_VOL</strong> &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+relative liquid permeability; two input values are required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Surface tension of the liquid</p></li>
+<li><p>&lt;float2&gt; - Contact angle the liquid-vapor menisci makes with the solid surfaces</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>PSD_WEXP</strong> &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+relative liquid permeability; two input values are required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Surface tension of the liquid</p></li>
+<li><p>&lt;float2&gt; - Contact angle the liquid-vapor menisci makes with the solid surfaces</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>PSD_SEXP</strong> &lt;float1&gt;
+&lt;float2&gt;</p></td>
+<td><p>This model can only be used in conjunction with the same model for permeability and
+relative liquid permeability; two input values are required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Surface tension of the liquid</p></li>
+<li><p>&lt;float2&gt; - Contact angle the liquid-vapor menisci makes with the solid surfaces</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id38">
+<h3><strong>Examples</strong><a class="headerlink" href="#id38" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Saturation</span> <span class="o">=</span> <span class="n">VAN_GENUCHTEN</span> <span class="mf">0.01</span> <span class="mf">0.01</span> <span class="mf">3.9</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<p>The parameters on this <strong>VAN_GENUCHTEN</strong> specification are basically curve fit
+parameters to experimental measured saturation values versus capillary pressure. They
+do have some physical meaning, as is described below, and in the references.</p>
+</section>
+<section id="id39">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id39" title="Permalink to this headline"></a></h3>
+<p>The saturation function specification is perhaps the most critical and most influential
+function for capturing accurate behavior of flow through partially saturated porous
+media. The basic cap of this function versus capillary pressure is depicted in the figure
+below: Notice the plateau of saturation at unity at low capillary pressures (high positive
+liquid pressures) and the dip to the irreducible water saturation at high capillary
+pressures. In most real operations, this dependence will be highly sensitive to many
+factors: viz. whether you are filling or vacating the pore space, whether network stress
+in poroelastic problems is leading to liquid tension, etc.</p>
+<p>The Van Genuchten model has the following functional form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/415_goma_physics.png"><img alt="../_images/415_goma_physics.png" src="../_images/415_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here the irreducible water saturation is θw, the irreducible air saturation 0air, the
+suction factor is α, and the exponents β and m, the latter of which is 1 – 1 ⁄ β.</p>
+<p>The <strong>TANH</strong> model has the following functional form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/416_goma_physics.png"><img alt="../_images/416_goma_physics.png" src="../_images/416_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>a</em> and <em>b</em> are automatically calculated from</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/417_goma_physics.png"><img alt="../_images/417_goma_physics.png" src="../_images/417_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and <em>c</em> and <em>d</em> are two fitted coefficients provided as input parameters. Here the
+irreducible water saturation is 0w, the irreducible air saturation 0air, and are also
+provided by the user as input parameters. Pc is the capillary pressure which has a lower
+limit of 1.E-5.</p>
+</section>
+<section id="id40">
+<h3><strong>References</strong><a class="headerlink" href="#id40" title="Permalink to this headline"></a></h3>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk.</p>
+<p>GTM-029.0: SUPG Formulation for the Porous Flow Equations in Goma, H. K.
+Moffat, August 2001 (DRAFT).</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996).</p>
+</section>
+</section>
+<section id="porous-weight-function">
+<h2><strong>Porous Weight Function</strong><a class="headerlink" href="#porous-weight-function" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="p">{</span><span class="n">GALERKIN</span> <span class="o">|</span> <span class="n">SUPG</span><span class="p">}</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id41">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id41" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the weight function form on the capacitance term
+of the Darcy flow equations for partially saturated flow (viz. for Media Type
+specifications of <strong>POROUS_PART_SAT</strong> and <strong>POROUS_UNSAT</strong>, and
+<strong>POROUS_TWO_PHASE</strong>.) The standard approach is to use a Galerkin formulation,
+but often times the SUPG option allows for a more stable time integration algorithm
+using the classic Streamwise Upwinding Petrov Galerkin weight function (see
+references below). The model options for this card are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>GALERKIN</strong></p></td>
+<td><p>Name of the weight function formulation. This option requests a standard Galerkin
+finite element weighted residual treatment. A parameter is required, viz. &lt;float&gt;,
+but it is not used by <em>Goma</em>; it should be set to zero.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - 0.0</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>SUGP</strong></p></td>
+<td><p>Name of the weight function formulation. This option requests a streamwise upwinding
+Petrov-Galerkin formulation. A floating point parameter is required as a
+SUPG weighting parameter and it should be set between 0.0 (for no upwinding) and 1.0
+(for full upwinding).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float&gt; - a SUPG weighting parameter</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The default model if this card is missing is <strong>GALERKIN</strong>.</p>
+</section>
+<section id="id42">
+<h3><strong>Examples</strong><a class="headerlink" href="#id42" title="Permalink to this headline"></a></h3>
+<p>An example card</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">SUPG</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id43">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id43" title="Permalink to this headline"></a></h3>
+<p>As mentioned above, this card is used to invoke a streamwise upwinding scheme for
+purposes of stabilizing the solution around steep saturation fronts. Galerkin finite
+element treatment is often an extremely inaccurate discretization for propagating a
+discontinuity, such as is the case around these fronts, and often has to be supplemented
+with streamwise diffusion and/or mass lumping so that the saturation variable remains
+monotonic and well behaved, viz. to keep it from going below zero. Another expedient
+to aid in keeping the front smooth and monotonic is to use mass lumping (cf. <em>Mass
+Lumping</em> card).</p>
+</section>
+<section id="id44">
+<h3><strong>References</strong><a class="headerlink" href="#id44" title="Permalink to this headline"></a></h3>
+<p>GTM-029.0: SUPG Formulation for the Porous Flow Equations in Goma, H. K.
+Moffat, August 2001 (DRAFT).</p>
+<p>Bradford, S. F. and N. D. Katopodes, “The anti-dissipative, non-monotone behavior of
+Petrov-Galerkin Upwinding,” International J. for Numerical Methods in Fluids, v. 33,
+583-608 (2000).</p>
+<p>Brooks, A. N. and T. J. R. Hughes, “Streamline Upwind/Petrov-Galerkin Formulations
+for Convection Dominated Flows with Particular Emphasis on the Incompressible
+Navier-Stokes Equations,” Comp. Math. In Appl. Mechanics and Eng., 32, 199 - 259
+(1992).</p>
+<p>Gundersen, E. and H. P. Langtangen, “Finite Element Methods for Two-Phase Flow in
+Heterogeneous Porous Media,” in Numerical Methods and Software Tools in Industrial
+Mathematics, Morten Daehlen, Aslak Tveito, Eds., Birkhauser, Boston, 1997.</p>
+<p>Helmig, R. and R. Huber, “Comparison of Galerkin-type discretization techniques for
+two-phase flow in heterogeneous porous media,” Advances in Water Resources, 21,
+697-711 (1998).</p>
+<p>Unger, A. J. A., P. A. Forsyth and E. A. Sudicky, “Variable spatial and temporal
+weighting schemes for use in multi-phase compositional problems,” Advances in Water
+Resources, 19, 1 - 27 (1996).</p>
+</section>
+</section>
+<section id="porous-mass-lumping">
+<h2><strong>Porous Mass Lumping</strong><a class="headerlink" href="#porous-mass-lumping" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Mass</span> <span class="n">Lumping</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">true</span> <span class="o">|</span> <span class="n">no</span> <span class="o">|</span> <span class="n">false</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id45">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id45" title="Permalink to this headline"></a></h3>
+<p>Mass lumping is a technique for handling stiff problems with propagation of
+discontinuities. By “Mass” we mean the so-called mass matrix, or the submatrix
+generated by the time-derivative term in the physical equations. Discretization of this
+term with the standard Galerkin finite element method produces a symmetric, but nondiagonal
+matrix, also known as the consistent mass matrix as it adheres to the proper
+weak form. This required card specifies the mode in which the mass matrix is
+computed. If mass lumping is turned on, then the matrix is formed on a nodal,
+collocated basis and the mass matrix becomes diagonal. This technique expedites timeintegration
+during the propagation of steep fronts.</p>
+<p>The mass lumping here applies ONLY to the time-derivative term in the
+<em>EQ=porous_liq</em> or <em>EQ=porous_gas</em> equations in <em>Goma</em>, and only when the <em>Media Type</em>
+is either <strong>POROUS_UNSATURATED</strong> or <strong>POROUS_TWO_PHASE</strong>. Mass lumping is
+not enabled for saturated porous flow. Please see technical discussion below for other
+usage tips. The card options are as follows:</p>
+<p><strong>yes | true</strong> Compute mass matrix with the lumped approach.</p>
+<p><strong>no | false</strong> Compute mass matrix with the standard Galerkin approach. This is the default.</p>
+</section>
+<section id="id46">
+<h3><strong>Examples</strong><a class="headerlink" href="#id46" title="Permalink to this headline"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Mass</span> <span class="n">Lumping</span> <span class="o">=</span> <span class="n">true</span>
+</pre></div>
+</div>
+</section>
+<section id="id47">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id47" title="Permalink to this headline"></a></h3>
+<p>Mass lumping is almost essential for unsaturated porous flow problems, especially at
+low permeabilities and in conditions for which the saturation front is sharp. It is
+recommended that mass lumping always be used for all unsaturated porous flow
+problems. However, with such use it is also recommended to use ONLY 1st order time
+integration (see <em>Time step parameter</em> card and choose Backward-Euler, 0.0). For
+second order time integration on the porous flow equations, mass lumping does not
+provide any benefit as the increased accuracy in time tends to lead to insufficient
+accuracy in space, and wiggles form.</p>
+<p>Mass lumping is not currently available for saturated deformable porous flow.</p>
+</section>
+<section id="id48">
+<h3><strong>References</strong><a class="headerlink" href="#id48" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>GTM-029.0: SUPG Formulation for the Porous Flow Equations in Goma, H. K.
+Moffat, August 2001 (DRAFT).</p>
+<p>Bradford, S. F. and N. D. Katopodes, “The anti-dissipative, non-monotone behavior of
+Petrov-Galerkin Upwinding,” International J. for Numerical Methods in Fluids, v. 33,
+583-608 (2000).</p>
+<p>Gundersen, E. and H. P. Langtangen, “Finite Element Methods for Two-Phase Flow in
+Heterogeneous Porous Media,” in Numerical Methods and Software Tools in Industrial
+Mathematics, Morten Daehlen, Aslak Tveito, Eds., Birkhauser, Boston, 1997.</p>
+<p>Helmig, R. and R. Huber, “Comparison of Galerkin-type discretization techniques for
+two-phase flow in heterogeneous porous media,” Advances in Water Resources, 21,
+697-711 (1998).</p>
+<p>Unger, A. J. A., P. A. Forsyth and E. A. Sudicky, “Variable spatial and temporal
+weighting schemes for use in multi-phase compositional problems,” Advances in Water
+Resources, 19, 1 - 27 (1996).</p>
+</section>
+</section>
+<section id="porous-diffusion-constitutive-equation">
+<h2><strong>Porous Diffusion Constitutive Equation</strong><a class="headerlink" href="#porous-diffusion-constitutive-equation" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Diffusion</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id49">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id49" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the species diffusion model for the gas phase in a
+porous medium. Just now there is only one option, but plans are to expand the options
+to include multicomponent diffusion models (cf. <em>Diffusion Constitutive Equation</em> card).
+It is important to note that this model specification only applies to the gas phase of each
+component. Liquid phase species diffusive transport has not been implemented as of
+12/19/01.</p>
+<p>Definitions of the input parameters are as follows, with only a single permissible value:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>DARCY_FICKIAN</strong></p></td>
+<td><p>Name of the model for the diffusion constitutive equation in the porous gas phase.</p></td>
+</tr>
+</tbody>
+</table>
+<p>This model simply implies that gas species can be transported relative to the solid
+skeleton phase not only by a pressure gradient, as in Darcy’s law, but also by Fickian
+diffusion.</p>
+</section>
+<section id="id50">
+<h3><strong>Examples</strong><a class="headerlink" href="#id50" title="Permalink to this headline"></a></h3>
+<p>The following sample input card uses the APREPRO variable model_name (which is
+set to <strong>DARCY_FICKIAN</strong>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Diffusion</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id51">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id51" title="Permalink to this headline"></a></h3>
+<p>Currently, the <strong>DARCY_FICKIAN</strong> model is the only option for the porous diffusion
+equation and it only applies to one phase. When this card is parsed, it is contained in a
+solvent species loop. When we allow more than one volatile species, we will eventually
+allow for other diffusion constitutive equation models, e.g. of the Stefan-Maxwell type.
+Also, we will have to build a phase dependence into this card, as the diffusion law may
+be different in the liquid and in the gas. Right now, we do not allow for diffusion
+transport (viz. by a chemical potential or concentration gradient) in the liquid phase of
+a porous medium. Please consult references below for theoretical discussion.</p>
+</section>
+<section id="id52">
+<h3><strong>References</strong><a class="headerlink" href="#id52" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="porous-gas-diffusivity">
+<h2><strong>Porous Gas Diffusivity</strong><a class="headerlink" href="#porous-gas-diffusivity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Gas</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">L2</span><span class="o">/</span><span class="n">t</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id53">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id53" title="Permalink to this headline"></a></h3>
+<p>This card sets the model for the porous gas diffusivity, or the diffusion coefficient for
+diffusive species flux in the gas phase of a porous medium. It is applicable to media
+types <strong>POROUS_UNSATURATED</strong> and <strong>POROUS_TWO_PHASE</strong> (see <em>Media Type</em>
+card).</p>
+<p>Definitions of the input options for {model_name} and the &lt;integer&gt; and &lt;float&gt;
+parameters fro each model are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;integer&gt;
+&lt;float1&gt;</p></td>
+<td><p>the name for the constant diffusivity model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - phase/component; always set to zero until a multicomponent capability
+exists</p></li>
+<li><p>&lt;float1&gt; - D, Diffusivity [L2/t]</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>POROUS</strong> &lt;integer&gt;
+&lt;float1&gt; &lt;float2&gt; &lt;float3&gt;
+&lt;float4&gt; &lt;float5&gt;</p></td>
+<td><p>the name for a microstructure dependent porous medium model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - phase/component; always set to zero until a multicomponent capability
+exists</p></li>
+<li><p>&lt;float1&gt; - Dvo, binary diffusion coefficient in free space [L2/t]</p></li>
+<li><p>&lt;float2&gt; - τ, tortuosity of the matrix skeleton</p></li>
+<li><p>&lt;float3&gt; - P*gas, reference gas phase pressure</p></li>
+<li><p>&lt;float4&gt; - T0, reference temperature.</p></li>
+<li><p>&lt;float5&gt; - n, exponent on the temperature dependence (see below).</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>For two-phase or unsaturated flow in a porous medium, the diffusivity calculated by
+this model is the diffusivity of solvent vapor through the gas phase in the pore-space
+(see Martinez, 1995).</p>
+</section>
+<section id="id54">
+<h3><strong>Examples</strong><a class="headerlink" href="#id54" title="Permalink to this headline"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Gas</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">POROUS</span> <span class="mi">0</span> <span class="mf">1.e-5</span> <span class="mf">0.5</span> <span class="mf">1.e+6</span> <span class="mf">25.0</span> <span class="mi">3</span>
+</pre></div>
+</div>
+<p>See the equation below for the diffusivity model that this card represents.</p>
+</section>
+<section id="id55">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id55" title="Permalink to this headline"></a></h3>
+<p>The generalized flux of liquid phase solvent, in both gas and liquid phases, contains a
+term that accounts for diffusion of the liquid solvent species as gas vapor (see
+references below). That flux is as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/418_goma_physics.png"><img alt="../_images/418_goma_physics.png" src="../_images/418_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>If the media type is <strong>POROUS_TWO_PHASE</strong>, this expression is divided by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/419_goma_physics.png"><img alt="../_images/419_goma_physics.png" src="../_images/419_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and if in addition it is temperature dependent, this expression is multiplied by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/420_goma_physics.png"><img alt="../_images/420_goma_physics.png" src="../_images/420_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id56">
+<h3><strong>References</strong><a class="headerlink" href="#id56" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND94-0379: “Formulation and Numerical Analysis of Nonisothermal Multiphase
+Flow in Porous Media”, Sandia Technical Report, Martinez, M. J., 1995</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="porous-latent-heat-vaporization">
+<h2><strong>Porous Latent Heat Vaporization</strong><a class="headerlink" href="#porous-latent-heat-vaporization" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Latent</span> <span class="n">Heat</span> <span class="n">Vaporization</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">E</span><span class="o">/</span><span class="n">M</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id57">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id57" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the model for the latent heat of vaporization for
+each liquid solvent species in a partially saturated porous media flow problem, viz.
+<em>Media Type</em> card set to <strong>POROUS_UNSATURATED</strong> or <strong>POROUS_TWO_PHASE</strong>.
+As of 6/13/2002, we only allow single liquid phase solvent, and the porous enthalpy
+equation is being tested. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the constant latent heat of vaporization model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - the species equation of liquid phase solvent; MUST BE SET TO ZERO for
+now.</p></li>
+<li><p>&lt;float&gt; - the value of the latent heat of vaporization.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id58">
+<h3><strong>Examples</strong><a class="headerlink" href="#id58" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Latent</span> <span class="n">Heat</span> <span class="n">Vaporization</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">1000.2</span>
+</pre></div>
+</div>
+<p>See the equation below for the diffusivity model that this card represents.</p>
+</section>
+<section id="id59">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id59" title="Permalink to this headline"></a></h3>
+<p>First order phase change involves the adsorption or expulsion of heat. This thermal
+effect is modeled through the porous energy equation (see EQ cards; this equation was
+under development and testing as this manual was being assembled) with a source term
+that depends on the evaporation/condensation rate.</p>
+</section>
+<section id="id60">
+<h3><strong>References</strong><a class="headerlink" href="#id60" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-latent-heat-fusion">
+<h2><strong>Porous Latent Heat Fusion</strong><a class="headerlink" href="#porous-latent-heat-fusion" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Latent</span> <span class="n">Heat</span> <span class="n">Fusion</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">E</span><span class="o">/</span><span class="n">M</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id61">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id61" title="Permalink to this headline"></a></h3>
+<p>This required card is used to specify the model for the latent heat of fusion (or freezing)
+for each liquid solvent species in a partially saturated porous media flow problem, viz.
+<em>Media Type</em> card set to <strong>POROUS_UNSATURATED</strong> or <strong>POROUS_TWO_PHASE</strong>.
+As of 6/13/2002, we only allow single liquid phase solvent and the porous enthalpy
+equation is being tested. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the constant latent heat of fusion model.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;integer&gt; - the species equation of liquid phase solvent; MUST BE SET TO ZERO for
+now.</p></li>
+<li><p>&lt;float&gt; - the value of the latent heat of fusion.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id62">
+<h3><strong>Examples</strong><a class="headerlink" href="#id62" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Latent</span> <span class="n">Heat</span> <span class="n">Fusion</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">1000.2</span>
+</pre></div>
+</div>
+<p>See the equation below for the diffusivity model that this card represents.</p>
+</section>
+<section id="id63">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id63" title="Permalink to this headline"></a></h3>
+<p>First order phase change involves the adsorption or expulsion of heat. This thermal
+effect is modeled through the porous energy equation (see <em>EQ</em> cards; this equation was
+under development and testing as this manual was being assembled) with a source term
+that depends on the evaporation/condensation rate. <em>Fusion</em> implies a liquid to solid
+transition. It is envisioned that this card will someday be used for porous flow in mushy
+zones of solidifying metals, or the freezing of water in a porous solid.</p>
+</section>
+<section id="id64">
+<h3><strong>References</strong><a class="headerlink" href="#id64" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-vapor-pressure">
+<h2><strong>Porous Vapor Pressure</strong><a class="headerlink" href="#porous-vapor-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Vapor</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">{</span><span class="n">integer</span><span class="p">}</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">M</span><span class="o">/</span><span class="n">L</span><span class="o">-</span><span class="n">t2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id65">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id65" title="Permalink to this headline"></a></h3>
+<p>Used to specify the model for the vapor pressure for each multiphase flow component
+in the porous medium that is activated for <em>Media Type</em> <strong>POROUS_UNSATURATED</strong> or
+<strong>POROUS_TWO_PHASE</strong>.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>The permissible values for the model in this class are <strong>KELVIN</strong> and <strong>FLAT</strong> for a
+volatile liquid, and <strong>NON_VOLATILE</strong> for a non-volatile liquid.</p></td>
+</tr>
+<tr class="row-even"><td><p>{integer}</p></td>
+<td><p>All models require an integer field after the model name which is the species_number;
+always set to zero until a multicomponent capability exists.</p></td>
+</tr>
+<tr class="row-odd"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Porous vapor pressure model choices and their parameters are presented below; consult
+the Technical Discussion for relevant details.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>KELVIN</strong> &lt;integer&gt; &lt;float1&gt;
+&lt;float2&gt;… &lt;float5&gt;</p></td>
+<td><p>For the <strong>KELVIN</strong> porous vapor pressure model, the {float_list} has a five values:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - p*v, vapor pressure on a flat interface</p></li>
+<li><p>&lt;float2&gt; - ρl, the liquid density</p></li>
+<li><p>&lt;float3&gt; - Mw , molecular weight of liquid</p></li>
+<li><p>&lt;float4&gt; - R, the gas law constant</p></li>
+<li><p>&lt;float5&gt; - T, the operating temperature</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>FLAT</strong> &lt;integer&gt; &lt;float1&gt;
+&lt;float2&gt;… &lt;float5&gt;</p></td>
+<td><p>For the <strong>FLAT</strong> porous vapor pressure model, the {float_list} has a five values
+(same as <strong>KELVIN</strong> above):</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - p*v, vapor pressure on a flat interface</p></li>
+<li><p>&lt;float2&gt; - ρl, the liquid density</p></li>
+<li><p>&lt;float3&gt; - Mw , molecular weight of liquid</p></li>
+<li><p>&lt;float4&gt; - R, the gas law constant</p></li>
+<li><p>&lt;float5&gt; - T, the operating temperature</p></li>
+</ul>
+</div></blockquote>
+<p>The <strong>FLAT</strong> option requires the same parameters as the <strong>KELVIN</strong> model but leaves
+out the exponential function.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>NON_VOLATILE</strong> &lt;integer&gt;</p></td>
+<td><p>The <strong>NON_VOLATILE</strong> model requires no additional input.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id66">
+<h3><strong>Examples</strong><a class="headerlink" href="#id66" title="Permalink to this headline"></a></h3>
+<p>The sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Vapor</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="n">FLAT</span> <span class="mi">0</span> <span class="p">{</span><span class="n">Vap_Pres</span><span class="p">}</span> <span class="p">{</span><span class="n">density</span><span class="p">}</span> <span class="p">{</span><span class="mf">30.</span><span class="p">}</span> <span class="p">{</span><span class="n">Rgas</span><span class="p">}</span> <span class="p">{</span><span class="n">T</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>applies the <strong>FLAT</strong> model as described above to vapor-liquid equilibrium (assumed to be
+single component for now) using all APREPRO-defined parameters.</p>
+</section>
+<section id="id67">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id67" title="Permalink to this headline"></a></h3>
+<p>The <strong>KELVIN</strong> option is used to include the effect of vapor-pressure lowering that
+results in equilibrium over high curvature menisci, i.e., small pores. The equation form
+of this is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/421_goma_physics.png"><img alt="../_images/421_goma_physics.png" src="../_images/421_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The <strong>FLAT</strong> option requires the same parameters but leaves out the exponential function.
+The constants are still needed so that the gas-phase concentration can be calculated
+with the ideal gas law. The functional form is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/422_goma_physics.png"><img alt="../_images/422_goma_physics.png" src="../_images/422_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where S is the local saturation, and ρgv is the gas phase density of vapor. This model is
+ad-hoc but nonetheless leads to some interesting results. It basically says that as
+saturation increases, the gas-liquid menisci, and correspondingly the interfacial area
+available for evaporation, become more concentrated and hence the gas-phase vapor
+concentration increases.</p>
+<p>The <strong>NON_VOLATILE</strong> option should be set if no gas-phase transport of vapor of the
+liquid phase component is desired, as if the liquid phase were non-volatile. Goma, with
+this choice, sets the gas phase concentration of liquid vapor to zero.</p>
+<p>For nonvolatile pore liquids, the vapor pressure on a flat interface, viz. the first required
+floating point on this card, should be set to zero. As of 6/13/02 this card has only been
+implemented for pure liquid solvents, so that no equilibrium solvent partitioning across
+the interface is present.</p>
+</section>
+<section id="id68">
+<h3><strong>FAQs</strong><a class="headerlink" href="#id68" title="Permalink to this headline"></a></h3>
+<p>Sometimes system aborts can happen with the Kelvin model because of real large,
+negative capillary pressures. In this case, the exponential term can exceed the machine
+limit. This can happen well into a transient run. The user should be aware of this;
+consult GT-009.3 for tips related to dealing with this problem.</p>
+</section>
+<section id="id69">
+<h3><strong>References</strong><a class="headerlink" href="#id69" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="porous-liquid-volume-expansion">
+<h2><strong>Porous Liquid Volume Expansion</strong><a class="headerlink" href="#porous-liquid-volume-expansion" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Not</span> <span class="n">currently</span> <span class="n">enabled</span> <span class="p">(</span><span class="mi">12</span><span class="o">/</span><span class="mi">21</span><span class="o">/</span><span class="mi">2001</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="id70">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id70" title="Permalink to this headline"></a></h3>
+<p>This card is not currently activated.</p>
+</section>
+<section id="id71">
+<h3><strong>Examples</strong><a class="headerlink" href="#id71" title="Permalink to this headline"></a></h3>
+<p>No examples.</p>
+</section>
+<section id="id72">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id72" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id73">
+<h3><strong>References</strong><a class="headerlink" href="#id73" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="porous-gas-constants">
+<h2><strong>Porous Gas Constants</strong><a class="headerlink" href="#porous-gas-constants" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Gas</span> <span class="n">Constants</span> <span class="o">=</span> <span class="n">IDEAL_GAS</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">varies</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id74">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id74" title="Permalink to this headline"></a></h3>
+<p>This required card is used for <em>Media Types</em> of <strong>POROUS_UNSATURATED</strong> and
+<strong>POROUS_TWO_PHASE</strong>, and is used to input some standard thermodynamic gas
+constants needed for vapor-liquid equilibrium calculations (see <em>Media Type</em> card).
+Eventually more than one model may be allowed for nonideal gas situations.</p>
+<p>The <strong>IDEAL_GAS</strong> model is the only model currently requiring standard constants; they
+are defined as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>IDEAL_GAS</strong></p></td>
+<td><p>the model name requiring constants for the thermodynamic ideal gas law.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - MWair, the molecular weight of the insoluble
+gas in the gas phase [g/mole].</p></li>
+<li><p>&lt;float2&gt; - R, the universal gas law constant [M-L2/t2/K]</p></li>
+<li><p>&lt;float3&gt; - T, the temperature [deg K]</p></li>
+<li><p>&lt;float4&gt; - pamb, the ambient gas pressure.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id75">
+<h3><strong>Examples</strong><a class="headerlink" href="#id75" title="Permalink to this headline"></a></h3>
+<p>The sample input card follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Gas</span> <span class="n">Constants</span> <span class="o">=</span> <span class="n">IDEAL_GAS</span> <span class="mf">28.0</span> <span class="mf">8.</span> <span class="mi">315</span> <span class="mi">275</span> <span class="mf">1.06e+5</span>
+</pre></div>
+</div>
+</section>
+<section id="id76">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id76" title="Permalink to this headline"></a></h3>
+<p>For <strong>POROUS_UNSATURATED</strong> media types the ambient pressure dictates the
+equilibrium pressure for the calculation of the gas-phase density of solvent (viz. the
+total ambient pressure minus the vapor pressure will be the gas partial pressure, from
+which the concentration of gas can be computed based on the other gas constants). In
+<strong>POROUS_TWO_PHASE</strong> media types, the gas partial pressure is a dependent
+variable and computed as a part of the Darcy law mass balance. In this case the
+dynamic pressure is used instead of &lt;float4&gt; here for the calculation of the gas-phase
+concentrations.</p>
+<p>It is important to realize that setting the ambient pressure on this card for Media Types
+of <strong>POROUS_UNSATURATED</strong> will potentially affect your saturation curve and the
+appropriate values of your liquid phase pressure boundary conditions. If possible, you
+should set this value to zero, and base your Saturation versus vapor pressure curve
+accordingly. Also, in that case your liquid pressure boundary conditions can all be
+referenced to zero. However, if you choose a gauge pressure, or thermodynamic
+pressure, you Saturation/capillary pressure curve must be shifted accordingly, as do
+your boundary conditions. Also, remember these pressures will affect your solid
+pressure state in poroelastic problems.</p>
+</section>
+<section id="id77">
+<h3><strong>References</strong><a class="headerlink" href="#id77" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="electrical.html" class="btn btn-neutral float-left" title="Electrical Properties" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="species.html" class="btn btn-neutral float-right" title="Species Properties" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

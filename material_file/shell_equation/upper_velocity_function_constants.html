@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upper Velocity Function Constants &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Upper Velocity Function Constants</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/shell_equation/upper_velocity_function_constants.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="upper-velocity-function-constants">
+<h1><strong>Upper Velocity Function Constants</strong><a class="headerlink" href="#upper-velocity-function-constants" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Upper</span> <span class="n">Velocity</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card takes the specification of the upper-wall velocity function for the confined
+channel lubrication capability, or the lub_p equation. This function specifies the
+velocity of the upper channel wall as a function of time. Currently two models for
+{model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model invokes a squeeze/separation velocity uniformly across the entire material
+region, viz. the two walls are brought together/apart at a constant rate. This option
+requires two floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the velocity component in the x-direction. L/t.</p></li>
+<li><p>&lt;float2&gt; is the velocity component in the y-direction. L/t</p></li>
+<li><p>&lt;float3&gt; is the velocity component in the z-direction. L/t (NOTE: this is usually
+taken as zero as it is set in the Upper Wall Height Function model)</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ROLL</strong></p></td>
+<td><p>This model invokes a wall velocity which corresponds to a rolling-motion. This model
+takes nine constants ???? :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; Roll radius, L.</p></li>
+<li><p>&lt;float2&gt; x-coordinate of axis origin, L.</p></li>
+<li><p>&lt;float3&gt; y-coordinate of axis orgin, L.</p></li>
+<li><p>&lt;float4&gt; z-coordinate of axis origin, L.</p></li>
+<li><p>&lt;float5&gt; Direction angle 1 of rotation axis</p></li>
+<li><p>&lt;float6&gt; Direction angle 2of rotation axis</p></li>
+<li><p>&lt;float7&gt; Direction angle 3of rotation axis</p></li>
+<li><p>&lt;float8&gt; Squeeze rate</p></li>
+<li><p>&lt;float9&gt; rotation rate</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>TANGENTIAL_ROTATE</strong></p></td>
+<td><p>his model allows a velocity that is always tangential to a shell surface, not
+necessarily aligned along the coordinate directions. It requires three
+specifications. First, a vector (v) that is always non-colinear to the normal vector
+of the shell must be specified. This is used to make unique tangent vectors. The last
+two specifications are the two tangential components to the velocity. The first
+velocity is applied in the direction of t1 = v×n. The second velocity is then applied
+in the t = t ×n  direction.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; vx</p></li>
+<li><p>&lt;float2&gt; vy</p></li>
+<li><p>&lt;float3&gt; vz</p></li>
+<li><p>&lt;float4&gt; velocity in the t1 direction</p></li>
+<li><p>&lt;float5&gt; velocity in the t2 direction</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>CIRCLE_MELT</strong></p></td>
+<td><p>Model which allows a converging or diverging height that is like a circle. Also works
+for melting.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - x-location of the circle center (circle is in x-y plane)</p></li>
+<li><p>&lt;float2&gt; - radius of circle</p></li>
+<li><p>&lt;float3&gt;- minimum height of circle</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Upper</span> <span class="n">Velocity</span> <span class="n">Function</span> <span class="n">Constants</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="p">{</span><span class="n">v_x</span><span class="o">=</span> <span class="o">-</span><span class="mf">0.001</span><span class="p">}</span> <span class="p">{</span><span class="n">vy</span><span class="o">=</span><span class="mf">0.00</span><span class="p">}</span> <span class="p">{</span><span class="n">vz</span><span class="o">=</span><span class="mi">0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>This card results in an upper wall speed of -0.001 in the x-direction which is tangential
+to the substrate, thus generating a Couette component to the flow field.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>For non-curved shell meshes, most of the time they are oriented with the x-, y-, or zplane.
+This card is aimed at applying a tangential motion to that plane, and so one of
+the three components is usually zero.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,2790 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post Processing Specifications &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Post Processing Fluxes and Data" href="post_processing_fluxes.html" />
+    <link rel="prev" title="Problem Description" href="problem_description.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="file_specifications.html">File Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="general_specifications.html">General Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="level_set.html">Level Set Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phase_field.html">Phase Field Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description.html">Problem Description</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Post Processing Specifications</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#stream-function"><strong>Stream Function</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#streamwise-normal-stress"><strong>Streamwise Normal Stress</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cross-stream-shear-rate"><strong>Cross-Stream Shear Rate</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id4"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#mean-shear-rate"><strong>Mean Shear Rate</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id9"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#pressure-contours"><strong>Pressure Contours</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id11"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id13"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id14"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#fill-contours"><strong>Fill Contours</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id15"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id16"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id17"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id18"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#concentration-contours"><strong>Concentration Contours</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id19"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id20"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id21"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id22"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#stress-contours"><strong>Stress Contours</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id23"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id24"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id25"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id26"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#first-invariant-of-strain"><strong>First Invariant of Strain</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id27"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id28"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id29"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id30"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#second-invariant-of-strain"><strong>Second Invariant of Strain</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id31"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id32"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id33"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#third-invariant-of-strain"><strong>Third Invariant of Strain</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id34"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id35"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id36"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id37"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#velocity-divergence"><strong>Velocity Divergence</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id38"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id39"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id40"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id41"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#particle-velocity-divergence"><strong>Particle Velocity Divergence</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id42"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id43"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id44"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id45"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#total-velocity-divergence"><strong>Total Velocity Divergence</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id46"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id47"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id48"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#electric-field"><strong>Electric Field</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id49"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id50"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id51"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id52"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#electric-field-magnitude"><strong>Electric Field Magnitude</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id53"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id54"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id55"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id56"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#enormsq-field"><strong>Enormsq Field</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id57"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id58"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id59"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id60"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#enormsq-field-norm"><strong>Enormsq Field Norm</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id61"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id62"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id63"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id64"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#viscosity"><strong>Viscosity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id65"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id66"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id67"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#density"><strong>Density</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id68"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id69"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id70"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id71"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#lame-mu"><strong>Lame MU</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id72"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id73"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id74"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id75"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#lame-lambda"><strong>Lame LAMBDA</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id76"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id77"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id78"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id79"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#von-mises-strain"><strong>Von Mises Strain</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id80"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id81"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id82"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id83"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#von-mises-stress"><strong>Von Mises Stress</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id84"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id85"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id86"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#navier-stokes-residuals"><strong>Navier Stokes Residuals</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id87"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id88"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id89"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#moving-mesh-residuals"><strong>Moving Mesh Residuals</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id90"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id91"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id92"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#mass-diffusion-vectors"><strong>Mass Diffusion Vectors</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id93"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id94"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id95"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id96"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#diffusive-mass-flux-vectors"><strong>Diffusive Mass Flux Vectors</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id97"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id98"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id99"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id100"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#mass-fluxlines"><strong>Mass Fluxlines</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id101"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id102"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id103"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id104"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#energy-conduction-vectors"><strong>Energy Conduction Vectors</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id105"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id106"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id107"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id108"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#energy-fluxlines"><strong>Energy Fluxlines</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id109"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id110"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id111"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id112"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#time-derivatives"><strong>Time Derivatives</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id113"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id114"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id115"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id116"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#mesh-stress-tensor"><strong>Mesh Stress Tensor</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id117"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id118"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id119"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id120"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#real-solid-stress-tensor"><strong>Real Solid Stress Tensor</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id121"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id122"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id123"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id124"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#mesh-strain-tensor"><strong>Mesh Strain Tensor</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id125"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id126"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id127"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id128"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#viscoplastic-def-grad-tensor"><strong>Viscoplastic Def_Grad Tensor</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id129"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id130"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id131"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id132"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#lagrangian-convection"><strong>Lagrangian Convection</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id133"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id134"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id135"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id136"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#normal-and-tangent-vectors"><strong>Normal and Tangent Vectors</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id137"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id138"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id139"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id140"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#error-zz-velocity"><strong>Error ZZ Velocity</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id141"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id142"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id143"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id144"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#error-zz-heat-flux"><strong>Error ZZ Heat Flux</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id145"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id146"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id147"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id148"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#error-zz-pressure"><strong>Error ZZ Pressure</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id149"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id150"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id151"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id152"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#user-defined-post-processing"><strong>User-Defined Post Processing</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id153"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id154"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id155"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#porous-saturation"><strong>Porous Saturation</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id156"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id157"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id158"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id159"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#total-density-of-solvents-in-porous-media"><strong>Total Density of Solvents in Porous Media</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id160"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id161"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id162"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id163"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#density-of-solvents-in-gas-phase-in-porous-media"><strong>Density of Solvents in Gas Phase in Porous Media</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id164"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id165"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id166"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id167"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#density-of-liquid-phase-in-porous-media"><strong>Density of Liquid Phase in Porous Media</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id168"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id169"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id170"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id171"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#gas-phase-darcy-velocity-in-porous-media"><strong>Gas Phase Darcy Velocity in Porous Media</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id172"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id173"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id174"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id175"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#liquid-phase-darcy-velocity-in-porous-media"><strong>Liquid Phase Darcy Velocity in Porous Media</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id176"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id177"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id178"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id179"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#capillary-pressure-in-porous-media"><strong>Capillary Pressure in Porous Media</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id180"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id181"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id182"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id183"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#grid-peclet-number-in-porous-media"><strong>Grid Peclet Number in Porous Media</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id184"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id185"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id186"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id187"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#supg-velocity-in-porous-media"><strong>SUPG Velocity in Porous Media</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id188"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id189"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id190"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id191"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#vorticity-vector"><strong>Vorticity Vector</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id192"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id193"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id194"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_particle.html">Post Processing Particle Traces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_volume.html">Volumetric Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../problem_description_file.html">Problem Description (Input File)</a> &raquo;</li>
+      <li>Post Processing Specifications</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/problem_description_file/post_processing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="post-processing-specifications">
+<h1>Post Processing Specifications<a class="headerlink" href="#post-processing-specifications" title="Permalink to this headline"></a></h1>
+<p>This section lists the post-processing options that are accessible within <em>Goma</em>. Each card below triggers calculations of the nodal values of a given function, which are then written to the EXODUS II output file. Normally these values are smoothed before writing them to the output file. For most of these cards a keyword is the only input; if the keyword is <strong>yes</strong>, the post-processing variable is calculated and written to the file; if the keyword is <strong>no</strong>, no output is generated for that variable. All of these cards are optional and can appear in any order.</p>
+<p>The sections below list the post-processing options and a brief description of each. <em>Users are cautioned - for large, time-dependent runs, the output of many post-processing variables may lead to excessively large EXODUS II output files</em>.</p>
+<section id="stream-function">
+<h2><strong>Stream Function</strong><a class="headerlink" href="#stream-function" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Stream</span> <span class="n">Function</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>The stream function provides a visual representation of the flow field in incompressible
+fluids and is derived from the fluid velocity components identified in the <em>Output
+Exodus II file</em> card.</p>
+<p>This auxiliary field triggered by “yes” on this card results in a nodal variable that is
+called <strong>STREAM</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the stream function.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the stream function.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Stream</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>This function is computed with an element-by-element volumetric flow calculation
+routine. Poor element quality can result in “kinks” in the stream function field when
+contoured.</p>
+<p>It is important to construct a mesh whose elements are contiguously ordered in such a
+way that there are no isolated clusters as the elements are swept, i.e., element n+1 must
+be in contact with one of the previous n elements. NOTE: as of 4/2001 an automatic
+element reordering scheme based on Reverse Cuthill-McKee algorithm has been
+implemented in <em>Goma</em>. Automatic ordering can be assured by issuing the OPtimize
+command to the FASTQ meshing module (cf. Blacker 1988). Most other mesh
+generators do not provide this service, viz. they do not put out an element order-map
+field in the EXODUS II file.</p>
+<p>NOTE: THIS FUNCTION IS NOT AVAILABLE IN THREE DIMENSIONS, but
+pathlines, which are equivalent to streamlines for steady flows can be computed in
+many graphics packages, like Mustafa (Glass, 1995).</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>SAND88-1326: FASTQ Users Manual: Version 1.2, Sandia Technical Report, Blacker,
+T. D. 1988.</p>
+<p>Mustafa, Glass, M. W., Personal Communication, 1995</p>
+</section>
+</section>
+<section id="streamwise-normal-stress">
+<h2><strong>Streamwise Normal Stress</strong><a class="headerlink" href="#streamwise-normal-stress" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Streamwise</span> <span class="n">normal</span> <span class="n">stress</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>The stream-wise normal stress, <span class="math notranslate nohighlight">\(T_{tt}\)</span>, is defined as tt: <span class="math notranslate nohighlight">\(\tau\)</span>, where t is the unit tangent vector
+to the streamlines computed as v ⁄ <span class="math notranslate nohighlight">\(\mid\)</span> v <span class="math notranslate nohighlight">\(\mid\)</span> and <span class="math notranslate nohighlight">\(\tau\)</span> is the deviatoric part of the dissipative stress
+tensor,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/320_goma_physics.png"><img alt="../_images/320_goma_physics.png" src="../_images/320_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>associated with the Navier-Stokes equations. This variable is called SNS in the output
+EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the stream-wise normal stress.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the stream-wise normal stress.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Streamwise</span> <span class="n">normal</span> <span class="n">stress</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>As of 2/9/02 this function is computed with the based viscosity, and not the strain-rate
+dependent viscosity as might be the case for viscosity models other than <em>NEWTONIAN</em>
+(see <em>Viscosity</em> card).</p>
+</section>
+</section>
+<section id="cross-stream-shear-rate">
+<h2><strong>Cross-Stream Shear Rate</strong><a class="headerlink" href="#cross-stream-shear-rate" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Cross</span><span class="o">-</span><span class="n">stream</span> <span class="n">shear</span> <span class="n">rate</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id4">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>As of 2/9/02, it is recommended that this card not be used.</p>
+<p>The quantity as computed in <em>Goma</em> is only applicable in two-dimensions and it is not
+clear what this quantity is, as it is computed. (PRS)</p>
+</section>
+<section id="id5">
+<h3><strong>Examples</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id6">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id7">
+<h3><strong>References</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="mean-shear-rate">
+<h2><strong>Mean Shear Rate</strong><a class="headerlink" href="#mean-shear-rate" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mean</span> <span class="n">shear</span> <span class="n">rate</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id8">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>The mean shear rate is defined as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/321_goma_physics.png"><img alt="../_images/321_goma_physics.png" src="../_images/321_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(II_D\)</span> is the second invariant of <strong>D</strong>, the strain-rate tensor,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/322_goma_physics.png"><img alt="../_images/322_goma_physics.png" src="../_images/322_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>associated with the Navier-Stokes equations. This variable is called <strong>SHEAR</strong> in the
+output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the mean shear rate.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the mean shear rate.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id9">
+<h3><strong>Examples</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mean</span> <span class="n">shear</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id10">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+</section>
+<section id="pressure-contours">
+<h2><strong>Pressure Contours</strong><a class="headerlink" href="#pressure-contours" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Pressure</span> <span class="n">contours</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id11">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>The hydrodynamic pressure is normally a field variable within <em>Goma</em>; however, it is
+often interpolated in finite element space with discontinuous basis functions (in order
+to satisfy the well-known LBB stability criterion, cf. Schunk, et al. 2002). This option
+enables interpolating and smoothing the hydrodynamic pressure to nodal values that
+most post-processors can deal with (e.g. BLOT, Mustafa). This variable is called
+<strong>PRESSURE</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the pressure contours.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the pressure contours.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id12">
+<h3><strong>Examples</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Pressure</span> <span class="n">contours</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id13">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id14">
+<h3><strong>References</strong><a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>SAND2001-3512J: Iterative Solvers and Preconditioners for Fully-coupled Finite
+Element Formulations of Incompressible Fluid Mechanics and Related Transport
+Problems, P. R. Schunk, M. A. Heroux, R. R. Rao, T. A. Baer, S. R. Subia and A. C.
+Sun. (March 2002)</p>
+</section>
+</section>
+<section id="fill-contours">
+<h2><strong>Fill Contours</strong><a class="headerlink" href="#fill-contours" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fill</span> <span class="n">contours</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id15">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p>This card triggers the inclusion of the level set or VOF fill function as a nodal variable
+in the output EXODUS II file.</p>
+<p>The nodal variable appears as <strong>FILL</strong> in the output EXODUS II file. This function is
+computed with the FILL equation (see EQ card).</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the fill contours.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the fill contours.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id16">
+<h3><strong>Examples</strong><a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>An example card requesting <strong>FILL</strong> contours be written to the EXODUS II file is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fill</span> <span class="n">contours</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id17">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id18">
+<h3><strong>References</strong><a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<section id="concentration-contours">
+<h2><strong>Concentration Contours</strong><a class="headerlink" href="#concentration-contours" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Concentration</span> <span class="n">contours</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id19">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id19" title="Permalink to this headline"></a></h3>
+<p>As of 2/9/02 this card is not necessary. If <em>EQ = species_bulk</em> card is active in any
+material, than the concentration contours are including as post-processing nodal
+variables in the output EXODUS II file.</p>
+</section>
+<section id="id20">
+<h3><strong>Examples</strong><a class="headerlink" href="#id20" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id21">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id21" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id22">
+<h3><strong>References</strong><a class="headerlink" href="#id22" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="stress-contours">
+<h2><strong>Stress Contours</strong><a class="headerlink" href="#stress-contours" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Stress</span> <span class="n">contours</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id23">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id23" title="Permalink to this headline"></a></h3>
+<p>This card allows the user to invoke the components of the stress tensor for all
+viscoelastic modes be included as nodal post-processing variables. Often times this is
+not desirable on long time-dependent runs because of the voluminous data that will
+appear in the output EXODUS II file. This variable is called <em>csij_mode</em> in the output
+EXODUS II file, where <em>i</em> and <em>j</em> indicate components of the stress tensor and <em>mode</em>
+indicates the desired viscoelastic mode; for example, <strong>cs23_4</strong> represents the stress
+contour for the fifth mode of polymer stress component <em>yz</em>.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate and include the stress-tensor components for all
+modes of viscoelasticity.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate and include the stress-tensor components.</p></td>
+</tr>
+</tbody>
+</table>
+<p>These stresses become dependent variables if the <em>Polymer Constitutive Equation</em> card
+is given any model but the <em>NOPOLYMER</em> model.</p>
+</section>
+<section id="id24">
+<h3><strong>Examples</strong><a class="headerlink" href="#id24" title="Permalink to this headline"></a></h3>
+<p>An example card requesting viscoelastic stress components be written:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Stress</span> <span class="n">contours</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id25">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id25" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id26">
+<h3><strong>References</strong><a class="headerlink" href="#id26" title="Permalink to this headline"></a></h3>
+<p>GT-014.1: Tutorial for Running Viscoelastic Flow Problems with GOMA, June 21,
+2000, R. R. Rao</p>
+</section>
+</section>
+<section id="first-invariant-of-strain">
+<h2><strong>First Invariant of Strain</strong><a class="headerlink" href="#first-invariant-of-strain" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">First</span> <span class="n">Invariant</span> <span class="n">of</span> <span class="n">Strain</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id27">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id27" title="Permalink to this headline"></a></h3>
+<p>The strain tensor is associated with the deformation of the mesh. Its first invariant is its
+trace and represents the volume change in the small strain limit. This variable is called
+<strong>IE</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the first invariant.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the first invariant.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id28">
+<h3><strong>Examples</strong><a class="headerlink" href="#id28" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">First</span> <span class="n">Invariant</span> <span class="n">of</span> <span class="n">strain</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id29">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id29" title="Permalink to this headline"></a></h3>
+<p>Computation of the strain tensor <span class="math notranslate nohighlight">\(\underline{E}\)</span> in <em>Goma</em> is discussed on the <em>Solid Constitutive Equation</em> card. The trace is related to the divergence of the tensor, and hence related to a measure of volume change in a material.</p>
+<p>It should be noted that the mesh strain is equivalent to the material strain for
+<em>LAGRANGIAN</em> mesh motion types. For <em>ARBITRARY</em> or <em>TOTAL_ALE</em> mesh motion
+types (see <em>Mesh Motion</em> card), the strain is strictly related to mesh and not the material.</p>
+</section>
+<section id="id30">
+<h3><strong>References</strong><a class="headerlink" href="#id30" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="second-invariant-of-strain">
+<h2><strong>Second Invariant of Strain</strong><a class="headerlink" href="#second-invariant-of-strain" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Second</span> <span class="n">Invariant</span> <span class="n">of</span> <span class="n">Strain</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id31">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id31" title="Permalink to this headline"></a></h3>
+<p>The strain tensor is associated with the deformation of the mesh. Its second invariant
+indicates the level of shear strain of the mesh. This variable is called <strong>IIE</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the second invariant.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the second invariant.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id32">
+<h3><strong>Examples</strong><a class="headerlink" href="#id32" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Second</span> <span class="n">Invariant</span> <span class="n">of</span> <span class="n">strain</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id33">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id33" title="Permalink to this headline"></a></h3>
+<p>The second invariant is computed in <em>Goma</em> as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/323_goma_physics.png"><img alt="../_images/323_goma_physics.png" src="../_images/323_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here Einstein’s summation convention applies, viz.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/324_goma_physics.png"><img alt="../_images/324_goma_physics.png" src="../_images/324_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+</section>
+<section id="third-invariant-of-strain">
+<h2><strong>Third Invariant of Strain</strong><a class="headerlink" href="#third-invariant-of-strain" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Third</span> <span class="n">Invariant</span> <span class="n">of</span> <span class="n">strain</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id34">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id34" title="Permalink to this headline"></a></h3>
+<p>The strain tensor is associated with the deformation of the mesh. Its third invariant
+indicates the volume change from the stress-free state (<strong>IIIE</strong> = 1.0 indicates no volume
+change). This variable is called <strong>IIIE</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the third invariant.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the third invariant.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id35">
+<h3><strong>Examples</strong><a class="headerlink" href="#id35" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Third</span> <span class="n">Invariant</span> <span class="n">of</span> <span class="n">strain</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id36">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id36" title="Permalink to this headline"></a></h3>
+<p>The mathematical definition of the third invariant is related to the determinant of the
+strain tensor, which is defined for the various constitutive equations in the manual entry
+for the <em>Solid Constitutive Equation</em> card.</p>
+</section>
+<section id="id37">
+<h3><strong>References</strong><a class="headerlink" href="#id37" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="velocity-divergence">
+<h2><strong>Velocity Divergence</strong><a class="headerlink" href="#velocity-divergence" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Velocity</span> <span class="n">Divergence</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id38">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id38" title="Permalink to this headline"></a></h3>
+<p>The divergence of velocity is associated with local mass conservation or how well the
+solenoidal character of the velocity field in <em>ARBITRARY</em> mesh motion regions is being
+maintained. (Fluid momentum equations are only applied for this <em>Mesh Motion</em> option.)
+Here we calculate the <span class="math notranslate nohighlight">\(L_2\)</span> norm of the divergence of velocity so that it is always zero or positive. This variable is called <strong>DIVV</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the velocity divergence.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the velocity divergence.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id39">
+<h3><strong>Examples</strong><a class="headerlink" href="#id39" title="Permalink to this headline"></a></h3>
+<p>A sample input specification for this card is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Velocity</span> <span class="n">Divergence</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id40">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id40" title="Permalink to this headline"></a></h3>
+<p>The divergence of the fluid velocity field is defined as the scalar <span class="math notranslate nohighlight">\(\Delta\)</span> • <span class="math notranslate nohighlight">\(\underline{v}\)</span>.</p>
+</section>
+<section id="id41">
+<h3><strong>References</strong><a class="headerlink" href="#id41" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="particle-velocity-divergence">
+<h2><strong>Particle Velocity Divergence</strong><a class="headerlink" href="#particle-velocity-divergence" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Particle</span> <span class="n">Velocity</span> <span class="n">Divergence</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id42">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id42" title="Permalink to this headline"></a></h3>
+<p>This option is currently disabled. As of 2/16/2002, the multiphase particle momentum
+equation is deactivated. It is not recommended that this option be selected.</p>
+</section>
+<section id="id43">
+<h3><strong>Examples</strong><a class="headerlink" href="#id43" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id44">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id44" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id45">
+<h3><strong>References</strong><a class="headerlink" href="#id45" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="total-velocity-divergence">
+<h2><strong>Total Velocity Divergence</strong><a class="headerlink" href="#total-velocity-divergence" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Not</span> <span class="n">activated</span> <span class="p">(</span><span class="n">PRS</span> <span class="mi">2</span><span class="o">/</span><span class="mi">16</span><span class="o">/</span><span class="mi">02</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="id46">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id46" title="Permalink to this headline"></a></h3>
+<p>Not currently activated. (2/16/02)</p>
+</section>
+<section id="id47">
+<h3><strong>Examples</strong><a class="headerlink" href="#id47" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id48">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id48" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+</section>
+<section id="electric-field">
+<h2><strong>Electric Field</strong><a class="headerlink" href="#electric-field" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Electric</span> <span class="n">Field</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id49">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id49" title="Permalink to this headline"></a></h3>
+<p>The electric field vector components are written to the output EXODUS II file. The
+electric field is calculated as the negative gradient of the VOLTAGE field variable.</p>
+<p>The permissible values for this postprocessing option are</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the electric field vectors.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the electric field vectors.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The vector components are called <strong>EX</strong>, <strong>EY</strong>, and (for three dimensional problems) <strong>EZ</strong> in the output EXODUS II file.</p>
+</section>
+<section id="id50">
+<h3><strong>Examples</strong><a class="headerlink" href="#id50" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card to calculate the Electric Field vector components:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Electric</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id51">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id51" title="Permalink to this headline"></a></h3>
+<p>See also the <em>Electric Field Magnitude</em> post processing option.</p>
+</section>
+<section id="id52">
+<h3><strong>References</strong><a class="headerlink" href="#id52" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="electric-field-magnitude">
+<h2><strong>Electric Field Magnitude</strong><a class="headerlink" href="#electric-field-magnitude" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Electric</span> <span class="n">Field</span> <span class="n">Magnitude</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id53">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id53" title="Permalink to this headline"></a></h3>
+<p>The magnitude of the electric field is written to the output EXODUS II file. The
+electric field is calculated as the negative gradient of the <em>VOLTAGE</em> field variable.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the electric field magnitude.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the electric field magnitude.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The electric field magnitude is called EE in the output EXODUS II file.</p>
+</section>
+<section id="id54">
+<h3><strong>Examples</strong><a class="headerlink" href="#id54" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card to calculate the Electric Field Magnitude:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Electric</span> <span class="n">Field</span> <span class="n">Magnitude</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id55">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id55" title="Permalink to this headline"></a></h3>
+<p>See also the <em>Electric Field</em> post processing option.</p>
+</section>
+<section id="id56">
+<h3><strong>References</strong><a class="headerlink" href="#id56" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="enormsq-field">
+<h2><strong>Enormsq Field</strong><a class="headerlink" href="#enormsq-field" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Enormsq</span> <span class="n">Field</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id57">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id57" title="Permalink to this headline"></a></h3>
+<p>This norm is based on the <em>ENORM</em> field variable (which, in turn, is derived from the
+<em>VOLTAGE</em> field variable).</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the norm.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the norm.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The field is stored in <strong>GENS0</strong>, <strong>GENS1</strong>, and <strong>GENS2</strong> (if 3D) in the output EXODUS II
+file.</p>
+</section>
+<section id="id58">
+<h3><strong>Examples</strong><a class="headerlink" href="#id58" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card to calculate the field:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Enormsq</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id59">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id59" title="Permalink to this headline"></a></h3>
+<p>This post-processing variable is equal to <span class="math notranslate nohighlight">\(\underline{\Delta}\)</span> <span class="math notranslate nohighlight">\(enorm^2\)</span> . This, in turn, should approximate <span class="math notranslate nohighlight">\(\underline{\Delta}\)</span> <span class="math notranslate nohighlight">\(\mid\)</span> ( <span class="math notranslate nohighlight">\(\underline{\Delta}V\)</span>
+<span class="math notranslate nohighlight">\(\mid^2\)</span> ).</p>
+<p>See also the <em>Enormsq Field Norm</em> post processing option.</p>
+</section>
+<section id="id60">
+<h3><strong>References</strong><a class="headerlink" href="#id60" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="enormsq-field-norm">
+<h2><strong>Enormsq Field Norm</strong><a class="headerlink" href="#enormsq-field-norm" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Enormsq</span> <span class="n">Field</span> <span class="n">Norm</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id61">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id61" title="Permalink to this headline"></a></h3>
+<p>This norm is based on the <em>ENORM</em> field variable (which, in turn, is derived from the
+<em>VOLTAGE</em> field variable).</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the norm.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the norm.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The norm is called <strong>GENSNORM</strong> in the output EXODUS II file.</p>
+</section>
+<section id="id62">
+<h3><strong>Examples</strong><a class="headerlink" href="#id62" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card to calculate the norm:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Enormsq</span> <span class="n">Field</span> <span class="n">Norm</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id63">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id63" title="Permalink to this headline"></a></h3>
+<p>This post-processing variable is equal to <span class="math notranslate nohighlight">\(\underline{\Delta}\)</span> <span class="math notranslate nohighlight">\(enorm^2\)</span> . This, in turn, should approximate <span class="math notranslate nohighlight">\(\underline{\Delta}\)</span> <span class="math notranslate nohighlight">\(\mid\)</span> ( <span class="math notranslate nohighlight">\(\underline{\Delta}V\)</span>
+<span class="math notranslate nohighlight">\(\mid^2\)</span> ).</p>
+<p>See also the <em>Enormsq Field</em> post processing option.</p>
+</section>
+<section id="id64">
+<h3><strong>References</strong><a class="headerlink" href="#id64" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="viscosity">
+<h2><strong>Viscosity</strong><a class="headerlink" href="#viscosity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Viscosity</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id65">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id65" title="Permalink to this headline"></a></h3>
+<p>This option allows you to plot the viscosity, which is written to the <em>Output EXODUS II</em>
+file as the variable <strong>MU</strong>. This is a useful feature for non-Newtonian fluids such as
+Phillip’s model for suspensions, Bingham plastic models, polymerizing solutions and
+other materials for which the viscosity may change orders of magnitude, greatly
+affecting the velocity and pressure fields. Contouring this variable <strong>MU</strong> over the domain
+can be useful in explaining some physical phenomena.</p>
+<p>he permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the viscosity and output as a nodal
+variable in the Output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the viscosity.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id66">
+<h3><strong>Examples</strong><a class="headerlink" href="#id66" title="Permalink to this headline"></a></h3>
+<p>The following sample card requests <strong>MU</strong> be written to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Viscosity</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id67">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id67" title="Permalink to this headline"></a></h3>
+<p>See the material file <em>Viscosity</em> card for an explanation of the models for which the
+viscosity is variable and dependent on the flow field and other variables.</p>
+</section>
+</section>
+<section id="density">
+<h2><strong>Density</strong><a class="headerlink" href="#density" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id68">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id68" title="Permalink to this headline"></a></h3>
+<p>This card is used to trigger the thermophysical or mechanical property of density (see
+<em>Density</em> card) to be computed and output as an EXODUS II nodal variable in the Ouput
+EXODUS II file with the variable name <strong>RHO</strong>.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the density and store it as a nodal
+variable in the output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate density.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id69">
+<h3><strong>Examples</strong><a class="headerlink" href="#id69" title="Permalink to this headline"></a></h3>
+<p>This is an example of the input to request density be written to the EXODUS II file.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id70">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id70" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id71">
+<h3><strong>References</strong><a class="headerlink" href="#id71" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="lame-mu">
+<h2><strong>Lame MU</strong><a class="headerlink" href="#lame-mu" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lame</span> <span class="n">MU</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id72">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id72" title="Permalink to this headline"></a></h3>
+<p>This option allows you to plot the Lame MU mechanical property, which is written to
+the <em>Output EXODUS II</em> file as the variable <strong>LAME_MU</strong>. This is a useful feature for
+temperature dependent mechanical properties and the like. Contouring this variable
+<strong>LAME_MU</strong> over the domain can be useful in explaining some physical phenomena.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the Lame MU and output as a nodal
+variable in the Output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the the coefficient (default).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id73">
+<h3><strong>Examples</strong><a class="headerlink" href="#id73" title="Permalink to this headline"></a></h3>
+<p>The following sample card requests <strong>LAME_MU</strong> be written to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lame</span> <span class="n">MU</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id74">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id74" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id75">
+<h3><strong>References</strong><a class="headerlink" href="#id75" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="lame-lambda">
+<h2><strong>Lame LAMBDA</strong><a class="headerlink" href="#lame-lambda" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lame</span> <span class="n">LAMBDA</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id76">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id76" title="Permalink to this headline"></a></h3>
+<p>This option allows you to plot the Lame LAMDA mechanical property, which is
+written to the <em>Output EXODUS II</em> file as the variable <strong>LAMBDA</strong>. This is a useful
+feature for temperature dependent mechanical properties and the like. Contouring this
+variable <strong>LAMBDA</strong> over the domain can be useful in explaining some physical
+phenomena.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the Lame LAMBDA and output as a nodal
+variable in the Output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the the coefficient (default).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id77">
+<h3><strong>Examples</strong><a class="headerlink" href="#id77" title="Permalink to this headline"></a></h3>
+<p>The following sample card requests <strong>LAMBDA</strong> be written to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lame</span> <span class="n">LAMBDA</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id78">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id78" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id79">
+<h3><strong>References</strong><a class="headerlink" href="#id79" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="von-mises-strain">
+<h2><strong>Von Mises Strain</strong><a class="headerlink" href="#von-mises-strain" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Von</span> <span class="n">Mises</span> <span class="n">Strain</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id80">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id80" title="Permalink to this headline"></a></h3>
+<p>This option allows you to plot the Von Mises strain invarients of the strain tensor, for
+use with the FAUX_PLASTICITY model of the modulus. These quantities are written
+to the <em>Output EXODUS II</em> file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the von Mises strain invariants and
+output as a nodal variable in the Output
+EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the invariants (default).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id81">
+<h3><strong>Examples</strong><a class="headerlink" href="#id81" title="Permalink to this headline"></a></h3>
+<p>The following sample card requests <strong>LAMBDA</strong> be written to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Von</span> <span class="n">Mises</span> <span class="n">Strain</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id82">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id82" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id83">
+<h3><strong>References</strong><a class="headerlink" href="#id83" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="von-mises-stress">
+<h2><strong>Von Mises Stress</strong><a class="headerlink" href="#von-mises-stress" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Von</span> <span class="n">Mises</span> <span class="n">Stress</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id84">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id84" title="Permalink to this headline"></a></h3>
+<p>This option allows you to plot the Von Mises stress tensor invarients, for use with the
+FAUX_PLASTICITY model of the modulus. These quantities are written to the
+<em>Output EXODUS II</em> file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the von Mises stress invariants and
+output as a nodal variable in the Output
+EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the invariants (default).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id85">
+<h3><strong>Examples</strong><a class="headerlink" href="#id85" title="Permalink to this headline"></a></h3>
+<p>The following sample card requests <strong>LAMBDA</strong> be written to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Von</span> <span class="n">Mises</span> <span class="n">Stress</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id86">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id86" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+</section>
+<section id="navier-stokes-residuals">
+<h2><strong>Navier Stokes Residuals</strong><a class="headerlink" href="#navier-stokes-residuals" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Navier</span> <span class="n">Stokes</span> <span class="n">Residuals</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id87">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id87" title="Permalink to this headline"></a></h3>
+<p>These post-processing nodal variables are constructed from the corresponding
+weighted residual function of the fluid (e.g. Navier-Stokes) momentum equations,
+using a Galerkin finite-element formulation. When activated with this card, variables
+named <strong>RMX</strong>, <strong>RMY</strong>, and <strong>RMZ</strong> appear in the output EXODUS II file, corresponding to
+each of the independent components of the fluid momentum balance.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 86%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the Navier-Stokes residuals and store
+as nodal variables in the output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate Navier-Stokes residuals.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id88">
+<h3><strong>Examples</strong><a class="headerlink" href="#id88" title="Permalink to this headline"></a></h3>
+<p>Following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Navier</span> <span class="n">Stokes</span> <span class="n">Residuals</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id89">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id89" title="Permalink to this headline"></a></h3>
+<p>This option can be used to help understand convergence behavior of a particular
+problem, as it allows the user to visualize the pattern of residuals over the
+computational domain during a Newton iteration process. The intermediate solutions of
+a Newton iteration process can be activated with the <em>Write Intermediate Results</em> card.</p>
+</section>
+</section>
+<section id="moving-mesh-residuals">
+<h2><strong>Moving Mesh Residuals</strong><a class="headerlink" href="#moving-mesh-residuals" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moving</span> <span class="n">Mesh</span> <span class="n">Residuals</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id90">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id90" title="Permalink to this headline"></a></h3>
+<p>These nodal variables are constructed from the corresponding weighted residual
+functions of the solid momentum equations (activated with the <em>EQ = mesh*</em> cards).
+The weighted residuals are formed using a Galerkin finite-element formulation. In the
+output EXODUS II file they appear as nodal variables <strong>RDX</strong>, <strong>RDY</strong>, and <strong>RDZ</strong>,
+corresponding to each of the independent components of the solid momentum balance
+(both pseudo and real).</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Include the moving mesh residuals as nodal
+variables in the ouput EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not include moving mesh residuals.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id91">
+<h3><strong>Examples</strong><a class="headerlink" href="#id91" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card which does not activate writing of mesh residuals:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Moving</span> <span class="n">Mesh</span> <span class="n">Residuals</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id92">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id92" title="Permalink to this headline"></a></h3>
+<p>This option can be used to help understand convergence behavior of a particular
+problem, as it allows the user to visualize the pattern of residuals over the
+computational domain during a Newton iteration process. The intermediate solutions
+of a Newton iteration process can be activated with the <em>Write Intermediate Results</em> card.
+Contouring these residuals can indicate where the convergence of a problem is being
+delayed, and give the user/developer some clues as to the boundary condition or local
+region of the mesh which is responsible.</p>
+</section>
+</section>
+<section id="mass-diffusion-vectors">
+<h2><strong>Mass Diffusion Vectors</strong><a class="headerlink" href="#mass-diffusion-vectors" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mass</span> <span class="n">Diffusion</span> <span class="n">Vectors</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id93">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id93" title="Permalink to this headline"></a></h3>
+<p>Activating this post-processing option allows the user to visualize the diffusive mass
+flux directions of all species components in a problem. Species components result from
+the <em>EQ = species_bulk</em> equation card. With this option selected, the output EXODUS II
+file will contain nodal variables called <strong>Y0dif0</strong> (diffusion of first species in x direction),
+<strong>Y0dif1</strong> (diffusion of first species in y direction), <strong>Y0dif2</strong> (diffusion of first species in z
+direction), <strong>Y1dif0</strong> (diffusion of second species in x direction), <strong>Y2dif1</strong> (diffusion of
+second species in y direction), … and so on, depending on the number of species
+components in the problem.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the mass diffusion vectors and
+include in the output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the mass diffusion vectors.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id94">
+<h3><strong>Examples</strong><a class="headerlink" href="#id94" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mass</span> <span class="n">Diffusion</span> <span class="n">Vectors</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id95">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id95" title="Permalink to this headline"></a></h3>
+<p>Currently this option is available only for <em>FICKIAN</em> and <em>HYDRODYNAMIC</em> mass flux
+types (see <em>Diffusion Constitutive Equation</em> card). In the <em>FICKIAN</em> case, the flux is
+computed with the base, constant diffusivity.</p>
+</section>
+<section id="id96">
+<h3><strong>References</strong><a class="headerlink" href="#id96" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="diffusive-mass-flux-vectors">
+<h2><strong>Diffusive Mass Flux Vectors</strong><a class="headerlink" href="#diffusive-mass-flux-vectors" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusive</span> <span class="n">Mass</span> <span class="n">Flux</span> <span class="n">Vectors</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id97">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id97" title="Permalink to this headline"></a></h3>
+<p>Please see description for <em>Mass Diffusion Vectors</em> card; this card performs exactly the
+same function.</p>
+</section>
+<section id="id98">
+<h3><strong>Examples</strong><a class="headerlink" href="#id98" title="Permalink to this headline"></a></h3>
+<p>This card turns on writing of diffusive mass flux vectors to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Diffusive</span> <span class="n">Mass</span> <span class="n">Flux</span> <span class="n">Vectors</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id99">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id99" title="Permalink to this headline"></a></h3>
+<p>Please see description for <em>Mass Diffusion Vectors</em> card.</p>
+</section>
+<section id="id100">
+<h3><strong>References</strong><a class="headerlink" href="#id100" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="mass-fluxlines">
+<h2><strong>Mass Fluxlines</strong><a class="headerlink" href="#mass-fluxlines" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mass</span> <span class="n">Fluxlines</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id101">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id101" title="Permalink to this headline"></a></h3>
+<p>With this post-processing option mass-diffusion pathlines are calculated and stored as
+post-processing nodal variables in the output EXODUS II file. This variables are called
+<strong>Y0FLUX</strong>, <strong>Y1FLUX</strong>, …(by species number) in the file and can be contoured in the
+visualization program. These flux lines are analogous to the stream function, viz.
+contours of the flux function represent pathlines for each species in solution.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the mass fluxlines and include in the
+output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the mass fluxlines.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id102">
+<h3><strong>Examples</strong><a class="headerlink" href="#id102" title="Permalink to this headline"></a></h3>
+<p>The following sample card requests that mass-diffusion pathlines be written to the
+EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mass</span> <span class="n">Fluxlines</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id103">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id103" title="Permalink to this headline"></a></h3>
+<p>Currently this option is available only for <em>FICKIAN</em> and <em>HYDRODYNAMIC</em> mass flux
+types (see <em>Diffusion Constitutive Equation</em> card). In the <em>FICKIAN</em> case, the flux is
+computed with the base, constant diffusivity. Also, the <em>Mass Diffusion Vectors</em> post
+processing option must also be activated for this option to work.</p>
+</section>
+<section id="id104">
+<h3><strong>References</strong><a class="headerlink" href="#id104" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="energy-conduction-vectors">
+<h2><strong>Energy Conduction Vectors</strong><a class="headerlink" href="#energy-conduction-vectors" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Energy</span> <span class="n">Conduction</span> <span class="n">Vectors</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id105">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id105" title="Permalink to this headline"></a></h3>
+<p>Activation of this option can be used to visualize the energy conduction paths in a
+solution. The resulting nodal variables are called <strong>TCOND0</strong> (conduction in x direction),
+<strong>TCOND1</strong> (conduction in y direction), and <strong>TCOND2</strong> (conduction in z direction) in the
+output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the energy conduction vectors and
+store in the output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the energy conduction vectors.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id106">
+<h3><strong>Examples</strong><a class="headerlink" href="#id106" title="Permalink to this headline"></a></h3>
+<p>This example card requests that energy conduction vectors be written to the EXODUS
+II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Energy</span> <span class="n">Conduction</span> <span class="n">Vectors</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id107">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id107" title="Permalink to this headline"></a></h3>
+<p>These quantities can be employed in a hedge-hog or vector plot to visualize the energy
+conduction pathways across a domain (cf. the vector option in BLOT, or the hedge-hog
+option in Mustafa, for example).</p>
+</section>
+<section id="id108">
+<h3><strong>References</strong><a class="headerlink" href="#id108" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="energy-fluxlines">
+<h2><strong>Energy Fluxlines</strong><a class="headerlink" href="#energy-fluxlines" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Energy</span> <span class="n">Fluxlines</span><span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id109">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id109" title="Permalink to this headline"></a></h3>
+<p>This post-processing option triggers the energy fluxlines to be calculated. The energy
+flux function is analogous to the stream function, its contours representing paths of
+energy flow through the domain. This variable is called <strong>TFLUX</strong> in the output
+EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate and write the energy fluxlines to the
+output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the energy fluxlines.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id110">
+<h3><strong>Examples</strong><a class="headerlink" href="#id110" title="Permalink to this headline"></a></h3>
+<p>The energy fluxlines are calculated in this sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Energy</span> <span class="n">Fluxlines</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id111">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id111" title="Permalink to this headline"></a></h3>
+<p>The <em>Energy Conduction Vectors</em> must also be activated for this post processing option
+to work.</p>
+</section>
+<section id="id112">
+<h3><strong>References</strong><a class="headerlink" href="#id112" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="time-derivatives">
+<h2><strong>Time Derivatives</strong><a class="headerlink" href="#time-derivatives" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Time</span> <span class="n">Derivatives</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id113">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id113" title="Permalink to this headline"></a></h3>
+<p>This option enables writing the time derivative of all the field variables as nodal
+variables to the output EXODUS II file. These variables are labeled <strong>XDOT0</strong> (mesh
+velocity in x direction), <strong>XDOT1</strong> (mesh velocity in y direction), <strong>XDOT2</strong> (mesh
+velocity in z direction), <strong>VDOT0</strong> (fluid acceleration in x direction), <strong>VDOT1</strong> (fluid
+acceleration in y direction), <strong>VDOT2</strong> (fluid acceleration in z direction), <strong>TDOT</strong> (rate of
+temperature change), <strong>Y0DOT</strong> (rate of 1st species concentration change), <strong>Y1D0T</strong> (rate
+of second species concentration change), and so on. The quantities can then be
+contoured or displayed by some other means with a visualization or graphics package.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 86%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the time derivatives and write them
+as nodal variables in the output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the time derivatives.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id114">
+<h3><strong>Examples</strong><a class="headerlink" href="#id114" title="Permalink to this headline"></a></h3>
+<p>The following sample card requests that time derivatives be written to the EXODUS II
+file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Time</span> <span class="n">Derivatives</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id115">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id115" title="Permalink to this headline"></a></h3>
+<p>Currently, this routine uses the values in the global vector <em>xdot</em> to report this data.
+During the first time step, all the <em>xdot</em> values are zero; by the second time step, these
+data should be realistic.</p>
+</section>
+<section id="id116">
+<h3><strong>References</strong><a class="headerlink" href="#id116" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="mesh-stress-tensor">
+<h2><strong>Mesh Stress Tensor</strong><a class="headerlink" href="#mesh-stress-tensor" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mesh</span> <span class="n">Stress</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id117">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id117" title="Permalink to this headline"></a></h3>
+<p>The mesh stress tensor is associated with the equations of elasticity. The stress tensor
+has six entries (in three dimensions, because it is symmetric) called <strong>T11, T22, T33, T12, T13,</strong> and <strong>T23</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the mesh stress tensor and write to
+output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the mesh stress tensor.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id118">
+<h3><strong>Examples</strong><a class="headerlink" href="#id118" title="Permalink to this headline"></a></h3>
+<p>The following sample card turns on the writing of the stress tensor to the EXODUS II
+file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mesh</span> <span class="n">Stress</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id119">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id119" title="Permalink to this headline"></a></h3>
+<p>The defining constitutive equations for these stresses can be found in the description
+for the <em>Solid Constitutive Equation</em> card. This option applies to all solid-material types
+(see <em>Mesh Motion</em> card), viz. <em>TOTAL_ALE, LAGRANGIAN, ARBITRARY,
+DYNAMIC_LAGRANGIAN</em>. In the <em>TOTAL_ALE</em> and <em>ARBITRARY</em> mesh motion types,
+the mesh stress is exactly that and not the true stress of the material. For <em>TOTAL_ALE</em>
+mesh motion types, use Real Solid Stress Tensor option to get the true solid material
+stresses.</p>
+</section>
+<section id="id120">
+<h3><strong>References</strong><a class="headerlink" href="#id120" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="real-solid-stress-tensor">
+<h2><strong>Real Solid Stress Tensor</strong><a class="headerlink" href="#real-solid-stress-tensor" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Real</span> <span class="n">Solid</span> <span class="n">Stress</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id121">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id121" title="Permalink to this headline"></a></h3>
+<p>The real solid stress tensor is associated with the equations of elasticity. If the mesh
+motion is of <em>LAGRANGIAN</em> type, then these quantities are not available; if is of
+<em>TOTAL_ALE</em> type, they are available. The stress tensor has six entries (in three
+dimensions because it is symmetric) called <strong>T11_RS, T22_RS, T33_RS, T12_RS, T13_RS</strong>, and <strong>T23_RS</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 86%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the real solid stress tensor and write
+to the output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the real solid stress tensor.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id122">
+<h3><strong>Examples</strong><a class="headerlink" href="#id122" title="Permalink to this headline"></a></h3>
+<p>No stress tensor is written for the following sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Real</span> <span class="n">Solid</span> <span class="n">Stress</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id123">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id123" title="Permalink to this headline"></a></h3>
+<p>This option is applicable only to <em>TOTAL_ALE</em> mesh motion types (see <em>Mesh Motion</em>
+card). Compare this with <em>Mesh Stress Tensor</em> post processing option for other types of
+mesh motion.</p>
+</section>
+<section id="id124">
+<h3><strong>References</strong><a class="headerlink" href="#id124" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="mesh-strain-tensor">
+<h2><strong>Mesh Strain Tensor</strong><a class="headerlink" href="#mesh-strain-tensor" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mesh</span> <span class="n">Strain</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id125">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id125" title="Permalink to this headline"></a></h3>
+<p>The mesh strain tensor is associated with the equations of elasticity. The strain tensor
+has six entries (in three dimensions, because it is symmetric) called <strong>E11, E22, E33, E12, E13,</strong> and <strong>E23</strong> in the output EXODUS II file, corresponding to the six independent
+components (the numbers <strong>1, 2,</strong> and <strong>3</strong> indicate the basis direction, e.g. 1 means xdirection
+for a Cartesian system).</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the mesh strain tensor and write the
+components as nodal variables to the output
+EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the mesh strain tensor.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id126">
+<h3><strong>Examples</strong><a class="headerlink" href="#id126" title="Permalink to this headline"></a></h3>
+<p>The following example input card does not request output of the stain tensor:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mesh</span> <span class="n">Strain</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id127">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id127" title="Permalink to this headline"></a></h3>
+<p>Definitions of the strain tensor depend on the solid constitutive equation type (see
+description for <em>Solid Constitutive Equation</em> card).</p>
+</section>
+<section id="id128">
+<h3><strong>References</strong><a class="headerlink" href="#id128" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="viscoplastic-def-grad-tensor">
+<h2><strong>Viscoplastic Def_Grad Tensor</strong><a class="headerlink" href="#viscoplastic-def-grad-tensor" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Viscoplastic</span> <span class="n">Def_Grad</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id129">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id129" title="Permalink to this headline"></a></h3>
+<p>The components of this tensor are associated with the elasto-viscoplasticity model,
+(described in detail in Schunk, et. al., 2001). If the mesh motion is of <em>LAGRANGIAN</em>
+type, then this card activates the components of this tensor to be available in the
+postprocessing EXODUS II file (see <em>Mesh Motion</em> card). The components are called
+<strong>FVP11, FVP12, FVP21, FVP22,</strong> and <strong>FVP33</strong>. This tensor is the identity tensor in
+regions that have not yielded, and so the diagonal components are unity; in regions that
+have yielded, these components deviate from the identity. Contouring them can reveal
+regions of plastic flow.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 86%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the viscoplastic Def_Grad tensor and
+write components in the output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the viscoplastic Def_Grad tensor.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id130">
+<h3><strong>Examples</strong><a class="headerlink" href="#id130" title="Permalink to this headline"></a></h3>
+<p>This sample input card does not activate Def_Grad output to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Viscoplastic</span> <span class="n">Def_Grad</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id131">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id131" title="Permalink to this headline"></a></h3>
+<p>Please see complete discussion in Schunk, et. el. (2001).</p>
+</section>
+<section id="id132">
+<h3><strong>References</strong><a class="headerlink" href="#id132" title="Permalink to this headline"></a></h3>
+<p>GT-019.1: Elastoviscoplastic (EVP) Constitutive Model in GOMA: Theory, Testing,
+and Tutorial, P. R. Schunk, A. Sun, S. Y. Tam (Imation Corp.) and K. S. Chen, January
+11, 2001</p>
+</section>
+</section>
+<section id="lagrangian-convection">
+<h2><strong>Lagrangian Convection</strong><a class="headerlink" href="#lagrangian-convection" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lagrangian</span> <span class="n">Convection</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id133">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id133" title="Permalink to this headline"></a></h3>
+<p>In deformable solids with a Lagrangian mesh, convection in the stress-free state can be
+mapped to the deformed configuration; this variable stores the velocity vectors of this
+solid motion (see <em>Convective Lagrangian Velocity</em> card). This variable is called <strong>VL1, VL2, VL3</strong> in the output EXODUS II file; the integer values <strong>1, 2</strong> and <strong>3</strong> denote
+coordinate directions.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the Lagrangian convection and store
+as nodal variable velocity fields in the output
+EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the Lagrangian convection.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id134">
+<h3><strong>Examples</strong><a class="headerlink" href="#id134" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Lagrangian</span> <span class="n">Convection</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id135">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id135" title="Permalink to this headline"></a></h3>
+<p>This option only applies to <em>Mesh Motion</em> type of <em>LAGRANGIAN</em>.</p>
+</section>
+<section id="id136">
+<h3><strong>References</strong><a class="headerlink" href="#id136" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="normal-and-tangent-vectors">
+<h2><strong>Normal and Tangent Vectors</strong><a class="headerlink" href="#normal-and-tangent-vectors" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Normal</span> <span class="ow">and</span> <span class="n">Tangent</span> <span class="n">Vectors</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id137">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id137" title="Permalink to this headline"></a></h3>
+<p>This option allows one to write the values of the normal and tangent vectors used in
+rotating the mesh and momentum equations as nodal variables to the output EXODUS
+II file. In two-dimensional problems, the normal and tangent vectors are saved as <strong>N1, N2, N3</strong> and <strong>T1, T2, T3</strong> in the output EXODUS II file; in two dimensions these vectors
+are calculated at all the nodes. In three-dimensional problems, the normal and tangent
+vectors are saved as <strong>N1, N2, N3, TA1, TA2, TA3,</strong> and <strong>TB1, TB2, TB3</strong>; in three
+dimensions, these vectors only exist at nodes with rotation specifications, and the
+vectors correspond to the rotation vectors chosen by the <em>ROT Specifications</em> for the
+given node (see description for <em>ROT</em> cards). Thus in three-dimensional problems,
+vectors are not necessarily saved for every node, nor do the vectors necessarily
+correspond to the normal, first tangent, and second tangent, respectively.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the vectors and store as nodal
+variables in the output EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the vectors.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id138">
+<h3><strong>Examples</strong><a class="headerlink" href="#id138" title="Permalink to this headline"></a></h3>
+<p>The following sample card produces no output to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Normal</span> <span class="ow">and</span> <span class="n">Tangent</span> <span class="n">vectors</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id139">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id139" title="Permalink to this headline"></a></h3>
+<p>This option is mostly used to debug three-dimensional meshes for full threedimensional
+ALE mesh motion. The tangent fields in 3D should be smooth across the
+surfaces, and <em>Goma</em> takes many steps to make them so. The surface normal crossed into any vector that is different will produce one tangent vector. Then the normal crossed (viz. cross product of two vectors) with the first tangent will produce a second tangent vector. Because the surface tangent basis fields are not unique, they must be uniform over a surface when the rotated
+Galerkin weighted residuals are formed (see description for <em>ROT</em> cards). Imperfections
+or defects in the mesh can lead to nonsmooth fields.</p>
+</section>
+<section id="id140">
+<h3><strong>References</strong><a class="headerlink" href="#id140" title="Permalink to this headline"></a></h3>
+<p>GT-018.1: ROT card tutorial, January 22, 2001, T. A. Baer</p>
+</section>
+</section>
+<section id="error-zz-velocity">
+<h2><strong>Error ZZ Velocity</strong><a class="headerlink" href="#error-zz-velocity" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Error</span> <span class="n">ZZ</span> <span class="n">velocity</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id141">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id141" title="Permalink to this headline"></a></h3>
+<p>This option has been disabled for lack of use, but originally allowed the user to
+compute a posteriori error estimates in the velocity field from the Zienkiewicz-Zhu
+energy norm error measure.</p>
+</section>
+<section id="id142">
+<h3><strong>Examples</strong><a class="headerlink" href="#id142" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id143">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id143" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id144">
+<h3><strong>References</strong><a class="headerlink" href="#id144" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="error-zz-heat-flux">
+<h2><strong>Error ZZ Heat Flux</strong><a class="headerlink" href="#error-zz-heat-flux" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Error</span> <span class="n">ZZ</span> <span class="n">heat</span> <span class="n">flux</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id145">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id145" title="Permalink to this headline"></a></h3>
+<p>This option has been disabled for lack of use, but originally allowed the user to
+compute a posteriori error estimates in the computed temperature/energy flux field
+from the Zienkiewicz-Zhu energy norm error measure.</p>
+</section>
+<section id="id146">
+<h3><strong>Examples</strong><a class="headerlink" href="#id146" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id147">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id147" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id148">
+<h3><strong>References</strong><a class="headerlink" href="#id148" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="error-zz-pressure">
+<h2><strong>Error ZZ Pressure</strong><a class="headerlink" href="#error-zz-pressure" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Error</span> <span class="n">ZZ</span> <span class="n">pressure</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id149">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id149" title="Permalink to this headline"></a></h3>
+<p>This option has been disabled for lack of use, but originally allowed the user to
+compute a posteriori error estimates in the pressure field from the Zienkiewicz-Zhu
+energy norm error measure.</p>
+</section>
+<section id="id150">
+<h3><strong>Examples</strong><a class="headerlink" href="#id150" title="Permalink to this headline"></a></h3>
+<p>No Examples.</p>
+</section>
+<section id="id151">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id151" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id152">
+<h3><strong>References</strong><a class="headerlink" href="#id152" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="user-defined-post-processing">
+<h2><strong>User-Defined Post Processing</strong><a class="headerlink" href="#user-defined-post-processing" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">User</span><span class="o">-</span><span class="n">Defined</span> <span class="n">Post</span> <span class="n">Processing</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id153">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id153" title="Permalink to this headline"></a></h3>
+<p>This option enables user-defined postprocessing options in <em>Goma</em>. An arbitrary number
+of floating point constants can be loaded to use in the user-defined subroutine
+user_post (user_post.c). This variable is called <strong>USER</strong> in the output EXODUS
+II file and can be contoured or processed just like any other nodal variable in a postprocessing
+visualization package.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate and write the user-defined postprocessing variable
+to the output EXODUSII file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the user-defined postprocessing.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float_list&gt;</p></td>
+<td><p>An arbitrary number (including zero) of floating point
+numbers, which can be accessed in file user_post</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id154">
+<h3><strong>Examples</strong><a class="headerlink" href="#id154" title="Permalink to this headline"></a></h3>
+<p>Consider the following sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">User</span><span class="o">-</span><span class="n">Defined</span> <span class="n">Post</span> <span class="n">Processing</span> <span class="o">=</span> <span class="n">yes</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+<p>Suppose you would like to contour the speed of a fluid in a two-dimensional problem
+using this card, with your intent being to multiply the calculated value by a factor of
+100.0 for some unit conversion or something. You must add</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">post_value</span> <span class="o">=</span> <span class="n">param</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">sqrt</span><span class="p">(</span><span class="n">fv</span><span class="o">-&gt;</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">fv</span><span class="o">-&gt;</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">fv</span><span class="o">-&gt;</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">fv</span><span class="o">-&gt;*</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">;</span>
+</pre></div>
+</div>
+<p>to user_post.c. Note also that you have to comment out the error handler line just
+above the location you enter the post_value code. The comments in the routine help
+guide you through the process.</p>
+</section>
+<section id="id155">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id155" title="Permalink to this headline"></a></h3>
+<p>See the function user_post in user_post.c.</p>
+</section>
+</section>
+<section id="porous-saturation">
+<h2><strong>Porous Saturation</strong><a class="headerlink" href="#porous-saturation" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Saturation</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id156">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id156" title="Permalink to this headline"></a></h3>
+<p>In partially saturated porous media, the saturation represents the volume fraction of the
+pore space that is filled with liquid. If this option is selected, then the saturation level
+(an auxiliary variable) is included in the output EXODUS II file. This variable is called
+<strong>SAT</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the porous saturation and write to the output
+EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the porous saturation.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id157">
+<h3><strong>Examples</strong><a class="headerlink" href="#id157" title="Permalink to this headline"></a></h3>
+<p>This sample input card turns off writing of saturation to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Porous</span> <span class="n">Saturation</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id158">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id158" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id159">
+<h3><strong>References</strong><a class="headerlink" href="#id159" title="Permalink to this headline"></a></h3>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+<p>SAND96-2149: Drying in Deformable Partially-Saturated Porous Media: Sol-Gel
+Coatings, Cairncross, R. A., P. R. Schunk, K. S. Chen, S. S. Prakash, J. Samuel, A. J.
+Hurd and C. Brinker (September 1996)</p>
+</section>
+</section>
+<section id="total-density-of-solvents-in-porous-media">
+<h2><strong>Total Density of Solvents in Porous Media</strong><a class="headerlink" href="#total-density-of-solvents-in-porous-media" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Total</span> <span class="n">density</span> <span class="n">of</span> <span class="n">solvents</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id160">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id160" title="Permalink to this headline"></a></h3>
+<p>This post processing option can be used to trigger the computation and output of the
+total density of solvents as a nodal field variable to the output EXODUS II file. Three
+nodal variables are written, <strong>Rho_Total_Liq, Rho_Total_air</strong> and <strong>Rho_Total_solid</strong>.
+The mathematical details are given below in the technical discussion. This option
+applies to media types of <em>POROUS_SATURATED, POROUS_UNSATURATED</em>, and
+<em>POROUS_TWO_PHASE</em> (see <em>Media Type</em> card). The options are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate and write the total solvent densities as a
+postprocessing variable to the output EXODUSII file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the total solvent densities.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id161">
+<h3><strong>Examples</strong><a class="headerlink" href="#id161" title="Permalink to this headline"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Total</span> <span class="n">density</span> <span class="n">of</span> <span class="n">solvents</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+<p>This card will result in the calculation and output of the mixture density of solvent
+(viz., phase mixture of liquid solvent in vapor form, liquid form, and the form adsorbed
+in the solid skeleton for partially saturated porous flows). The form of that mixture
+density is given in the technical discussion.</p>
+</section>
+<section id="id162">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id162" title="Permalink to this headline"></a></h3>
+<p>In saturated flow cases, viz. for <em>Media Type</em> selection <em>POROUS_SATURATED</em>, the total
+solvent density is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/325_goma_physics.png"><img alt="../_images/325_goma_physics.png" src="../_images/325_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\rho_1\)</span> is the pure liquid density and <span class="math notranslate nohighlight">\(\phi\)</span> is the porosity. Here we have assumed that no liquid solvent is adsorbed into the solid struts (currently the assumption used
+throughout <em>Goma</em>).</p>
+<p>For partially saturated flows, viz. for <em>Media Type</em> selection <em>POROUS_UNSATURATED</em>
+or <em>POROUS_TWO_PHASE</em>, the total density is given by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/326_goma_physics.png"><img alt="../_images/326_goma_physics.png" src="../_images/326_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\rho_{gv}\)</span> is the density of solvent vapor in the total gas-solvent vapor mixture (see
+<em>Density of solvents in gas phase in porous media card</em>), <em>S</em> is the saturation (see <em>Porous
+Saturation</em> card), and <span class="math notranslate nohighlight">\(\chi_{ls}\)</span> is the volume fraction of solvent in liquid phase (including any condensed species component). When calculating the total density of the liquid
+(<strong>Rho_Total_liq</strong>), the liquid vapor density comes from a Kelvin vapor-liquid
+equilibrium relation. The total density of the gas phase (<strong>Rho_Total_gas</strong>) will use a
+vapor density fro air and a volume fraction of zero (0) since air is insoluble. The total
+density of the solid in the gas (<strong>Rho_Total_solid</strong>) is zero (0).</p>
+</section>
+<section id="id163">
+<h3><strong>References</strong><a class="headerlink" href="#id163" title="Permalink to this headline"></a></h3>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+<section id="density-of-solvents-in-gas-phase-in-porous-media">
+<h2><strong>Density of Solvents in Gas Phase in Porous Media</strong><a class="headerlink" href="#density-of-solvents-in-gas-phase-in-porous-media" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="n">of</span> <span class="n">solvents</span> <span class="ow">in</span> <span class="n">gas</span> <span class="n">phase</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id164">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id164" title="Permalink to this headline"></a></h3>
+<p>This post processing option can be used to trigger the computation and output of the
+density of solvents in the gas phase only, including the volume occupied by the
+assumed insoluble gas (e.g. air), as a nodal field variable to the output EXODUS II file.
+The nodal variables are called <strong>RhoSolv_g_liq, RhoSolv_g_air</strong> and <strong>RhoSolv_g_solid</strong>.
+The mathematical details are given below in the technical discussion. This option
+applies to media types of <em>POROUS_UNSATURATED</em>, and <em>POROUS_TWO_PHASE</em>
+(see <em>Media Type</em> card). The options are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate and write the gas phase solvent density as a
+postprocessing variable to the output EXODUSII file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the total solvent density.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id165">
+<h3><strong>Examples</strong><a class="headerlink" href="#id165" title="Permalink to this headline"></a></h3>
+<p>The following input card turns off writing solvent densities to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="n">of</span> <span class="n">solvents</span> <span class="ow">in</span> <span class="n">gas</span> <span class="n">phase</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id166">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id166" title="Permalink to this headline"></a></h3>
+<p>The air and solid components are insoluble in the gas phase so the <strong>RhoSolv_g_air</strong> and
+<strong>RhoSolv_g_solid</strong> variables will be zero. The gas-density of liquid solvents
+<strong>(RhoSolv_g_liq)</strong> is determined from the vapor-liquid equilibrium relationship at a
+liquid-vapor meniscus. Specifically,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/327_goma_physics.png"><img alt="../_images/327_goma_physics.png" src="../_images/327_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(M_w\)</span> is the average molecular weight of solvents in the mixture, R is the ideal gas
+constant, T is the temperature, and <span class="math notranslate nohighlight">\(\rho_v\)</span> is the equilibrium vapor pressure. Note that this
+vapor pressure can be affected by local meniscus curvature through the Kelvin equation
+(cf. Schunk, 2002 and <em>Porous Vapor Pressure</em> card).</p>
+</section>
+<section id="id167">
+<h3><strong>References</strong><a class="headerlink" href="#id167" title="Permalink to this headline"></a></h3>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+<section id="density-of-liquid-phase-in-porous-media">
+<h2><strong>Density of Liquid Phase in Porous Media</strong><a class="headerlink" href="#density-of-liquid-phase-in-porous-media" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="n">of</span> <span class="n">liquid</span> <span class="n">phase</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id168">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id168" title="Permalink to this headline"></a></h3>
+<p>This post processing option can be used to trigger the computation and output of the
+density of solvents in the liquid phase only, averaged over the mixture, as a nodal field
+variable to the output EXODUS II file. The nodal variable is called <strong>Rho_Liq_Phase</strong>.
+The mathematical details are given below in the technical discussion. This option
+applies to media types of <em>POROUS_SATURATED, POROUS_UNSATURATED</em>, and
+<em>POROUS_TWO_PHASE</em> (see <em>Media Type</em> card). The options are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate and write the density of solvent in the liquid phase
+as a postprocessing variable to the output EXODUSII file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the liquid solvent density.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id169">
+<h3><strong>Examples</strong><a class="headerlink" href="#id169" title="Permalink to this headline"></a></h3>
+<p>An example of an input card which activates writing of the density to the EXODUS II
+file is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Density</span> <span class="n">of</span> <span class="n">liquid</span> <span class="n">phase</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id170">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id170" title="Permalink to this headline"></a></h3>
+<p>In liquid-saturated flow cases, viz. for <em>Media Type</em> selection <em>POROUS_SATURATED</em>,
+the total solvent density in the liquid phase is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/328_goma_physics.png"><img alt="../_images/328_goma_physics.png" src="../_images/328_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\rho_l\)</span> is the pure liquid density and <span class="math notranslate nohighlight">\(\phi\)</span> is the porosity. Here we have assumed that no liquid solvent is adsorbed into the solid struts (currently the assumption used
+throughout <em>Goma</em>).</p>
+<p>For partially saturated flows, viz. for <em>Media Type</em> selection <em>POROUS_UNSATURATED</em>
+or <em>POROUS_TWO_PHASE</em>, the density of solvent in the liquid phase only is given by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/329_goma_physics.png"><img alt="../_images/329_goma_physics.png" src="../_images/329_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where S is the saturation (see <em>Porous Saturation</em> card). Compare this with the quantity
+computed with the <em>Total density of solvents in porous media</em> card.</p>
+</section>
+<section id="id171">
+<h3><strong>References</strong><a class="headerlink" href="#id171" title="Permalink to this headline"></a></h3>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+<section id="gas-phase-darcy-velocity-in-porous-media">
+<h2><strong>Gas Phase Darcy Velocity in Porous Media</strong><a class="headerlink" href="#gas-phase-darcy-velocity-in-porous-media" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gas</span> <span class="n">phase</span> <span class="n">Darcy</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id172">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id172" title="Permalink to this headline"></a></h3>
+<p>This post-processing option will lead to the explicit calculation and storage of the
+Darcy velocity components in the gas phase, viz. the velocity of the gas phase due to
+gas-phase pressure gradients. This option is only available for
+<em>POROUS_TWO_PHASE</em> media types (cf. <em>Media Type</em> card). The velocity components
+appear in the output EXODUS II file as the nodal variables <strong>Darcy_Vel_g_0, Darcy_Vel_g_1</strong> and
+<strong>Darcy_Vel_g_2</strong>.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the gas-phase Darcy velocity components and
+write to the output EXODUSII file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the gas phase velocity components.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id173">
+<h3><strong>Examples</strong><a class="headerlink" href="#id173" title="Permalink to this headline"></a></h3>
+<p>This input example turns on calculation of the gas phase velocity components:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gas</span> <span class="n">phase</span> <span class="n">Darcy</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span><span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id174">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id174" title="Permalink to this headline"></a></h3>
+<p>The gas-phase Darcy velocity is given by the extended Darcy law, which accounts for
+the relative reduced flow due to the presence of another phase, viz.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/330_goma_physics.png"><img alt="../_images/330_goma_physics.png" src="../_images/330_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here <span class="math notranslate nohighlight">\(\nu_g\)</span> represents the Darcy flux, or Darcy velocity, in the gas phase, k is the
+permeability of the porous medium, <span class="math notranslate nohighlight">\(k_g\)</span> is the relative permeabilities for the gas and
+liquid phases respectively, <span class="math notranslate nohighlight">\(\mu_g\)</span> are the gas viscosity, <span class="math notranslate nohighlight">\(p_g\)</span> is the pressure in the gas phase, and g is the gravitational force vector. <span class="math notranslate nohighlight">\(\rho_g\)</span> is the density of the gas phase and is equal to the sum of the partial densities of air and solvent vapor,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/331_goma_physics.png"><img alt="../_images/331_goma_physics.png" src="../_images/331_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id175">
+<h3><strong>References</strong><a class="headerlink" href="#id175" title="Permalink to this headline"></a></h3>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+<section id="liquid-phase-darcy-velocity-in-porous-media">
+<h2><strong>Liquid Phase Darcy Velocity in Porous Media</strong><a class="headerlink" href="#liquid-phase-darcy-velocity-in-porous-media" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">Darcy</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id176">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id176" title="Permalink to this headline"></a></h3>
+<p>This post-processing option will lead to the explicit calculation and storage of the
+Darcy velocity components in the liquid phase, viz. the velocity of the liquid phase due
+to liquid phase pressure gradients. This option is available for all porous media types
+(cf. <em>Media Type</em> card). The velocity components appear in the output EXODUS II file
+as the nodal variables <strong>Darcy_Vel_l_0, Darcy_Vel_l_1</strong> and <strong>Darcy_Vel_l_2</strong>.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the liquid-phase Darcy velocity components and
+write to the output EXODUSII file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the liquid phase velocity components.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id177">
+<h3><strong>Examples</strong><a class="headerlink" href="#id177" title="Permalink to this headline"></a></h3>
+<p>This input example turns on calculation of the liquid phase velocity components:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">phase</span> <span class="n">Darcy</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id178">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id178" title="Permalink to this headline"></a></h3>
+<p>The liquid-phase Darcy velocity is given by the extended Darcy law, which accounts
+for the relative reduced flow due to the presence of another phase, viz.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/332_goma_physics.png"><img alt="../_images/332_goma_physics.png" src="../_images/332_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here <span class="math notranslate nohighlight">\(v_l\)</span> represents the Darcy flux, or Darcy velocity, in the gas phase, k is the
+permeability of the porous medium, <span class="math notranslate nohighlight">\(k_l\)</span> is the relative permeabilities for the liquid and
+liquid phases respectively, <span class="math notranslate nohighlight">\(\mu_l\)</span> are the liquid viscosity, <span class="math notranslate nohighlight">\(p_l\)</span> is the pressure in the liquid phase, and g is the gravitational force vector. <span class="math notranslate nohighlight">\(\rho_l\)</span> is the density of the liquid phase.</p>
+</section>
+<section id="id179">
+<h3><strong>References</strong><a class="headerlink" href="#id179" title="Permalink to this headline"></a></h3>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+<section id="capillary-pressure-in-porous-media">
+<h2><strong>Capillary Pressure in Porous Media</strong><a class="headerlink" href="#capillary-pressure-in-porous-media" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Capillary</span> <span class="n">pressure</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id180">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id180" title="Permalink to this headline"></a></h3>
+<p>In partially saturated porous media, the capillary pressure is the difference between the
+gas and liquid pressures. This option only takes affect for <em>POROUS_TWO_PHASE</em> and
+<em>POROUS_UNSATURATED</em> media types (see <em>Media Type</em> card). This variable is called
+<strong>PC</strong> in the output EXODUS II file.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the capillary pressure and write to output
+EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the capillary pressure.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id181">
+<h3><strong>Examples</strong><a class="headerlink" href="#id181" title="Permalink to this headline"></a></h3>
+<p>This is a sample input card to activate calculation of capillary pressure:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Capillary</span> <span class="n">pressure</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id182">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id182" title="Permalink to this headline"></a></h3>
+<p>The capillary pressure is a critical variable for partially saturated porous media, and is
+in fact the dependent variable for unsaturated (not two-phase) flows for which the gasphase
+pressure is taken as constant. It is simply defined as</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/335_goma_physics.png"><img alt="../_images/335_goma_physics.png" src="../_images/335_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>As such, positive capillary pressures imply liquid phase pressure being greater than gas
+phase pressure. Because liquid phase saturation strongly correlates to capillary
+pressure, this current quantity is a good indicator of the level of liquid inventory in
+smaller pores in the skeleton relative to large pores. Contouring this quantity can give
+some indication of the level of suction exerted on the porous-skeleton, which is
+relevant when the skeleton is taken as deformable.</p>
+</section>
+<section id="id183">
+<h3><strong>References</strong><a class="headerlink" href="#id183" title="Permalink to this headline"></a></h3>
+<p>GT-009.3: GOMA’s Capabilities for Partially Saturated Flow in Porous Media,
+September 1, 2002, P. R. Schunk</p>
+</section>
+</section>
+<section id="grid-peclet-number-in-porous-media">
+<h2><strong>Grid Peclet Number in Porous Media</strong><a class="headerlink" href="#grid-peclet-number-in-porous-media" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Grid</span> <span class="n">Peclet</span> <span class="n">Number</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id184">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id184" title="Permalink to this headline"></a></h3>
+<p>This option triggers the computation and output of the so-called grid-level Peclet
+number as a nodal variable in the output EXODUS II file. It appears as a nodal variable
+called <strong>Por_Grid_Peclet</strong>. This quantity gives the user a measure of advective transport
+relative to diffusive transport in a porous medium, and is strongly correlated to the
+steepness of a saturation front. This quantity is actually used to scale the formulation
+which employs the streamline upwind Petrov-Galerkin method for stabilizing the
+equations for partially saturated flow. This option only applies for unsaturated media
+and only for the <em>SUPG</em> option on the <em>Porous Weight Function</em> card.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Compute the grid-level Peclet Number and write to output
+EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the grid-level Peclet Number.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id185">
+<h3><strong>Examples</strong><a class="headerlink" href="#id185" title="Permalink to this headline"></a></h3>
+<p>This is a sample input card to activate calculation of the Peclet Number:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Grid</span> <span class="n">Peclet</span> <span class="n">Number</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id186">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id186" title="Permalink to this headline"></a></h3>
+<p>See discussion for the <em>Porous Weight Function</em> card.</p>
+</section>
+<section id="id187">
+<h3><strong>References</strong><a class="headerlink" href="#id187" title="Permalink to this headline"></a></h3>
+<p>GTM-029.0: SUPG Formulation for the Porous Flow Equations in Goma, H. K.
+Moffat, August 2001 (DRAFT).</p>
+</section>
+</section>
+<section id="supg-velocity-in-porous-media">
+<h2><strong>SUPG Velocity in Porous Media</strong><a class="headerlink" href="#supg-velocity-in-porous-media" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SUPG</span> <span class="n">Velocity</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id188">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id188" title="Permalink to this headline"></a></h3>
+<p>Used to specify use of effective velocities in SUPG formulations for porous media. It is
+written to the output EXODUS II file as nodal variable <strong>U_supg_porous</strong>.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate and write the effective velocity components as a
+postprocessing variable to the output EXODUSII file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the effective velocity components.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id189">
+<h3><strong>Examples</strong><a class="headerlink" href="#id189" title="Permalink to this headline"></a></h3>
+<p>This is a sample input card to activate calculation of SUPG Velocity:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SUPG</span> <span class="n">Velocity</span> <span class="ow">in</span> <span class="n">porous</span> <span class="n">media</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id190">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id190" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id191">
+<h3><strong>References</strong><a class="headerlink" href="#id191" title="Permalink to this headline"></a></h3>
+<p>GTM-029.0: SUPG Formulation for the Porous Flow Equations in Goma, H. K.
+Moffat, August 2001 (DRAFT).</p>
+</section>
+</section>
+<section id="vorticity-vector">
+<h2><strong>Vorticity Vector</strong><a class="headerlink" href="#vorticity-vector" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Vorticity</span> <span class="n">Vector</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id192">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id192" title="Permalink to this headline"></a></h3>
+<p>This option allows the user to output the vorticity vector to the output EXODUS II file.
+It applies to problems with the fluid momentum equations (see <em>EQ = momentum*</em>
+cards). The output nodal variables are named <strong>VORTX, VORTY, VORTZ</strong>.</p>
+<p>The permissible values for this postprocessing option are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>yes</strong></p></td>
+<td><p>Calculate the vorticity vectors and store in the output
+EXODUS II file.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>no</strong></p></td>
+<td><p>Do not calculate the vorticity vectors.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id193">
+<h3><strong>Examples</strong><a class="headerlink" href="#id193" title="Permalink to this headline"></a></h3>
+<p>This example card requests that vorticity vectors be written to the EXODUS II file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Vorticity</span> <span class="n">Vector</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id194">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id194" title="Permalink to this headline"></a></h3>
+<p>The vorticity vector function, <span class="math notranslate nohighlight">\(\underline\omega\)</span> , is defined in terms of the velocity <span class="math notranslate nohighlight">\(\underline\upsilon\)</span> as:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../_images/336_goma_physics.png"><img alt="../_images/336_goma_physics.png" src="../_images/336_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="problem_description.html" class="btn btn-neutral float-left" title="Problem Description" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="post_processing_fluxes.html" class="btn btn-neutral float-right" title="Post Processing Fluxes and Data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

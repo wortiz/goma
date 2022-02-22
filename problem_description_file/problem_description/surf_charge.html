@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>surf_charge &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>surf_charge</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/problem_description/surf_charge.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="surf-charge">
+<h1><strong>surf_charge</strong><a class="headerlink" href="#surf-charge" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EQ</span> <span class="o">=</span><span class="n">surf_charge</span> <span class="p">{</span><span class="n">Galerkin_wt</span><span class="p">}</span> <span class="n">QS</span> <span class="p">{</span><span class="n">Interpol_fnc</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">float4</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float5</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card provides information for solving a conservation equation for the total surface
+charge in a 2-dimensional bar (or shell) element.. Note that this equation is not yet
+available in three dimensions and is in fact untested at this time. The card entries are as
+follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>surf_charge</strong></p></td>
+<td><p>Name of the equation to be solved.</p></td>
+</tr>
+<tr class="row-even"><td><p>{Galerkin_wt}</p></td>
+<td><p>Two- or four-character value that defines the type of
+weighting function for this equation, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Q1</strong>-Linear</p></li>
+<li><p><strong>Q2</strong>-Quadratic</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>QS</strong></p></td>
+<td><p>Name of the variable associated with the shell curvature
+equation.</p></td>
+</tr>
+<tr class="row-even"><td><p>{Interpol_fnc}</p></td>
+<td><p>Two- or four-character value that defines the
+interpolation function used to represent the variable
+<strong>QS</strong> where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Q1</strong>-Linear Continuous</p></li>
+<li><p><strong>Q2</strong>-Quadratic Continuous</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Multiplier for mass terms. Set to 1.0.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p>Multiple for advection terms. Set to 1.0.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float3&gt;</p></td>
+<td><p>Multiplier for boundary terms. Set to 1.0.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float4&gt;</p></td>
+<td><p>Multiplier for diffusion terms - required but not
+currently implemented.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float5&gt;</p></td>
+<td><p>Multiplier for source terms - required but not currently
+implemented.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample card that uses bilinear surface charge interpolation and
+weight function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EQ</span> <span class="o">=</span> <span class="n">surf_charge</span> <span class="n">Q2</span> <span class="n">QS</span> <span class="n">Q2</span> <span class="mf">1.0</span> <span class="mf">1.0</span> <span class="mf">1.0</span> <span class="mf">0.0</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The surface charge conservation equation implemented is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/302_goma_physics.png"><img alt="../../_images/302_goma_physics.png" src="../../_images/302_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\sigma\)</span> is the surface charge unknown, <span class="math notranslate nohighlight">\(D_s\)</span> is the surface diffusion coefficient,
+e is the electrical permittivity, <span class="math notranslate nohighlight">\(\underline{n}\)</span> is the unit normal vector to the surface, and
+<span class="math notranslate nohighlight">\(\underline{E}\)</span> = –<span class="math notranslate nohighlight">\(\Delta\)</span> V is the electric field vector. Here, advection contributions
+are not considered.</p>
+<p>This is a special type of shell equation which depends on the gradient of a bulk variable
+(here, electric potential V). Since values of these variables away from the surface are
+normally not accessible during assembly of shell equations, this term has to be applied
+as a special type of boundary condition (WEAK_SHELL_GRAD) which is set up to
+evaluate sensitivities to interior bulk variable degrees of freedom . This term, though
+physically an integral part of the surface charge equation, is applied through the
+SURFACE_ELECTRIC_FIELD_BC boundary condition.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>Notz, Patrick K. Ph.D. thesis. Purdue University, 2000.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

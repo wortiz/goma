@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media Type &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Media Type</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/microstructure/media_type.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="media-type">
+<h1><strong>Media Type</strong><a class="headerlink" href="#media-type" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Media</span> <span class="n">Type</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card is used to designate the characteristic medium type for solid materials so that
+the proper microstructural features/models may be imposed. Basically, the choices are
+dictated by whether the medium is to be modeled as <em>porous</em> (viz. a medium in which
+flow will be determined relative to the motion of a porous solid skeleton) or as
+<em>continuous</em> (viz., in which the mechanics equations apply to all parts of the medium and
+not weighted by a solid fraction). If porous flow through Darcy or Brinkman
+formulations are desired in the material, then the phase is designated as <em>continuous</em>.</p>
+<p>The input parameter is a {model_name} and has the following possible values:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 72%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>{model_name} Name of the media model; the choices are</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>CONTINUOUS</strong></p></li>
+<li><p><strong>POROUS_SATURATED</strong></p></li>
+<li><p><strong>POROUS_UNSATURATED</strong></p></li>
+<li><p><strong>POROUS_TWO_PHASE</strong></p></li>
+<li><p><strong>POROUS_BRINKMAN</strong></p></li>
+<li><p><strong>POROUS_SHELL_UNSATURATED</strong></p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Specific characteristics of these types are identified below, including other cards that
+must be present.</p>
+<ul class="simple">
+<li><p>If the type chosen is <strong>CONTINUOUS</strong>, then the material is assumed to be
+amorphous and no further microstructure properties need to be specified (next
+required card is the <em>Diffusion Constitutive Equation</em>).</p></li>
+<li><p>In a porous medium with one phase in the pores (i.e. a saturated medium), use
+<strong>POROUS_SATURATED</strong> then only the Porosity and Permeability cards are
+required. A <strong>POROUS_SATURATED</strong> medium model enables the user to solve the
+simplest porous flow equation for the liquid phase pressure only for rigid porous
+media (see the porous_sat or porous_liq equation cards). For deformable porous
+saturated media, one can employ a stress balance and porosity equation for
+deformable porous media (see mesh* equation cards and porous_deform equation
+card).</p></li>
+<li><p>In a porous medium with two phases in the pores (such as air-water, i.e., an
+unsaturated medium), two options exist - <strong>POROUS_UNSATURATED</strong>, a
+formulation of the porous flow problem using the capillary pressure as the field
+variable (gas pressure assumed to be uniform), and <strong>POROUS_TWO_PHASE</strong>, a
+formulation of the porous flow problem using the liquid pressure and gas pressure
+as field variables. All the cards in this Microstructure porous flow section, except
+the Brinkman cards (<em>FlowingLiquid Viscosity and Inertia Coefficient</em>), are needed
+for the unsaturated or two-phase models. As in the saturated case above, these
+options can also be chosen for deformable porous media, for which the Lagrangian
+mesh stress equations and the porosity equation are used to complete the effective
+stress principle formulation.</p></li>
+<li><p>The <strong>POROUS_BRINKMAN</strong> model is an extension of the Navier-Stokes
+equation for porous media. In addition, it has an inertia term intended to account
+for boundary and interface deficiencies at Reynold’s numbers greater than one
+(Re &gt; 1), a deficiency in all Darcy flow models (see, e.g., Gartling, et. al., 1996). It
+is a vector formulation (the momentum equations) of saturated flow in a porous
+medium which reduces to the Navier-Stokes equations as the porosity increases to
+one (φ → 1). For Brinkman flow, the input parameters (i.e., cards) that must be
+specified from this section are <em>Porosity, Permeability, FlowingLiquid Viscosity</em>,
+and <em>Inertia Coefficient</em>. Please note the use of two viscosities; for the Brinkman
+media type, the viscosity entered via the (<em>Mechanical Properties and Constitutive
+Equations</em>) Viscosity card is interpreted to be the Brinkman viscosity (μB) and is
+used to calculate the viscous stresses (see Gartling, et. al., 1996) while the
+<em>FlowingLiquid Viscosity</em> (μ) is used in the correction term for nonlinear drag
+forces in porous media. Brinkman viscosity is an effective value and can be taken
+as the porosity weighted average of the matrix and fluid. It is generally not correct
+to set it equal to the liquid viscosity (Martys, et. al., 1994; Givler and Altobelli,
+1994).</p></li>
+<li><p>The <strong>POROUS_SHELL_UNSATURATED</strong> model is used for thin shell, open
+pore, porous media, viz. the shell_sat_open equation. This media type
+instructs GOMA to obtain most of the media properties from the bulk continuum
+specifications just like <strong>POROUS_UNSATURATED</strong>. Exceptions are the
+Porous Shell Cross Permeability model and the Porous Shell
+Height material models. Please see the porous shell tutorial</p></li>
+</ul>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Media</span> <span class="n">Type</span> <span class="o">=</span> <span class="n">POROUS_TWO_PHASE</span>
+</pre></div>
+</div>
+<p>This card will require a plethora of material models for Darcy flow of liquid and gas in
+a porous medium. It also will require the use of two Darcy flow mass balances in the
+<em>Problem Description EQ</em> specification section, specifically <em>porous_liq</em> and <em>porous_gas</em>
+equations. See references below for details.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>In solving porous medium problems, it is important to understand that each
+conservation equation represents a component, or species balance. The <em>porous_liq</em>
+equation is actually a species balance for the liquid phase primary component (e.g.
+water) for all phases in the medium, viz. liquid, gas, and solid. This is the case even
+though the dependent variable is the liquid phase pressure. This is the only required
+equation for rigid <strong>POROUS_SATURATED</strong> media. The same holds true for rigid
+<strong>POROUS_UNSATURATED</strong> media, as the liquid solvent is present in liquid and gas
+vapor form (it is actually taken as insoluble in the solid). For deformable media, one
+must add a stress balance through the <em>mesh*</em> equations (in <em>LAGRANGIAN</em> form, as
+described on the <em>Mesh Motion</em> card) and a solid phase “solvent” balance which is used
+to solve for the porosity, viz. the <em>porous_deform</em> equation. In these cases, the gas is
+taken to be at constant pressure. If pressure driven Darcy flow is important in the gas,
+an additional species balance for the primary gas component is required through the
+porous_gas equation. This last case is the so-called <strong>POROUS_TWO_PHASE</strong> media
+type.</p>
+<p>Options for representing the solid medium as rigid or deformable are discussed under
+the <em>Saturation, Permeability</em> and <em>Porosity</em> cards. When rigid porous media are
+modeled, both porosity and permeability are constant. In <em>Goma</em> 4.0, these concepts
+were being researched and improved, with much of the usage documentation residing
+in technical memos.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-008.2: Porous Media Capabilities/Tutorial for GOMA. User Guidance for Saturated
+Porous Penetration Problems, August 11, 1999, P. R. Schunk</p>
+<p>GT-009.3: GOMA’s capabilities for partially saturated flow in porous media,
+September 1, 2002, P. R. Schunk</p>
+<p>Gartling D. K., C. E. Hickox and R. C. Givler 1996. “Simulations of Coupled Viscous
+and Porous Flow Problems”, Comp. Fluid Dynamics, 7, 23-48.</p>
+<p>Givler, R. C. and S. A. Altobelli 1994. “A Determination of the Effective Viscosity for
+the Brinkman-Forchheimer Flow Model.” J. Fluid Mechanics, 258, 355-370.</p>
+<p>Martys, N., D. P. Bantz and E. J. Barboczi 1994. “Computer Simulation Study of the
+Effective Viscosity in Brinkman’s Equation.” Phys. Fluids, 6, 1434-1439</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

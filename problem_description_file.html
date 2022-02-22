@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Problem Description (Input File) &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="File Specification" href="problem_description_file/file_specifications.html" />
+    <link rel="prev" title="Code Structure and I/O" href="code_structure_and_io.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Goma User Manual
+            <img src="_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Problem Description (Input File)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/file_specifications.html">File Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/general_specifications.html">General Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/level_set.html">Level Set Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/phase_field.html">Phase Field Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/problem_description.html">Problem Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/post_processing.html">Post Processing Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/post_processing_particle.html">Post Processing Particle Traces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description_file/post_processing_volume.html">Volumetric Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Problem Description (Input File)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/problem_description_file.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="problem-description-input-file">
+<h1>Problem Description (Input File)<a class="headerlink" href="#problem-description-input-file" title="Permalink to this headline"></a></h1>
+<p>The <strong>input file</strong> for <em>Goma</em> contains the overall description of the problem to be solved together with
+instructions on solution strategy. The file (cf. sample in Figure 3) is split into sixteen sections: (1)
+File Specifications (Section 4.1) which directs I/O, (2) General Specifications (Section 4.2), (3)
+Time Integration Specifications (Section 4.3), (4) Continuation Specifications (Section 4.4), (5)
+Hunting Specifications (Section 4.5), (6) Augmenting conditions (Section 4.6), (7) Solver
+Specifications (Section 4.7), (8) Eigensolver Specifications (Section 4.8), (9) Geometry
+Specifications, (Section 4.9) (10) Boundary Condition Specifications (Section 4.10), (11)
+Rotation Specifications (Section 4.11), (12) Problem Description (Section 4.12), (13) Post
+Processing Specifications (Section 4.13), (14) Post Processing Fluxes and Data (Section 4.14),
+(15) Post Processing Particle Traces (Section 4.15) and (16) Volumetric Integration (Section
+4.16). Sections (1), (2), (3), (7), (10), (12), and (13) are required. The rest are optional, depending
+on the problem type being solved.</p>
+<p>Each section in this chapter discusses a separate part of the input file specification and it indicates
+the data cards or input records that may be used, followed by the options available for each
+individual record (or line in the file) and the necessary input data/parameters. All input data are
+specified in a free field format with successive data items separated by blanks or tabs. In this
+version of the user’s manual, a new format has been instituted in which each record is presented in
+a template structure. This template has eight parts: 1) a title, which is also the card name, 2) a
+syntax, which is enclosed in a framed box and shows the proper contents of the card, 3) a
+Description/Usage section, which presents the user options and descriptions of proper input
+records, 4) an Example, 5) a Technical Discussion to provide relevant information to help the user
+understand how to select from among various options or how to properly determine the desired
+parameters, 6) a Theory to provide an understanding of the physics and mechanics that have been
+implemented or are being exercised, 7) a FAQs section to present important user experience, and
+8) a Reference section to identify citations and/or provide background information to the user.
+This is a more lengthy but a more complete form for documenting and instructing users of <em>Goma</em>.</p>
+<p>The syntax entry denotes a unique string for each input record which <em>Goma</em> parses in the input
+file. All words in these unique strings are separated by a single white space and because the code
+parses for these exact strings, the parser becomes case sensitive. The identifying string for a
+particular specification is followed by an ‘=’ character. Following this character will be all
+additional data for that record, if any. In the syntax box, this additional data is symbolically
+represented by one or more variables with some appropriate delimiters. Typically, the user will
+find a variable called <em>model_name</em> enclosed in <strong>curly braces</strong> ‘{}’; this would then be followed by
+a description of specific options for <em>model_name</em> in the Description/Usage section. The curly
+braces indicate a required input and that the user must select one of the offered options for
+<em>model_name</em>. Required parameters, if any, for the model option are enclosed in <strong>angle brackets</strong> ‘&lt;
+&gt;’, while optional parameters for <em>model_name</em> are enclosed in <strong>square brackets</strong> ‘[ ]’. Following
+the ‘=’ character, the user may use white space freely between and among the remaining
+parameters on the command line.</p>
+<p>The nature of the input parser allows the user to freely comment the input deck in any way, so
+long as the character strings in the comments do not contain the exact strings described in this
+section of the manual at the beginning of the comment line. Simply for the sake of uniformity, it is
+recommended that a comment card convention be adopted, i.e., placing some delimiting symbol
+(e.g., $, #, , etc.) at the <em>beginning</em> of each comment line. Moreover, employing some of the basic
+text processing capabilities provided in the ACCESS system (Sjaardema, 1993) makes it possible
+to connect both the model generation input file, e.g., FASTQ or CUBIT, with the input deck for
+<em>Goma</em>. For example, the <em>“include”</em> statement in APREPRO (Sjaardema, 1992) makes it
+convenient to include geometrical information contained in a FASTQ input file into the <em>Goma</em>
+input file for use with commands like <em>PLANE</em> and <em>SPLINE</em> that make use of global problem
+geometry. APREPRO also enables a user to generate customized model parameterizations with
+the algebraic preprocessing capability (demonstrated in <em>Goma</em> Tutorials). Finally, employing a
+text preprocessor like APREPRO enables the analyst to attach more meaningful labels to entities
+such as side sets, node sets and element blocks than the internal names (which are simple integer
+identifiers).</p>
+<p><strong>The order of the input cards is significant</strong>; omitting a required card will often result in an error
+message from <em>Goma</em>. To avoid such errors, a good strategy is to copy a current version of a
+working input file and then make changes to it. However, as noted below, some cards are optional.
+Some file sections, such as boundary condition specification section and equation specification
+section, are not order dependent, but number dependent, as only the number of boundary
+conditions or equations which are specified by the “Number of BC” and “Number of EQ” cards
+will be read (regardless of the number of cards in the file). That is, after the specified number of
+individual equation or boundary condition cards is read, any remaining cards are ignored. Figure
+3 shows a sample problem description input deck, indicating some optional and required cards
+(lines). All possible cards and card sections are not identified in this figure as they are too
+numerous. The remainder of this chapter describes each card in detail.</p>
+<p>A final note to the user (and reader) of this manual pertains to backward compatibility and
+obsolescence. There are several input records that have been superseded or have simply been
+dropped from usage as the software has evolved. Rather than eliminate all of these inputs cards
+immediately and cause some head-scratching about input cards which exist in users old input
+decks, the decision was made to leave these cards in the current manual and simply document the
+fact that they are no longer used (and in some cases why this is so). In the CD version of the
+<em>Goma</em> Document System, these cards will be removed at a future date and no reference made to
+them again.</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/003_goma_physics.png"><img alt="_images/003_goma_physics.png" src="_images/003_goma_physics.png" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Sample problem description input deck. Italic type denotes required data cards (lines) and plain type denotes optional cards or cards that in number correspond to the designation above them, e.g., “Number of BC” or “Number of EQ”. (a) These cards are optional if the “steady” option is chosen on the Time Integration card. (b) This group of cards is repeated for each different material block in the EXODUS II database file. (c) These cards are all optional and can appear in any order. Please check this manual for
+numerous new post processing options.</span><a class="headerlink" href="#id1" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/file_specifications.html">File Specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/general_specifications.html">General Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/level_set.html">Level Set Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/phase_field.html">Phase Field Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/problem_description.html">Problem Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/post_processing.html">Post Processing Specifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/post_processing_particle.html">Post Processing Particle Traces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file/post_processing_volume.html">Volumetric Integration</a></li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="code_structure_and_io.html" class="btn btn-neutral float-left" title="Code Structure and I/O" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="problem_description_file/file_specifications.html" class="btn btn-neutral float-right" title="File Specification" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

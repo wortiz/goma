@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disjoining Pressure Model &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Disjoining Pressure Model</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/shell_equation/disjoining_pressure_model.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="disjoining-pressure-model">
+<h1><strong>Disjoining Pressure Model</strong><a class="headerlink" href="#disjoining-pressure-model" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Disjoining</span> <span class="n">Pressure</span> <span class="n">Model</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card takes the specification of the disjoining pressure model for the film-flow
+equation capability, specifically the shell_filmh equation. This function
+specifies the disjoining pressure in the unit of force per area. Currently four models for
+{model_name} are permissible:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 77%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>This model specifies a constant disjoining pressure. This option requires one
+floating point values</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; is the evaporation rate in the unit of length/time</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>ONE_TERM</strong> This model specifies disjoining pressure and the input parameters
+(floats). This model only employs the repulsion part of the van der Waals force. The
+functional form is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/495_goma_physics.png"><img alt="../../_images/495_goma_physics.png" src="../../_images/495_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<ul class="simple">
+<li><p>&lt;float1&gt; is the equilibrium liquid-solid contact angle θe</p></li>
+<li><p>&lt;float2&gt; is exponent n and it should satisfy n &gt;1</p></li>
+<li><p>&lt;float3&gt; is the precursor film thickness h*</p></li>
+</ul>
+<p><strong>TWO_TERM</strong> This model specifies disjoining pressure and the input parameters
+(floats). Here, the model only employs both repulsion and attraction part of the van der
+Waals force. The functional form is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/496_goma_physics.png"><img alt="../../_images/496_goma_physics.png" src="../../_images/496_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/497_goma_physics.png"><img alt="../../_images/497_goma_physics.png" src="../../_images/497_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<ul class="simple">
+<li><p>&lt;float1&gt; is the equilibrium liquid-solid contact angle 0e</p></li>
+<li><p>&lt;float2&gt; is exponent n corresponding to the repulsive part of the
+van der Waals force. It should satisfy n &gt;1</p></li>
+<li><p>&lt;float3&gt; is exponent m corresponding to the attractive part of the
+van der Waals force. It should satisfy m &gt; n since
+the attractive part acts in longer range than the repulsive
+one.</p></li>
+<li><p>&lt;float4&gt; is the precursor film thickness h</p></li>
+<li><p>&lt;float5&gt; is the parameter a describing relative importance of the
+attractive part to the repulsive part. Typically, a is
+chosen to be 0 &lt;α &lt;1 in order to achieve
+more numerical stability.</p></li>
+</ul>
+<p><strong>TWO_TERM_EXT_CA</strong> This model is identical with <strong>TWO_TERM</strong> except that it
+uses contact angle from an external field identifies as THETA.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Disjoining</span> <span class="n">Pressure</span> <span class="n">Model</span> <span class="o">=</span> <span class="n">TWO_TERM</span> <span class="mf">120.3</span> <span class="mi">2</span> <span class="mf">1.0e-4</span> <span class="mf">0.1</span>
+</pre></div>
+</div>
+<p>This results in disjoining pressure with contact angle of 120, repulsive exponent of 3,
+attractive repulsion of 2, precursor film thickness of 1.0e-4, and relative importance of
+attractive part of 0.1.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>A thorough discussion of disjoining pressure can be found in Teletzke et al (1987). The
+premultiplying constant is related to contact angle and surface tension by
+balancing capillary and disjoining force where the wetting line meets the precursor film.
+See Schwartz (1998) for further detail.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>Leonard W. Schwartz, R. Valery Roy, Richard R. Eley, and Stanislaw Petrash,
+“Dewetting Patterns in a Drying Liquid Film”, Journal of Colloid and Interface
+Science 234, 363–374 (2001)</p>
+<p>Teletzke, G. F., Davis, H. T., and Scriven, L. E., “How liquids spread on solids”, Chem.
+Eng. Comm., 55, pp 41-81 (1987).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

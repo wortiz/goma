@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liquid Constitutive Equation &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Liquid Constitutive Equation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/mechanical_and_constitutive/liquid_constitutive_equation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="liquid-constitutive-equation">
+<h1>Liquid Constitutive Equation<a class="headerlink" href="#liquid-constitutive-equation" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card is used to specify the stress, strain-rate/strain constitutive equation
+associated with the momentum equations (e.g. Navier-Stokes equations) and contains
+Newtonian and generalized Newtonian models. The single input parameter is the
+{model_name} with the options listed below:</p>
+<dl class="simple">
+<dt>{model_name}</dt><dd><p>Name of the constitutive equation, being one of the following values:
+<strong>NEWTONIAN, POWER_LAW,</strong> <strong>CARREAU, BINGHAM, CARREAU_WLF, CURE, THERMAL,
+EPOXY, SUSPENSION, FILLED_EPOXY,</strong>             <strong>POWERLAW_SUSPENSION,
+CARREAU_SUSPENSION,</strong> or <strong>HERSCHEL_BULKLEY</strong>. Each of these
+constitutive models require additional parameters that are entered via
+additional cards, as    described below.</p>
+</dd>
+</dl>
+<p>Thus,</p>
+<dl>
+<dt>NEWTONIAN</dt><dd><p>For a simple constant viscosity Newtonian fluid. This model requires one floating point value,</p>
+<p><span class="math notranslate nohighlight">\(\mu\)</span>, where <span class="math notranslate nohighlight">\(\mu\)</span> is the viscosity in the chosen units for the problem and is
+entered with the <em>Viscosity</em> card.</p>
+</dd>
+<dt>POWER_LAW</dt><dd><p>For a power law model. This model requires two parameters. The first, μ0, is the zero
+strain-rate limit of the viscosity and is entered with the <em>Low Rate Viscosity</em> card. The
+second, n, is the exponent on the strain rate which can take on any value between 1 (Newtonian)
+and 0 (infinitely shear thinning). n is entered with the <em>Power Law Exponent</em> card. The form of
+the equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/376_goma_physics.png"><img alt="../../_images/376_goma_physics.png" src="../../_images/376_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>where is the second invariant of the shear-rate tensor. To obtain solutions with the power law
+model, it is best to start with a Newtonian initial guess since the viscosity becomes infinite
+at zero shear-rate.</p>
+</dd>
+<dt>CARREAU</dt><dd><p>For a Carreau-Yasuda strain-rate thinning or thickening relation. This option requires five
+floating point values. The first, μ0, is the zero strain-rate limit of the viscosity and is
+entered with the Low Rate Viscosity card. The second, n, is the exponent on the strain rate
+which can take on any value between 1 (Newtonian) and 0 (infinitely shear thinning). n is
+entered with the Power Law Exponent card. The third, μinf, is the high-strainrate limit to the
+viscosity and is entered with the High Rate Viscosity card. The fourth, λ, is the time constant
+reflecting the strain-rate at which the transition between μ0 and μinf takes place. λ is
+entered with the Time Constant card. The fifth, a, is a dimensionless parameter that describes
+the transition between the low-rate and the power-law region and is entered with the Aexp card.
+The form of the equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/377_goma_physics.png"><img alt="../../_images/377_goma_physics.png" src="../../_images/377_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>where is the second invariant of the shear-rate tensor.</p>
+</dd>
+<dt>BINGHAM</dt><dd><p>For a Bingham-Carreau-Yasuda fluid. This option requires eight floating point values. It uses
+the same parameters as the CARREAU model with the addition of coefficients to describe the
+yield and temperature dependent behavior. The first, μ0, is the zero strain-rate limit of the
+viscosity and is entered with the Low Rate Viscosity card. The second, n, is the exponent on
+the strain rate which can take on any value between 1 (Newtonian) and 0 (infinitely shear
+thinning). n is entered with the Power Law Exponent card. The third, μinf, is the
+high-strain-rate limit to the viscosity and is entered with the High Rate Viscosity card. The
+fourth, λ, is the time constant reflecting the strain-rate at which the transition between μ0
+and μinf takes place. λ is entered with the Time Constant card. The fifth, a, is a
+dimensionless parameter that describes the transition between the low-rate and the power-law
+region and is entered with the Aexp card. The form of the equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/378_goma_physics.png"><img alt="../../_images/378_goma_physics.png" src="../../_images/378_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>where is a simplified temperature dependent shift factor that is expressed as an Arrhenius type
+temperature dependence of the following form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/379_goma_physics.png"><img alt="../../_images/379_goma_physics.png" src="../../_images/379_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>The exponent for the temperature dependence, Eμ/R, is input using the Thermal Exponent card.
+Tref is input using the Reference Temperature card in the thermal properties section of the
+material file. The stress at which the material yields is input with the Yield Stress card. The
+sharpness of the transition from the solid to fluid state, F, is indicated with the Yield
+Exponent card.</p>
+</dd>
+<dt>CARREAU_WLF</dt><dd><p>An extension of the Carreau-Yasuda model to incorporate a temperature-dependent shift in
+shear-rate according to the Williams-Landel-Ferry equation (Hudson and Jones, 1993). The form
+of the equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/380_goma_physics.png"><img alt="../../_images/380_goma_physics.png" src="../../_images/380_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(a_T\)</span> is another form of the temperature-dependent shift factor:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/381_goma_physics.png"><img alt="../../_images/381_goma_physics.png" src="../../_images/381_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>Here is a thermal exponential factor (can be Arrhenius) and is input by the <em>Thermal Exponent</em>
+card; <span class="math notranslate nohighlight">\(c_2\)</span> is the WLF constant 2 and is input by the <em>Thermal WLF Constant2</em> card. μ0,
+is the zero strain-rate limit of the viscosity and is entered with the <em>Low Rate Viscosity</em>
+card. n, is the exponent on the strain rate which can take on any value between 1 (Newtonian)
+and 0 (infinitely shear thinning) and is entered with the <em>Power Law Exponent</em> card.
+<span class="math notranslate nohighlight">\(μ_{inf}\)</span>, is the high-strain-rate limit to the viscosity and is entered with the
+<em>High Rate Viscosity</em> card. λ, is the time constant reflecting the strain-rate at which the
+transition between μ0 and μinf takes place and is entered with the <em>Time Constant</em> card. a, is
+a dimensionless parameter that describes the transition between the low-rate and the power-law
+region and is entered with the <em>Aexp</em> card.</p>
+</dd>
+<dt>CURE</dt><dd><p>For a model to increase the viscosity with the extent of reaction. The Cure model can be used
+to represent polymerizing systems whose viscosity depends on the extent of reaction. The form
+of the equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/382_goma_physics.png"><img alt="../../_images/382_goma_physics.png" src="../../_images/382_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This option requires four floating point values. The first, μ0, is the reference state
+viscosity and is entered with the <em>Low Rate Viscosity</em> card. The constant, <span class="math notranslate nohighlight">\(α_g\)</span>, is
+entered with the <em>Cure Gel Point</em> card and marks the extent of reaction at the transition from
+the liquid to the solid state. The exponents <em>A</em> and <em>B</em> are entered with the <em>Cure A Exponent</em>
+and <em>Cure B Exponent</em> cards.</p>
+</dd>
+<dt>THERMAL</dt><dd><p>For a temperature-dependent viscosity. This option, which requires two floating point values,
+can be used to represent fluids that change viscosity with temperature. The form of the
+equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/383_goma_physics.png"><img alt="../../_images/383_goma_physics.png" src="../../_images/383_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>where the reference state viscosity, μ0, is entered with the <em>Low Rate Viscosity</em> card. The
+exponent, Eμ/R, is specified using the <em>Thermal Exponent</em> card.</p>
+</dd>
+<dt>EPOXY</dt><dd><p>For a thermal and curing component. The Epoxy model combines the temperature dependence of the
+<strong>THERMAL</strong> option with the extent of reaction dependence of the <strong>CURE</strong> option. The
+functional form of the equation is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/384_goma_physics.png"><img alt="../../_images/384_goma_physics.png" src="../../_images/384_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>Five cards must be used to specify all the parameters for this model. The first, μ0, is the
+reference state viscosity and is entered with the <em>Low Rate Viscosity</em> card. The thermal
+exponent, Eμ/R, is specified using the <em>Thermal Exponent</em> card. The constant, <span class="math notranslate nohighlight">\(α_g\)</span>, is
+entered with the <em>Cure Gel Point</em> card and marks the extent of reaction at the transition from
+the liquid to the solid state. The exponents <em>A</em> and <em>B</em> are entered with the <em>Cure A Exponent</em>
+and <em>Cure B Exponent</em> cards.</p>
+</dd>
+<dt>SUSPENSION</dt><dd><p>For simulating a carrier fluid with high-volume fraction particles. This option invokes a
+concentrationdependent viscosity model useful in modeling solid suspensions. The functional
+form associated with this option is,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/385_goma_physics.png"><img alt="../../_images/385_goma_physics.png" src="../../_images/385_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>where μ0 is effectively the viscosity of the suspending fluid specified with the
+<em>Low Rate Viscosity</em> card, n is an exponent specified by the <em>Power Law Exponent</em> card and is
+typically less than zero. <span class="math notranslate nohighlight">\(C_{max}\)</span> is the “binding” solid concentration and is specified
+with the Suspension Maximum Packing card. Ci is the solid concentration and is tied to a
+convective-diffusion equation specified in the equation section of the Problem Description. The
+correct species number “i” is specified with the Suspension Species Number card. Note that for
+<span class="math notranslate nohighlight">\(C_i\)</span> &gt; <span class="math notranslate nohighlight">\(C_{max}\)</span> and n &lt; 0, the model as written above is physically undefined.
+For concentrations in this range, a very large value for viscosity will be used, effectively
+solidifying the material.</p>
+</dd>
+<dt>FILLED_EPOXY</dt><dd><p>This option combines the cure and thermal dependence of the <strong>EPOXY</strong> model with the solid
+volume fraction dependence of the <strong>SUSPENSION</strong> model. The functional form of this equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/386_goma_physics.png"><img alt="../../_images/386_goma_physics.png" src="../../_images/386_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>with the temperature <span class="math notranslate nohighlight">\(T_g\)</span> being calculated from</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/387_goma_physics.png"><img alt="../../_images/387_goma_physics.png" src="../../_images/387_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Here the viscosity now depends on extent of reaction, temperature and solid volume fraction.
+Nine cards must be specified to define the parameters for this option and are entered in the
+following manner. The first, μ0, is the reference state viscosity and is entered with the <em>Low
+Rate Viscosity</em> card. n is the exponent for suspension behavior and is specified by the <em>Power
+Law Exponent</em> card; it is typically less than zero. <span class="math notranslate nohighlight">\(C_{max}\)</span> is the “binding” solid
+concentration and is specified with the <em>Suspension Maximum Packing</em> card. <span class="math notranslate nohighlight">\(C_i\)</span> is the
+solid concentration and is tied to a convective-diffusion equation specified in the equation
+section of the previous chapter. The correct species number “i” is identified with the
+<em>Suspension Species Number</em> card. Here <span class="math notranslate nohighlight">\(c_1\)</span> is a thermal exponential factor and is input
+by the Thermal Exponent card; <span class="math notranslate nohighlight">\(c_2\)</span> is a second thermal exponent and is entered via the
+<em>Cure B Exponent</em> card. The constant for the curing model, <span class="math notranslate nohighlight">\(α_g\)</span>, is entered with the
+<em>Cure Gel Point</em> card and marks the extent of reaction at the transition from the liquid to the
+solid state. The cure exponent used in the <strong>EPOXY</strong> model is here assumed to be constant
+(-4/3) and is fixed in the model. The constant A in the gel temperature equation is entered
+with the <em>Cure A Exponent</em> card and the temperature is entered with the <em>Unreacted Gel
+Temperature</em> card. Although it does not appear directly in the model equations, the <em>Cure
+Species Number</em> must also be specified.</p>
+</dd>
+<dt>POWERLAW_SUSPENSION</dt><dd><p>This is a specialized research model that incorporates the power law model with the suspension
+model to try and simulate particles suspending in shear-thinning fluid. This option requires
+five input values. The first, μ0, is the zero strain-rate limit of the viscosity of the
+solvent and is entered with the <em>Low Rate Viscosity</em> card. The second, n, is the exponent on
+the strain rate which can take on any value between 1 (Newtonian) and 0 (infinitely shear
+thinning). n is entered with the <em>Power Law Exponent</em> card. The third value is the exponent for
+the suspension Krieger model, which is input through the <em>Thermal Exponent</em>, m. The fourth term
+is the suspension maximum packing, <span class="math notranslate nohighlight">\(C_{max}\)</span>, which is entered through the
+<em>Suspension Maximum Packing</em> card. <span class="math notranslate nohighlight">\(C_i\)</span> is the solid concentration and is tied to a
+convectivediffusion equation specified in the equation section of the previous chapter. The
+correct species number “i” is identified with the <em>Suspension Species Number</em> card. The form of
+the equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/388_goma_physics.png"><img alt="../../_images/388_goma_physics.png" src="../../_images/388_goma_physics.png" style="width: 40%;" /></a>
+</figure>
+<p>where y is the second invariant of the shear-rate tensor. It is best to start with a Newtonian
+initial guess for the power law suspension model, since the viscosity for the power law model
+will become infinite at zero shear-rate.</p>
+</dd>
+<dt>CARREAU_SUSPENSION</dt><dd><p>This model is a hybrid for the flow of particle-laden suspensions in shear-thinning fluids. It
+uses a Carreau-Yasuda strain-rate thinning or thickening relation for the suspending fluid and
+a Krieger model for the suspension. This option requires eight input values. The first, μ0, is
+the zero strain- rate limit of the viscosity and is entered with the Low Rate Viscosity card.
+The second, n, is the exponent on the strain rate which can take on any value between 1
+(Newtonian) and 0 (infinitely shear thinning). n is entered with the <em>Power Law Exponent</em>
+card. The third, μinf, is the high-strain-rate limit to the viscosity and is entered with the
+<em>High Rate Viscosity</em> card. The fourth, λ, is the time constant reflecting the strain-rate at
+which the transition between μ0 and μinf takes place. λ is entered with the <em>Time Constant</em>
+card. The fifth, a, is a dimensionless parameter that describes the transition between the
+low-rate and the power-law region and is entered with the Aexp card. The sixth value is the
+exponent for the suspension Krieger model, which is input through the Thermal Exponent, m. The
+seventh term is the suspension maximum packing, Cmax, which is entered through the Suspension
+Maximum Packing card. Ci is the solid concentration and is tied to a convective-diffusion
+equation specified in the equation section of the previous chapter. The correct species number
+“i” is identified with the <em>Suspension Species Number</em> card.The form of the equation is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/389_goma_physics.png"><img alt="../../_images/389_goma_physics.png" src="../../_images/389_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where y is the second invariant of the shear-rate tensor.</p>
+</dd>
+<dt>HERSCHEL_BULKLEY</dt><dd><p>This is a variant on the power law model that includes a yield stress. It requires three input
+values to operate: a reference viscosity value, μ0, a power-law exponent, n. and a yield shear
+stress value, <span class="math notranslate nohighlight">\(τ_y\)</span>. The model for this constitutive relations is as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/390_goma_physics.png"><img alt="../../_images/390_goma_physics.png" src="../../_images/390_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The nature of this relation is best seen by multiplying the entire relation by the shear rate
+to produce a relation between shear stress and shear rate. In this manner it can be seen that
+the shear stress does not go to zero for zero shear rate. Instead it approaches the yield shear
+stress value. Put another way, only for imposed shear stresses greater than the yield stress
+will the fluid exhibit a nonzero shear rate. This is effective yielding behavior.</p>
+<p>A caveat needs stating at this point. This model is essentially a superposition of two
+power-law models. One with the supplied exponent and the other with an implicit exponent of
+n = 0. It has long been observed that power-law models with exponents approaching zero
+exhibit very poor convergence properties. The Herschel_Bulkley model is no exception. To
+alleviate these convergence problems somewhat, the sensitivities of the yield stress term with
+respect to shear rate has not been included in the Jacobian entries for this viscosity model.
+This helps in that it allows for convergence at most yield stress values, but also means that
+the iteration scheme no longer uses an exact Jacobian. The difference is seen in that this
+model will take relatively more iterations to converge to an answer. The user should expect
+this and not be too troubled (it’s alright to be troubled a little).</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>NEWTONIAN</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">NEWTONIAN</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Viscosity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.00</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>POWER_LAW</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">POWER_LAW</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>CARREAU</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">CARREAU</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">High</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.001</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Time</span> <span class="n">Constant</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Aexp</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>BINGHAM</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">BINGHAM</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">10.00</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">.70</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">High</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.01</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Time</span> <span class="n">Constant</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Aexp</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">2.5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermal</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Yield</span> <span class="n">Stress</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">5.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Yield</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reference</span> <span class="n">Temperature</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">273.</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>CARREAU_WLF</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">CARREAU_WLF</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">10.00</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">.70</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">High</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.01</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Time</span> <span class="n">Constant</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Aexp</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">2.5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermal</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermal</span> <span class="n">WLF</span> <span class="n">Constant2</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Reference</span> <span class="n">Temperature</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">273.</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to <strong>CURE</strong>
+and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">CURE</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>THERMAL</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">THERMAL</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermal</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">9.</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to <strong>EPOXY</strong>
+and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">EPOXY</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">FILLED_EPOXY</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.e5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermal</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">9.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Cure</span> <span class="n">Gel</span> <span class="n">Point</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.8</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Cure</span> <span class="n">A</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.3</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Cure</span> <span class="n">B</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">43.8</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>SUSPENSION</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">SUSPENSION</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.e5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">-</span><span class="mf">3.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Suspension</span> <span class="n">Maximum</span> <span class="n">Packing</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.49</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Suspension</span> <span class="n">Species</span> <span class="n">Number</span> <span class="o">=</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>FILLED_EPOXY</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">FILLED_EPOXY</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.e5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">-</span><span class="mf">3.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermal</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">9.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Suspension</span> <span class="n">Maximum</span> <span class="n">Packing</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.49</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Suspension</span> <span class="n">Species</span> <span class="n">Number</span> <span class="o">=</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Cure</span> <span class="n">Gel</span> <span class="n">Point</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.8</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Cure</span> <span class="n">A</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.3</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Cure</span> <span class="n">B</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">43.8</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Cure</span> <span class="n">Species</span> <span class="n">Number</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Unreacted</span> <span class="n">Gel</span> <span class="n">Temperature</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">243</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>POWERLAW_SUSPENSION</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">POWERLAW_SUSPENSION</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermal</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">-</span><span class="mf">1.82</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Suspension</span> <span class="n">Maximum</span> <span class="n">Packing</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.68</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Suspension</span> <span class="n">Species</span> <span class="n">Number</span><span class="o">=</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>The following is a sample card setting the liquid constitutive equation type to
+<strong>CARREAU_SUSPENSION</strong> and demonstrates the required cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">CARREAU_SUSPENSION</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">High</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.001</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">High</span> <span class="n">Rate</span> <span class="n">Viscosity</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.001</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Time</span> <span class="n">Constant</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Aexp</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thermal</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="o">-</span><span class="mf">1.82</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Suspension</span> <span class="n">Maximum</span> <span class="n">Packing</span><span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.68</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Suspension</span> <span class="n">Species</span> <span class="n">Number</span><span class="o">=</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>The following card gives an example of the <strong>HERSCHEL_BULKLEY</strong> model</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Liquid</span> <span class="n">Constitutive</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">HERSCHEL_BULKLEY</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Low</span> <span class="n">Rate</span> <span class="n">Viscosity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.337</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Power</span> <span class="n">Law</span> <span class="n">Exponent</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.817</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Yield</span> <span class="n">Stress</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">1.39</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>See Description/Usage section for this card.</p>
+</section>
+<section id="theory">
+<h2>Theory<a class="headerlink" href="#theory" title="Permalink to this headline"></a></h2>
+<p>The <strong>NEWTONIAN, POWER_LAW,</strong> and <strong>CARREAU</strong> models are described in detail
+in Bird, et al. (1987). Details of the continuous yield stress model used in the Bingham-
+Carreau-Yasuda (<strong>BINGHAM</strong>) model, which is a Carreau model combined with a
+continuous yield stress model, can be found in Papanastasiou (1987).</p>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>Bird, R. B., Armstrong, R. C., and Hassager, O. 1987. Dynamics of Polymeric Liquids,
+2nd ed., Wiley, New York, Vol. 1.</p>
+<p>Hudson, N. E. and Jones, T. E. R., 1993. “The A1 project - an overview”, Journal of
+Non-Newtonian Fluid Mechanics, 46, 69-88.</p>
+<p>Papanastasiou, T. C., 1987. “Flows of Materials with Yield,” Journal of Rheology, 31
+(5), 385-404.</p>
+<p>Papananstasiou, T. C., and Boudouvis, A. G., 1997. “Flows of Viscoplastic Materials:
+Models and Computation,” Computers &amp; Structures, Vol 64, No 1-4, pp 677-694.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

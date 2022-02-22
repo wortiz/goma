@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plasticity Equation &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Plasticity Equation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/mechanical_and_constitutive/plasticity_equation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="plasticity-equation">
+<h1>Plasticity Equation<a class="headerlink" href="#plasticity-equation" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Plasticity</span> <span class="n">Equation</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="p">[</span> <span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This optional card specifies the formulation for the potential yielding/plastic flow
+regime during solid deformation. This card is not to be used in place of the <em>Solid
+Constitutive Equation</em> card, but rather supplements that card to describe the constitutive
+behavior during plastic deformation. Elastic deformation still proceeds according to the
+model specified on the <em>Solid Constitutive Equation</em> card (i.e., for regimes that have not
+yielded). The single input parameter is defined as</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 87%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the plasticity model. This parameter can have one of the following values:</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>EVP_HYPER</strong></p></td>
+<td><p>a constitutive equation that uses the elasticity portion specified on the <em>Solid
+Constitutive Equation</em> card for unyielding material and a complex hyperelastic
+plasticity equation for the yielding/flowing material as determined by the Von Mises
+yield criterion.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>NO_MODEL</strong></p></td>
+<td><p>this, or any value other than EVP_HYPER, will result in no plastic deformation.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Requirements for the use of this model are</p>
+<ul class="simple">
+<li><p>Transient problems only</p></li>
+<li><p><em>LAGRANGIAN</em> mesh motion only; no <em>TALE</em></p></li>
+<li><p>Continuous media only; no porous media (as specified on the <em>Media Type</em> card)</p></li>
+<li><p>Elastic Plane Strain models only (i.e., INCOMP_PSTRAIN in the <em>Solid Constitutive Equation</em> card)</p></li>
+<li><p>a <em>Plastic Viscosity</em> card and an <em>EVP Yield Stress</em> card must also be supplied.</p></li>
+</ul>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Plasticity</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">EVP_HYPER</span>
+</pre></div>
+</div>
+<p>which specifies hyperelastic elastoviscoplastic model is to be used for a solid phase
+constitutive equation. In addition to the Lame coefficients that are still required as the
+mechanical properties of the unyielded material, this model also requires a plastic
+viscosity and a yield stress, viz.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Plastic</span> <span class="n">Viscosity</span> <span class="o">=</span> <span class="n">LINEAR</span> <span class="mf">1.0</span> <span class="mf">2.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EVP</span> <span class="n">Yield</span> <span class="n">Stress</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">50.0</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Detailed theoretical discussion, usage tutorials and troubleshooting tips for this model
+are covered in the EVP tutorial (GT-019.1). Usage examples for four different strain
+scenarios are given, including a solid yielding from an applied mechanical load and a
+solid yielding from high shrinkage stress during drying.</p>
+</section>
+<section id="faqs">
+<h2><strong>FAQs</strong><a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h2>
+<p><em>Problem</em> – Trouble in continuing the first few time steps.</p>
+<p><em>Solution</em> – You may have a fast drying case with slow diffusion in the coating. Instead
+of decreasing the time step size according to the normal procedure and intuition,
+increase the time step size. With fast drying and slow diffusion, the initial
+concentration gradient is very steep at the drying surface. This is a very difficult
+numerical problem to solve. So when you increase the time step size, in effect, you are
+relaxing the concentration gradient the program is solving, that will get you past the
+initial numerical difficulty. However, even if the code can handle such a condition, the
+concentration and stress profile may appear very wavy. This waviness only reflects the
+degree of difficulty the code encountered and is not part of the real solution. In this
+case, refining the mesh towards the drying surface will only increase the waviness of
+the solution. Drawing from this observation, coarsening the mesh will also get you past
+this initial numerical difficulty. Although this condition may pose numerical stability
+problems initially, it does not affect subsequent solution. And most of the time, one is
+not interested in the solution from the initial time steps.</p>
+<p><em>Problem</em> – Trouble in converging in the plastic region.</p>
+<p><em>Solution</em> – Reduce the time step size because viscoplasticity is in itself a time
+dependent problem and elasticity in itself is not. Before the material yields, time
+dependency is induced only through the drying process. The reduction in time step size
+depends on the value of the plastic viscosity. The lower the viscosity, the small time
+step should be used. Also, it takes more iterations to converge a time step in the
+viscoplastic region than the elastic region, so increasing the maximum allowable
+iterations per time step will help.</p>
+<p>Other Cautions:
+Always set the <em>MASS_FRACTION</em> in the input file to be the same as the <em>Stress
+Free Solvent Vol Frac</em> in the material file.</p>
+<p>The code has been tested for a wide range of initial solvent volume fractions
+(up to 0.85). When using very high initial solvent volume fractions
+(approaching 0.85 or beyond), use with caution.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-019.1: Elastoviscoplastic (EVP) Constitutive Model in GOMA: Theory, Testing,
+and Tutorial, P. R. Schunk, A. Sun, S. Y. Tam (Imation Corp.) and K. S. Chen, January
+11, 2001</p>
+<p>S.Y. Tam’s thesis: “Stress Effects in Drying Coatings,” Ph.D Dissertation, University of
+Minnesota, 1997</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

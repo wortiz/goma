@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVP Yield Stress &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>EVP Yield Stress</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/mechanical_and_constitutive/evp_yield_stress.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="evp-yield-stress">
+<h1>EVP Yield Stress<a class="headerlink" href="#evp-yield-stress" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EVP</span> <span class="n">Yield</span> <span class="n">Stress</span> <span class="o">=</span> <span class="p">{</span><span class="n">CONSTANT</span> <span class="o">|</span> <span class="n">LINEAR</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span><span class="p">]</span> <span class="p">[</span><span class="n">M</span><span class="o">/</span><span class="n">L</span><span class="o">-</span><span class="n">t2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card is used to specify the characteristic yield stress for Von Mises yield criterion
+of plastic deformation and is required when the <em>Plasticity Equation</em> card is present.
+Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>Name of the model for a constant yield stress.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - the value of the yield stress.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>LINEAR</strong></p></td>
+<td><p>LINEAR Name of the model for a linear variation in plastic viscosity; this model requires
+two floating point values as parameters.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - <span class="math notranslate nohighlight">\(y_1\)</span>, the lower limit of yield stress.</p></li>
+<li><p>&lt;float2&gt; - <span class="math notranslate nohighlight">\(y_2\)</span>, the upper limit of yield stress.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EVP</span> <span class="n">Yield</span> <span class="n">Stress</span> <span class="o">=</span> <span class="n">LINEAR</span> <span class="mf">1.0</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+<p>This specification results in a linear variation of yield stress of the elastoviscoplasticity
+constitutive equation with concentration of solvent species according to the equation
+above.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Using the concentration of solvent species as the independent variable, the yield stress
+<em>y</em> at a certain concentration <em>c</em> is:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/374_goma_physics.png"><img alt="../../_images/374_goma_physics.png" src="../../_images/374_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(V_{sf}\)</span> is the stress-free solvent volume fraction and the solvent volume fraction at
+solidification, which is set by the Stress Free Solvent Vol Fraction card in the
+material file. The input parameters for the <em>LINEAR</em> model are the plastic viscosity
+limits <span class="math notranslate nohighlight">\(y_1\)</span> and <span class="math notranslate nohighlight">\(y_2\)</span>. <em>NOTE: this model activates a linear dependence on concentration and
+hence can only be used for cases in which there is solvent transport</em>.</p>
+<p>So for a typical drying/solidification problem, the material file input deck requirements
+are shown as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Stress</span> <span class="n">Free</span> <span class="n">Solvent</span> <span class="n">Vol</span> <span class="n">Frac</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">0.6</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Plasticity</span> <span class="n">Equation</span> <span class="o">=</span> <span class="n">EVP_HYPER</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Plastic</span> <span class="n">Viscosity</span> <span class="o">=</span> <span class="n">LINEAR</span> <span class="mf">1.0</span> <span class="mf">2.0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">EVP</span> <span class="n">Yield</span> <span class="n">Stress</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mf">50.0</span>
+</pre></div>
+</div>
+<p>Together with these properties one must specify the elastic constants <em>Lame Mu</em> and
+<em>Lame Lambda</em>.</p>
+</section>
+<section id="theory">
+<h2><strong>Theory</strong><a class="headerlink" href="#theory" title="Permalink to this headline"></a></h2>
+<p>See Schunk, et. al., 2001 reference.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-019.1: Elastoviscoplastic (EVP) Constitutive Model in GOMA: Theory, Testing,
+and Tutorial, P. R. Schunk, A. Sun, S. Y. Tam (Imation Corp.) and K. S. Chen, January
+11, 2001</p>
+<p>GTM-020.0: In-Situ Characterization of Stress Development in Gelatin Film During
+Controlled Drying, M. Lu, S-Y Tam, P. R. Schunk and C. J. Brinker, March 2000.</p>
+<p>GTM-027.0: Probing Plastic Deformation in Gelatin Films during Drying, M. Lu, S. Y.
+Tam, A. Sun, P. R. Schunk and C. J. Brinker, 2000.</p>
+<p>S.Y. Tam’s thesis: “Stress Effects in Drying Coatings,” Ph.D Dissertation, University of
+Minnesota, 1997</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

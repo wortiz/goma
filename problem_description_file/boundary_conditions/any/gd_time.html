@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GD_TIME &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>GD_TIME</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/any/gd_time.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="gd-time">
+<h1>GD_TIME<a class="headerlink" href="#gd-time" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">BC</span> <span class="o">=</span> <span class="n">GD_TIME</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">equation_name</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">time_func_name</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float3</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(PCC/VARIED)</strong></p>
+<p>This boundary condition card is actually a multiplicative building block that can be
+used to impose a multiplicative time modulation of a specified functional form on any
+set of <em>GD_*</em> conditions. <em>NOTE: unlike the other</em> <em>GD_*</em> <em>cards which are additive</em>,
+<em>this card is multiplicative</em>. This condition must be placed after any single or set of <em>GD_*</em>
+cards for which the user wishes to modulate (viz. <em>GD_LINEAR, GD_PARAB</em>, etc.). The
+card can be used as many times as needed to construct the desired function. The
+examples below will clarify its use. Definitions of the input parameters are as follows:</p>
+<dl class="simple">
+<dt>GD_TIME</dt><dd><p>Name of the boundary condition (&lt;bc_name&gt;).</p>
+</dd>
+<dt>SS</dt><dd><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes side set in
+the EXODUS II database.</p>
+</dd>
+<dt>&lt;bc_id&gt;</dt><dd><p>The boundary flag identifier, an integer associated with &lt;bc_type&gt; that
+identifies the boundary location (side set in EXODUS II) in the problem
+domain.</p>
+</dd>
+<dt>&lt;equation_name&gt;</dt><dd><p>A character string indicating the equation to which this boundary condition
+is applied (see the list of permissible values in the discussion above for
+<em>Category 1</em>).</p>
+</dd>
+<dt>&lt;integer1&gt;</dt><dd><p>Species number of the mass transport equation. The value should be 0 unless
+the &lt;equation_name&gt; is of type R_MASS.</p>
+</dd>
+<dt>&lt;time_func_name&gt;</dt><dd><p>Keyword to identify the functional form of the time modulation. Permissible
+values for this parameter are LINEAR, EXPONENTIAL, and SINUSOIDAL.</p>
+</dd>
+<dt>&lt;integer2&gt;</dt><dd><p>Set this required but unused parameter to zero.</p>
+</dd>
+<dt>&lt;float1&gt;</dt><dd><p><span class="math notranslate nohighlight">\(C_0\)</span> model parameter</p>
+</dd>
+<dt>&lt;float2&gt;</dt><dd><p><span class="math notranslate nohighlight">\(C_1\)</span> model parameter</p>
+</dd>
+<dt>[float3]</dt><dd><p>Optional parameter to add a maximum time to be applied if <span class="math notranslate nohighlight">\(t &gt; t_{max}\)</span> then
+<span class="math notranslate nohighlight">\(t\)</span> is set to <span class="math notranslate nohighlight">\(t_{max}\)</span></p>
+</dd>
+</dl>
+<p>The functional form of each time-modulation model is as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>LINEAR:</p></td>
+<td><p><span class="math notranslate nohighlight">\(f(t) = C_0 + C_1t\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>EXPONENTIAL:</p></td>
+<td><p><span class="math notranslate nohighlight">\(f(t) = \exp \left(C_0 + C_1t \right)\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>SINUSOIDAL:</p></td>
+<td><p><span class="math notranslate nohighlight">\(f(t) = \sin \left(C_0 + C_1t \right)\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card set:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">GD_LINEAR</span> <span class="n">SS</span> <span class="mi">1</span> <span class="n">R_MESH_NORMAL</span> <span class="mi">0</span> <span class="n">MESH_DISPLACEMENT1</span> <span class="mi">0</span> <span class="mf">1.</span> <span class="mf">0.</span>
+<span class="n">BC</span> <span class="o">=</span> <span class="n">GD_TIME</span> <span class="n">SS</span> <span class="mi">1</span> <span class="n">R_MESH_NORMAL</span> <span class="mi">0</span> <span class="n">SINUSOIDAL</span> <span class="mi">0</span> <span class="mf">10.</span> <span class="mf">2.</span>
+<span class="n">BC</span> <span class="o">=</span> <span class="n">GD_LINEAR</span> <span class="n">SS</span> <span class="mi">1</span> <span class="n">R_MESH_NORMAL</span> <span class="mi">0</span> <span class="n">MESH_POSITION1</span> <span class="mi">0</span> <span class="mf">0.</span> <span class="o">-</span><span class="mf">1.</span>
+</pre></div>
+</div>
+<p>This set of cards leads to the application of <span class="math notranslate nohighlight">\(x = sin(10.0 + 2t)\)</span> to the normal component
+of the mesh displacement at side set 1. If side set 1 were a surface of constant x (viz.
+normal in the x-direction) then this condition could be used to impose a piston motion
+to the surface. Recall that <em>GD_LINEAR</em> cards are additive with each other and
+<em>GD_TIME</em> is multiplicative with the previous cards. The first card is used to put a
+constant of 1.0 in the equation, the second card (<em>GD_TIME</em> card) multiplies that
+constant with the sinusoidal time function, and the third card is used to put the linear
+term on mesh position. Note carefully the signs used.</p>
+<p>Invoking with a maximum time is done using the optional parameter:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">GD_LINEAR</span> <span class="n">SS</span> <span class="mi">1</span> <span class="n">R_MOMENTUM1</span> <span class="mi">0</span> <span class="n">VELOCITY1</span> <span class="mi">0</span> <span class="p">{</span><span class="n">web_speed</span><span class="o">/</span><span class="n">time_max</span><span class="p">}</span> <span class="mf">0.</span>
+<span class="n">BC</span> <span class="o">=</span> <span class="n">GD_TIME</span> <span class="n">SS</span> <span class="mi">1</span> <span class="n">R_MOMENTUM1</span> <span class="mi">0</span> <span class="n">LINEAR</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mf">1.</span> <span class="p">{</span><span class="n">time_max</span><span class="p">}</span>
+<span class="n">BC</span> <span class="o">=</span> <span class="n">GD_LINEAR</span> <span class="n">SS</span> <span class="mi">1</span> <span class="n">R_MOMENTUM1</span> <span class="mi">0</span> <span class="n">VELOCITY1</span> <span class="mi">0</span> <span class="mf">0.</span> <span class="o">-</span><span class="mf">1.</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>This boundary condition building block is very useful for imposing time-dependent
+boundary conditions with some fairly standard functional forms without the
+inconvenience of writing a user-defined boundary condition. Boundary conditions for
+pulsating flow, piston motion, roll-eccentricity effects in coating, time-evolving
+temperature transients, etc. can all be constructed using this card. The examples at the
+end of this section on <em>GD_*</em> options will help the user construct such functions.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

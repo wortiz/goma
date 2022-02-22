@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gravity-based Diffusivity &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Gravity-based Diffusivity</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/species_properties/gravity_based_diffusivity.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="gravity-based-diffusivity">
+<h1><strong>Gravity-based Diffusivity</strong><a class="headerlink" href="#gravity-based-diffusivity" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gravity</span><span class="o">-</span><span class="n">based</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card is used to specify Dg when the model in the <em>Diffusivity</em> card is <strong>HYDRO</strong>.
+There are two {model_name} options for this mode; definitions of the input parameters
+are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong></p></td>
+<td><p>constant gravity-based diffusivity.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float&gt;- the value of Dg.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>RICHARDSON_ZAKI</strong></p></td>
+<td><p>constant gravity-based diffusivity.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;species&gt; - an integer designating the species equation.</p></li>
+<li><p>&lt;float1&gt; - the value of Dg.</p></li>
+<li><p>&lt;float2&gt; - the exponent in the Richardson-Zaki hindered settling function.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gravity</span><span class="o">-</span><span class="n">based</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">CONSTANT</span> <span class="mi">0</span> <span class="mf">8.88e-7</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Gravity</span><span class="o">-</span><span class="n">based</span> <span class="n">Diffusivity</span> <span class="o">=</span> <span class="n">RICHARDSON_ZAKI</span> <span class="mi">0</span> <span class="mf">8.88e-7</span> <span class="mf">5.1</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>When a suspension of particles settles or floats in a fluid, particle-particle interactions
+serve to slow the terminal velocity of all the particles relative to the Stokes velocity.
+The terminal velocity is then corrected by what is known as the hindered settling
+function. If a <strong>CONSTANT</strong> model is chosen, the form of this function is</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/452_goma_physics.png"><img alt="../../_images/452_goma_physics.png" src="../../_images/452_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where φ is the volume fraction of suspension, η(φ) is the relative viscosity of the
+mixture, μ0 is the viscosity of the pure fluid.</p>
+<p>On the other hand if <strong>RICHARDSON_ZAKI</strong> is chosen for the function,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/453_goma_physics.png"><img alt="../../_images/453_goma_physics.png" src="../../_images/453_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where n is the exponent specified by the user. n=5.1 has been found to fit well for
+suspensions of monodisperse spherical particles at low Reynolds number by Garside
+and Al-Dibouni (1977). Richardson-Zaki approach will not yield a zero f(φ) if φ
+approaches maximum packing, so it is recommended that <strong>CONSTANT</strong> is used.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GTM-010.0: The Hindered Settling Function for a Glass Microballoon Suspension,
+March 3, 1999, C. A. Romero.</p>
+<p>Garside, J. and M.R. Al-Dibouni, “Velocity-voidage relationship for fluidization and
+sedimentation in solid-liquid systems,” Ind. Eng. Chem. Process Des. Dev., 16, 206
+(1977).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

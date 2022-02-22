@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Code Structure and I/O &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Problem Description (Input File)" href="problem_description_file.html" />
+    <link rel="prev" title="Background Information" href="background.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Goma User Manual
+            <img src="_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background Information</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Code Structure and I/O</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#files-for-data-input">Files for Data Input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#command-line-arguments">Command-Line Arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Code Structure and I/O</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/code_structure_and_io.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="code-structure-and-i-o">
+<h1>Code Structure and I/O<a class="headerlink" href="#code-structure-and-i-o" title="Permalink to this headline"></a></h1>
+<section id="files-for-data-input">
+<h2>Files for Data Input<a class="headerlink" href="#files-for-data-input" title="Permalink to this headline"></a></h2>
+<p>The <em>Goma</em> file I/O structure is diagrammed in Figure 2. Input to the program is divided into six
+categories: (1) command-line options, (2) problem description file, (3) material files, (4) ASCII
+continuation/restart file, (5) EXODUS II database file, and (6) sundry material property or
+boundary condition table lookup files. <em>Goma</em> is basically set up to run in batch mode, i.e., no input
+is required on the command line or after the run command is issued. There are, however, several
+command-line switches which can be used to redirect I/O, control the level of I/O, and activate
+debugging options.</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/002_goma_physics.png"><img alt="_images/002_goma_physics.png" src="_images/002_goma_physics.png" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">I/O structure for <em>Goma</em>. Dashed lines indicate that the files or commands are
+not required.</span><a class="headerlink" href="#id1" title="Permalink to this image"></a></p>
+</figcaption>
+</figure>
+<p>The <em>problem-description</em> file is by default called “input” but can be renamed with the -i switch on
+the command line. A version of this file is also output as an “echo” file, viz. a prefix “echo”
+prepended to the input file name. The echo file is used to verify input into goma, as it clearly
+states all default settings for the input file and material files. . The input file itself contains the
+general description of the problem and directions to <em>Goma</em> on how to solve it (see Chapter 4). The
+file is split into thirteen sections: (1) File Specifications (Section 4.1) which directs I/O, (2)
+General Specifications (Section 4.2), (3) Time Integration Specifications (Section 4.3), (4)
+Continuation Specifications (Section 4.4), (5) Hunting Specifications (Section 4.5), (6)
+Augmenting Condition Specification (Section 4.6), (7) Solver Specifications (Section 4.7), (8) Eigensolver Specifications (Section 4.8), (9) Geometry Specification (Section 4.9), (10)
+Boundary Condition Specifications (Section 4.10), (11) Rotation Specifications (Section 4.11),
+(12) Problem Description (Section 4.12), and (13) Post Processing Specifications (Section 4.13);
+this latter section includes breakouts for fluxes and data (Section 4.14), particle traces (Section
+4.15) and for volume-based integrals. The file format is described in detail in Chapter 4.
+Incidentally, the structure of the data input routines is divided roughly along the same lines as the
+input data file itself.</p>
+<p>The <em>material description</em> files (using the nomenclature “[material name].mat”) contain all
+material property data and material property model and constitutive model specifications. The
+names of these files are specified in the problem description file. The format of these files and the
+available options are described in Chapter 5. Note that these files are also reproduced as output as
+“echo” files, with all default settings specified.</p>
+<p>The <em>ASCII continuation/restart files</em> (may have any name) contain an ASCII list of the solution
+vector (values of field variables at nodes), which can be used as an initial guess for successive
+runs of <em>Goma</em>. The names of these files are specified in the problem description file, but may be
+changed with the -c (for input) or -s (for output) command-line options. These restart files are
+“recyclable”, in the sense that output from one <em>Goma</em> simulation may be used as input to another
+<em>Goma</em> simulation under certain restrictions.</p>
+<p>The <em>EXODUS II database files</em> (may have any name but generally end in “.exoII”) contain a
+description of the finite-element structure for the current problem. All EXODUS II files contain a
+definition of the mesh, material blocks, and boundary sets. In the case of input EXODUS II files
+created from mesh generator output, this is the sole content of the file. Output EXODUS II
+database files contain a clone of the input EXODUS II mesh information and also contains the
+nodal values of all field variables in the solution. The names of these files are specified in the
+problem description file, but may be changed with the -ix (for input) or -ox (for output)
+command-line options. The only EXODUS II file required when running <em>Goma</em> is the one
+containing the current problem mesh. All others are either output for postprocessing or used to
+supply auxiliary external fields (e.g. magnetic fields).</p>
+</section>
+<section id="command-line-arguments">
+<h2>Command-Line Arguments<a class="headerlink" href="#command-line-arguments" title="Permalink to this headline"></a></h2>
+<p><em>Goma</em> can be run using only the input files (all four listed above) to describe the problem and to
+direct the input and output; in this case <em>Goma</em> is run using the command “goma” without any
+arguments. However, command-line arguments offer additional flexibility for redirecting input or
+output and for adjusting common run-time parameters. The general command line for running
+<em>Goma</em> is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ goma [-nd] [-se fn] [-so fn] [-i fn] [-c fn] [-s fn] [-ix fn] [-ox fn] [-d int]
+       [-n int] [-r dbl] [-a args] [-restart fn] [-h] [-ts dbl] [-te dbl] [-cb dbl]
+       [-ce dbl] [-cd dbl] [-cn int] [-cmin dbl] [-cmax dbl] [-cm int] [-ct int] [-c_bc int]
+       [-c_df int] [-c_mn int] [-c_mp int] [-bc_list] [-v]
+</pre></div>
+</div>
+<p>Here <em>fn</em> denotes “file name”, <em>int</em> denotes “integer”, <em>dbl</em> denotes “float or double” and <em>args</em> denotes
+multiple sub-options or file names. The input line is parsed into options, which are preceded by a
+single hyphen (-) and arguments, which normally are <em>fn</em>, <em>int</em>, or <em>dbl</em> not preceded by a hyphen. The
+default, if no options are specified, is the input option (e.g. “goma input.alt” is the same as
+“goma -i input.alt”). The following is a list of the command-line options and their
+descriptions (two ways are shown to specify each option, an abbreviated and a verbose form).</p>
+<dl class="simple">
+<dt>-a args, -aprepro args</dt><dd><p>Preprocess input files through the APREPRO preprocessor
+[with args as arguments to APREPRO] before reading into
+<em>Goma</em>. With this option, <em>Goma</em> performs a UNIX
+system() call to run APREPRO which will preprocess
+the input file and the material data files. The
+APREPRO input file is preprocessed from “input” or
+the filenamespecified by the -input option and
+written to “tmp.input”. Likewise, the material
+data files are preprocessed from “[material
+name].mat” to “tmp.[material name].mat”. After the
+“-a” on the command line, options for APREPRO are
+preceded by two hyphens (–). For example, the
+command line “goma -i <em>input.pre</em> -a CONSTANT1=0.2
+–vd” will preprocess “input.pre” and the material
+data files specified in <em>input.pre</em> using APREPRO,
+and will pass the argument -<em>vd</em> (which prints
+version number and values of all variables to the
+screen) and CONSTANT1=0.2 (which sets the variable
+CONSTANT1 equal to 0.2 for preprocessing) to
+APREPRO; the preprocessed files will be
+“<em>tmp.input</em>” and “<em>tmp</em>.[material name].*mat*”.)</p>
+</dd>
+<dt>-c fn -contin fn</dt><dd><p>Change the name of the ASCII continuation/restart input
+file (specified in Problem-Description File) to <em>fn</em>,
+(e.g. “goma -c <em>old.soln.dat</em>” uses the file
+“<em>old.soln.dat</em>” as the ASCII input file). Note that
+this option has no effect if the initial guess is not
+read from the ASCII file, i.e. unless “<em>Initial Guess
+= read</em>” is specified in the input file.</p>
+</dd>
+<dt>-d int -debug int</dt><dd><p>Change the debug flag to <em>int</em>. This option is convenient
+when debugging and the user wants to see more output
+from <em>Goma</em>. (e.g. “goma - d -2” will run <em>Goma</em> with
+the Debug_Flag set to -2). Higher values generally
+produce more output.</p>
+</dd>
+<dt>-h -help</dt><dd><p>Prints a helpful message with brief descriptions of
+these command line options.</p>
+</dd>
+<dt>-i fn -input fn</dt><dd><p>Redirect <em>Goma</em> to read the problem description file from
+<em>fn</em>. The normal default option is to read from
+a file named “<em>input</em>”.</p>
+</dd>
+<dt>-ix fn -inexoII fn</dt><dd><p>Redirect <em>Goma</em> to read the input EXODUS II database
+file (often called “<em>in.exoII</em>”) from <em>fn</em>.</p>
+</dd>
+<dt>-brk fn</dt><dd><p>Specify a Brk file, this overrides setting Brk File in
+Problem Description File</p>
+</dd>
+</dl>
+<dl class="option-list">
+<dt><kbd><span class="option">-n <var>int</var></span></kbd></dt>
+<dd><p>Change the maximum number of Newton iterations to <em>int</em>. This is
+especially convenient for setting the number of
+iterations to zero so that <em>Goma</em> just runs the
+post-processor on the set of input data.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>-nd -nodisplay</dt><dd><p>Do not display the run-time information on the
+screen. With this option, <em>Goma</em> sends the stdout and
+stderr output to temporary files that are removed at
+the end of the run. This command takes no arguments.</p>
+</dd>
+<dt>-ox fn -outexoII fn</dt><dd><p>Redirect <em>Goma</em> to write the output EXODUS II file
+(often called “<em>out.exoII</em>”) to <em>fn</em>.</p>
+</dd>
+<dt>-r dbl relax dbl</dt><dd><p>Change the value of the Newton relaxation parameter
+to <em>dbl</em>. This is convenient if a few Newton steps
+with relaxation are desired before using full Newton.
+(e.g. “goma -r 0.1” will use Newton’s method with
+updates one-tenth of the normal value.</p>
+</dd>
+<dt>-s fn -soln fn</dt><dd><p>Redirect Goma to write the output ASCII file
+(normally called “<em>soln.dat</em>”) to <em>fn</em>.</p>
+</dd>
+<dt>-se fn -stderr fn</dt><dd><p>Redirect the standard error from <em>Goma</em> to <em>fn</em>. This
+output is comprised of more urgent diagnostic error
+and timing messages.</p>
+</dd>
+<dt>-so fn -stdout fn</dt><dd><p>Redirect the standard output from <em>Goma</em> to <em>fn</em>.
+This output is comprised of less urgent informational
+messages.</p>
+</dd>
+<dt>-ts dbl</dt><dd><p>Start time of simulation.</p>
+</dd>
+<dt>-te dbl</dt><dd><p>End time of simulation</p>
+</dd>
+<dt>-cb dbl</dt><dd><p>Continuation: Start value (see Gates et al., SAND2000-2465)</p>
+</dd>
+<dt>-ce dbl</dt><dd><p>Continuation: Final value (see Gates et al., SAND2000-2465)</p>
+</dd>
+<dt>-cd dbl</dt><dd><p>Continuation: Path step, ds (see Gates et al., SAND2000-2465)</p>
+</dd>
+<dt>-cn dbl</dt><dd><p>Continuation: Max number of path steps (see Gates et al., 2000)</p>
+</dd>
+<dt>-cm int</dt><dd><p>Continuation: Method (see Gates et al., 2000)</p>
+</dd>
+<dt>-ct int</dt><dd><p>Continuation: Type (see Gates et al., 2000)</p>
+</dd>
+<dt>-c_bc int</dt><dd><p>Continuation: Boundary condition ID (see Gates et al., 2000)</p>
+</dd>
+<dt>-c_df int</dt><dd><p>Continuation: BC Data Float ID (see Gates et al., 2000)</p>
+</dd>
+<dt>-c_mn int</dt><dd><p>Continuation: Material ID (see Gates et al., 2000)</p>
+</dd>
+<dt>-c_mp int</dt><dd><p>Continuation: Method property ID (see Gates et al, 2000)</p>
+</dd>
+</dl>
+<dl class="option-list">
+<dt><kbd><span class="option">-b<var>c_list</var></span></kbd></dt>
+<dd><p>Continuation: Method property ID (see Gates et al, 2000)</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>-v -version</dt><dd><p>Output goma version</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>To get the most up-to-date list, simple issue the* “goma -h” <em>command
+at the command line. Also note that the continuation input parameters are
+explained in the Advanced Capabilities Manual (Gates et al. 2000 or newer
+version).</em></p>
+</div>
+<p>The primary purpose of the command-line options is to allow the user an easy way to redirect the
+input and output of Goma or to quickly change problem specifications. Most of the options are
+overrides of information in the problem description file, so in some cases it may be easier to edit the problem description file than to use command-line arguments.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="background.html" class="btn btn-neutral float-left" title="Background Information" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="problem_description_file.html" class="btn btn-neutral float-right" title="Problem Description (Input File)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VELO_NORMAL_EDGE &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>VELO_NORMAL_EDGE</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/fluid_momentum/velo_normal_edge.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="velo-normal-edge">
+<h1><strong>VELO_NORMAL_EDGE</strong><a class="headerlink" href="#velo-normal-edge" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VELO_NORMAL_EDGE</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">bc_id2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(PCC-EDGE/ROTATED MOMENTUM)</strong></p>
+<p>This boundary condition card is used to specify the normal velocity component on a
+dynamic contact line in three-dimensions. The velocity component is normal to the
+contact line in the plane of the web and is equal to <span class="math notranslate nohighlight">\(V_n\)</span>. The free-surface side set should
+always be &lt;bc_id1&gt;, the primary side set, and the web side set should be &lt;bc_id2&gt;, the
+secondary side set. Usually, this boundary condition is used to model dynamic contact
+lines in three dimensions and is usually found in conjunction with a
+<em>VELO_TANGENT_EDGE</em> card, a <em>VAR_CA_EDGE</em> or <em>CA_EDGE</em> card as explained
+below.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>VELO_NORMAL_EDGE</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id1&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain. This is the
+primary side set defining the edge and should also be
+associated with the capillary free surface if used in the
+context of a dynamic contact line.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;bc_id2&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain. Together with
+&lt;bc_id1&gt;, this secondary side set defines the edge/curve
+on which the boundary condition applies as the
+intersection of the two side sets. In problems involving
+dynamic contact lines, this side set should correspond to
+the moving substrate.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(V_n\)</span>, a parameter supplying the imposed normal velocity
+component. This component is taken normal to the edge
+curve parallel to &lt;bc_id2&gt;. See below for a more
+detailed description.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VELO_NORMAL_EDGE</span> <span class="n">SS</span> <span class="mi">5</span> <span class="mi">4</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
+<p>This card sets the normal-to-contact line component of the velocity to zero along the
+curve defined by the intersections of side set 5 and 4.</p>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>This boundary condition imposes a point
+collocated constraint of the form:</p></li>
+</ul>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/079_goma_physics.png"><img alt="../../../_images/079_goma_physics.png" src="../../../_images/079_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>v</em> is the fluid velocity, <span class="math notranslate nohighlight">\(v_m\)</span> is the mesh
+velocity and <span class="math notranslate nohighlight">\(n_cl\)</span> is the normal to the contact
+line in the plane of &lt;bc_id2&gt;. The sketch at
+right depicts the orientation of this latter
+vector. Note that the collocation points for this boundary condition only are not the
+nodes on the edge curve but integration points in each of the edge elements. The
+reason for this is historical and uninteresting from a user point of view.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../../_images/080_goma_physics.png"><img alt="../../../_images/080_goma_physics.png" src="../../../_images/080_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<ul>
+<li><p>This boundary condition is used almost exclusive in problems involving dynamic
+contact lines in three dimensions. Imposition of wetting line physics is a
+difficult
+problem in modeling situations involving dynamic contact lines. In twodimensions,
+the assumption is often made that the effect of any wetting line force
+is to locally produce a condition in which the fluid velocity at the contact line is
+zero <em>in the laboratory reference frame</em>. That is to say, that at the contact line noslip
+between fluid and moving substrate is not enforced and instead a zero velocity
+condition is imposed. In this way, the difficult-to-model wetting line forces are not
+included directly, but instead are included by their effect on the velocity. One
+might argue with this model, and many do, but as a practical approach, this has
+been shown to work well.</p>
+<p>Generalizing this notion into three dimensions is the primary motivation for this
+boundary condition. In the case of a dynamic contact line that is a curve in three
+dimensions, it is not correct to simply set all velocity components to zero because
+that would imply that the wetting forces act equally in all three directions. It is
+more reasonable to say that the wetting forces can act only in a direction normal to
+the contact line in the plane of the substrate. Therefore, the correct generalization
+of the wetting line model described in the previous paragraph is to set the velocity
+component normal to the contact line in the plane of the substrate to zero. This is
+done by using the <em>VELO_NORMAL_EDGE</em> boundary condition with <span class="math notranslate nohighlight">\(V_n\)</span> set to
+zero. In the case of a transient problem, it is necessary to add the qualifier,
+“relative to the mesh motion.” This accounts for the mesh motion velocity in the
+constraint equation. See Baer, et.al. (2000) for a more complete discussion of this
+wetting line model.</p>
+</li>
+<li><p>Generally, a <em>VELO_NORMAL_EDGE</em> card must be accompanied by other
+boundary conditions for a correct application. Firstly, since
+<em>VELO_NORMAL_EDGE</em> forces the velocity vector to be parallel to the contact
+line (at least in steady state), the <em>KINEMATIC</em> condition on any free surface
+attached to the contact line will overspecify the problem at the contact line. For
+this reason, it is generally the case that a <em>CA_EDGE, VAR_CA_EDGE</em> or
+<em>VAR_CA_USER</em> (or their variants) should also be present for the contact line.
+These boundary conditions replace the <em>KINEMATIC</em> card on the mesh at the
+contact line.</p>
+<p>In addition, a <em>VELO_TANGENT_EDGE</em> card should be present to enforce no-slip
+between fluid and substrate <em>in the tangential direction</em>. Also it should be
+recognized that <em>VELO_NORMAL_EDGE</em> will not override other Dirichlet
+conditions on the substrate side set. Typically, the latter are used to apply no slip
+between fluid and substrate. If such conditions are used over the entirety of the
+substrate side set, both <em>VELO_NORMAL_EDGE</em> and <em>VELO_TANGENT_EDGE</em>
+conditions applied at the contact will be discarded.</p>
+<p>There are two potential solutions to this. First, the substrate region could be
+divided into two side sets, a narrow band of elements adjacent to the contact line
+and the remainder of substrate region. In the narrow band of elements, the no slip
+condition is replaced by a <em>VELO_SLIP</em> card with the substrate velocity as
+parameters. This allows the velocity field to relax over a finite region from the
+velocity imposed at the contact line to the substrate field. The second method uses
+only a single side set for the substrate region, but replaces the Dirichlet no slip
+boundary conditions with a penalized <em>VELO_SLIP</em> condition. That is, the slip
+parameter is set to a small value so that no slip is effectively enforced, but within
+the context of a weakly integrated condition. Since the <em>VELO_NORMAL_EDGE</em>
+and <em>VELO_TANGENT_EDGE</em> cards are strongly enforced on the contact lines, the
+<em>VELO_SLIP</em> card will be overridden in those locations and the velocity field will
+deviate appropriately from the substrate velocity.</p>
+</li>
+</ul>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>Baer, T.A., R.A. Cairncross, P.R.Schunk, R.R. Rao, and P.A. Sackinger, “A finite
+element method for free surface flows of incompressible fluids in three dimensions.
+Part II. Dynamic wetting lines.” IJNMF, 33, 405-427, (2000).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

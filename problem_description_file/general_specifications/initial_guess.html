@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Initial Guess &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Initial Guess</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/general_specifications/initial_guess.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="initial-guess">
+<h1><strong>Initial Guess</strong><a class="headerlink" href="#initial-guess" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">Guess</span> <span class="o">=</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span> <span class="p">[</span><span class="n">filename</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This optional card directs the initialization of the entire unknown vector. Three options
+are provided to set the entire solution field to numerical values determined by
+{char_string}. Three additional options are available for reading initial values of the
+solution vector from data files. The permissible values of {char_string} are:</p>
+<dl class="simple">
+<dt>zero</dt><dd><p>For an initial guess of zero (0.) for each degree of freedom in the unknown
+vector.</p>
+</dd>
+<dt>one</dt><dd><p>For an initial guess of one (1.) for each degree of freedom in the unknown
+vector.</p>
+</dd>
+<dt>random</dt><dd><p>For a random initial guess (between 0. and 1.) for each degree of freedom
+in the unknown vector.</p>
+</dd>
+<dt>read</dt><dd><p>To obtain the initial guess by reading the ASCII data file identified as
+the <em>GUESS file</em>, which must have initially been a <em>SOLN</em> file or a tmp_i.d
+(<em>Write Intermediate Results</em>) file.</p>
+</dd>
+<dt>read_exoII</dt><dd><p>To obtain the initial guess from the EXODUS II file specified by the <em>FEM
+file</em> card that is also used to supply mesh data. Any extraneous variables
+in the EXODUS II file that are not in the list of active variables for the
+current problem description are simply ignored.</p>
+</dd>
+<dt>read_exoII_file <em>file name</em></dt><dd><p>To read the initial guess for the field variables from an EXODUS II
+database file different from the initial mesh database file. The
+<em>file_name</em> is specified as a single string following the read_exoII_file
+keyword. As with the read_exoII option, any extraneous variables not
+specified as active variables for the simulation will be simply ignored.</p>
+</dd>
+</dl>
+<p>If this card is omitted, then the default behavior is to assume that a value of zero has
+been specified for {char_string}.</p>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">Guess</span> <span class="o">=</span> <span class="n">zero</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">Guess</span> <span class="o">=</span> <span class="n">read_exoII_file</span>      <span class="n">First_Iteration</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>This card provides the specification of the initial vector of unknowns in a problem. In
+most cases this vector is specified to be identically zero, though in some cases a nonzero
+vector may be of value (see <em>Technical Discussion</em> section of <em>Debug</em> card). The first
+three options (<strong>zero, one, random</strong>) employ an internally-generated vector of initial
+values, while the <strong>read</strong> option utilizes the values read from an ASCII solution file (see
+<em>SOLN</em> input card) previously calculated by <em>Goma</em>, and the <strong>read_exoII</strong> options employ
+solutions read from binary (exoII) files, not necessarily always generated by <em>Goma</em>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

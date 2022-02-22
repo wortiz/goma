@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Level Set Specifications &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Phase Field Specifications" href="phase_field.html" />
+    <link rel="prev" title="Time Integration Specifications" href="time_integration.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="file_specifications.html">File Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="general_specifications.html">General Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Level Set Specifications</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fill-subcycle">Fill Subcycle</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#fill-weight-function">Fill Weight Function</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-interface-tracking">Level Set Interface Tracking</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id4">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-semi-lagrange">Level Set Semi_Lagrange</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id7">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>Examples</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-subgrid-integration-depth">Level Set Subgrid Integration Depth</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id9">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id11">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-subelement-integration">Level Set Subelement Integration</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id13">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id14">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id15">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id16">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-adaptive-integration">Level Set Adaptive Integration</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id17">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id18"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-adaptive-order">Level Set Adaptive Order</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id19">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id20">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id21">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#overlap-quadrature-points">Overlap Quadrature Points</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id22">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id23">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id24">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id25">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-pspp-filtering">Level Set PSPP Filtering</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id26">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id27">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id28">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-length-scale">Level Set Length Scale</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id29">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id30">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id31">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#faqs">FAQs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id32">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-initialize">Level Set Initialize</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id33">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id34">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id35">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-initialization-method">Level Set Initialization Method</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id36">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id37">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id38">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id39"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-periodic-planes">Level Set Periodic Planes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id40">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id41">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id42"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-control-width">Level Set Control Width</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id43">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id44">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id45">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id46">FAQs</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-timestep-control">Level Set Timestep Control</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id47">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id48">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id49">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-renormalization-tolerance">Level Set Renormalization Tolerance</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id50">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id51">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id52">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id53">FAQs</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-renormalization-method">Level Set Renormalization Method</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id54">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id55">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id56">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-renormalization-frequency">Level Set Renormalization Frequency</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id57">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id58">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id59">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#restart-time-integration-after-renormalization">Restart Time Integration After Renormalization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id60">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id61">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-reconstruction-method">Level Set Reconstruction Method</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id62">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id63">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id64">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-contact-extension">Level Set Contact Extension</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id65">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id66">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id67">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#level-set-slave-surface">Level Set Slave Surface</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id68">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id69">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id70">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id71">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#ignore-level-set-dependencies">Ignore Level Set Dependencies</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id72">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id73">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#force-initial-level-set-renormalization">Force Initial Level Set Renormalization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id74">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id75">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id76">Technical Discussion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="phase_field.html">Phase Field Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description.html">Problem Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing.html">Post Processing Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_particle.html">Post Processing Particle Traces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_volume.html">Volumetric Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../problem_description_file.html">Problem Description (Input File)</a> &raquo;</li>
+      <li>Level Set Specifications</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/problem_description_file/level_set.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="level-set-specifications">
+<h1>Level Set Specifications<a class="headerlink" href="#level-set-specifications" title="Permalink to this headline"></a></h1>
+<section id="fill-subcycle">
+<h2>Fill Subcycle<a class="headerlink" href="#fill-subcycle" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fill</span> <span class="n">Subcycle</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This is an optional card that sets the number of subcycle-fill time steps between fluidflow
+time steps in uncoupled level set calculations. The default is 10 subcycle time
+steps for every flow time step. The input parameter is defined as</p>
+<dl class="simple">
+<dt>&lt;integer&gt;</dt><dd><p>Any nonzero number indicating the subcycling frequency of the fill equation
+versus the flow equations.</p>
+</dd>
+</dl>
+<p>For example, if the value of &lt;integer&gt; is 1, the flow and fill equations are solved every
+time step. If it is 10, between every transient step in the flow calculation, the fill
+(advection) equation is solved 10 times with one-tenth of the time step.</p>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>The following is a sample card that sets the fill subcycling rate to 4:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fill</span> <span class="n">Subcycle</span> <span class="o">=</span> <span class="mi">4</span>
+</pre></div>
+</div>
+</section>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, Februray 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="fill-weight-function">
+<h2>Fill Weight Function<a class="headerlink" href="#fill-weight-function" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fill</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="p">{</span><span class="n">Galerkin</span> <span class="o">|</span> <span class="n">Taylor</span><span class="o">-</span><span class="n">Galerkin</span> <span class="o">|</span> <span class="n">SUPG</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3>Description / Usage<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>Sets the weight function used for the <em>FILL</em> equation for either the VOF or Level Set
+methods. The options for this card are as follows:</p>
+<dl class="simple">
+<dt>Galerkin</dt><dd><p>Name of the weight function formulation. This option requests a standard
+Galerkin finite element weighted residual treatment. A floating point
+parameter is not used for this option.</p>
+</dd>
+<dt>Taylor-Galerkin</dt><dd><p>Name of the weight function formulation</p>
+</dd>
+<dt>SUPG</dt><dd><p>Name of the weight function formulation. This option requests a Streamwise
+Upwinding Petrov Galerkin formulation. No floating point parameter is
+required.</p>
+</dd>
+</dl>
+<p>The default value for the <em>Fill Weight Function</em> is Taylor-Galerkin.</p>
+</section>
+<section id="id2">
+<h3>Examples<a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>This is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Fill</span> <span class="n">Weight</span> <span class="n">Function</span> <span class="o">=</span> <span class="n">Galerkin</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>This card selects the integration/weight function used in solving for the VOF color
+function or the level set distance function (i.e., the <em>FILL</em> unknown). The user should
+refer to the tutorial on Level Set Computations for a detailed description of level set
+interface tracking. (See References.)</p>
+</section>
+<section id="id3">
+<h3><strong>References</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+<p>A. N. Brooks and T. J. R. Hughes, “Streamline Upwind/Petrov-Galerkin Formulations
+for Convection Dominated Flows with Particular Emphasis on the Incompressible
+Navier-Stokes Equations,” Comp. Math. In Appl. Mechanics and Eng., 32, 199 - 259
+(1992).</p>
+<p>A. J. A. Unger, P. A. Forsyth and E. A. Sudicky, “Variable spatial and temporal
+weighting schemes for use in multi-phase compositional problems,” Advances in Water
+Resources, 19, 1 - 27 (1996).</p>
+<p>R. Helmig and R. Huber, “Comparison of Galerkin-type discretization techniques for
+two-phase flow in heterogeneous porous media,” Advances in Water Resources, 21,
+697-711 (1998).</p>
+<p>E. Gundersen and H. P. Langtangen, “Finite Element Methods for Two-Phase Flow in
+Heterogeneous Porous Media,” in Numerical Methods and Software Tools in Industrial
+Mathematics, Morten Daehlen, Aslak Tveito, Eds., Birkhauser, Boston, 1997.</p>
+<p>S. F. Bradford and N. D. Katopodes, “The anti-dissipative, non-monotone behavior of
+Petrov-Galerkin Upwinding,” International J. for Numerical Methods in Fluids, v. 33,
+583-608 (2000).</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-interface-tracking">
+<h2>Level Set Interface Tracking<a class="headerlink" href="#level-set-interface-tracking" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Interface</span> <span class="n">Tracking</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id4">
+<h3>Description / Usage<a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>Activates (or deactivates) embedded interface tracking by the level set method. When
+activated, the set of cards specifying level set run parameters are read; these should
+appear in the input deck following this card. Also when activated a “level_set”
+equation type should be included in the list of equations identified in the equations
+section.</p>
+</section>
+<section id="id5">
+<h3>Examples<a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>A sample input card is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Interface</span> <span class="n">Tracking</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h3><strong>References</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-semi-lagrange">
+<h2>Level Set Semi_Lagrange<a class="headerlink" href="#level-set-semi-lagrange" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Semi_Lagrange</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id7">
+<h3>Description / Usage<a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>This card is currently inactive because it was developed for decoupled LS fill
+problems.</p>
+<dl class="simple">
+<dt>&lt;char1&gt;</dt><dd><p>YES | ON | TRUE</p>
+</dd>
+</dl>
+</section>
+<section id="id8">
+<h3><strong>Examples</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Semi_Lagrange</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-subgrid-integration-depth">
+<h2>Level Set Subgrid Integration Depth<a class="headerlink" href="#level-set-subgrid-integration-depth" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Subgrid</span> <span class="n">Integration</span> <span class="n">Depth</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id9">
+<h3>Description / Usage<a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>Subgrid integration is used to improve integration accuracy for all functions which
+invoke a diffuse level-set interface representation of properties and surfaces. With
+integration depths greater than zero the elements through which the zero level set
+crosses are subdivided in a geometric way to achieve more accurate integration. Level-
+1 depths implies the smallest grid size is 1/4 of the original, and a level-2 is 1/8th, and
+so on. Please see usage nodes below.</p>
+<dl class="simple">
+<dt>&lt;integer1&gt;</dt><dd><p>Level of integration depth. Default is zero. See usage notes.</p>
+</dd>
+</dl>
+</section>
+<section id="id10">
+<h3>Examples<a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>This example sets the subgrid integration depth to two:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Subgrid</span> <span class="n">Integration</span> <span class="n">Depth</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</section>
+<section id="id11">
+<h3>Technical Discussion<a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>Each level of subgrid integration leads to precipitous growth in computational
+load, especially in 3D. Level-2 seems to optimize accuracy and efficiency.
+Levels higher than 2 is not recommended.</p>
+</section>
+<section id="id12">
+<h3><strong>References</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-subelement-integration">
+<h2>Level Set Subelement Integration<a class="headerlink" href="#level-set-subelement-integration" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Subelement</span> <span class="n">Integration</span> <span class="o">=</span> <span class="p">{</span><span class="n">ON</span> <span class="o">|</span> <span class="n">YES</span> <span class="o">|</span> <span class="n">OFF</span> <span class="o">|</span> <span class="n">NO</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id13">
+<h3>Description / Usage<a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>Subelement integration is used to improve integration accuracy for all functions which
+invoke a sharp level-set interface. Note here that the Level Set Length Scale
+option must be zero. This is possible because the subelement integration scheme
+actually produces a geometric representation of the zero level set surface on which
+exact line integrals of the surface tension source term term can be peformed. Please
+see usage nodes below.</p>
+<dl class="simple">
+<dt>{ON | YES}</dt><dd><p>Use subelement integration on surface level set capillary term.</p>
+</dd>
+<dt>{OFF | NO}</dt><dd><p>Don’t use subelement integration.</p>
+</dd>
+</dl>
+</section>
+<section id="id14">
+<h3>Examples<a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>This example invokes the subelement integration</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Subelement</span> <span class="n">Integration</span> <span class="o">=</span> <span class="n">ON</span>
+</pre></div>
+</div>
+</section>
+<section id="id15">
+<h3>Technical Discussion<a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<ul class="simple">
+<li><p><strong>NOTE</strong>: Level Set Length Scale must be set to zero.</p></li>
+<li><p>Because of the construction of an in-element interface meshing to find this
+representation, subelement integration cannot be used currently for three
+dimensional problems. Subgrid integration can be, however, but it is inefficient.</p></li>
+<li><p>Best to use this integration approach with the property specification method of
+“Second Level-Set “property_name”, e.g. Second Level Set Density, etc.</p></li>
+<li><p>Typically this capability greatly improves mass conservation and avoids parasitics
+for surface tension dominated problems.</p></li>
+<li><p><strong>NOTE</strong> that the Level Set Renormalization method must be set to Huygens.</p></li>
+</ul>
+</section>
+<section id="id16">
+<h3>References<a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-adaptive-integration">
+<h2>Level Set Adaptive Integration<a class="headerlink" href="#level-set-adaptive-integration" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Adaptive</span> <span class="n">Integration</span> <span class="o">=</span> <span class="p">{</span><span class="n">ON</span> <span class="o">|</span> <span class="n">YES</span> <span class="o">|</span> <span class="n">OFF</span> <span class="o">|</span> <span class="n">NO</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id17">
+<h3>Description / Usage<a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>To be used with Subelement integration to improve integration accuracy. Does not
+work with subgrid integration or basic level-set. Requires a sharp interface, viz. levelset
+length scale of zero. Please see usage nodes below.</p>
+<dl class="simple">
+<dt>{ON | YES}</dt><dd><p>Use adaptive integration on surface level set capillary term.</p>
+</dd>
+<dt>{OFF | NO}</dt><dd><p>Don’t use adaptive integration.</p>
+</dd>
+</dl>
+</section>
+<section id="id18">
+<h3><strong>References</strong><a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-adaptive-order">
+<h2>Level Set Adaptive Order<a class="headerlink" href="#level-set-adaptive-order" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Adaptive</span> <span class="n">Integration</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id19">
+<h3>Description / Usage<a class="headerlink" href="#id19" title="Permalink to this headline"></a></h3>
+<p>To be used with Subelement adaptive integration to improve integration accuracy. Does
+not work with subgrid integration or basic level-set. Requires a sharp interface, viz.
+level-set length scale of zero. Please see usage nodes below.</p>
+<dl class="simple">
+<dt>&lt;integer1&gt;</dt><dd><p>Adaptive integration order. Single positive integer greater than zero.
+Default value is 3.</p>
+</dd>
+</dl>
+</section>
+<section id="id20">
+<h3>Examples<a class="headerlink" href="#id20" title="Permalink to this headline"></a></h3>
+<p>This example invokes the subelement adaptive integration order:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Adaptive</span> <span class="n">Integration</span> <span class="o">=</span> <span class="n">YES</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Adaptive</span> <span class="n">Order</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</section>
+<section id="id21">
+<h3>References<a class="headerlink" href="#id21" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="overlap-quadrature-points">
+<h2>Overlap Quadrature Points<a class="headerlink" href="#overlap-quadrature-points" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Overlap</span> <span class="n">Quadrature</span> <span class="n">Points</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id22">
+<h3>Description / Usage<a class="headerlink" href="#id22" title="Permalink to this headline"></a></h3>
+<p>To be used with the overset grid capability. This function sets the number of overlap
+quadrature points with this capability. See GT-026 for more details.</p>
+<dl class="simple">
+<dt>&lt;integer1&gt;</dt><dd><p>Overlap quadrature points. Single positive integer greater than zero.
+Default value is 3.</p>
+</dd>
+</dl>
+</section>
+<section id="id23">
+<h3>Examples<a class="headerlink" href="#id23" title="Permalink to this headline"></a></h3>
+<p>This example invokes the number of overlapping quadrature points:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Overlap</span> <span class="n">Quadrature</span> <span class="n">Points</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</section>
+<section id="id24">
+<h3>Technical Discussion<a class="headerlink" href="#id24" title="Permalink to this headline"></a></h3>
+<p>Please consult the overset grid capability tutorial for futher discussion. (Ref.
+below). This is to be use with AC_OVERLAP, or the augmenting condition of
+type AC = OV.</p>
+</section>
+<section id="id25">
+<h3>References<a class="headerlink" href="#id25" title="Permalink to this headline"></a></h3>
+<p>GT-026.4: “GOMA’s Overset Mesh Method”, P R. Schunk and E. D. Wilkes, 11 Jan.
+2006</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-pspp-filtering">
+<h2>Level Set PSPP Filtering<a class="headerlink" href="#level-set-pspp-filtering" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">PSPP</span> <span class="n">filtering</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">YES</span> <span class="o">|</span> <span class="n">NO</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id26">
+<h3>Description / Usage<a class="headerlink" href="#id26" title="Permalink to this headline"></a></h3>
+<p>On this card, the user specifies a single char_string.</p>
+<dl class="simple">
+<dt>&lt;YES | ON&gt;</dt><dd><p>This string turns on level set PSPP filtering if it is “yes” or “on”.</p>
+</dd>
+</dl>
+</section>
+<section id="id27">
+<h3>Examples<a class="headerlink" href="#id27" title="Permalink to this headline"></a></h3>
+<p>A typical PSPP filtering input card looks like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">PSPP</span> <span class="n">filtering</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id28">
+<h3>Technical Discussion<a class="headerlink" href="#id28" title="Permalink to this headline"></a></h3>
+<p>Not entirely clear what this card does, but in the vicinity of the level-set interface, the
+Bochev PSPP stabilization scheme is altered. This is recommended when this pressure
+stabilization scheme is deployed. See the Pressure Stabilization card.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-length-scale">
+<h2>Level Set Length Scale<a class="headerlink" href="#level-set-length-scale" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Length</span> <span class="n">Scale</span> <span class="o">=</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id29">
+<h3>Description / Usage<a class="headerlink" href="#id29" title="Permalink to this headline"></a></h3>
+<p>On this card, the user specifies a single char_string.</p>
+<dl class="simple">
+<dt>&lt;float&gt;</dt><dd><p>This value represents the size of the region around the zero level set
+function contour in which interfacial physical quantities, for example,
+surface tension, will be present.</p>
+</dd>
+</dl>
+<p>Stability and conservation of phase volume are dependent upon this value to a
+significant degree. Experimentation has revealed that this float value should be
+between two and three times the average linear dimension of the elements in the mesh.</p>
+</section>
+<section id="id30">
+<h3>Examples<a class="headerlink" href="#id30" title="Permalink to this headline"></a></h3>
+<p>A typical length scale input card looks like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Length</span> <span class="n">Scale</span> <span class="o">=</span> <span class="mf">0.3</span>
+</pre></div>
+</div>
+</section>
+<section id="id31">
+<h3>Technical Discussion<a class="headerlink" href="#id31" title="Permalink to this headline"></a></h3>
+<p>The level set method is an <em>embedded</em> interface method. That is, the location of the
+interface is not known explicitly as a geometric parameter of the problem, but rather it
+is abstracted as a level contour of a higher dimensional function. This is convenient in
+many ways, but it does mean that phenomena associated with the interface, for
+example, surface tension, must enter the problem spread over a region near the zero
+level set contour. The <em>Level Set Length Scale</em> sets the size of this region.</p>
+<p>A good example of the application of the <em>Level Set Length Scale</em> parameter is in how
+surface tension is included in problems using level set interface tracking. The following
+tensor is added to the fluid momentum equation:</p>
+<div class="math notranslate nohighlight">
+\[\underline{\underline{T}} = \sigma \delta_{\alpha} \left( F \right) \left( \underline{\underline{I}} - \underline{n} \,\underline{n} \right)\]</div>
+<p>where <span class="math notranslate nohighlight">\(F\)</span> is the level set function itself, <span class="math notranslate nohighlight">\(\underline{n}\)</span> is the unit normal to the level
+set contour, <span class="math notranslate nohighlight">\(\underline{\underline{I}}\)</span> is the unit tensor, <span class="math notranslate nohighlight">\(\sigma\)</span> the surface tension, and <span class="math notranslate nohighlight">\(\delta_{\alpha} \left( F \right)\)</span> is a “smooth” Dirac
+function given by:</p>
+<div class="math notranslate nohighlight">
+\[\delta_{\alpha} \left( F \right) = \lvert \nabla F \rvert \frac{1 + \cos \left( \pi F/\alpha \right)}{2 \alpha}, \quad \lvert F \rvert \leq \alpha\]</div>
+<p>In this example, the parameter <span class="math notranslate nohighlight">\(\alpha\)</span> would be equal to one-half the <em>Level Set Length Scale</em>
+value specified on this card.</p>
+</section>
+<section id="faqs">
+<h3>FAQs<a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h3>
+<p>How should the Length Scale value be chosen? Trial and error is often the best method
+to determine an appropriate value for this parameter. However, experience has shown
+that values for Level Set Length Scale that are between two and three times the average
+element linear dimension seem to work best.</p>
+</section>
+<section id="id32">
+<h3>References<a class="headerlink" href="#id32" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-initialize">
+<h2>Level Set Initialize<a class="headerlink" href="#level-set-initialize" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Initialize</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char_string</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id33">
+<h3>Description / Usage<a class="headerlink" href="#id33" title="Permalink to this headline"></a></h3>
+<p>This card is used to initialize fields around the zero level set.</p>
+<dl class="simple">
+<dt>&lt;Char_string&gt;</dt><dd><p>A character string which identifies dependent variable to be initialized.
+It is taken from the list of names on the Initialize card.</p>
+</dd>
+<dt>&lt;float1&gt;</dt><dd><p>Value of the variable on the negative side of the zero level set.</p>
+</dd>
+<dt>&lt;float2&gt;</dt><dd><p>Value of the field on the positive side of the zero level set.</p>
+</dd>
+</dl>
+</section>
+<section id="id34">
+<h3>Examples<a class="headerlink" href="#id34" title="Permalink to this headline"></a></h3>
+<p>Two examples of initialization methods are provide below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Initialize</span> <span class="o">=</span> <span class="n">TEMPERATURE</span> <span class="mf">0.</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+</section>
+<section id="id35">
+<h3>Technical Discussion<a class="headerlink" href="#id35" title="Permalink to this headline"></a></h3>
+<p>Not clear whether this capability has been used and tested much. (12/3/2012)</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-initialization-method">
+<h2>Level Set Initialization Method<a class="headerlink" href="#level-set-initialization-method" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="p">{</span><span class="n">method_name</span><span class="p">}</span> <span class="p">{</span><span class="n">parameter</span> <span class="nb">list</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id36">
+<h3>Description / Usage<a class="headerlink" href="#id36" title="Permalink to this headline"></a></h3>
+<p>This card specifies the means by which the level set function is initialized. That is, it
+constructs from a representation of the starting interface shape, a value for the distance
+function at every node in the mesh. The syntax of the card is as follows:</p>
+<dl class="simple">
+<dt>{method_name}</dt><dd><p>A character string which identifies the initialization option desired.
+Choices for this string are: <strong>Projection, Exodus, Nodeset, Surfaces,
+SM_object.</strong></p>
+</dd>
+<dt>{parameter list}</dt><dd><p>This is a variable parameter list specific to each option. The nature of it
+for each method is detailed in the syntax descriptions below.</p>
+</dd>
+</dl>
+<p>Below are the exact syntax used for each initialization method, a brief description of
+the method and a specification of any additional required parameters.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>Projection</strong></p></td>
+<td><p>This method computes the initial level set field by
+calling a user-specified routine which returns the signed
+distance function for a given point. It has no parameter
+list after its name.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Exodus</strong></p></td>
+<td><p>Using this card indicates that the initial level set
+field is
+to be read from the exodus file specified earlier (see
+<em>FEM file</em> and <em>Initial Guess</em> cards for <strong>read_exoII</strong>
+option). This card has no parameter list after its name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Nodeset</strong> &lt;integer1&gt; <strong>EB</strong> &lt;integer2&gt;</p></td>
+<td><p>This method establishes the initial location of the
+interface as the boundary between two element blocks.
+The value &lt;integer1&gt; is the nodeset identification
+number for an internal nodeset defined to exist at the
+interface between the two element blocks. The character
+string <strong>EB</strong> is required. The integer &lt;integer2&gt; is the
+element block id number to which positive values of
+level set function is going to be assigned.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Surfaces</strong> &lt;integer&gt;</p></td>
+<td><p>This card establishes the initial level set function by
+referring to a set of primitive geometric objects. It is the
+easiest to use and the most general. The integer value
+&lt;integer&gt; is the number of surface objects that are used
+to construct the initial interface. This number of <strong>SURF</strong>
+object cards must follow this card. This is the syntax of
+the <strong>SURF</strong> object card:</p>
+<p>SURF = {object_name} {float list}</p>
+<p>{object_name}: a character string identifying the
+type of geometric object. Options are: <strong>PLANE</strong>,
+<strong>CIRCLE,</strong> <strong>SPHERE,</strong> SS, <strong>USER.</strong></p>
+<p>{float list}: geometric parameters associated with
+each object as float values</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The following is the syntax and description for each geometric
+object option, i.e., the “{object_name} {float list}” part of <strong>SURF</strong></p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 60%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>PLANE</strong> &lt;nx. &lt;ny&gt; &lt;nz&gt; &lt;d&gt;</p></td>
+<td><p>This card constructs a planar interface surface. The float
+values &lt;nx&gt;, &lt;ny&gt;, &lt;nz&gt; define a vector normal to this
+plane with the restriction that the sign of the vector must
+be such that it points from the negative side of the
+interface to the positive side of the interface. The float
+value &lt;d&gt; effectively represents the distance of the
+plane from the origin. Its value must be set, however, so
+that the dot product of any position vector to a point on
+the desired plane and the vector (nx,ny,nz) must be equal to
+&lt;d&gt; (it is a property of planes that this number
+is independent of the point on the plane that is chosen).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>CIRCLE</strong> &lt;cx&gt; &lt;cy&gt; &lt;radius&gt;</p></td>
+<td><p>This card constructs a circular interface surface in a
+two-dimensional domain. The float values &lt;cx&gt; &lt;cy&gt;
+identify the coordinates of the center of the circle. The
+float value &lt;radius&gt; establishes the radius of the curve.
+By definition, points interior to the circle are assigned
+negative level set function values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>SPHERE</strong> &lt;cx&gt; &lt;cy&gt; &lt;cz&gt; &lt;radius&gt;</p></td>
+<td><p>This card constructs a spherical interface surface in a
+three-dimensional domain. The float values &lt;cx&gt; &lt;cy&gt;
+<em>&lt;cz&gt;</em> identify the coordinates of the center of the circle.
+The float value &lt;radius&gt; establishes the radius of the
+sphere. By definition, points interior to the sphere are
+assigned negative level set function values.</p></td>
+</tr>
+<tr class="row-even"><td><p>SS {ss_id}</p></td>
+<td><p>This card uses an existing sideset in the problem as a
+defined geometric object for construction of an
+interface. The parameter &lt;ss_id&gt; identifies this sideset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>USER</strong> {user-defined float list}</p></td>
+<td><p>This card indicates the user has defined an object
+function using the supplied parameter float list that
+returns a signed distance value when supplied with the
+coordinates of a point in space. This object function
+should appear in the function call <em>user_init_object</em> in the
+file <strong>user_pre.c.</strong></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SM_object</strong> {object_type} {object_name}</p></td>
+<td><p>This card allows the user to initialize the level set
+location by using a piece of solid model geometry. The
+solid model object_type can be either <strong>FACE</strong> or <strong>BODY.</strong>
+A 2D initialization uses the boundary of the specified
+FACE (or surface) as the 0 level set. A 3D initialization
+uses the boundary of the specified BODY (or volume)
+as the 0 level set.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id37">
+<h3>Examples<a class="headerlink" href="#id37" title="Permalink to this headline"></a></h3>
+<p>Two examples of initialization methods are provide below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Nodeset</span> <span class="mi">20</span> <span class="n">EB</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Surfaces</span> <span class="mi">3</span>
+    <span class="n">SURF</span> <span class="o">=</span> <span class="n">PLANE</span> <span class="o">-</span><span class="mf">1.</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="o">-</span><span class="mf">3.</span>
+        <span class="n">SURF</span> <span class="o">=</span> <span class="n">CIRCLE</span> <span class="o">-</span><span class="mi">2</span> <span class="mi">0</span> <span class="mi">1</span>
+        <span class="n">SURF</span> <span class="o">=</span> <span class="n">CIRCLE</span> <span class="o">-</span><span class="mi">3</span> <span class="mi">0</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">SM_object</span> <span class="n">BODY</span> <span class="n">my_blob</span>
+</pre></div>
+</div>
+</section>
+<section id="id38">
+<h3>Technical Discussion<a class="headerlink" href="#id38" title="Permalink to this headline"></a></h3>
+<p>The <strong>Projection</strong> initialization method was developed early in the level set
+development process. It has since been superseded by other more easily used
+methods. It is still supported primarily for the use of developers. Users wanting a
+complicated interface shape for which they can supply an appropriate distance
+function should user the USER surface object option under the Surfaces
+initialization method.</p>
+<p>The <strong>Exodus</strong> method deserves little comment. It should be used when restarting
+level set computations from a preexisting solution.</p>
+<p>The <strong>Nodeset</strong> method allows the user to make use of the sophisticated solid body
+manipulation software in meshing packages like CUBIT. The procedure for using
+this method is to create a domain which contains two element blocks. The desired
+starting point for the interface should lie on the curve or surface which these two
+blocks have in common. A single nodeset should be defined over this entire curve
+or surface. The nodeset identification number should be the first integer parameter
+specified on the card. Also note that one of the blocks must be designated as the
+“positive” block. This means then when initialized the values of the level set
+function in this block will be positive. The values in the other block will be
+negative. Note that this initialization method can only by used for problems that
+have exactly two blocks, no more.</p>
+<p>The <strong>Surfaces</strong> initialization method is the most useful method for initialization. It
+draws from the fact that it is relatively easy to determine the distance to simple
+geometric objects (planes, circles, spheres, etc.). Further, it permits initialization
+using more than one of these objects so that relatively complicated initial interface
+locations can be constructed. However, the user should recognize that this method
+is still somewhat unsophisticated in its approach so there are some caveats
+associated with its use. The primary point is that surface objects should never
+intersect anywhere within the domain of interest, otherwise it is more than likely
+that the starting interface shape will not be what the user expects.</p>
+<p>The <strong>SM_object</strong> initialization method allows the user to use solid model geometry
+to initialize 2D and 3D level sets. Certain 2D geometries can be created using only
+Goma input commands (see <em>FACE</em>). Other 2D geometries, and all 3D geometries,
+can be accessed via an ACIS .sat file. The usual way to do this is for the user to
+create their desired geometry within Cubit (or, import solid model geometry from
+elsewhere into Cubit). Faces (or surfaces) should be created for 2D initialization,
+and bodies (or volumes) should be created for 3D initialization. The <em>boundary</em> of
+the object is used to initialize the level set. The geometry should be named within
+Cubit and exported to an ACIS .sat file via Cubit’s export acis
+“filename” ascii command. This same file should be read in via the <em>ACIS
+file</em> command in the Geometry Specifications section. The solid model geometry is
+then available for the <em>Level Set Initialization Method</em> command. (Note that the
+Geometry Specifications section usually comes after the <em>Level Set Initialization
+Method</em> command; this is OK).</p>
+</section>
+<section id="id39">
+<h3><strong>References</strong><a class="headerlink" href="#id39" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-periodic-planes">
+<h2>Level Set Periodic Planes<a class="headerlink" href="#level-set-periodic-planes" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Periodic</span> <span class="n">Planes</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float3</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float4</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float5</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float6</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id40">
+<h3>Description / Usage<a class="headerlink" href="#id40" title="Permalink to this headline"></a></h3>
+<p>This card directs the level-set renormalization to accommodate peroidic boundary
+conditions (see Advanced Capabilities Manual AC_Periodic capability). The periodic
+boundary conditions on the level set field are not compatible with renormalization
+unless this capability is specified.</p>
+<dl class="simple">
+<dt>&lt;float1&gt;</dt><dd><p>x-coordinate value of first periodic boundary.</p>
+</dd>
+<dt>&lt;float2&gt;</dt><dd><p>x-coordinate value of second periodic boundary. If equivalent to float1
+than this direction is not periodic.</p>
+</dd>
+<dt>&lt;float3&gt;</dt><dd><p>y-coordinate value of first periodic boundary.</p>
+</dd>
+<dt>&lt;float4&gt;</dt><dd><p>y-coordinate value of second periodic boundary. If equivalent to float3
+than this direction is not periodic.</p>
+</dd>
+<dt>&lt;float5&gt;</dt><dd><p>y-coordinate value of first periodic boundary.</p>
+</dd>
+<dt>&lt;float6&gt;</dt><dd><p>y-coordinate value of second periodic boundary. If equivalent to float5
+than this direction is not periodic.</p>
+</dd>
+</dl>
+</section>
+<section id="id41">
+<h3>Examples<a class="headerlink" href="#id41" title="Permalink to this headline"></a></h3>
+<p>Two examples of initialization methods are provide below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Periodic</span> <span class="n">Boundary</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>This card instructs renormalization to accommodate the x-directed-boundaries to be
+considered as periodic relative to the level-set field.</p>
+</section>
+<section id="id42">
+<h3><strong>References</strong><a class="headerlink" href="#id42" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-control-width">
+<h2>Level Set Control Width<a class="headerlink" href="#level-set-control-width" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Control</span> <span class="n">Width</span> <span class="o">=</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id43">
+<h3>Description / Usage<a class="headerlink" href="#id43" title="Permalink to this headline"></a></h3>
+<p>This card is a multiplier on the <em>Level Set Length Scale</em> to determine the size of the
+region around the zero level set contour over which the level set gradient is averaged.
+The value of this parameter defaults to 1.0 if this card is not included.</p>
+</section>
+<section id="id44">
+<h3>Examples<a class="headerlink" href="#id44" title="Permalink to this headline"></a></h3>
+<p>This sample card sets the control width to be equivalent to the length scale:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Control</span> <span class="n">Width</span> <span class="o">=</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+</section>
+<section id="id45">
+<h3>Technical Discussion<a class="headerlink" href="#id45" title="Permalink to this headline"></a></h3>
+<p>As noted in the description of the <em>Level Set Renormalization Tolerance</em> card,
+renormalization is triggered when the average of the level set gradient magnitude has
+departed sufficiently from unity. The region over which this average is obtained is
+approximately a narrow fixed-width strip on either side of the zero level set contour.
+The width of this strip is twice the <em>Level Set Length Scale</em> multiplied by the float value
+supplied on this card.</p>
+</section>
+<section id="id46">
+<h3>FAQs<a class="headerlink" href="#id46" title="Permalink to this headline"></a></h3>
+<p>Usually it is best practice to leave this parameter at its default setting and control the
+frequency of renormalization with the renormalization tolerance.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-timestep-control">
+<h2>Level Set Timestep Control<a class="headerlink" href="#level-set-timestep-control" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Timestep</span> <span class="n">Control</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">YES</span> <span class="o">|</span> <span class="n">NO</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id47">
+<h3>Description / Usage<a class="headerlink" href="#id47" title="Permalink to this headline"></a></h3>
+<p>On this card, the user specifies a single char_string.</p>
+<dl class="simple">
+<dt>&lt;YES | ON&gt;</dt><dd><p>This string turns on level set timestep control if it is “yes” or “on”.</p>
+</dd>
+</dl>
+</section>
+<section id="id48">
+<h3>Examples<a class="headerlink" href="#id48" title="Permalink to this headline"></a></h3>
+<p>A typical length scale input card looks like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Timestep</span> <span class="n">Control</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id49">
+<h3>Technical Discussion<a class="headerlink" href="#id49" title="Permalink to this headline"></a></h3>
+<p>In normal operations, the error norm of the level set function is not included in
+controlling the size of the time step decided upon by the variable timestep size
+integrator. Inclusion of this card will add the level set unknown to the list of update
+error norms used to decide the time step size. In other words, use this card when you
+want the changes of the level set function to affect the timestep size. If this card is not
+used, the default behavior is to ignore the level set degrees of freedom in controlling
+the timestep size.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-renormalization-tolerance">
+<h2>Level Set Renormalization Tolerance<a class="headerlink" href="#level-set-renormalization-tolerance" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="n">Tolerance</span> <span class="o">=</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id50">
+<h3>Description / Usage<a class="headerlink" href="#id50" title="Permalink to this headline"></a></h3>
+<p>This parameter provides a means for controlling how often renormalization
+(redistancing) operations are performed on the level set function as it evolves by fixing
+the size of the deviation allowed between the average absolute magnitude of the level
+set function gradient near the level set interface and unity, the theoretical value
+observed for a pure distance function.</p>
+<dl class="simple">
+<dt>&lt;float&gt;</dt><dd><p>Value of the tolerance, the allowable deviation.</p>
+</dd>
+</dl>
+<p>The range of this parameter is any positive real number, however, it is rare to use values
+smaller than 0.1 or larger than 5.0. The value of the tolerance defaults to 0.5 if this card
+is not specified.</p>
+</section>
+<section id="id51">
+<h3>Examples<a class="headerlink" href="#id51" title="Permalink to this headline"></a></h3>
+<p>This is a sample renormalization card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="n">Tolerance</span> <span class="o">=</span> <span class="mf">0.05</span>
+</pre></div>
+</div>
+</section>
+<section id="id52">
+<h3>Technical Discussion<a class="headerlink" href="#id52" title="Permalink to this headline"></a></h3>
+<p>One of the key properties of the level set function is that it is a smooth function near to
+the interface. In particular, if the level set function is a distance function then the
+magnitude of its gradient on the zero level contour should always be unity. This fact is
+used to provide a criterion for invoking a renormalization procedure. The gradient of
+the level set function is found within a fixed region around the zero level set contour
+(see <em>Level Set Control Width</em>). The integrated average of the magnitude of this vector is
+determined and compare to unity. Should this difference differ by greater than the value
+for Renormalization Tolerance identified on this card, a renormalization procedure will
+presently be initiated.</p>
+</section>
+<section id="id53">
+<h3>FAQs<a class="headerlink" href="#id53" title="Permalink to this headline"></a></h3>
+<p>What is a proper value for this parameter? Values on the order of unity should work
+well. Renormalization based on gradient can be disabled completely by choosing a very large value for this parameter. Conversely, a very small value will always result in
+a renormalization step.</p>
+<p>Is it possible to renormalize too often? Yes. Renormalization is an extraphysical
+procedure designed solely to improve the numerical performance of the interface
+tracker. As such, it can add or subtract volume to or from the phases represented by the
+interface contour. Renormalizing too often, therefore, can result in errors being
+introduced. The renormalization procedure, Huygens_Constrained, attempts to
+mitigate this effect.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-renormalization-method">
+<h2>Level Set Renormalization Method<a class="headerlink" href="#level-set-renormalization-method" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="n">Method</span> <span class="o">=</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id54">
+<h3>Description / Usage<a class="headerlink" href="#id54" title="Permalink to this headline"></a></h3>
+<p>This card indicates the method to be used to renormalize the level set function during
+the course of the computation. The syntax of this card is as follows:</p>
+<dl class="simple">
+<dt>{char_string}</dt><dd><p>A character string which specifies the type of method for renormalization.
+Choices for this string are: <strong>Huygens, Huygens_Constrained, Correction.</strong></p>
+</dd>
+</dl>
+<p>Each method is described below; see also the Technical Discussion.</p>
+<dl>
+<dt>Huygens</dt><dd><p>In this method a set of m points P is constructed:</p>
+<blockquote>
+<div><p><span class="math notranslate nohighlight">\(\mathbf{P} = \left\{ \left( x_i, y_i, z_i \right), \,
+i = 1,2, \ldots m | \quad \phi_j \left( x_i, y_i, z_i \right)
+= 0 \right\}\)</span></p>
+</div></blockquote>
+<p>which in a sense represent a discretization of the
+interface location. The finite element interpolation
+functions are used to find exact locations for these
+points. For each mesh node <span class="math notranslate nohighlight">\(j\)</span>, a minimum distance
+<span class="math notranslate nohighlight">\(D_j\)</span>, can be found to this set of points.
+Renormalization is accomplished by replacing the
+level set value at this node <span class="math notranslate nohighlight">\(\phi_j\)</span>
+with <span class="math notranslate nohighlight">\(D_j\)</span> multiplied by
+the sign of the previous value for the level set
+function. This method is fast and robust and
+reasonably accurate given sufficiently refined
+meshes using high order level set interpolation.
+However, this method is prone to losing material if
+low order level set interpolation is employed.</p>
+</dd>
+<dt>Huygens_Constrained</dt><dd><p>This method renormalizes the function in much the same way as the
+<strong>Huygens</strong> method, except it employs a Lagrange multiplier to enforce
+a global integrated constraint that requires the volume occupied by the
+“negative” phase to remain unchanged before and after renormalization. This
+requirement makes this method better at conserving mass. However, since it
+enforces a global constraint, it is possible that material might be moved
+nonphysically around the computational domain.</p>
+</dd>
+</dl>
+</section>
+<section id="id55">
+<h3>Examples<a class="headerlink" href="#id55" title="Permalink to this headline"></a></h3>
+<p>This is a sample renormalization method input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Huygens_Constrained</span>
+</pre></div>
+</div>
+</section>
+<section id="id56">
+<h3>Technical Discussion<a class="headerlink" href="#id56" title="Permalink to this headline"></a></h3>
+<p>Renormalization is an operation particular to level set embedded interface tracking.
+The level set function <span class="math notranslate nohighlight">\(\phi\)</span> is usually specified in terms of a signed distance to the
+interface. This type of function has very nice properties in terms of smoothness and a
+unitary gradient magnitude in the vicinity of the interface. All of which are beneficial
+in accurately integrating the function and applying interfacial physics such as surface
+tension. The difficulty appears because of the velocity field <span class="math notranslate nohighlight">\(\underline{u}\)</span> used to evolve the level
+set function via the relation:</p>
+<div class="math notranslate nohighlight">
+\[\frac{\partial \phi}{\partial t} + \underline{u} \cdot \nabla \phi = 0\]</div>
+<p>There is nothing that requires that this velocity preserve the level set function as a
+distance function during its evolution. As a result, large gradients in the level set
+function might appear that would degrade the accuracy of both its time evolution and
+the accuracy of the interfacial terms related to the level set function. To remedy this
+problem, periodically the level set function must be reconstructed as a distance
+function; this process is referred to as renormalization. The criteria for determining
+when renormalization should occur is discussed under <em>Level Set Renormalization
+Tolerance.</em></p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-renormalization-frequency">
+<h2>Level Set Renormalization Frequency<a class="headerlink" href="#level-set-renormalization-frequency" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="n">Frequency</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id57">
+<h3>Description / Usage<a class="headerlink" href="#id57" title="Permalink to this headline"></a></h3>
+<p>This card sets an upper limit to the number of time steps which are allowed to pass
+between renormalization procedures. Possible values for &lt;integer&gt; are listed below:</p>
+<p>&lt;integer&gt;</p>
+<blockquote>
+<div><table class="docutils align-default">
+<colgroup>
+<col style="width: 6%" />
+<col style="width: 94%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>-1</p></td>
+<td><p>never renormalize (default)</p></td>
+</tr>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>renormalize every step</p></td>
+</tr>
+<tr class="row-odd"><td><p><em>n</em></p></td>
+<td><p>a positive integer &gt;1, renormalize every n<sup>th</sup> time step</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</section>
+<section id="id58">
+<h3>Examples<a class="headerlink" href="#id58" title="Permalink to this headline"></a></h3>
+<p>This is a sample input:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="n">Frequency</span> <span class="o">=</span> <span class="mi">50</span>
+</pre></div>
+</div>
+</section>
+<section id="id59">
+<h3>Technical Discussion<a class="headerlink" href="#id59" title="Permalink to this headline"></a></h3>
+<p>Renormalization procedures are normally triggered by the average gradient exceeding
+one by a specified amount (<em>see Level Set Renormalization Tolerance</em>). However, at
+times it might be advantageous to trigger a renormalization independent of the size of
+the average level set gradient. For example, it might occur that in a very small region
+near the interface, the level set gradient is becoming large but elsewhere the gradient is
+still relatively small. Since the average gradient is used, this condition might not trigger
+renormalization. By setting an upper limit for the number of time steps that can pass
+before renormalization, situations such as this can be remedied.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="restart-time-integration-after-renormalization">
+<h2>Restart Time Integration After Renormalization<a class="headerlink" href="#restart-time-integration-after-renormalization" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Restart</span> <span class="n">Time</span> <span class="n">Integration</span> <span class="n">After</span> <span class="n">Renormalization</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id60">
+<h3>Description / Usage<a class="headerlink" href="#id60" title="Permalink to this headline"></a></h3>
+<p>This card is used to specify whether or not to restart time integration each time Goma
+renormalizes the level set function during the course of the computation. When time
+integration is restarted, the time step is reset to its initial size and held at this step size
+for the following 3 time steps. If this card is not present, the default is yes (time
+integration will be restarted after each renormalization). The syntax of this card is as
+follows:</p>
+<dl class="simple">
+<dt>{yes | no}</dt><dd><p>Indicates the specified choice. {yes | on | true}can all be used to specify
+restarting of time integration. {no | off | false} can all be used to
+specify no restart.</p>
+</dd>
+</dl>
+</section>
+<section id="id61">
+<h3>Examples<a class="headerlink" href="#id61" title="Permalink to this headline"></a></h3>
+<p>This is a sample renormalization method input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Restart</span> <span class="n">Time</span> <span class="n">Integration</span> <span class="n">After</span> <span class="n">Renormalization</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-reconstruction-method">
+<h2>Level Set Reconstruction Method<a class="headerlink" href="#level-set-reconstruction-method" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Reconstruction</span> <span class="n">Method</span> <span class="o">=</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id62">
+<h3>Description / Usage<a class="headerlink" href="#id62" title="Permalink to this headline"></a></h3>
+<p>This card indicates the method used to perform the Huygens renormalization of the
+level set function. This card applies only if <em>Level Set Renormalization Method</em> is set to
+<strong>Huygens</strong> or <strong>Huygens_Constrained.</strong> Permissible values of {char_string} are:</p>
+<dl class="simple">
+<dt>POINTS</dt><dd><p>A list of points on the interface is formed and the renormalized distance
+is computed as the distance to the nearest point in this list; this is the
+default method.</p>
+</dd>
+<dt>FACETS</dt><dd><p>A list of connected facets on the interface is formed and the renormalized
+distance is computed as the distance to the nearest point on the nearest
+facet in this list. Currently this option is not supported for
+3-dimensional calculations.</p>
+</dd>
+</dl>
+</section>
+<section id="id63">
+<h3>Examples<a class="headerlink" href="#id63" title="Permalink to this headline"></a></h3>
+<p>This is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Reconstruction</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">FACETS</span>
+</pre></div>
+</div>
+</section>
+<section id="id64">
+<h3>Technical Discussion<a class="headerlink" href="#id64" title="Permalink to this headline"></a></h3>
+<p>As described for the <em>Level Set Renormalization Method</em> card, Huygens based
+renormalization is performed by reconstructing the level set surface and computing the
+distance to the nearest point on this surface. Here, the method of reconstructing the
+level set surface is addressed. Either a set of points on the interface is formed or a
+connected set of facets is formed. The advantage to using connected facets is that the
+interface is better described between the points on the interface. However, the
+calculation of the faceted geometry is slightly more expensive computationally. Also,
+the current implementation is limited to 2-dimensional simulations.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-contact-extension">
+<h2>Level Set Contact Extension<a class="headerlink" href="#level-set-contact-extension" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Contact</span> <span class="n">Extension</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span><span class="o">|</span><span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id65">
+<h3>Description / Usage<a class="headerlink" href="#id65" title="Permalink to this headline"></a></h3>
+<p>This card specifies whether the level set surface is considered to extend into boundaries
+when performing renormalization of the level set distance function. This card applies
+only if <em>Level Set Renormalization Method</em> = <strong>Huygens_Constrained.</strong> Permissible
+values for this option are:</p>
+<dl class="simple">
+<dt>yes|on</dt><dd><p>The level set interface is considered to extend smoothly into the
+boundaries.</p>
+</dd>
+<dt>no|off</dt><dd><p>The level set interface ends at the boundaries; this is the default.</p>
+</dd>
+</dl>
+</section>
+<section id="id66">
+<h3>Examples<a class="headerlink" href="#id66" title="Permalink to this headline"></a></h3>
+<p>This is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Contact</span> <span class="n">Extension</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id67">
+<h3>Technical Discussion<a class="headerlink" href="#id67" title="Permalink to this headline"></a></h3>
+<p>When renormalizing the level set distance function, the behavior of the interface near
+boundaries is important. When the interface is considered to end at the boundary, a
+large number of grid points may be closest to this boundary point. This appears as a
+cusp in the interface and can make it difficult to achieve sharp contact angles because
+of the very large capillary force that results. One method to alleviate this is to extend
+the interface smoothly into the boundaries to eliminate the cusp in the interface. The
+current algorithm, however, can cause errors when employed near corners of the domain. Until this is resolved, this option can only be recommended for domains
+without interior corners.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="level-set-slave-surface">
+<h2>Level Set Slave Surface<a class="headerlink" href="#level-set-slave-surface" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Slave</span> <span class="n">Surface</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span><span class="o">|</span><span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id68">
+<h3>Description / Usage<a class="headerlink" href="#id68" title="Permalink to this headline"></a></h3>
+<p>This card specifies whether the level set distance function is constrained during the
+calculation or evolves with the typical advection equation. Permissible values for this
+option are:</p>
+<dl class="simple">
+<dt>yes|on</dt><dd><p>The surface is constrained to remain on the initial surfaces throughout the
+calculation (moving with these surfaces if they are moving).</p>
+</dd>
+<dt>no|off</dt><dd><p>The surface evolves normally according to the local velocity field; this is
+the default.</p>
+</dd>
+</dl>
+</section>
+<section id="id69">
+<h3>Examples<a class="headerlink" href="#id69" title="Permalink to this headline"></a></h3>
+<p>This is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Slave</span> <span class="n">Surface</span> <span class="o">=</span> <span class="n">on</span>
+</pre></div>
+</div>
+</section>
+<section id="id70">
+<h3>Technical Discussion<a class="headerlink" href="#id70" title="Permalink to this headline"></a></h3>
+<p>In a typical level set simulation, the surface is first initialized with the <em>Level Set
+Initialization Method</em> card, and then the surface evolves in time according to the local
+velocity field. Using this card, however, the surface is constrained to remain on the
+initial surfaces. If the initial surfaces are static, then the level set surface remains stationary. For moving interfaces such as those defined by an isosurface or a side set,
+the level set function is reinitialized at each Newton iteration to match the moving
+surface.</p>
+</section>
+<section id="id71">
+<h3>References<a class="headerlink" href="#id71" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="ignore-level-set-dependencies">
+<h2>Ignore Level Set Dependencies<a class="headerlink" href="#ignore-level-set-dependencies" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Ignore</span> <span class="n">Level</span> <span class="n">Set</span> <span class="n">Dependencies</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id72">
+<h3>Description / Usage<a class="headerlink" href="#id72" title="Permalink to this headline"></a></h3>
+<p>Including this card in your input deck with the string parameter set to “yes” instructs
+<em>Goma</em> to discard the sensitivities of all equations to the level set variable when
+constructing the Jacobian matrix. This may have benefits when it comes to stability
+and convergence; although, the effectiveness of this card is very much case by case.
+Note also that use of this card is consistent only with <strong>Fill Weight Function = Explicit.</strong>
+Any other choice will result in an error.</p>
+</section>
+<section id="id73">
+<h3>Examples<a class="headerlink" href="#id73" title="Permalink to this headline"></a></h3>
+<p>A sample input card is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Ignore</span> <span class="n">Level</span> <span class="n">Set</span> <span class="n">Dependencies</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="force-initial-level-set-renormalization">
+<h2>Force Initial Level Set Renormalization<a class="headerlink" href="#force-initial-level-set-renormalization" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Force</span> <span class="n">Initial</span> <span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char_string</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id74">
+<h3>Description / Usage<a class="headerlink" href="#id74" title="Permalink to this headline"></a></h3>
+<p>This card is used to invoke a renormalization step prior to the first time step of any
+transient computation.</p>
+<dl class="simple">
+<dt>&lt;char_string&gt;</dt><dd><p><code class="docutils literal notranslate"><span class="pre">YES|ON</span></code> (not case sensitive) will cause the renormalization procedure to
+occur on the first step. If this card is not included or some other string
+is used here a renormalization will automatically occur on the first time
+step.</p>
+</dd>
+</dl>
+</section>
+<section id="id75">
+<h3>Examples<a class="headerlink" href="#id75" title="Permalink to this headline"></a></h3>
+<p>A typical length scale input card looks like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Force</span> <span class="n">Initial</span> <span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id76">
+<h3>Technical Discussion<a class="headerlink" href="#id76" title="Permalink to this headline"></a></h3>
+<p>Restarts occur fairly frequently during level set computations. It has been discovered
+that the robustness of the subsequent computation can be improved by quite a bit if the
+level set field is renormalized at the start of the restart, regardless of the current average
+gradient norm error. This card is employed to invoke a renormalization at the start of
+any computation, that is, a renormalization procedure is conducted prior to the initial
+time step if this card is present in the input deck. It has become standard operating
+procedure that when a level set computation runs into computational difficulty the first
+step in recovery should be to restart with a forced initial renormalization using this
+card.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="time_integration.html" class="btn btn-neutral float-left" title="Time Integration Specifications" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="phase_field.html" class="btn btn-neutral float-right" title="Phase Field Specifications" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

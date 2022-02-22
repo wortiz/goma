@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vapor Pressure &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>Vapor Pressure</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/material_file/species_properties/vapor_pressure.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="vapor-pressure">
+<h1><strong>Vapor Pressure</strong><a class="headerlink" href="#vapor-pressure" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Vapor</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="p">{</span><span class="n">model_name</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">species</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">float_list</span><span class="p">}</span> <span class="p">[</span><span class="n">varies</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card is used to specify the model for the vapor pressure for each species;
+it has two main classes of use. The first class regards multiphase flow in porous media,
+which is activated when the media type is set to <strong>POROUS_UNSATURATED</strong> or
+<strong>TWO_PHASE</strong> (cf. the <em>Media Type</em> card). The second class of use of this data card is
+for specification of vapor pressure at the external boundary of a liquid domain, for
+which the bounding gas phase is modeled with a lumped parameter approach, or at an
+internal interface between a liquid and a gas. No curvature effects are included here.
+Eventually the models in this class will be supported in the porous-media cases.
+Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>{model_name}</p></td>
+<td><p>Name of the model for the vapor pressure, based on the class of use.</p>
+<p>For the first class of multiphase flows in porous media, {model_name} can be one of
+the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>KELVIN</strong> - for a volatile liquid</p></li>
+<li><p><strong>IDEAL_GAS</strong> - for a non-condensable gas</p></li>
+<li><p><strong>FLAT</strong> - for a volatile liquid</p></li>
+</ul>
+</div></blockquote>
+<p>For the second class regarding specification of vapor pressure at the external
+boundary of a liquid domain or the interface between a gas and a liquid, {model_name}
+can be one of the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>CONSTANT</strong> - for a constant vapor pressure model</p></li>
+<li><p><strong>ANTOINE</strong> - for temperature-dependent, nonideal gases</p></li>
+<li><p><strong>RIEDEL</strong> -for temperature-dependent, nonideal gases</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p>&lt;species&gt;</p></td>
+<td><p>An integer designating the species equation. Typically this value is zero if the
+problem is one of a single solvent in a partially saturated medium.</p></td>
+</tr>
+<tr class="row-odd"><td><p>{float_list}</p></td>
+<td><p>One or more floating point numbers (&lt;float1&gt; through &lt;floatn&gt;) whose values are
+determined by the selection for {model_name}.</p></td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/454_goma_physics.png"><img alt="../../_images/454_goma_physics.png" src="../../_images/454_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Vapor pressure model choices and their parameters are discussed below.</p>
+<p><em>Models in the first class…</em></p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 80%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>KELVIN</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The &lt;float_list&gt; for the <strong>KELVIN</strong> option specifies input values for seven parameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Equilibrium vapor pressure across a flat interface</p></li>
+<li><p>&lt;float2&gt; - Liquid density</p></li>
+<li><p>&lt;float3&gt; - Molecular weight of the liquid</p></li>
+<li><p>&lt;float4&gt; - Gas law constant</p></li>
+<li><p>&lt;float5&gt; - Operating temperature</p></li>
+<li><p>&lt;float6&gt; - Molecular weight of air or gas phase</p></li>
+<li><p>&lt;float7&gt; - Ambient pressure of that gas phase</p></li>
+</ul>
+</div></blockquote>
+<p>The <strong>KELVIN</strong> option is used to include the effect of vapor-pressure lowering that
+results in equilibrium over high curvature menisci, i.e., small pores. The equation form
+of this is</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>FLAT</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The <strong>FLAT</strong> option requires the same seven parameters as the <strong>KELVIN</strong> model but leaves
+off the exponential function, i.e., the vapor pressure is independent of the level of
+capillary pressure. The constants are still needed so that the gas-phase concentration can
+be calculated with the ideal gas law. See the <strong>KELVIN</strong> option above for definition of
+the &lt;float_list&gt; values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>IDEAL_GAS</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The &lt;float_list&gt; for this model has three values, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Molecular weight of the gas</p></li>
+<li><p>&lt;float2&gt; - Gas law constant</p></li>
+<li><p>&lt;float3&gt; - Operating temperature</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p><em>Models in the second class..</em></p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 80%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>CONSTANT</strong> &lt;species&gt;
+&lt;float1&gt;</p></td>
+<td><p>This model is used for a constant species source such as a homogeneous reaction term. The
+&lt;float_list&gt; has a single value:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - Vapor pressure</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ANTOINE</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The <strong>ANTOINE</strong> model for vapor pressure is used in conjunction with the <em>VL_EQUIL</em>
+boundary condition. If specified, a temperature-dependent vapor pressure for species i is
+calculated.</p>
+<p>The model requires six values in the &lt;float_list&gt;, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - A, the unit conversion factor for pressure based on the units in the
+material file</p></li>
+<li><p>&lt;float2&gt; - Bi, Antoine coefficient for species i</p></li>
+<li><p>&lt;float3&gt; - Ci, Antoine coefficient for species i</p></li>
+<li><p>&lt;float4&gt; - Di, Antoine coefficient for species i</p></li>
+<li><p>&lt;float5&gt; - Tmin, Minimum temperature of the range over which the Antoine relation will
+hold</p></li>
+<li><p>&lt;float6&gt; - Tmax, Maximum temperature of the range over which the Antoine relation will
+hold</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>RIEDEL</strong> &lt;species&gt;
+&lt;float_list&gt;</p></td>
+<td><p>The <strong>RIEDEL</strong> model for vapor pressure is used in conjunction with the <em>VL_EQUIL</em>
+boundary condition card. If specified, a temperature-dependent vapor pressure for species
+i is calculated.</p>
+<p>The model requires eight values in the &lt;float_list&gt;, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&lt;float1&gt; - A, the unit conversion factor for pressure based on the units in the
+material file</p></li>
+<li><p>&lt;float2&gt; - Bi, Riedel constant for species i</p></li>
+<li><p>&lt;float3&gt; - Ci, Riedel constant for species i</p></li>
+<li><p>&lt;float4&gt; - Di, Riedel constant for species i</p></li>
+<li><p>&lt;float5&gt; - Ei, Riedel constant for species i</p></li>
+<li><p>&lt;float6&gt; - Fi, Riedel constant for species i</p></li>
+<li><p>&lt;float7&gt; - Tmin, Minimum temperature of the range over which the relation will hold</p></li>
+<li><p>&lt;float8&gt; - Tmax, Maximum temperature of the range over which the relation will hold</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/455_goma_physics.png"><img alt="../../_images/455_goma_physics.png" src="../../_images/455_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/456_goma_physics.png"><img alt="../../_images/456_goma_physics.png" src="../../_images/456_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>An example use of the Antoine model for vapor pressure follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Vapor</span> <span class="n">Pressure</span> <span class="o">=</span> <span class="n">ANTOINE</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mf">9.380340229</span> <span class="mf">3096.516433</span> <span class="o">-</span><span class="mf">53.668</span> <span class="mf">0.1</span> <span class="mi">1000</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>No Discussion.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>No References.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

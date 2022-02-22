@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase Field Specifications &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Continuation Specifications" href="continuation.html" />
+    <link rel="prev" title="Level Set Specifications" href="level_set.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="file_specifications.html">File Specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="general_specifications.html">General Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="level_set.html">Level Set Specifications</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Phase Field Specifications</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#number-of-phase-functions"><strong>Number of Phase Functions</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#phase-function-slave-surface"><strong>Phase Function Slave Surface</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#phase-function-initialization-method"><strong>Phase Function Initialization Method</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id4"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#phase-function-renormalization-tolerance"><strong>Phase Function Renormalization Tolerance</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id9"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#faqs"><strong>FAQs</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#phase-function-renormalization-method"><strong>Phase Function Renormalization Method</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id11"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id13"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description.html">Problem Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing.html">Post Processing Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_particle.html">Post Processing Particle Traces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_volume.html">Volumetric Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../problem_description_file.html">Problem Description (Input File)</a> &raquo;</li>
+      <li>Phase Field Specifications</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/problem_description_file/phase_field.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="phase-field-specifications">
+<h1>Phase Field Specifications<a class="headerlink" href="#phase-field-specifications" title="Permalink to this headline"></a></h1>
+<section id="number-of-phase-functions">
+<h2><strong>Number of Phase Functions</strong><a class="headerlink" href="#number-of-phase-functions" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Number</span> <span class="n">of</span> <span class="n">phase</span> <span class="n">functions</span> <span class="o">=</span> <span class="p">{</span><span class="n">integer</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>Activates generalized phase function capability. Currently, the number of phase
+functions cannot exceed five. Phase function fields are essentially identical to level set
+fields, but more than one can be activated for various purposes. Please see technical
+discussion below.</p>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>A sample input card is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Number</span> <span class="n">of</span> <span class="n">phase</span> <span class="n">functions</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>Various uses of the phase function approach have been explored. To track multiple
+interface types from multiple fluids requires more than one level-set field. This
+capability can also be deployed for tracking imprinted solid surfaces (moving) together
+with capillary free surfaces. Consult the tutorials.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>GT-026.3 GOMA’s Overset Mesh Method: User Tutorial, November 19 2003. P. R.
+Schunk and E. D. Wilkes</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="phase-function-slave-surface">
+<h2><strong>Phase Function Slave Surface</strong><a class="headerlink" href="#phase-function-slave-surface" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Slave</span> <span class="n">Surface</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char_string</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>This card is used to designate that the phase function degree of freedom is being slaved
+to a boundary. This card is used primarily in the overset grid algorithm in which a
+phase function field is slaved to the surface of the embedded body.</p>
+<dl class="simple">
+<dt>&lt;char_string&gt;</dt><dd><p>YES|ON (not case sensitive) will allow the phase function field to be
+slaved to a surface. Currently, no support is given to more than one slaved
+function fields or to problems in which there are slaved and unslaved
+(free?) phase function fields.</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>A typical length scale input card looks like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Slave</span> <span class="n">Surface</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>One of the nice properties of level set/phase function fields is that they can be used to
+find distances from surfaces. This function can be used quite apart from their abilities
+to track interfaces. Including this card informs Goma that the phase function 1 field is
+going to be used in this capacity and that no PDE is going to be solved to evolve it.
+Instead, the values of this field will be “slaved” to a specific surface in the problem and
+their values will be determined in reference to this surface in a process very reminicent
+of renormalization.</p>
+<p>The overset grid method makes use of a slaved phase function field. In that case, the
+phase function field is slaved to the surface of the embedded object. As the embedded
+object moves through the flow field, the slaved phase function values will be updated
+by determining the distance of a given node to the object’s surface. This slaved phase
+function field is then used in a variety of ways to compute the influence of the
+embedded object on the flow and stresses of the surrounding fluid.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="phase-function-initialization-method">
+<h2><strong>Phase Function Initialization Method</strong><a class="headerlink" href="#phase-function-initialization-method" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="p">{</span><span class="n">method_name</span><span class="p">}</span> <span class="p">{</span><span class="n">parameter</span> <span class="nb">list</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id4">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>This card specifies the means by which the phase functions are initialized. After the
+initial instance, subsequent instances of {model_name} {parameter_list} are used to
+describe initializations of phase fields 2 through 5. This card constructs from a
+representation of the starting interface shape, a value for the distance function at every
+node in the mesh. The syntax of the card is as follows:</p>
+<dl class="simple">
+<dt>{method_name}</dt><dd><p>A character string which identifies the initialization option desired.
+Choices for this string are: <strong>Projection, Exodus, Nodeset, Surfaces,
+SM_object.</strong></p>
+</dd>
+<dt>{parameter list}</dt><dd><p>This is a variable parameter list specific to each option. The nature of it
+for each method is detailed in the syntax descriptions below.</p>
+</dd>
+</dl>
+<p>Below are the exact syntax used for each initialization method, a brief description of
+the method and a specification of any additional required parameters.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 44%" />
+<col style="width: 56%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>Projection</strong></p></td>
+<td><p>This method computes the initial phase function
+field by
+calling a user-specified routine which returns the
+signed
+distance function for a given point. It has no
+parameter
+list after its name.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Exodus</strong></p></td>
+<td><p>Using this card indicates that the initial phase
+function
+field is to be read from the exodus file specified
+earlier
+(see <em>FEM file</em> and <em>Initial Guess</em> cards for **
+read_exoII**
+option). This card has no parameter list after its
+name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Nodeset</strong> &lt;integer1&gt; <strong>EB</strong> &lt;integer2&gt;</p></td>
+<td><p>This method establishes the initial location of the
+interface as the boundary between two element blocks.
+The value &lt;integer1&gt; is the nodeset identification
+number for an internal nodeset defined to exist at
+the
+interface between the two element blocks. The
+character
+string <strong>EB</strong> is required. The integer &lt;integer2&gt; is
+the
+element block id number to which positive values of
+phase function function is going to be assigned.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Surfaces</strong> &lt;integer&gt;</p></td>
+<td><p>This card establishes the initial phase function
+function
+by referring to a set of primitive geometric
+objects. It is
+the easiest to use and the most general. The integer
+value &lt;integer&gt; is the number of surface objects
+that are
+used to construct the initial interface. This number
+of
+<strong>SURF</strong> object cards must follow this card. This is
+the
+syntax of the <strong>SURF</strong> object card:</p>
+<p><strong>SURF</strong> = {object_name} {float list}</p>
+<p>{object_name}: a character string identifying the
+type of geometric object. Options are: <strong>PLANE,</strong>
+<strong>CIRCLE, SPHERE,</strong> SS, <strong>USER.</strong></p>
+<p>{float list}: geometric parameters associated with
+each object as float values.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The following is the syntax and description for each geometric
+object option, i.e., the “{object_name} {float list}” part of <strong>SURF</strong></p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 55%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>PLANE</strong> &lt;nx. &lt;ny&gt; &lt;nz&gt; &lt;d&gt;</p></td>
+<td><p>This card constructs a planar interface surface.The
+float
+values &lt;nx&gt;, &lt;ny&gt;, &lt;nz&gt; define a vector normal to
+this
+plane with the restriction that the sign of the
+vector must
+be such that it points from the negative side of the
+interface to the positive side of the interface.
+The
+float value &lt;d&gt; effectively represents the distance
+of the
+plane from the origin. Its value must be set,
+however, so
+that the dot product of any position vector to a
+point on
+the desired plane and the vector (nx,ny,nz) must be
+equal to &lt;d&gt; (it is a property of planes that this
+number
+is independent of the point on the plane that is
+chosen).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>CIRCLE</strong> &lt;cx&gt; &lt;cy&gt; &lt;radius&gt;</p></td>
+<td><p>This card constructs a circular interface surface
+in a
+two-dimensional domain. The float values &lt;cx&gt; &lt;cy&gt;
+identify the coordinates of the center of the
+circle. The
+float value &lt;radius&gt; establishes the radius of the
+curve.
+By definition, points interior to the circle are
+assigned
+negative phase function function values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>SPHERE</strong> &lt;cx&gt; &lt;cy&gt; &lt;cz&gt; &lt;radius&gt;</p></td>
+<td><p>This card constructs a spherical interface surface
+in a
+three-dimensional domain. The float values &lt;cx&gt; &lt;cy&gt;
+&lt;cz&gt; identify the coordinates of the center of the
+circle.
+The float value &lt;radius&gt; establishes the radius of
+the
+sphere. By definition, points interior to the
+sphere are
+assigned negative phase function function values.</p></td>
+</tr>
+<tr class="row-even"><td><p>SS {ss_id}</p></td>
+<td><p>This card uses an existing sideset in the problem
+as a
+defined geometric object for construction of an
+interface. The parameter &lt;ss_id&gt; identifies this
+sideset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>USER</strong> {user-defined float list}</p></td>
+<td><p>This card indicates the user has defined an object
+function using the supplied parameter float list
+that
+returns a signed distance value when supplied with
+the
+coordinates of a point in space. This object
+function
+should appear in the function call <em>user_init_object
+* in the file **user_pre.c.*</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SM_object</strong> {object_type} {object_name}</p></td>
+<td><p>This card allows the user to initialize the phase
+function
+location by using a piece of solid model geometry.
+The
+solid model object_type can be either <strong>FACE</strong> or **
+BODY.**
+A 2D initialization uses the boundary of the
+specified
+FACE (or surface) as the 0 phase function. A 3D
+initialization uses the boundary of the specified
+BODY (or volume) as the 0 phase function.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id5">
+<h3><strong>Examples</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>Three examples of initialization methods for a single phase function are provide below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Nodeset</span> <span class="mi">20</span> <span class="n">EB</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Surfaces</span> <span class="mi">3</span>
+        <span class="n">SURF</span> <span class="o">=</span> <span class="n">PLANE</span> <span class="o">-</span><span class="mf">1.</span> <span class="mf">0.</span> <span class="mf">0.</span> <span class="o">-</span><span class="mf">3.</span>
+        <span class="n">SURF</span> <span class="o">=</span> <span class="n">CIRCLE</span> <span class="o">-</span><span class="mi">2</span> <span class="mi">0</span> <span class="mi">1</span>
+        <span class="n">SURF</span> <span class="o">=</span> <span class="n">CIRCLE</span> <span class="o">-</span><span class="mi">3</span> <span class="mi">0</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Initialization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">SM_object</span> <span class="n">BODY</span> <span class="n">my_blob</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>Please consult Level Set Initialization Method card for discussion.</p>
+</section>
+<section id="id7">
+<h3><strong>References</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>GT-020.1: Tutorial on Level Set Interface Tracking in GOMA, February 27, 2001, T.A.
+Baer</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="phase-function-renormalization-tolerance">
+<h2><strong>Phase Function Renormalization Tolerance</strong><a class="headerlink" href="#phase-function-renormalization-tolerance" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Funtion</span> <span class="n">Renormalization</span> <span class="n">Tolerance</span> <span class="o">=</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id8">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>This parameter provides a means for controlling how often renormalization
+(redistancing) operations are performed on the phase function fields as they evolve by
+fixing the size of the deviation allowed between the average absolute magnitude of the phase function gradient near each respecitve interface and unity, the theoretical value
+observed for a pure distance function.</p>
+<dl class="simple">
+<dt>&lt;float&gt;</dt><dd><p>Value of the tolerance, the allowable deviation.</p>
+</dd>
+</dl>
+<p>The range of this parameter is any positive real number, however, it is rare to use values
+smaller than 0.1 or larger than 5.0. The value of the tolerance defaults to 0.5 if this card
+is not specified. Note that a global parameter value is applied to all phase function
+fields in the problem. Currently, there is no provision for each phase function field to
+have a unique value for this parameter.</p>
+<p>This parameter is exactly analogous to the similarly named parameter used in standard
+level set interface tracking.</p>
+</section>
+<section id="id9">
+<h3><strong>Examples</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>This is a sample renormalization card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Renormalization</span> <span class="n">Tolerance</span> <span class="o">=</span> <span class="mf">0.25</span>
+</pre></div>
+</div>
+</section>
+<section id="id10">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>The reader is referred to the Technical Discussion associated with Level Set
+Renormalization Tolerance card as it is virtually identical to the operation of it in the
+current context. The only thing to note is that each phase function is evaluted
+separately against this tolerance and each function is renormalized independently if the
+tolerance is exceeded. That is, exceeding the tolerance by one phase function field only
+triggers renormalization for that field. The other phase function fields are left
+unaltered.</p>
+</section>
+<section id="faqs">
+<h3><strong>FAQs</strong><a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h3>
+<p>What is a proper value for this parameter? Values on the order of unity should work
+well. Renormalization based on gradient can be disabled completely by choosing a
+very large value for this parameter. Conversely, a very small value will always result in
+a renormalization step.</p>
+<p>Is it possible to renormalize too often? Yes. Renormalization is an extraphysical
+procedure designed solely to improve the numerical performance of the interface
+tracker. As such, it can add or subtract volume to or from the phases represented by the
+interface contour. Renormalizing too often, therefore, can result in errors being introduced. The renormalization procedure, Huygens_Constrained, attempts to
+mitigate this effect.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="phase-function-renormalization-method">
+<h2><strong>Phase Function Renormalization Method</strong><a class="headerlink" href="#phase-function-renormalization-method" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Renormalization</span> <span class="n">Method</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char_string</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id11">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>This card indicates the method to be used to renormalize the phase function fields
+during the course of the computation.</p>
+<dl class="simple">
+<dt>{char_string}</dt><dd><p>A character string which specifies the type of method for renormalization.
+Choices for this string are: <strong>Huygens, Huygens_Constrained, Correction.</strong></p>
+</dd>
+</dl>
+<p>Each method is described below; see also the Technical Discussion.</p>
+<dl>
+<dt>Huygens</dt><dd><p>In this method a set of m points P is constructed:</p>
+<blockquote>
+<div><p><span class="math notranslate nohighlight">\(\mathbf{P} = \left\{ \left( x_i, y_i, z_i \right), \,
+i = 1,2, \ldots m | \quad \phi_j \left( x_i, y_i, z_i \right)
+= 0 \right\}\)</span></p>
+</div></blockquote>
+<p>which in a sense represent a discretization of the
+interface location. The finite element interpolation
+functions are used to find exact locations for these
+points. For each mesh node <span class="math notranslate nohighlight">\(j\)</span>, a minimum distance
+<span class="math notranslate nohighlight">\(D_j\)</span>, can be found to this set of points.
+Renormalization is accomplished by replacing the
+phase field value at this node <span class="math notranslate nohighlight">\(\phi_j\)</span>
+with <span class="math notranslate nohighlight">\(D_j\)</span> multiplied by
+the sign of the previous value for the phase field
+function. This method is fast and robust and
+reasonably accurate given sufficiently refined
+meshes using high order phase field interpolation.
+However, this method is prone to losing material if
+low order phase field interpolation is employed.</p>
+</dd>
+<dt>Huygens_Constrained</dt><dd><p>This method renormalizes the function in much the same way as the
+<strong>Huygens</strong> method, except it employs a Lagrange multiplier to enforce
+a global integrated constraint that requires the volume occupied by the
+“negative” phase to remain unchanged before and after renormalization. This
+requirement makes this method better at conserving mass. However, since it
+enforces a global constraint, it is possible that material might be moved
+nonphysically around the computational domain.</p>
+</dd>
+</dl>
+</section>
+<section id="id12">
+<h3><strong>Examples</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>This is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Phase</span> <span class="n">Function</span> <span class="n">Renormalization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Huygens_Constrained</span>
+</pre></div>
+</div>
+</section>
+<section id="id13">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>Renormalization is an operation particular to phase function (and level set) embedded
+interface tracking. The phase function fields are defined originally as distanes from a
+known curve or surface. This type of function offers benefits in terms of smoothness of
+representation and the easy with which interfacial physics can be included. However,
+typically we are evolving these functions using the commonplace advection operator:</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[\frac{D \phi_j}{D t} = 0\]</div>
+</div></blockquote>
+<p>which does not necessarily perpetuate the phase field as a distance function. Sharp
+gradients or flat regions in the function may therefore appear near the interface which
+have various detrimental effects on the accuracy of the solution. The solution that is
+most often used is to periodically construct the interfaces from the phase function field
+and renormalize the phase function fields, i.e. reevaluated them so that they return to
+being distance functions from the interface. In general, this is a satisfactory solution if
+the frequency of renormalization is not too great. To set the criteria for determining
+when to renormalize the phase functions see the <em>Phase Function Renormalization
+Tolerance</em> card.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="level_set.html" class="btn btn-neutral float-left" title="Level Set Specifications" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="continuation.html" class="btn btn-neutral float-right" title="Continuation Specifications" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

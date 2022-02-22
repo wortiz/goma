@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FIX &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>FIX</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/problem_description_file/boundary_conditions/any/fix.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fix">
+<h1>FIX<a class="headerlink" href="#fix" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">FIX</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p><strong>(DC/VARIED)</strong></p>
+<p>This boundary condition card is used to fix the value of a nodal variable along a node
+set to the value it receives from an initial guess file (viz. either from the neutral file
+specified by the <em>Initial Guess</em> card or an input EXODUS II file as also specified by the
+<em>read_exoII_file</em> option on the <em>Initial Guess</em> card). The boundary condition is applied as
+a Dirichlet condition (see technical discussion below).</p>
+<p>Definitions of the input parameters are as follows:</p>
+<dl class="simple">
+<dt>FIX</dt><dd><p>Name of the boundary condition (&lt;bc_name&gt;).</p>
+</dd>
+<dt>NS</dt><dd><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong> denotes
+node set in the EXODUS II database.</p>
+</dd>
+<dt>&lt;bc_id&gt;</dt><dd><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (node set in
+EXODUS II) in the problem domain.</p>
+</dd>
+<dt>{char_string}</dt><dd><p>Variable name that is to be fixed. This parameter can have
+the following permissible values:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY1</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY2</span> <span class="pre">VELOCITY3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MESH_DISPLACEMENT1</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MESH_DISPLACEMENT2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MESH_DISPLACEMENT3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SOLID_DISPLACEMENT1</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SOLID_DISPLACEMENT2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SOLID_DISPLACEMENT3</span> <span class="pre">MASS_FRACTION</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TEMPERATURE</span> <span class="pre">PRESSURE</span> <span class="pre">VOLTAGE</span> <span class="pre">FILL</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">POLYMER_STRESS11</span> <span class="pre">POLYMER_STRESS12</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">POLYMER_STRESS13</span> <span class="pre">POLYMER_STRESS22</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">POLYMER_STRESS23</span> <span class="pre">POLYMER_STRESS33</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT11</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT12</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT13</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT21</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT22</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT23</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT31</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT32</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VELOCITY_GRADIENT33</span> <span class="pre">POR_LIQ_PRES</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">POR_GAS_PRES</span> <span class="pre">POR_POROSITY</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">POR_POROSITY</span> <span class="pre">POR_TEMP</span> <span class="pre">POR_SATURATION</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">POR_LAST</span> <span class="pre">MAX_POROUS_NUM</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">POR_SINK_MASS</span> <span class="pre">VORT_DIR1</span> <span class="pre">VORT_DIR2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VORT_DIR3</span> <span class="pre">VORT_LAMBDA</span> <span class="pre">CURVATURE</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LAGR_MULT1</span> <span class="pre">LAGR_MULT2</span> <span class="pre">LAGR_MULT3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BOND_EVOLUTION</span> <span class="pre">SURF_CHARGE</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EXT_VELOCITY</span> <span class="pre">EFIELD1</span> <span class="pre">EFIELD2</span> <span class="pre">EFIELD3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ENORM</span> <span class="pre">NORMAL1</span> <span class="pre">NORMAL2</span> <span class="pre">NORMAL3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_CURVATURE</span> <span class="pre">SHELL_TENSION</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_X</span> <span class="pre">SHELL_Y</span> <span class="pre">SHELL_USER</span> <span class="pre">PHASE1</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PHASE2</span> <span class="pre">PHASE3</span> <span class="pre">PHASE4</span> <span class="pre">PHASE5</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_ANGLE1</span> <span class="pre">SHELL_ANGLE2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_SURF_DIV_V</span> <span class="pre">SHELL_SURF_CURV</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">N_DOT_CURL_V</span> <span class="pre">GRAD_S_V_DOT_N1</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GRAD_S_V_DOT_N2</span> <span class="pre">GRAD_S_V_DOT_N3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ACOUS_PREAL</span> <span class="pre">ACOUS_PIMAG</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_DIFF_FLUX</span> <span class="pre">SHELL_DIFF_CURVATURE</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_NORMAL1</span> <span class="pre">SHELL_NORMAL2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ACOUS_REYN_STRESS</span> <span class="pre">SHELL_BDYVELO</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_LUBP</span> <span class="pre">LUBP</span> <span class="pre">SHELL_FILMP</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_FILMH</span> <span class="pre">SHELL_PARTC</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_SAT_CLOSED</span> <span class="pre">SHELL_PRESS_OPEN</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_TEMPERATURE</span> <span class="pre">SHELL_DELTAH</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_LUB_CURV</span> <span class="pre">SHELL_SAT_GASN</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_SHEAR_TOP</span> <span class="pre">SHELL_SHEAR_BOT</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_CROSS_SHEAR</span> <span class="pre">MAX_STRAIN</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CUR_STRAIN</span> <span class="pre">LUBP_2</span> <span class="pre">SHELL_PRESS_OPEN2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHELL_LUB_CURV_2</span></code></p></li>
+</ul>
+</dd>
+<dt>&lt;integer1&gt;</dt><dd><p>Species number of concentration, or zero if variable is not
+concentration.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>The following is an example of using this card to set the mesh displacement
+components in a 2-D problem:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span>    <span class="n">FIX</span>    <span class="n">NS</span>    <span class="mi">4</span>    <span class="n">MESH_DISPLACEMENT1</span>    <span class="mi">0</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span>    <span class="n">FIX</span>    <span class="n">NS</span>    <span class="mi">4</span>    <span class="n">MESH_DISPLACEMENT2</span>    <span class="mi">0</span>
+</pre></div>
+</div>
+<p>In this example, several continuation steps were taken to deform part of an elastic block
+of material. The displacements on boundary node set 4 were then held constant while
+moving another boundary (because the current displacements were not known, FIX
+was a convenient tool).</p>
+</section>
+<section id="technical-discussion">
+<h2>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>This boundary condition capability is indispensable for moving-mesh problems when
+the dependent variable is the mesh displacement from a stress free state. If one were to
+try to use the DX/DY/DZ type Dirichlet condition to suddenly freeze a mesh along a
+node set after a parameter continuation or transient problem restart, then they would be
+faced with figuring out the displacement of each node and defining individual node sets
+for each node for boundary condition application. This capability is also beneficial
+when using previous simulation results to generate boundary conditions for more
+complex analysis. We have on occasion used this boundary condition for most of the
+variable types shown.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

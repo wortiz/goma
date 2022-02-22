@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Level Set Renormalization Method &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Level Set Renormalization Method</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/level_set/level_set_renormalization_method.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="level-set-renormalization-method">
+<h1>Level Set Renormalization Method<a class="headerlink" href="#level-set-renormalization-method" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="n">Method</span> <span class="o">=</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This card indicates the method to be used to renormalize the level set function during
+the course of the computation. The syntax of this card is as follows:</p>
+<dl class="simple">
+<dt>{char_string}</dt><dd><p>A character string which specifies the type of method for renormalization.
+Choices for this string are: <strong>Huygens, Huygens_Constrained, Correction.</strong></p>
+</dd>
+</dl>
+<p>Each method is described below; see also the Technical Discussion.</p>
+<dl>
+<dt>Huygens</dt><dd><p>In this method a set of m points P is constructed:</p>
+<blockquote>
+<div><p><span class="math notranslate nohighlight">\(\mathbf{P} = \left\{ \left( x_i, y_i, z_i \right), \,
+i = 1,2, \ldots m | \quad \phi_j \left( x_i, y_i, z_i \right)
+= 0 \right\}\)</span></p>
+</div></blockquote>
+<p>which in a sense represent a discretization of the
+interface location. The finite element interpolation
+functions are used to find exact locations for these
+points. For each mesh node <span class="math notranslate nohighlight">\(j\)</span>, a minimum distance
+<span class="math notranslate nohighlight">\(D_j\)</span>, can be found to this set of points.
+Renormalization is accomplished by replacing the
+level set value at this node <span class="math notranslate nohighlight">\(\phi_j\)</span>
+with <span class="math notranslate nohighlight">\(D_j\)</span> multiplied by
+the sign of the previous value for the level set
+function. This method is fast and robust and
+reasonably accurate given sufficiently refined
+meshes using high order level set interpolation.
+However, this method is prone to losing material if
+low order level set interpolation is employed.</p>
+</dd>
+<dt>Huygens_Constrained</dt><dd><p>This method renormalizes the function in much the same way as the
+<strong>Huygens</strong> method, except it employs a Lagrange multiplier to enforce
+a global integrated constraint that requires the volume occupied by the
+“negative” phase to remain unchanged before and after renormalization. This
+requirement makes this method better at conserving mass. However, since it
+enforces a global constraint, it is possible that material might be moved
+nonphysically around the computational domain.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>This is a sample renormalization method input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Level</span> <span class="n">Set</span> <span class="n">Renormalization</span> <span class="n">Method</span> <span class="o">=</span> <span class="n">Huygens_Constrained</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Renormalization is an operation particular to level set embedded interface tracking.
+The level set function <span class="math notranslate nohighlight">\(\phi\)</span> is usually specified in terms of a signed distance to the
+interface. This type of function has very nice properties in terms of smoothness and a
+unitary gradient magnitude in the vicinity of the interface. All of which are beneficial
+in accurately integrating the function and applying interfacial physics such as surface
+tension. The difficulty appears because of the velocity field <span class="math notranslate nohighlight">\(\underline{u}\)</span> used to evolve the level
+set function via the relation:</p>
+<div class="math notranslate nohighlight">
+\[\frac{\partial \phi}{\partial t} + \underline{u} \cdot \nabla \phi = 0\]</div>
+<p>There is nothing that requires that this velocity preserve the level set function as a
+distance function during its evolution. As a result, large gradients in the level set
+function might appear that would degrade the accuracy of both its time evolution and
+the accuracy of the interfacial terms related to the level set function. To remedy this
+problem, periodically the level set function must be reconstructed as a distance
+function; this process is referred to as renormalization. The criteria for determining
+when renormalization should occur is discussed under <em>Level Set Renormalization
+Tolerance.</em></p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

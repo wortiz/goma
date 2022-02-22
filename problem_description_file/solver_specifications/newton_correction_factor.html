@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Newton Correction Factor &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Newton Correction Factor</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/solver_specifications/newton_correction_factor.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="newton-correction-factor">
+<h1>Newton Correction Factor<a class="headerlink" href="#newton-correction-factor" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Newton</span> <span class="n">correction</span> <span class="n">factor</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This required card indicates the damping (or relaxation) factor for the Newton updates
+and offers customization of the relaxation choice based on the size of the nonlinear
+residual from the Newton iteration. Definitions of the &lt;float_list&gt; input parameters,
+from one (f<sub>1</sub>) to six (f<sub>2</sub>, … f<sub>6</sub>) floating point numbers (one required and five optional),
+are as follows:</p>
+<dl class="simple">
+<dt>&lt;float1&gt;</dt><dd><p>f<sub>1</sub>, damping factor for the Newton updates, where ( 0.0 &lt; f<sub>1</sub> ≤ 1.0 ). A value of 1.0 gives the usual Newton’s method,
+otherwise, only a portion of the Newton update is applied to the solution.
+Values near 0 (e.g., 0.1) may be used effectively to aid convergence for
+sensitive problems where the initial guess is not very close to the final
+solution for the first several Newton iterations. This parameter can also
+be controlled from the command line (see <strong>-r</strong> option, Command-line
+Arguments, Chapter 3).</p>
+</dd>
+<dt>[floatn]</dt><dd><p>These five floats [f<sub>2</sub>, … f<sub>6</sub>] are optional but give
+a way to more finely control the amount of relaxation applied to Newton
+updates. See the description below and the example for an explanation.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<p>A simple example is the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Newton</span> <span class="n">correction</span> <span class="n">factor</span> <span class="o">=</span> <span class="mf">0.1</span>
+</pre></div>
+</div>
+<p>This tells <em>Goma</em> to take the specified number of Newton iterations (from the <em>Number of
+Newton Iterations</em> card) at a fixed relaxation parameter of 0.1. This is a moderately
+large amount of relaxation, but of course “moderately large” is always problem
+dependent.</p>
+<p>A more interesting example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Newton</span> <span class="n">correction</span> <span class="n">factor</span> <span class="o">=</span> <span class="mf">0.8</span> <span class="mf">1.0e-6</span> <span class="mf">0.4</span> <span class="mf">1.0e-4</span> <span class="mf">0.1</span> <span class="mf">1.0e-3</span>
+</pre></div>
+</div>
+<p>causes the following relaxation scheme to be used according to the L<sub>∞</sub> norm of the
+nonlinear residual:</p>
+<ul class="simple">
+<li><p>If L<sub>∞</sub> &gt; 1.0e – 3, the relaxation factor is taken as 0.1.</p></li>
+<li><p>If 1.0e – 4 &lt; L<sub>∞</sub> ≤ 1.0e – 3, the relaxation factor is taken as 0.4.</p></li>
+<li><p>If 1.0e – 6 &lt; L<sub>∞</sub> ≤ 1.0e – 4, the relaxation factor is taken as 0.8.</p></li>
+<li><p>If L<sub>∞</sub> ≤ 1.0e – 6, the relaxation factor is taken as the usual Newton’s method
+relaxation of 1.0.</p></li>
+</ul>
+<p>The default relaxation level for small residuals is 1.0.</p>
+</section>
+<section id="technical-discussion">
+<h2>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>The relaxation factor is used to intentionally shorten the solution update vector
+computed by the Newton iteration. There are many factors that can cause the effective
+radius of convergence of Newton’s method to be quite small or malformed:</p>
+<ul class="simple">
+<li><p>the underlying nonlinear problem is stiff,</p></li>
+<li><p>the initial solution is poor,</p></li>
+<li><p>non-analytic constitutive models or boundary conditions,</p></li>
+<li><p>poor linear solver performance, etc.</p></li>
+</ul>
+<p>Under these kinds of circumstances, the update computed by Newton’s method may be
+too large and end up not improving the overall solution. In such cases it is
+recommended that one uses some relaxation (e.g., 0.9), and possibly a lot (e.g., 0.05).</p>
+<p>What one really wishes to do is to use shortened updates when far from convergence,
+and full updates as the solution converges. This is the capability that the optional five
+parameters makes available. While they don’t directly measure how far the solution is
+from convergence, it does use the residual as an indicator. The full set of six parameters
+allows the user to specify four different residual intervals with four different relaxation
+factors. The f<sub>1</sub>, f<sub>3</sub> and f<sub>5</sub> values are relaxation factors and must lie in 0.0 &lt; f<sub>i</sub> ≤ 1.0,
+while the f<sub>2</sub>, f<sub>4</sub>, and f<sub>6</sub> values are interval endpoints. The supplied interval endpoints
+must be in ascending order, 0 &lt; f<sub>2</sub> &lt; f<sub>4</sub> &lt; f<sub>6</sub>. Although no such restriction is put on the
+relaxation factors, they should generally satisfy 0 &lt; f<sub>5</sub> ≤ f<sub>3</sub> ≤ f<sub>1</sub> ≤ 1.0.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

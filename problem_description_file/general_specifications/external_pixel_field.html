@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>External Pixel Field &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li><strong>External Pixel Field</strong></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/general_specifications/external_pixel_field.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="external-pixel-field">
+<h1><strong>External Pixel Field</strong><a class="headerlink" href="#external-pixel-field" title="Permalink to this headline"></a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Pixel</span> <span class="n">Field</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char_string1</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">Q1</span><span class="o">|</span><span class="n">Q2</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h2><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h2>
+<p>This optional card format provides a mechanism for reading-in pixel fields which are
+converted (mapped, with a least squares algorithm) to finite element fields with the
+chosen interpolation. After GOMA execution these fields are output in exodusII
+format in a file map.exoII. Please see discussion below and Tutorial GT-038 for more
+details and important tips.</p>
+<dl class="simple">
+<dt>&lt;char_string1&gt;</dt><dd><p>Name of the nodal field to be read; it should correspond to a nodal
+variable name you wish to have in the output EXODUS II file. If you
+subsequently wish to read the field in again and use as an EXTERNAL_FIELD
+model on other material property card, the chosen name matters.</p>
+</dd>
+<dt>{Q1 | Q2}</dt><dd><p>The type of interpolation to be applied to the external pixel field
+variable field. Possible values are as follows:</p>
+<ul class="simple">
+<li><p>Q1  -  Linear</p></li>
+<li><p>Q2  -  Quadratic</p></li>
+</ul>
+</dd>
+<dt>&lt;file_name&gt;</dt><dd><p>Name of the text file name with the pixel points. The pixel field format in
+this file should be as follows:</p>
+<ul class="simple">
+<li><p># pixel points</p></li>
+<li><p>x_1, y_1, z_1 value</p></li>
+<li><p>x_2, y_2, z_2 value</p></li>
+<li><p>…</p></li>
+<li><p>x_N, y_n, z_n value</p></li>
+</ul>
+</dd>
+<dt>&lt;integer1&gt;</dt><dd><p>Material block ID to which the pixel field is mapped.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h2><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Pixel</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">HEIGHT</span> <span class="n">Q1</span> <span class="n">tread</span><span class="o">.</span><span class="n">txt</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h2><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h2>
+<p>Please consult the tutorial GT-038 before using this capability. Many user tips are
+given together with a more thorough explanation on the proper use This capability is
+extremely memory intensive, and excessive grid sizes and pixel densities can blow out
+the memory on your machine. As of 12/22/2012 (the end of the Mayan calendar)
+these fields are used typically to bring in pattern maps for scaling porous media and
+lubrication height properties.</p>
+<p>SAT, HEIGHT, PERM, CROSS_PERM, SH_SAT_CL_POROSITY, etc. These are
+specially designated external fields which are mapped to variations in these properties
+corresponding to thin porous media. Please see GT-038.</p>
+</section>
+<section id="references">
+<h2><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+<p>GT-038.0: Pixel-to-Mesh Tool Tutorial for GOMA. P R. Schunk, Memo to
+distribution, 10 November 2009.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

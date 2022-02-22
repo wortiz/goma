@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>General Specifications &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Time Integration Specifications" href="time_integration.html" />
+    <link rel="prev" title="File Specification" href="file_specifications.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="file_specifications.html">File Specification</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">General Specifications</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#output-level"><strong>Output Level</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#debug"><strong>Debug</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#number-of-jacobian-file-dumps"><strong>Number of Jacobian File Dumps</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id4"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#initial-guess"><strong>Initial Guess</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id7"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id9"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#initialize"><strong>Initialize</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id10"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id11"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#external-field"><strong>External Field</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id13"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id14"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id15"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#export-field"><strong>Export Field</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id16"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id17"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#external-pixel-field"><strong>External Pixel Field</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id18"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id19"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id20"><strong>Technical Discussion</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id21"><strong>References</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#pressure-datum"><strong>Pressure Datum</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id22"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id23"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id24"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#anneal-mesh-on-output"><strong>Anneal Mesh on Output</strong></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id25"><strong>Description / Usage</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id26"><strong>Examples</strong></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id27"><strong>Technical Discussion</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="level_set.html">Level Set Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phase_field.html">Phase Field Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description.html">Problem Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing.html">Post Processing Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_particle.html">Post Processing Particle Traces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_volume.html">Volumetric Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../problem_description_file.html">Problem Description (Input File)</a> &raquo;</li>
+      <li>General Specifications</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/problem_description_file/general_specifications.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="general-specifications">
+<h1>General Specifications<a class="headerlink" href="#general-specifications" title="Permalink to this headline"></a></h1>
+<p>This section of input records covers additional I/O requests and specifications, including parallel
+file I/O information, initial-guess directives (viz., whether a restart comes from a neutral file or
+another exoII file), individual field variable initialization, debugging options, developer
+diagnostic options, etc. This section and several of its input records are required, as indicated
+below.</p>
+<section id="output-level">
+<h2><strong>Output Level</strong><a class="headerlink" href="#output-level" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Output</span> <span class="n">Level</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This optional card specifies the level of diagnostic information output to the file
+stderr. The permissible values for &lt;integer&gt; are <strong>0</strong> through <strong>4</strong>, depending on the level
+of informational (debugging) output desired; higher values of the output level will
+produce more diagnostic information on the stdout and stderr output channels.
+The default output level is <strong>0</strong>. Specific output is summarized below.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Level</p></th>
+<th class="head"><p>Results Output</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>No diagnostic output (default).</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Identifies the degree of freedom, the solution variable, and
+node at which the maximum value of norm is present.</p></td>
+</tr>
+<tr class="row-even"><td><p>2,3,4</p></td>
+<td><p>Currently unused; available for developer output
+specification.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Output</span> <span class="n">Level</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>This specification allows the developer a means to output specific information that
+would be helpful in diagnosing problems in the software. Currently, the output options
+are limited.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="debug">
+<h2><strong>Debug</strong><a class="headerlink" href="#debug" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Debug</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>This optional card specifies the level of information output to files stdout and
+stderr. The permissible values for &lt;integer&gt; are <strong>-3</strong> through <strong>4</strong>, depending on the level
+of informational (debugging) output desired; higher values of the output level will
+produce more diagnostic information output on the stdout and stderr output
+channels. The default level is 0. Specific results produced for each level are
+summarized below. The user should exercise caution in using values other than the
+default for problems with large numbers of unknowns as the volume of information
+increases very quickly.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Level</p></th>
+<th class="head"><p>Results Output</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>No output (default).</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Logs activity as the code does problem setup, including setting
+addresses and sizes, boundary-condition (BC) conflictresolution
+information, and identification of the rotation
+conditions at every node with a boundary flag. Prints out surface
+boundary integral setup information. Lists matrix and solver
+information for each solution step.</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Prints same information as level 1, plus provides a summary of
+BC type information for each BC and logs the beginning and
+end of matrix fill operations.</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>Prints same information as level 2, but also prints a list of
+variables/unknowns at each node.</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>Prints same information as for level 3.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-1</p></td>
+<td><p>Logs activity as the code does problem setup and prints out
+surface boundary integral setup information as is done for mode
+1. Triggers a comparison of the analytical Jacobian and the
+numerical Jacobian in un-scaled form, which can be used to
+check the compatibility of the analytical residual equations and
+Jacobian. Prints results only if the analytical and numerical
+Jacobian are different. Does not solve any equations; terminates
+after Jacobian print out.</p></td>
+</tr>
+<tr class="row-even"><td><p>-2</p></td>
+<td><p>Same initial information as for level -1. Triggers a comparison
+of the analytical Jacobian and the numerical Jacobian scaled by
+the sum of each row of the analytical Jacobian (this helps
+suppress small errors in large Jacobian entries). Prints results
+only if the analytical and numerical Jacobian are different.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-3</p></td>
+<td><p>Similar to level -2 except each row is scaled by the diagonal
+value which is usually the largest. Prints results only if the
+analytical and numerical Jacobian are different.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Debug</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>For options -1, -2, -3, viz. numerical Jacobian checking, the user must take care when
+interpreting the cited differences in the numerical and analytical Jacobian. The comparison is made by perturbing each variable and comparing the numerical Jacobian
+computed between the perturbed and unperturbed states to the analytical Jacobians at
+the two states. A difference is deemed significant if the numerical Jacobian falls outside
+the band between the two analytical values with an additional allowance for roundoff
+error. It is the roundoff error in the residual that is the most difficult for the Jacobian
+checker to estimate. This is particularly true for problems with zero initial conditions
+since it is impossible to determine the scale of a velocity, for example, if all the values
+of velocity are zero. For this reason, it is often better to use a nonzero initial condition
+or a scaled problem (with values order unity) when using the Jacobian checker.</p>
+<p>Currently, there are two parameters output by the Jacobian checker that can help the
+user decide on the significance of the entry. The first is the relative change in the
+analytical residual. This quantity, labeled d<sub>aj</sub>, is the percentage of the acceptance band
+that comes from changes in the analytical Jacobian from the unperturbed to perturbed
+states. For a non-linear dependency, the difference between the analytical Jacobians
+will be significant and it is reasonable to expect that the numerical Jacobian should fall
+within the band. If the analytical Jacobian is nearly constant over the perturbation, the
+accuracy of the check becomes increasingly dependent on knowing the roundoff error
+in the residual. So, as d<sub>aj</sub> gets closer to unity, the user can have more confidence that
+the entry is significant.</p>
+<p>The second parameter is a confidence measure that is the deviation between the
+numerical jacobian and analytical values divided by the expected value of the deviation
+based on roundoff error. Since the roundoff error is only known approximately, this
+value, called <em>conf</em>, is only a qualitative measure of the confidence. A <em>conf</em> value of 100
+means that the deviation between the numerical jacobian and the analytical values is
+100 times larger than the expected deviation based on roundoff error.</p>
+<p>Here is a sample of output from a convective heat transfer problem, using the -2 option</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Eqdof</span><span class="o">=</span><span class="mi">92</span> <span class="n">T_0</span> <span class="n">n</span><span class="o">=</span><span class="mi">31</span> <span class="n">Vardof</span><span class="o">=</span><span class="mi">95</span> <span class="n">T_0</span> <span class="n">n</span><span class="o">=</span><span class="mi">32</span> <span class="n">x</span><span class="o">=</span><span class="mi">0</span>
+<span class="n">dx</span><span class="o">=</span><span class="mf">0.0001</span> <span class="n">aj</span><span class="o">=-</span><span class="mf">0.008188</span> <span class="n">nj</span><span class="o">=-</span><span class="mf">0.008126</span> <span class="n">aj_1</span><span class="o">=-</span><span class="mf">0.008188</span> <span class="n">d_aj</span><span class="o">=</span><span class="mi">0</span>
+<span class="n">conf</span><span class="o">=</span><span class="mf">1.889e+06</span>
+
+  <span class="o">&gt;&gt;&gt;</span> <span class="n">QCONV</span> <span class="n">on</span> <span class="n">SSID</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>This entry can be read as follows: The sensitivity of global equation number 92, which
+happens to be the T_0 energy equation at node 31, with respect to the temperature
+variable at node 32 (variable global degree of freedom number 95) has an analytical
+Jacobian of -0.008188 at the unperturbed state and a computed numerical Jacobian of
+0.008126. The analytical jacobian at the perturbed state is -0.008188. For this problem
+the change in the analytical Jacobian is zero between the unperturbed and perturbed
+states, so d<sub>aj</sub> is zero. But even though the difference is small between the analytical and
+numerical values, it is huge relative to the expected roundoff error, with the deviation
+being 1.889e+6 times the deviation attributable to roundoff error.</p>
+<p>For each node where a deviation is found, the side boundary conditions applied at the
+node are printed, as shown above. If one of these boundary conditions are applied to the
+equation that shows an error and have the same dependency that is showing the error,
+this boundary condition is flagged as shown for the QCONV boundary condition
+above.</p>
+<p>Before the user/developer concludes that there is a discrepancy in the analytical
+Jacobian, a few things should be tried:</p>
+<ul class="simple">
+<li><p>Giving the problem a nonzero initial guess, either by reading in a STEADY state
+solution, if one exists, or on transient problems using the “one” option on the
+Initial Guess card. Sometimes this will make many differences disappear.</p></li>
+<li><p>Checking whether the nodes cited in the difference outputs are boundary nodes.
+Specifically, if they are boundary nodes on which Dirichlet boundary conditions
+are specified, artificial errors can occur.</p></li>
+<li><p>Also, if you are in doubt that there are not reported errors, put one in by a 10
+percent perturbation to the residual. The Jacobian checker should hit on those
+errors and report them to you.</p></li>
+<li><p>Check the settings in <em>mm_numjac.h</em>.</p></li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
+<section id="number-of-jacobian-file-dumps">
+<h2><strong>Number of Jacobian File Dumps</strong><a class="headerlink" href="#number-of-jacobian-file-dumps" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Number</span> <span class="n">of</span> <span class="n">Jacobian</span> <span class="n">File</span> <span class="n">Dumps</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id4">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>This routine will dump a serial machine independent binary file out to disk containing
+the Jacobian. The file is meant to be used by the auxiliary program, <strong>checkGomaJac</strong>, to compare two versions of the Jacobian. Ancillary data meant to enhance the printouts in
+<strong>checkGomaJac</strong> are also output to the file. The card takes one mandatory integer
+variable.</p>
+<dl class="simple">
+<dt>&lt;integer&gt;</dt><dd><p>If the integer is a positive number, n, then <em>Goma</em> will dump the first
+n Jacobians created (for any reason) to the current directory. If the
+integer is a negative value, -n, then <em>Goma</em> will dump a single Jacobian,
+the n’th Jacobian created, to the current directory.</p>
+</dd>
+</dl>
+<p>The dumped files are named matrix.000, matrix.001, etc. Overwrites of files are
+allowed to occur. The files themselves are written out using the XDR protocol layer
+(easy, quick, and machine portable). The VBR format is used to write files out, even if
+the internal format used by <em>Goma</em> is MSR. Thus, VBR and MSR formatted Jacobians
+may be compared. Frontal Solver Jacobians are not compatible. The algorithm used is
+also compatible with parallel jobs using <em>Goma</em>. In other words, the Jacobian file
+dumped out for an 8 processor <em>Goma</em> run should be identical to the file dumped out by
+a single processor run.</p>
+<p>In order to use this feature, it is necessary to compile <em>Goma</em> with the MATRIX_DUMP
+flag defined.</p>
+<p>To compare two Jacobian files previously dumped out for compatibility, run
+<strong>checkGomaJac</strong> offline:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">checkGomaJac</span>   <span class="n">matrix1</span>   <span class="n">matrix2</span>
+</pre></div>
+</div>
+<p><strong>checkGomaJac</strong> will compare each entry in the row and column scaled matrices and
+print out in an annotated format the entries containing the largest differences.</p>
+</section>
+<section id="id5">
+<h3><strong>Examples</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Number</span> <span class="n">of</span> <span class="n">Jacobian</span> <span class="n">File</span> <span class="n">Dumps</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>This capability has proven itself to be very useful in tracking changes to the Jacobian
+due to differences in the machine architecture, number of processes, and due to changes
+in the source code over time. The comparison is done using the standard RTOL, ATOL
+logic found in ODE solvers. In other words, a weighting vector of the form,</p>
+<p><strong>EQUATION</strong></p>
+<p>is created for each Jacobian entry, J<sub>i</sub>. Then, a determination of the difference between
+J<sub>i`and J:sub:`i</sub> by the following formula:</p>
+<p><strong>EQUATION</strong></p>
+<p>w<sub>i</sub> is also used in the Jacobian column scalings, before the standard row sum scaling is
+applied.</p>
+<p>Internal Sandia users can find the auxiliary program, <strong>checkGomaJac</strong>, in the directory /
+<strong>home/goma/arch/linux/bin</strong> on the Linux compute server, and in other ‘arch’
+subdirectories for other platforms. External users should contact Goma support staff to
+obtain the tool.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="initial-guess">
+<h2><strong>Initial Guess</strong><a class="headerlink" href="#initial-guess" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">Guess</span> <span class="o">=</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span> <span class="p">[</span><span class="n">filename</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id7">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>This optional card directs the initialization of the entire unknown vector. Three options
+are provided to set the entire solution field to numerical values determined by
+{char_string}. Three additional options are available for reading initial values of the
+solution vector from data files. The permissible values of {char_string} are:</p>
+<dl class="simple">
+<dt>zero</dt><dd><p>For an initial guess of zero (0.) for each degree of freedom in the unknown
+vector.</p>
+</dd>
+<dt>one</dt><dd><p>For an initial guess of one (1.) for each degree of freedom in the unknown
+vector.</p>
+</dd>
+<dt>random</dt><dd><p>For a random initial guess (between 0. and 1.) for each degree of freedom
+in the unknown vector.</p>
+</dd>
+<dt>read</dt><dd><p>To obtain the initial guess by reading the ASCII data file identified as
+the <em>GUESS file</em>, which must have initially been a <em>SOLN</em> file or a tmp_i.d
+(<em>Write Intermediate Results</em>) file.</p>
+</dd>
+<dt>read_exoII</dt><dd><p>To obtain the initial guess from the EXODUS II file specified by the <em>FEM
+file</em> card that is also used to supply mesh data. Any extraneous variables
+in the EXODUS II file that are not in the list of active variables for the
+current problem description are simply ignored.</p>
+</dd>
+<dt>read_exoII_file <em>file name</em></dt><dd><p>To read the initial guess for the field variables from an EXODUS II
+database file different from the initial mesh database file. The
+<em>file_name</em> is specified as a single string following the read_exoII_file
+keyword. As with the read_exoII option, any extraneous variables not
+specified as active variables for the simulation will be simply ignored.</p>
+</dd>
+</dl>
+<p>If this card is omitted, then the default behavior is to assume that a value of zero has
+been specified for {char_string}.</p>
+</section>
+<section id="id8">
+<h3><strong>Examples</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">Guess</span> <span class="o">=</span> <span class="n">zero</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">Guess</span> <span class="o">=</span> <span class="n">read_exoII_file</span>      <span class="n">First_Iteration</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+</section>
+<section id="id9">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>This card provides the specification of the initial vector of unknowns in a problem. In
+most cases this vector is specified to be identically zero, though in some cases a nonzero
+vector may be of value (see <em>Technical Discussion</em> section of <em>Debug</em> card). The first
+three options (<strong>zero, one, random</strong>) employ an internally-generated vector of initial
+values, while the <strong>read</strong> option utilizes the values read from an ASCII solution file (see
+<em>SOLN</em> input card) previously calculated by <em>Goma</em>, and the <strong>read_exoII</strong> options employ
+solutions read from binary (exoII) files, not necessarily always generated by <em>Goma</em>.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="initialize">
+<h2><strong>Initialize</strong><a class="headerlink" href="#initialize" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initialize</span> <span class="o">=</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>       <span class="p">[</span><span class="n">units</span> <span class="n">vary</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id10">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>This optional card provides a mechanism to set one of the field variables to a constant
+value across the <em>whole</em> domain. Definitions of the input parameters are as follows:</p>
+<dl>
+<dt>{char_string}</dt><dd><p>Permissible values for this input string are any variable names identified
+in source file rf_fem_const.h beginning at the section labeled Variable
+Names of unknowns. Examples include, but are not limited to, the following
+(note the shorthand notation for components):</p>
+<p><code class="docutils literal notranslate"><span class="pre">VELOCITY1,</span> <span class="pre">VELOCITY2,</span> <span class="pre">VELOCITY3</span> <span class="pre">(V123),</span></code>
+<code class="docutils literal notranslate"><span class="pre">MESH_DISPLACEMENT</span> <span class="pre">(MD123),</span> <span class="pre">SOLID_DISPLACEMENT</span></code>
+<code class="docutils literal notranslate"><span class="pre">(SD123),</span> <span class="pre">MASS_FRACTION,</span> <span class="pre">TEMPERATURE,</span> <span class="pre">PRESSURE,</span></code>
+<code class="docutils literal notranslate"><span class="pre">VOLTAGE,</span> <span class="pre">FILL,</span> <span class="pre">LS,</span> <span class="pre">POLYMER_STRESS</span> <span class="pre">(6</span> <span class="pre">components,</span></code>
+<code class="docutils literal notranslate"><span class="pre">8</span> <span class="pre">modes),</span> <span class="pre">VELOCITY_GRADIENT</span> <span class="pre">(9</span> <span class="pre">components),</span></code>
+<code class="docutils literal notranslate"><span class="pre">SHEAR_RATE,</span> <span class="pre">VOLF_PHASE</span> <span class="pre">(6</span> <span class="pre">phases),</span> <span class="pre">POR_LIQ_PRES,</span></code>
+<code class="docutils literal notranslate"><span class="pre">POR_GAS_PRES,</span> <span class="pre">POR_POROSITY,</span> <span class="pre">POR_SATURATION,</span></code>
+<code class="docutils literal notranslate"><span class="pre">POR_LAST,</span> <span class="pre">LAGR_MULT</span> <span class="pre">(LM123),</span> <span class="pre">SURF_CHARGE,</span></code>
+<code class="docutils literal notranslate"><span class="pre">EXT_VELOCITY,</span> <span class="pre">EFIELD(123),</span> <span class="pre">SHELL</span> <span class="pre">(4</span> <span class="pre">variables),</span></code>
+<code class="docutils literal notranslate"><span class="pre">SPECIES</span> <span class="pre">(7</span> <span class="pre">variables).</span></code></p>
+<p><em>For a more comprehensive list, see Technical discussion below.</em></p>
+</dd>
+<dt>&lt;integer&gt;</dt><dd><p>Species number to be initialized if the value of {char_string} is one of
+the SPECIES variables (see Technical Discussion); otherwise, set &lt;integer&gt;
+to zero.</p>
+</dd>
+<dt>&lt;float&gt;</dt><dd><p>Value to which the variable should be initialized.</p>
+</dd>
+</dl>
+<p>Multiple applications of this card are valid; <em>Goma</em> automatically counts the number of
+<em>Initialize</em> cards.</p>
+</section>
+<section id="id11">
+<h3><strong>Examples</strong><a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initialize</span> <span class="o">=</span> <span class="n">VELOCITY1</span> <span class="mi">0</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id12">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>This card provides the means to globally set (i.e., the entire problem domain) initial
+values for any of the field variables. Since the setting of variables initialized on this
+card takes place after reading the initial guess (see function <em>init_vec</em> in file <em>rf_util.c</em>), it can be used to override the value in the <em>Initial Guess</em> file.</p>
+<p>In order to set a field to a specific value in a particular material only, a similar <em>Initialize</em>
+capability is provided within each material block. Please check in the Material Files
+section of this manual.</p>
+<p>Note, the SPECIES_UNK variables are <strong>NOT</strong> used to initialize any of the species
+variables. Rather, the special definition called <strong>MASS_FRACTION</strong>
+representing the various Species Types, is the variables used in Goma input or mat
+files for this input record. Multiple species are initialized by combining one of these
+variable types with the second parameter (&lt;integer&gt;) on this card.</p>
+<p>The comprehensive list of keyword variable names can be found in <em>mm_input_util.c</em>, if
+you have access to GOMA source code. Search for the function <em>variable_string_to_int</em>.
+A snapshot of the initialize-able variables in that routine is shown here:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">TEMPERATURE</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">MASS_FRACTION</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">MESH_DISPLACEMENT1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">MESH_DISPLACEMENT2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">MESH_DISPLACEMENT3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PRESSURE</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS11</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS12</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS13</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS22</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS23</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS33</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SOLID_DISPLACEMENT1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SOLID_DISPLACEMENT2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SOLID_DISPLACEMENT3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT11</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT12</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT13</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT21</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT22</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT23</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT31</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT32</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VELOCITY_GRADIENT33</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VOLTAGE</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">FILL</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHEAR_RATE</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PVELOCITY1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PVELOCITY2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PVELOCITY3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS11_1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS12_1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS22_1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS13_1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS23_1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS33_1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS11_2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS12_2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS22_2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS13_2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS23_2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS33_2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS11_3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS12_3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS22_3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS13_3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS23_3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS33_3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS11_4</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS12_4</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS22_4</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS13_4</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS23_4</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS33_4</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS11_5</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS12_5</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS22_5</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS13_5</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS23_5</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS33_5</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS11_6</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS12_6</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS22_6</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS13_6</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS23_6</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS33_6</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS11_7</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS12_7</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS22_7</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS13_7</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS23_7</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POLYMER_STRESS33_7</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SPECIES_MASS_FRACTION</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SPECIES_MOLE_FRACTION</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SPECIES_VOL_FRACTION</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SPECIES_DENSITY</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SPECIES_CONCENTRATION</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SPECIES_CAP_PRESSURE</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SPECIES_UNDEFINED_FORM</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POR_LIQ_PRES</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POR_GAS_PRES</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POR_POROSITY</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POR_TEMP</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POR_SATURATION</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VORT_DIR1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VORT_DIR2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VORT_DIR3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">CURVATURE</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">BOND_EVOLUTION</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SURF_CHARGE</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">EXT_VELOCITY</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">EFIELD1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">EFIELD2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">EFIELD3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">ENORM</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">NORMAL1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">NORMAL2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">NORMAL3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_CURVATURE</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_TENSION</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_X</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_Y</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_USER</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE4</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE5</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_ANGLE1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_ANGLE2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_SURF_DIV_V</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_SURF_CURV</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">N_DOT_CURL_V</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">GRAD_V_DOT_N1</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">GRAD_V_DOT_N2</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">GRAD_V_DOT_N3</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">ACOUS_PREAL</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">ACOUS_PIMAG</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">ACOUS_ENERGY</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">POR_SINK_MASS</span><span class="p">;</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VORT_DIR1</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VORT_DIR2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VORT_DIR3</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">VORT_LAMBDA</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">CURVATURE</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">LAGR_MULT1</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">LAGR_MULT2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">LAGR_MULT3</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">BOND_EVOLUTION</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SURF_CHARGE</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">EXT_VELOCITY</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">EFIELD1</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">EFIELD2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">EFIELD3</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">ENORM</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">NORMAL1</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">NORMAL2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">NORMAL3</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_CURVATURE</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_TENSION</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_X</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_Y</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_USER</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE1</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE3</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE4</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">PHASE5</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_ANGLE1</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_ANGLE2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_SURF_DIV_V</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_SURF_CURV</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">N_DOT_CURL_V</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">GRAD_S_V_DOT_N1</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">GRAD_S_V_DOT_N2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">GRAD_S_V_DOT_N3</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">ACOUS_PREAL</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">ACOUS_PIMAG</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_DIFF_FLUX</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_DIFF_CURVATURE</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_NORMAL1</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_NORMAL2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">ACOUS_REYN_STRESS</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_BDYVELO</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_LUBP</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">LUBP</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_FILMP</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_FILMH</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_PARTC</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_SAT_CLOSED</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_PRESS_OPEN</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_TEMPERATURE</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_DELTAH</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_LUB_CURV</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_SAT_GASN</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_SHEAR_TOP</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_SHEAR_BOT</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_CROSS_SHEAR</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">MAX_STRAIN</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">CUR_STRAIN</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">LUBP_2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_PRESS_OPEN_2</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">SHELL_LUB_CURV_2</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="external-field">
+<h2><strong>External Field</strong><a class="headerlink" href="#external-field" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char_string1</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">char_string2</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">char_string_3</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id13">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>This optional card format provides a mechanism for reading-in nodal field variables
+stored in an EXODUS II file. Each field variable is specified on a separate input card,
+with the following input parameters:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>&lt;char_string1&gt;</dt><dd><p>Name of the nodal field to be read; it should correspond to a nodal
+variable name in the EXODUS II file.</p>
+</dd>
+<dt>{char_string2}</dt><dd><p>Two- to eight-character value that identifies the type of interpolation to
+be applied to the external variable field. Possible values are as follows:</p>
+<ul class="simple">
+<li><p><strong>Q1</strong>       - Linear</p></li>
+<li><p><strong>Q2</strong>       - Quadratic</p></li>
+<li><p><strong>Q2_LSA</strong>   - Special quadratic for 3D analysis of 2D LSA</p></li>
+<li><p><strong>Q1_D</strong>     - Linear with special surface dofs</p></li>
+<li><p><strong>Q2_D</strong>     - Quadratic with special surface dofs</p></li>
+<li><dl class="simple">
+<dt><strong>Q2_D_LSA</strong> - Special quadratic discontinuous for 3D</dt><dd><p>analysis of 2D LSA</p>
+</dd>
+</dl>
+</li>
+<li><p><strong>PQ1</strong>      - Bilinear discontinuous</p></li>
+<li><p><strong>PQ2</strong>      - Biquadratic discontinuous</p></li>
+<li><p><strong>P0</strong>       - Piecewise constant</p></li>
+<li><p><strong>Pl</strong>       - Piecewise linear</p></li>
+<li><dl class="simple">
+<dt><strong>SP</strong>       - Subparametric; linear on interior,</dt><dd><p>quadratic on surface</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>&lt;file_name&gt;</dt><dd><p>Name of the EXODUS II file from which the nodal field is to be read. When
+Goma is compiled with LIBRARY_MODE defined (see Appendix 2) and the
+external field will be passed into Goma from a driver code, this entry will
+be either IMPORT (for nodal variables) or IMPORT_EV (for element
+variables), instead of a file name.</p>
+</dd>
+<dt>[char_string3]</dt><dd><p>Optional character string. Only optional available is <strong>“timedependent”</strong>
+which enables nodal variables to be interpolated to the current time step.
+This option is useful for transient coupling, viz. a case in which
+a transient field variable is used to drive a time-dependent simulation.
+A good example of this is a transient current density field from
+a electromagnetics calculation being used to drive a transient thermal
+calculation with Joule heating.</p>
+</dd>
+</dl>
+</section>
+<section id="id14">
+<h3><strong>Examples</strong><a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>The first example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">VX</span> <span class="n">Q2</span> <span class="n">velocity</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">VY</span> <span class="n">Q2</span> <span class="n">velocity</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<p>The second example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">JX_FIELD</span> <span class="n">Q2</span> <span class="n">fields</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">JY_FIELD</span> <span class="n">Q2</span> <span class="n">fields</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">BTHETA_FIELD</span> <span class="n">Q2</span> <span class="n">fields</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+<p>The third example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">DMX</span> <span class="n">Q1</span> <span class="n">IMPORT</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">DMY</span> <span class="n">Q1</span> <span class="n">IMPORT</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">P_POR</span> <span class="n">Q1</span> <span class="n">IMPORT_EV</span>
+</pre></div>
+</div>
+<p>The fourth example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">JE_N_1</span> <span class="n">Q1</span> <span class="n">emfields</span><span class="o">.</span><span class="n">exoII</span> <span class="n">time_dependent</span>
+</pre></div>
+</div>
+</section>
+<section id="id15">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p>The field variables read into <em>Goma</em> from the Example cards can be accessed in any
+user-defined subroutine.</p>
+<p>In the case of variables named <strong>VX, VY, or VZ</strong>, these fields are automatically loaded to
+the appropriate velocity component so they can be used in an advection-diffusion
+analysis, i.e., <strong>VX, VY, VZ</strong> are reserved names for &lt;char_string1&gt; and a user-defined
+routine is not required. Thus the variables for the two fields, “VX” and “VY”, read
+from the file named “velocity.exoII” in the first example above, would be automatically
+accessed when the advection term is left on in the <em>energy</em> or <em>species_bulk</em> equation
+cards. In other words, without solving the momentum equations, one can access an
+external velocity field for advection-diffusion problems. These variables would have
+quadratic interpolation (Q2) applied to the velocity values read.</p>
+<p>The three cards in the second example can be used to read two components of a current
+density field (JX_FIELD, JY_FIELD), and the azimuthal component of a magnetic
+field (BTHETA_FIELD) from the file “fields.exoII” (generated by some other analysis
+code). These fields are then accessed in the user-defined subroutines as</p>
+<p>fv-&gt;external_field[0], fv-&gt;external_field[1], and fv-&gt;external_field[2],</p>
+<p>respectively, as an interpolated value at an integration point. NOTE that these fields are
+brought in as a part of the BOUSS_JXB_FORCE on the Navier Stokes source
+card. These are to be distinguished from the electromagnetic fields in the fourth
+example which correspond to Solid Momentum Source models.</p>
+<p>Note that the number of field variables read from the EXODUS II file must not exceed
+the value MAX_EXTERNAL_FIELD set in the include file rf_fem_const.h.
+Should that occur, a new version of <em>Goma</em> must be compiled with an increased value of
+MAX_EXTERNAL_FIELD. The user should consult notes on building <em>Goma</em> if (s)he
+has questions regarding how to do this.</p>
+<p>The third example assumes that <em>Goma</em> has been compiled with LIBRARY_MODE and
+is linked in to an external driver code along with another program which will compute
+some variables and pass their values into <em>Goma</em>; here the imported fields are the X and
+Y components of mesh displacement (nodal variables) and porosity (an element
+variable). There is a naive first order interpolation function in <em>Goma</em> to obtain nodal
+values of fields which are imported as element variables. Although <em>Goma</em> does not
+solve for these variables, their values are included in the output Exodus file.</p>
+<p>In the fourth example a field JE_N_1, the x-directed current density field, timedependent,
+is brought in from emfields.exoII. Typically, depending on the
+dimension of the problem, additional fields JE_N_2, JE_N_3 are also brought in as
+current density is a e. These fields are part of the JXB Solid Momentum Source model, together with the magnetic nodal field quantities, BE_N_1, BE_N_2, and
+BE_N_3.</p>
+<p>Several other standard external fields variables are supported in GOMA. Namely:</p>
+<p>FVP11, FVP22, etc. These fields are useful for the elastoviscoplasticity model. Please
+consult GOMA tutorial GT-019.2 for more details.</p>
+<p>SAT, HEIGHT, PERM, CROSS_PERM, SH_SAT_CL_POROSITY, etc. These are
+specially designated external fields which are mapped to variations in these properties
+corresponding to thin porous media. Please see GT-038.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>GT-019.2. Elastoviscoplastic (EVP) Consitutive Model in GOMA: Theory, Testing,
+and Tutorial, P. R. Schunk, A. Sun, S. Y. Tam, and K. S. Chen. Memo to Distribution.
+March 13, 2003.</p>
+<p>GT-038.0: Pixel-to-Mesh Tool Tutorial for GOMA. P R. Schunk, Memo to
+distribution, 10 November 2009.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="export-field">
+<h2><strong>Export Field</strong><a class="headerlink" href="#export-field" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Export</span> <span class="n">Field</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id16">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>Special capability for use in library mode, a mode in which GOMA is called as a
+library from a driver program. This card is used to indicate which fields will be
+exported for use in other codes.</p>
+<dl class="simple">
+<dt>&lt;integer1&gt;</dt><dd><p>Name of the nodal field to be read; it should correspond to
+a nodal variable name in the EXODUS II file.</p>
+</dd>
+</dl>
+</section>
+<section id="id17">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>See Appendix 2.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="external-pixel-field">
+<h2><strong>External Pixel Field</strong><a class="headerlink" href="#external-pixel-field" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Pixel</span> <span class="n">Field</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char_string1</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">Q1</span><span class="o">|</span><span class="n">Q2</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id18">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>This optional card format provides a mechanism for reading-in pixel fields which are
+converted (mapped, with a least squares algorithm) to finite element fields with the
+chosen interpolation. After GOMA execution these fields are output in exodusII
+format in a file map.exoII. Please see discussion below and Tutorial GT-038 for more
+details and important tips.</p>
+<dl class="simple">
+<dt>&lt;char_string1&gt;</dt><dd><p>Name of the nodal field to be read; it should correspond to a nodal
+variable name you wish to have in the output EXODUS II file. If you
+subsequently wish to read the field in again and use as an EXTERNAL_FIELD
+model on other material property card, the chosen name matters.</p>
+</dd>
+<dt>{Q1 | Q2}</dt><dd><p>The type of interpolation to be applied to the external pixel field
+variable field. Possible values are as follows:</p>
+<ul class="simple">
+<li><p>Q1  -  Linear</p></li>
+<li><p>Q2  -  Quadratic</p></li>
+</ul>
+</dd>
+<dt>&lt;file_name&gt;</dt><dd><p>Name of the text file name with the pixel points. The pixel field format in
+this file should be as follows:</p>
+<ul class="simple">
+<li><p># pixel points</p></li>
+<li><p>x_1, y_1, z_1 value</p></li>
+<li><p>x_2, y_2, z_2 value</p></li>
+<li><p>…</p></li>
+<li><p>x_N, y_n, z_n value</p></li>
+</ul>
+</dd>
+<dt>&lt;integer1&gt;</dt><dd><p>Material block ID to which the pixel field is mapped.</p>
+</dd>
+</dl>
+</section>
+<section id="id19">
+<h3><strong>Examples</strong><a class="headerlink" href="#id19" title="Permalink to this headline"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">External</span> <span class="n">Pixel</span> <span class="n">Field</span> <span class="o">=</span> <span class="n">HEIGHT</span> <span class="n">Q1</span> <span class="n">tread</span><span class="o">.</span><span class="n">txt</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="id20">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id20" title="Permalink to this headline"></a></h3>
+<p>Please consult the tutorial GT-038 before using this capability. Many user tips are
+given together with a more thorough explanation on the proper use This capability is
+extremely memory intensive, and excessive grid sizes and pixel densities can blow out
+the memory on your machine. As of 12/22/2012 (the end of the Mayan calendar)
+these fields are used typically to bring in pattern maps for scaling porous media and
+lubrication height properties.</p>
+<p>SAT, HEIGHT, PERM, CROSS_PERM, SH_SAT_CL_POROSITY, etc. These are
+specially designated external fields which are mapped to variations in these properties
+corresponding to thin porous media. Please see GT-038.</p>
+</section>
+<section id="id21">
+<h3><strong>References</strong><a class="headerlink" href="#id21" title="Permalink to this headline"></a></h3>
+<p>GT-038.0: Pixel-to-Mesh Tool Tutorial for GOMA. P R. Schunk, Memo to
+distribution, 10 November 2009.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="pressure-datum">
+<h2><strong>Pressure Datum</strong><a class="headerlink" href="#pressure-datum" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Pressure</span> <span class="n">Datum</span> <span class="o">=</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span> <span class="p">{</span> <span class="n">atm</span> <span class="o">|</span> <span class="n">torr</span> <span class="o">|</span> <span class="n">cgs</span> <span class="p">}</span>
+</pre></div>
+</div>
+<section id="id22">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id22" title="Permalink to this headline"></a></h3>
+<p>This card is used to set a thermodynamic pressure datum on fluid or solid mechanics
+problems that calculate equations of state requiring a true value for the total pressure.
+The total pressure is then defined as the sum of a constant base thermodynamic
+pressure, specified by this card, and a variable hydrodynamic pressure calculated via
+the pressure unknown. Definitions of the input parameters are as follows:</p>
+<dl class="simple">
+<dt>&lt;float&gt;</dt><dd><p>Value of the thermodynamic pressure datum.</p>
+</dd>
+<dt>{ atm | torr | cgs }</dt><dd><p>Units of the float specified above.</p>
+</dd>
+</dl>
+</section>
+<section id="id23">
+<h3><strong>Examples</strong><a class="headerlink" href="#id23" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Pressure</span> <span class="n">Datum</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="n">atm</span>
+</pre></div>
+</div>
+</section>
+<section id="id24">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id24" title="Permalink to this headline"></a></h3>
+<p>The value of this variable is stored in the unified problem description structure in cgs
+units. It is then used in consistency checks and as input into some equation of state
+routines, such as the ideal gas equation of state routine.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="anneal-mesh-on-output">
+<h2><strong>Anneal Mesh on Output</strong><a class="headerlink" href="#anneal-mesh-on-output" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Anneal</span> <span class="n">Mesh</span> <span class="n">on</span> <span class="n">Output</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id25">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id25" title="Permalink to this headline"></a></h3>
+<p>This optional card enables the user to specify that the mesh displacements should be set
+to zero for the next continuation step. Valid options for this input card are</p>
+<dl class="simple">
+<dt>yes</dt><dd><p>Set the mesh displacements to zero for the next continuation step.</p>
+</dd>
+<dt>no</dt><dd><p>Do not set the mesh displacements to zero for the next continuation step.
+This is the default.</p>
+</dd>
+</dl>
+<p>There are two important restrictions: 1) annealing the mesh will not work for the
+TOTAL_ALE mesh motion types, and 2) only the last time step will be annealed for
+transient problems.</p>
+</section>
+<section id="id26">
+<h3><strong>Examples</strong><a class="headerlink" href="#id26" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Anneal</span> <span class="n">Mesh</span> <span class="n">on</span> <span class="n">Output</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id27">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id27" title="Permalink to this headline"></a></h3>
+<p>Annealing a mesh is accomplished by adding the displacements (from the
+solution) to the base positions (from the FEM file) and writing the resulting
+nodal positions to a new EXODUS II file, currently anneal.exoII. During the
+annealing process, the displacement field is also set to zero. This file would
+be used to restart a subsequent analysis where the anneal.exoII is copied to,
+or becomes, the file used in a <strong>read_exoII</strong> option for an <em>Initial Guess</em>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="file_specifications.html" class="btn btn-neutral float-left" title="File Specification" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="time_integration.html" class="btn btn-neutral float-right" title="Time Integration Specifications" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

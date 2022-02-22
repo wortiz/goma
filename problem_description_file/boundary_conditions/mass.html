@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Category 6: Mass Equations &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../problem_description_file.html">Problem Description (Input File)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Category 6: Mass Equations</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/problem_description_file/boundary_conditions/mass.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="category-6-mass-equations">
+<h1>Category 6: Mass Equations<a class="headerlink" href="#category-6-mass-equations" title="Permalink to this headline"></a></h1>
+<p>The collection of boundary conditions in this category are applied to the mass balance equations,
+specifically the species component balance equations. Most boundary conditions are weakly
+integrated conditions defining fluxes at internal or external surfaces, although strongly integrated
+and Dirichlet conditions are also available to control known values of dependent variables or
+integrated quantities. Boundary conditions are available for chemical species as well as charged
+species, suspensions and liquid metals. An important capability in <em>Goma</em> is represented by the
+discontinuous variable boundary conditions, for which users are referred to Schunk and Rao
+(1994) and Moffat (2001). Care must be taken if the species concentration is high enough to be
+outside of the <em>dilute species</em> assumption, in which case transport of species through boundaries
+will affect the volume of the bounding fluids. In these cases, users are referred to the
+<em>VNORM_LEAK</em> condition for the fluid momentum equations and to <em>KIN_LEAK</em> for the solid
+momentum (mesh) equations. And finally, users are cautioned about different bases for
+concentration (volume, mass, molar) and several discussions on or references to units.</p>
+<section id="y">
+<h2><strong>Y</strong><a class="headerlink" href="#y" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">Y</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float2</span><span class="p">]</span> <span class="p">[</span><span class="n">integer2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p><strong>(DC/MASS)</strong></p>
+<p>This card is used to set the Dirichlet boundary condition of constant concentration
+for a given species. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 85%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>Y</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>NS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong> denotes
+node set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (node set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number of concentration.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Value of concentration, in user’s choice of units, e.g. moles/
+<span class="math notranslate nohighlight">\(cm^3\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>[float2]</p></td>
+<td><p>An optional parameter (that serves as a flag to the code for a
+Dirichlet boundary condition). If a value is present, and is
+not -1.0, the condition is applied as a residual equation.
+Otherwise, it is a “hard set” condition and is eliminated
+from the matrix. <em>The residual method must be used when
+this Dirichlet boundary condition is used as a parameter in
+automatic continuation sequences</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>[integer2]</p></td>
+<td><p>Element block ID; only applicable to node sets, this optional
+parameter specifies the element block on which to impose
+the boundary condition, if there is a choice, as occurs at
+discontinuous variable interfaces where there may be more
+that one unknown corresponding to species 0 at a single
+node. This parameter allows the user to specify which
+unknown to set the boundary condition on, and allows for a
+jump discontinuity in species value across a discontinuous
+variables interface.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples">
+<h3><strong>Examples</strong><a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>The following is a sample card with no Dirichlet flag:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">Y</span> <span class="n">NS</span> <span class="mi">3</span>   <span class="mi">0</span>   <span class="mf">0.00126</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+</section>
+<section id="yuser">
+<h2><strong>YUSER</strong><a class="headerlink" href="#yuser" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YUSER</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p><strong>(SIC/MASS)</strong></p>
+<p>This is a user-defined mass concentration boundary. The user must supply the
+relationship in function <em>yuser_surf</em> within <em>user_bc.c</em>.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YUSER</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+node set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (node set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float_list&gt;</p></td>
+<td><p>A list of float values separated by spaces which will be
+passed to the user-defined subroutines so the user can vary
+the parameters of the boundary condition. This list of float
+values is passed as a one-dimensional double array to the
+appropriate C function.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3><strong>Examples</strong><a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>The following sample input card applies a user flux condition to side set 100 for species 0 that requires two input parameters:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YUSER</span> <span class="n">SS</span> <span class="mi">100</span> <span class="mi">0</span> <span class="mf">.5</span> <span class="mf">.5</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="y-discontinuous">
+<h2><strong>Y_DISCONTINUOUS</strong><a class="headerlink" href="#y-discontinuous" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">Y_DISCONTINUOUS</span> <span class="n">NS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">float2</span> <span class="n">integer2</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="id4">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p><strong>(DC/MASS)</strong></p>
+<p>This card is used to set a constant valued Dirichlet boundary condition for the species
+unknown. The condition only applies to interphase mass, heat, and momentum transfer
+problems applied to discontinuous (or multivalued) species unknown variables at an
+interface, and it must be invoked on fields that employ the <strong>Q1_D</strong> or <strong>Q2_D</strong>
+interpolation functions to “tie” together or constrain the extra degrees of freedom at
+the interface in question.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 76%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>Y_DISCONTINUOUS</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>NS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>NS</strong>
+denotes node set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (node
+set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species subvariable number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Value of the species unknown on the boundary. Note,
+the units depend on the specification of the type of the
+species unknown.</p></td>
+</tr>
+<tr class="row-even"><td><p>[float2]</p></td>
+<td><p>An optional parameter (that serves as a flag to the code
+for a Dirichlet boundary condition). If a value is present,
+and is not -1.0, the condition is applied as a residual
+equation. Otherwise, it is a “hard set” condition and is
+eliminated from the matrix. <em>The residual method must
+be used when this Dirichlet boundary condition is used
+as a parameter in automatic continuation sequences</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>[integer2]</p></td>
+<td><p>Element block ID; only applicable to node sets, this
+optional parameter specifies the element block on which
+to impose the boundary condition, if there is a choice, as
+occurs at discontinuous variable interfaces where there
+may be more that one unknown corresponding to
+species 0 at a single node. This parameter allows the
+user to specify which unknown to set the boundary
+condition on, and allows for a jump discontinuity in
+species value across a discontinuous variables interface.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id5">
+<h3><strong>Examples</strong><a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card with no Dirichlet flag:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">Y_DISCONTINUOUS</span> <span class="n">SS</span> <span class="mi">3</span>   <span class="mi">0</span>   <span class="mf">0.00126</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>Typically, this boundary condition may be used to set the species unknown variable on
+one side of a discontinuous variables interface, while the species unknown variable on
+the other side of the interface is solved for via a <em>KINEMATIC_SPECIES</em> boundary
+condition. Note, this boundary condition is not covered by the test suite, and thus,
+may or may not work.</p>
+</section>
+</section>
+<section id="yflux">
+<h2><strong>YFLUX</strong><a class="headerlink" href="#yflux" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float2</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id7">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card is used to specify the mass flux of a given species normal
+to the boundary (or interface) using a mass transfer coefficient. When used in
+conjunction with the <em>KIN_LEAK</em> card, the <em>YFLUX</em> card also enables the determination
+of velocity normal to the moving boundary at which the <em>YFLUX</em> boundary condition is
+applied.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 88%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td><p><em>i</em>, species number of concentration.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(k_i\)</span>, value of mass transfer coefficient of species <em>i</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p><span class="math notranslate nohighlight">\(c_i^\infty\)</span> value of reference concentration of species <em>i</em>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id8">
+<h3><strong>Examples</strong><a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>Following are two sample cards:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX</span> <span class="n">SS</span>   <span class="mi">3</span> <span class="mi">0</span>   <span class="mf">0.12</span>   <span class="mf">0.</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX</span> <span class="n">SS</span>   <span class="mi">3</span> <span class="mi">1</span>   <span class="mf">0.05</span>   <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id9">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>Specifically, the species mass flux is given by</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/136_goma_physics.png"><img alt="../../_images/136_goma_physics.png" src="../../_images/136_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>n</em> is the unit vector normal to the boundary, <span class="math notranslate nohighlight">\(J_i\)</span> is mass flux of species <em>i</em>, <em>v</em> is the
+fluid velocity, <span class="math notranslate nohighlight">\(v_m\)</span> is the mesh displacement velocity, <span class="math notranslate nohighlight">\(k_i\)</span> is mass transfer coefficient of
+species <em>i</em>, <span class="math notranslate nohighlight">\(c_i\)</span> is concentration of species <em>i</em> at the boundary surface,
+<span class="math notranslate nohighlight">\(c_i^\infty\)</span> and is reference
+concentration of species <em>i</em>. The units of <span class="math notranslate nohighlight">\(J_i\)</span>, <span class="math notranslate nohighlight">\(k_i\)</span>, <span class="math notranslate nohighlight">\(c_i\)</span> and
+<span class="math notranslate nohighlight">\(c_i^\infty\)</span> depend on the user’s choice. For
+example, if <span class="math notranslate nohighlight">\(c_i\)</span> and <span class="math notranslate nohighlight">\(c_i^\infty\)</span> are chosen to have units of moles/ <span class="math notranslate nohighlight">\(cm^3\)</span>, then <span class="math notranslate nohighlight">\(k_i\)</span> has the unit of cm/
+s, and <span class="math notranslate nohighlight">\(J_i\)</span> has the units of moles/ <span class="math notranslate nohighlight">\(cm^2\)</span> /s.</p>
+<p>For the <em>KIN_LEAK</em> and <em>VNORM_LEAK</em> cards, the information from <em>YFLUX</em> boundary
+conditions corresponding to each species is needed. <em>Goma</em> automatically searches for
+these boundary conditions and uses an extra variable in the BC data storage to record
+the boundary condition number of the next <em>YFLUX</em> condition in a linked list; when the
+extra storage value is -1, there are no more <em>YFLUX</em> conditions at this boundary.</p>
+</section>
+<section id="faqs">
+<h3><strong>FAQs</strong><a class="headerlink" href="#faqs" title="Permalink to this headline"></a></h3>
+<p>A question was raised regarding the use of volume flux in Goma; the following portion
+of the question and response elucidate this topic and the subject of units. Note the
+references in the response are to the Version 2.0 Goma User’s Manual.</p>
+<p><strong>Question</strong>: … I know what you are calling volume flux is mass flux divided by
+density. The point I am trying to make is that the conservation equations in the books I
+am familiar with talk about mass, energy, momentum, and heat fluxes. Why do you not
+write your conservation equations in their naturally occurring form? If density just so
+happens to be common in all of the terms, then it will be obvious to the user that the
+problem does not depend on density. You get the same answer no matter whether you
+input rho=1.0 or rho=6.9834, provided of course this does not impact iterative
+convergence. This way, you write fluxes in terms of gradients with the transport
+properties (viscosity, thermal conductivity, diffusion coefficient, etc.) being in familiar
+units.</p>
+<p><strong>Answer</strong>: First let me state the only error in the manual that exists with regard to
+the convection-diffusion equation is the following:</p>
+<blockquote>
+<div><p><span class="math notranslate nohighlight">\(J_t\)</span> in the nomenclature table … should be described as a volume flux with units
+of L/t, i.e., <span class="math notranslate nohighlight">\(D ⋅ \Delta_yi\)</span> , where D is in <span class="math notranslate nohighlight">\(L^2\)</span> ⁄ t units.</p>
+</div></blockquote>
+<p>Now, … this is actually stated correctly, as it states the <span class="math notranslate nohighlight">\(J_i\)</span> is a diffusion flux (without
+being specific); to be more specific here, we should say it is a “volume flux of species
+<em>i</em>.” So, in this case D is in L ⋅ L ⁄ t units, <span class="math notranslate nohighlight">\(y_i\)</span> is dimensionless and it is immaterial that (the
+mass conservation equation) is multiplied by density or not, <em>as long as density is
+constant</em>.</p>
+<p>Now, in <em>Goma</em> we actually code it up EXACTLY as in the … (mass conservation
+equation), i.e., there are no densities anywhere for the <em>FICKIAN</em> diffusion model. For
+the <em>HYDRO</em> diffusion model, we actually compute a <span class="math notranslate nohighlight">\(J_i\)</span> ⁄ ρ in the code, and handle variable density changes through that p . In that case <span class="math notranslate nohighlight">\(J_i\)</span> as computed in Goma is a mass
+flux vector, not a volume flux vector, but by dividing it by p and sending it back up to
+the mass conservation equation it changes back into a volume flux. i. e., everything is the same.</p>
+<p>Concerning the units of the mass transfer coefficient on the <em>YFLUX</em> boundary
+condition, the above discussion now sets those. <em>Goma</em> clearly needs the flux in the
+following form:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/137_goma_physics.png"><img alt="../../_images/137_goma_physics.png" src="../../_images/137_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and dimensionally for the left hand side</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/138_goma_physics.png"><img alt="../../_images/138_goma_physics.png" src="../../_images/138_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where D is in units <span class="math notranslate nohighlight">\(L^2\)</span> /t , the gradient operator has units of 1/L so K HAS to be in units
+of L/t (period!) because <span class="math notranslate nohighlight">\(y_i\)</span> is a fraction.</p>
+<p>So, if you want a formulation as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/139_goma_physics.png"><img alt="../../_images/139_goma_physics.png" src="../../_images/139_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>then K’s units will have to accommodate for the relationship between <span class="math notranslate nohighlight">\(p_i\)</span> and <span class="math notranslate nohighlight">\(y_i\)</span> in the
+liquid, hopefully a linear one as in Raoult’s law, i.e. if <span class="math notranslate nohighlight">\(p_i\)</span> = <span class="math notranslate nohighlight">\(P_V\)</span><span class="math notranslate nohighlight">\(y_i\)</span> where <span class="math notranslate nohighlight">\(P_v\)</span> is the vapor
+pressure, then</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/140_goma_physics.png"><img alt="../../_images/140_goma_physics.png" src="../../_images/140_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and so K on the <em>YFLUX</em> command has to be <span class="math notranslate nohighlight">\(KP_v\)</span> ….and so on.</p>
+<p>Finally, you will note, since we do not multiply through by density, you will have to
+take care of that, i. e., in the Price paper he gives K in units of t/L. So, that must be converted as follows:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/141_goma_physics.png"><img alt="../../_images/141_goma_physics.png" src="../../_images/141_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This checks out!</p>
+</section>
+<section id="id10">
+<h3><strong>References</strong><a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>Price, P. E., Jr., S. Wang, I. H. Romdhane, 1997. “Extracting Effective Diffusion
+Parameters from Drying Experiments”, AIChE Journal, 43, 8, 1925-1934.</p>
+</section>
+</section>
+<section id="yflux-const">
+<h2><strong>YFLUX_CONST</strong><a class="headerlink" href="#yflux-const" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_CONST</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id11">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card is used to specify a constant diffusive mass flux of a
+given species. This flux quantity can be specified on a per mass basis (e.g. with units of
+g/ <span class="math notranslate nohighlight">\(cm^2\)</span> /s) or on a per mole basis (e.g. with units of moles/ <span class="math notranslate nohighlight">\(cm^2\)</span> /s), depending on the
+user’s choice of units in the species unknown.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 79%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_CONST</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where SS
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float&gt;</p></td>
+<td><p>Value of diffusive mass flux; the units of this quantity
+depends on the user’s choice of units for species
+concentration.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id12">
+<h3><strong>Examples</strong><a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_CONST</span> <span class="n">SS</span> <span class="mi">1</span> <span class="mi">0</span> <span class="mf">10000.2</span>
+</pre></div>
+</div>
+</section>
+<section id="id13">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id14">
+<h3><strong>References</strong><a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="yflux-equil">
+<h2><strong>YFLUX_EQUIL</strong><a class="headerlink" href="#yflux-equil" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_EQUIL</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id15">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary card is used when equilibrium-based mass transfer is occurring at an
+vapor-liquid external boundary; i.e.,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/142_goma_physics.png"><img alt="../../_images/142_goma_physics.png" src="../../_images/142_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>This is different from an internal boundary since only one phase is represented in the
+computational domain. This boundary condition then describes the rate of mass
+entering or leaving the boundary via vapor-liquid equilibria. The <span class="math notranslate nohighlight">\(w_i^v\)</span> is the mass
+fraction of component <em>i</em> in <span class="math notranslate nohighlight">\(\underline{vapor}\)</span> that is in equilibrium with the liquid phase. The <span class="math notranslate nohighlight">\(w_i^{v \infty}\)</span>
+is the bulk concentration of component <em>i</em> in vapor.</p>
+<p>The &lt;float_list&gt; requires three input values; definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 81%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_EQUIL</strong></p></td>
+<td><p>Name of the boundary condition.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>{char_string}</p></td>
+<td><p>This refers to the equilibrium model for mass transfer; the
+options are either <strong>FLORY</strong> or <strong>RAOULT</strong>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species id.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>Total system pressure.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>Mass transfer coefficient.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>Bulk concentration in vapor ( <span class="math notranslate nohighlight">\(w_i^{v \infty}\)</span> )</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id16">
+<h3><strong>Examples</strong><a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_EQUIL</span> <span class="n">SS</span> <span class="mi">1</span>   <span class="n">FLORY</span> <span class="mi">0</span>   <span class="mf">1.</span> <span class="mf">5.4e-3</span>   <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id17">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>This boundary condition is very similar to <em>VL_EQUIL</em> and <em>VL_POLY</em> except that it is
+only applied at an external boundary where vapor phase is not modeled in the problem.</p>
+</section>
+<section id="id18">
+<h3><strong>References</strong><a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>GTM-007.1: New Multicomponent Vapor-Liquid Equilibrium Capabilities in GOMA,
+December 10, 1998, A. C. Sun</p>
+</section>
+</section>
+<section id="yflux-sulfidation">
+<h2><strong>YFLUX_SULFIDATION</strong><a class="headerlink" href="#yflux-sulfidation" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_SULFIDATION</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id19">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id19" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>The <em>YFLUX_SULFIDATION</em> card enables computation of the molar flux of the
+diffusing species (e.g. copper vacancy) using copper-sulfidation kinetics at the
+specified boundary (gas/ <span class="math notranslate nohighlight">\(Cu^2S\)</span> or Cu/ <span class="math notranslate nohighlight">\(Cu^2S\)</span> interface). When used in conjunction with
+the <em>KIN_LEAK</em> card, it also enables the determination of velocity normal to the moving
+gas/ <span class="math notranslate nohighlight">\(Cu^2S\)</span> interface.</p>
+<p>The &lt;float_list&gt; contains ten values to be defined; these and all input parameter
+definitions are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 72%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_SULFIDATION</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated
+with &lt;bc_type&gt; that identifies the boundary location
+(side set in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>{char_string}</p></td>
+<td><p>Name of sulfidation kinetic models. Allowable names
+are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>SOLID_DIFFUSION_SIMPLIFIED</strong></p></li>
+<li><p><strong>SOLID_DIFFUSION</strong></p></li>
+<li><p><strong>SOLID_DIFFUSION_ELECTRONEUTRALITY</strong></p></li>
+<li><p><strong>SOLID_DIFFUSION_ELECTRONEUTRALITY_LINEAR</strong></p></li>
+<li><p><strong>GAS_DIFFUSION</strong></p></li>
+<li><p><strong>FULL</strong></p></li>
+<li><p><strong>ANNIHILATION</strong></p></li>
+<li><p><strong>ANNIHILATION_ELECTRONEUTRALITY</strong></p></li>
+</ul>
+</div></blockquote>
+<p>Detailed description of kinetic models with these
+name key words are presented in the Technical
+Discussion section below.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species number of concentration.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float1&gt;</p></td>
+<td><p>Stoichiometric coefficient.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float2&gt;</p></td>
+<td><p>Rate constant for forward copper sulfidation
+reaction.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float3&gt;</p></td>
+<td><p>Activation energy for forward copper sulfidation
+reaction.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float4&gt;</p></td>
+<td><p>Rate constant for backward copper sulfidation
+reaction.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float5&gt;</p></td>
+<td><p>Activation energy for backward copper sulfidation
+reaction.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float6&gt;</p></td>
+<td><p>Temperature.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float7&gt;</p></td>
+<td><p>Bulk concentration of <span class="math notranslate nohighlight">\(H^2S\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float8&gt;</p></td>
+<td><p>Bulk concentration of <span class="math notranslate nohighlight">\(O^2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float9&gt;</p></td>
+<td><p>Molecular weight of copper sulfide ( <span class="math notranslate nohighlight">\(Cu_2S\)</span> )</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id20">
+<h3><strong>Examples</strong><a class="headerlink" href="#id20" title="Permalink to this headline"></a></h3>
+<p>Examples of this input card follow:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_SULFIDATION</span> <span class="n">SS</span> <span class="mi">3</span> <span class="n">SOLID_DIFFUSION_ELECTRONEUTRALITY</span> <span class="mi">0</span> <span class="o">-</span><span class="mf">2.0</span>
+<span class="mf">1.46e+7</span> <span class="mf">6300.0</span> <span class="mf">1.2e+14</span> <span class="mf">6300.0</span> <span class="mf">303.0</span> <span class="mf">1.61e-11</span> <span class="mf">8.4e-6</span> <span class="mf">159.14</span> <span class="mf">5.6</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_SULFIDATION</span> <span class="n">SS</span> <span class="mi">1</span> <span class="n">ANNIHILATION_ELECTRONEUTRALITY</span> <span class="mi">0</span> <span class="mf">1.0</span>   <span class="mf">10.0</span>
+<span class="mf">0.0</span>   <span class="mf">0.0</span>   <span class="mf">0.0</span>   <span class="mf">303.0</span> <span class="mf">1.61e-11</span> <span class="mf">8.4e-6</span> <span class="mf">159.14</span> <span class="mf">5.6</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_SULFIDATION</span> <span class="n">SS</span> <span class="mi">3</span> <span class="n">SOLID_DIFFUSION</span> <span class="mi">1</span> <span class="o">-</span><span class="mf">2.0</span> <span class="mf">1.46e7</span> <span class="mf">6300.0</span> <span class="mf">1.2e+14</span>
+<span class="mf">6300.0</span> <span class="mf">303.0</span> <span class="mf">1.61e-11</span> <span class="mf">8.4e-6</span> <span class="mf">159.14</span> <span class="mf">5.6</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_SULFIDATION</span> <span class="n">SS</span> <span class="mi">1</span> <span class="n">ANNIHILATION</span> <span class="mi">1</span> <span class="mf">1.0</span> <span class="mf">10.0</span>   <span class="mf">0.0</span>   <span class="mf">0.0</span>   <span class="mf">0.0</span>
+<span class="mf">303.0</span> <span class="mf">1.61e-11</span> <span class="mf">8.4e-6</span> <span class="mf">159.14</span> <span class="mf">5.6</span>
+</pre></div>
+</div>
+</section>
+<section id="id21">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id21" title="Permalink to this headline"></a></h3>
+<p>Key word <strong>SOLID_DIFFUSION_SIMPLIFIED</strong> refers to the following simplified
+kinetic model of copper sulfidation in which gas-phase diffusion is neglected and Cu
+is taken to be the diffusing species:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/143_goma_physics.png"><img alt="../../_images/143_goma_physics.png" src="../../_images/143_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>r</em> is molar rate of formation of sulfidation-corrosion product, <span class="math notranslate nohighlight">\(Cu^2S\)</span>, per unit area, <span class="math notranslate nohighlight">\(^cH_2S\)</span>
+is the molar concentration of <span class="math notranslate nohighlight">\(H_2S\)</span> taken to be fixed at its bulk value,
+<span class="math notranslate nohighlight">\(^cCu\)</span> is the
+molar concentration of Cu at the sulfidation surface ( <span class="math notranslate nohighlight">\(Cu_2S\)</span> /gas interface), <em>k</em> is the rate
+constant, <em>E</em> is the activation energy, <em>R</em> is the universal gas constant, and <em>T</em> is the temperature.</p>
+<p>Key word <strong>SOLID_DIFFUSION</strong> refers to the following kinetic model of copper
+sulfidation in which gas-phase diffusion is neglected and Cu vacancies and electron
+holes are taken as the diffusing species:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/144_goma_physics.png"><img alt="../../_images/144_goma_physics.png" src="../../_images/144_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>r</em> is molar rate of formation of <span class="math notranslate nohighlight">\(Cu_2S\)</span> per unit area, <span class="math notranslate nohighlight">\(^cH_2S\)</span> and <span class="math notranslate nohighlight">\(^cO_2\)</span> are the molar
+concentrations of <span class="math notranslate nohighlight">\(H_2S\)</span> and <span class="math notranslate nohighlight">\(O_2\)</span>, respectively, taken to be fixed at their bulk values, <span class="math notranslate nohighlight">\(^c_V\)</span>
+and <span class="math notranslate nohighlight">\(^c_h\)</span> are the molar concentrations of Cu vacancies and electron holes, respectively,
+at the sulfidation surface, <span class="math notranslate nohighlight">\(k_1\)</span> and <span class="math notranslate nohighlight">\(k_{-1}\)</span> are rate constants, respectively, for the forward and
+backward sulfidation reactions, <span class="math notranslate nohighlight">\(E_1\)</span> and <span class="math notranslate nohighlight">\(E_{-1}\)</span> are activation energies, respectively, for the
+forward and the backward sulfidation reactions.</p>
+<p>Key word <strong>SOLID_DIFFUSION_ELECTRONEUTRALITY</strong> refers to the following
+kinetic model of copper sulfidation in which Cu vacancies and electron holes are taken
+as the diffusing species and the electroneutrality approximation is applied such that
+concentrations of Cu vacancies and electron holes are equal to each other:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/145_goma_physics.png"><img alt="../../_images/145_goma_physics.png" src="../../_images/145_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Key word <strong>SOLID_DIFFUSION_ELECTRONEUTRALITY_LINEAR</strong> refers to the
+following kinetic model of copper sulfidation:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/146_goma_physics.png"><img alt="../../_images/146_goma_physics.png" src="../../_images/146_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Key word <strong>GAS_DIFFUSION</strong> refers to the following simplified kinetic model of
+copper sulfidation in which solid-phase diffusion is neglected, and <span class="math notranslate nohighlight">\(H_2S\)</span> and
+<span class="math notranslate nohighlight">\(O_2\)</span> are taken to be the diffusing species:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/147_goma_physics.png"><img alt="../../_images/147_goma_physics.png" src="../../_images/147_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>Key word <strong>FULL</strong> refers to the following kinetic model in which diffusion in both the
+gas phase and the solid phase are important, and <span class="math notranslate nohighlight">\(H_2S\)</span>, <span class="math notranslate nohighlight">\(O_2\)</span>,
+Cu vacancies, and electron holes are taken as the diffusing species:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/148_goma_physics.png"><img alt="../../_images/148_goma_physics.png" src="../../_images/148_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(^cH_2S\)</span> and <span class="math notranslate nohighlight">\(^cO_2\)</span> are the time-dependent molar concentrations of
+<span class="math notranslate nohighlight">\(H_2S\)</span> and <span class="math notranslate nohighlight">\(O_2\)</span>, respectively, at the sulfidation surface.</p>
+<p>Key word <strong>ANNIHILATION</strong> refers to the following kinetic model in which diffusion
+in both the gas phase and the solid phase are important, and
+<span class="math notranslate nohighlight">\(H_2S\)</span>, <span class="math notranslate nohighlight">\(O_2\)</span>, Cu vacancies, and
+electron holes are taken as the diffusing species:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/149_goma_physics.png"><img alt="../../_images/149_goma_physics.png" src="../../_images/149_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(k_2\)</span> are <span class="math notranslate nohighlight">\(E_2\)</span> are the rate constant and activation energy,
+respectively, for the annihilation reaction.</p>
+<p>Key word <strong>ANNIHILATION_ELECTRONEUTRALITY</strong> is similar to
+<strong>ANNIHILATION</strong> except that, here, the electroneutrality approximation is applied and
+concentrations of Cu vacancies and electron holes are taken to be equal to each other:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/150_goma_physics.png"><img alt="../../_images/150_goma_physics.png" src="../../_images/150_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+</section>
+<section id="yflux-sus">
+<h2><strong>YFLUX_SUS</strong><a class="headerlink" href="#yflux-sus" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_SUS</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id22">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id22" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary defines a flux of suspension particles at an interface. Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_SUS</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species id; the species number for suspension particles.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id23">
+<h3><strong>Examples</strong><a class="headerlink" href="#id23" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_SUS</span> <span class="n">SS</span> <span class="mi">1</span>   <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="id24">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id24" title="Permalink to this headline"></a></h3>
+<p>This condition is only used in conjunction with the <em>SUSPENSION</em> liquid constitutive
+models, <em>HYDRODYNAMIC</em> diffusivity model, and <em>SUSPENSION</em> or
+<em>SUSPENSION_PM</em> density models. A theoretical outflux condition associated with
+suspension particles leaving the domain is tied to the Phillips diffusive-flux model.
+Please refer to discussions on <em>HYDRODYNAMIC</em> diffusivity to gain more
+understanding of the suspension flux model.</p>
+</section>
+</section>
+<section id="yflux-bv">
+<h2><strong>YFLUX_BV</strong><a class="headerlink" href="#yflux-bv" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_BV</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id25">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id25" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>The <em>YFLUX_BV</em> card enables computation of the molar flux of the specified species
+using Butler-Volmer kinetics at the specified boundary (namely, the electrode surface).
+When used in conjunction with the <em>KIN_LEAK</em> card, it also enables the determination
+of velocity normal to the moving solid-electrode surface.</p>
+<p>The &lt;floatlist&gt; consists of nine values; definitions of the input parameters are as
+follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 81%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_BV</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number of concentration.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Stoichiometric coefficient.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p>Kinetic rate constant.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float3&gt;</p></td>
+<td><p>Reaction order.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float4&gt;</p></td>
+<td><p>Anodic direction transfer coefficient.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float5&gt;</p></td>
+<td><p>Cathodic direction transfer coefficient.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float6&gt;</p></td>
+<td><p>Electrode potential or applied voltage.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float7&gt;</p></td>
+<td><p>Theoretical open-circuit potential.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float8&gt;</p></td>
+<td><p>Molecular weight of solid deposit.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float9&gt;</p></td>
+<td><p>Density of solid deposit.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id26">
+<h3><strong>Examples</strong><a class="headerlink" href="#id26" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_BV</span> <span class="n">SS</span> <span class="mi">1</span> <span class="mi">0</span> <span class="o">-</span><span class="mf">1.</span> <span class="mf">0.00001</span> <span class="mf">1.</span> <span class="mf">0.21</span> <span class="mf">0.21</span> <span class="o">-</span><span class="mf">0.8</span> <span class="o">-</span><span class="mf">0.22</span> <span class="mf">58.71</span> <span class="mf">8.9</span>
+</pre></div>
+</div>
+</section>
+<section id="id27">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id27" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+</section>
+<section id="yflux-hor">
+<h2><strong>YFLUX_HOR</strong><a class="headerlink" href="#yflux-hor" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_HOR</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id28">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id28" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>The <strong>YFLUX_HOR</strong> card enables computation of the molar flux of the specified species
+at the specified boundary (i.e., at the electrode surface) using the linearized Butler-
+Volmer kinetics such as that for the hydrogen-oxidation reaction in polymerelectrolyte-
+membrane fuel cells.</p>
+<p>The &lt;floatlist&gt; consists of 10 values; definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_HOR</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species number of concentration.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Product of interfacial area per unit volume by exchange
+current density, <span class="math notranslate nohighlight">\(ai_0\)</span>, in units of <span class="math notranslate nohighlight">\(A/cm^3\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p>Catalyst layer or catalyzed electrode thickness,
+<em>H</em>, in unit of <em>cm</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float3&gt;</p></td>
+<td><p>Reference concentration, <span class="math notranslate nohighlight">\(c_{ref}\)</span>, in units of
+<em>moles</em>/ <span class="math notranslate nohighlight">\(cm^3\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float4&gt;</p></td>
+<td><p>Anodic direction transfer coefficient, <span class="math notranslate nohighlight">\(\alpha_a\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float5&gt;</p></td>
+<td><p>Cathodic direction transfer coefficient, <span class="math notranslate nohighlight">\(\alpha_c\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float6&gt;</p></td>
+<td><p>Temperature, <em>T</em>, in unit of <em>K</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float7&gt;</p></td>
+<td><p>Theoretical open-circuit potential, <span class="math notranslate nohighlight">\(U_0\)</span>, in unit of V.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float8&gt;</p></td>
+<td><p>Reaction order, <span class="math notranslate nohighlight">\(\beta\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float9&gt;</p></td>
+<td><p>Number of electrons involved in the reaction, <em>n</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float10&gt;</p></td>
+<td><p>Electrode potential, <em>V</em>, in unit of <em>V</em>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id29">
+<h3><strong>Examples</strong><a class="headerlink" href="#id29" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_HOR</span> <span class="n">SS</span> <span class="mi">14</span> <span class="mi">0</span> <span class="mf">1000.</span> <span class="mf">0.001</span> <span class="mf">4.e-5</span> <span class="mf">1.</span> <span class="mf">1.</span> <span class="mf">353.</span> <span class="mf">0.</span> <span class="mf">0.5</span> <span class="mf">2.</span> <span class="mf">0.</span>
+</pre></div>
+</div>
+</section>
+<section id="id30">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id30" title="Permalink to this headline"></a></h3>
+<p>For electrochemical reactions such as the hydrogen-oxidation reaction (HOR), surface
+overpotential is relatively small such that the Butler-Volmer kinetic model can be
+linearized to yield:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/151_goma_physics.png"><img alt="../../_images/151_goma_physics.png" src="../../_images/151_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>r</em> is the surface reaction rate in units of <em>moles</em>/ <span class="math notranslate nohighlight">\(cm^2-s\)</span>;
+<span class="math notranslate nohighlight">\(ai_0\)</span> denotes the product of
+interfacial area per unit volume by exchange current density,
+which has units of <span class="math notranslate nohighlight">\(A/cm^3\)</span>;
+<em>H</em> is the catalyst layer or catalyzed electrode thickness in unit of <em>cm</em>; <em>n</em> is the number of
+electrons involved in the electrochemical reaction; <em>R</em> is the universal gas constant
+( <span class="math notranslate nohighlight">\(\equiv\)</span> 8.314 J/mole-K); T is temperature in unit of <em>K</em>; <em>c</em> and
+<span class="math notranslate nohighlight">\(c_{ref}\)</span> are, respectively, species
+and reference molar concentrations in units of <em>moles</em>/ <span class="math notranslate nohighlight">\(cm^3\)</span>; <span class="math notranslate nohighlight">\(\beta\)</span> is reaction order; <span class="math notranslate nohighlight">\(\alpha_a\)</span> and <span class="math notranslate nohighlight">\(\alpha_c\)</span>
+are, respetively, the anodic and cathodic transfer coefficients; <em>V</em> and <span class="math notranslate nohighlight">\(\phi\)</span> are,
+respectively, the electrode and electrolyte potentials in unit of <em>V</em>; <span class="math notranslate nohighlight">\(U_0\)</span> and is the opencircuit
+potential in unit of <em>V</em>.</p>
+</section>
+<section id="id31">
+<h3><strong>References</strong><a class="headerlink" href="#id31" title="Permalink to this headline"></a></h3>
+<ol class="upperalpha simple" start="10">
+<li><p>Newman, Electrochemical Systems, 2nd Edition, Prentice-Hall, NJ (1991).</p></li>
+</ol>
+<p>K. S. Chen and M. A. Hickner, “Modeling PEM fuel cell performance using the finiteelement
+method and a fully-coupled implicit solution scheme via Newton’s technique”,
+in ASME Proceedings of FUELCELL2006-97032 (2006).</p>
+</section>
+</section>
+<section id="yflux-orr">
+<h2><strong>YFLUX_ORR</strong><a class="headerlink" href="#yflux-orr" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_ORR</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">floatlist</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id32">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id32" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>The <strong>YFLUX_ORR</strong> card enables computation of the molar flux of the specified species
+at the specified boundary (i.e., at the electrode surface) using the Tafel kinetics such as
+that for the oxygen-reduction reaction in polymer-electrolyte-membrane fuel cells.</p>
+<p>The &lt;floatlist&gt; consists of 9 values; definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_ORR</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species number of concentration.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Product of interfacial area per unit volume by exchange
+current density, <span class="math notranslate nohighlight">\(ai_0\)</span>, in units of <span class="math notranslate nohighlight">\(A/cm^3\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p>Catalyst layer or catalyzed electrode thickness, <em>H</em>, in unit of <em>cm</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float3&gt;</p></td>
+<td><p>Reference concentration, <span class="math notranslate nohighlight">\(c_{ref}\)</span>, in units of <em>moles</em>/
+<span class="math notranslate nohighlight">\(cm^3\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float4&gt;</p></td>
+<td><p>Cathodic direction transfer coefficient, <span class="math notranslate nohighlight">\(\alpha_c\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float5&gt;</p></td>
+<td><p>Temperature, <em>T</em>, in unit of <em>K</em>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float6&gt;</p></td>
+<td><p>Electrode potential, <em>V</em>, in unit of <em>V</em>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float7&gt;</p></td>
+<td><p>Theoretical open-circuit potential, <span class="math notranslate nohighlight">\(U_0\)</span>, in unit of V.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float8&gt;</p></td>
+<td><p>Reaction order, <span class="math notranslate nohighlight">\(\beta\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float9&gt;</p></td>
+<td><p>Number of electrons involved in the reaction, <em>n</em>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id33">
+<h3><strong>Examples</strong><a class="headerlink" href="#id33" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_ORR</span> <span class="n">SS</span> <span class="mi">15</span> <span class="mi">1</span> <span class="mf">0.01</span> <span class="mf">0.001</span> <span class="mf">4.e-5</span> <span class="mf">1.</span> <span class="mf">353.</span> <span class="mf">0.7</span> <span class="mf">1.18</span> <span class="mf">1.</span> <span class="mf">4.</span>
+</pre></div>
+</div>
+</section>
+<section id="id34">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id34" title="Permalink to this headline"></a></h3>
+<p>For electrochemical reactions such as the hydrogen-oxidation reaction (HOR), surface
+overpotential is relatively small such that the Butler-Volmer kinetic model can be
+linearized to yield:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/152_goma_physics.png"><img alt="../../_images/152_goma_physics.png" src="../../_images/152_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <em>r</em> is the surface reaction rate in units of <em>moles</em>/ <span class="math notranslate nohighlight">\(cm^2-s\)</span>;
+<span class="math notranslate nohighlight">\(ai_0\)</span> denotes the product of
+interfacial area per unit volume by exchange current density, which has units of
+A/ <span class="math notranslate nohighlight">\(cm^3\)</span>;
+<em>H</em> is the catalyst layer or catalyzed electrode thickness in unit of <em>cm</em>; <em>n</em> is the number of
+electrons involved in the electrochemical reaction; <em>F</em> is the Faraday’s constant
+( <span class="math notranslate nohighlight">\(\equiv\)</span> 96487 <em>C/mole</em>); <em>c</em> and <span class="math notranslate nohighlight">\(c_{ref}\)</span> are, respectively, species and reference molar
+concentrations in units of <em>moles</em>/ <span class="math notranslate nohighlight">\(cm^3\)</span>; <span class="math notranslate nohighlight">\(\beta\)</span> is reaction order; <span class="math notranslate nohighlight">\(\alpha_c\)</span> is the anodic and cathodic
+transfer coefficient; <em>R</em> is the universal gas constant ( <span class="math notranslate nohighlight">\(\equiv\)</span> 8.314 <em>J/mole-K</em>); <em>T</em> is
+temperature in unit of <em>K</em>; <em>V</em> and <span class="math notranslate nohighlight">\(\phi\)</span> are, respectively, the electrode and electrolyte
+potentials in unit of <em>V</em>; <span class="math notranslate nohighlight">\(U_0\)</span> and is the open-circuit potential in unit of <em>V</em>.</p>
+</section>
+<section id="id35">
+<h3><strong>References</strong><a class="headerlink" href="#id35" title="Permalink to this headline"></a></h3>
+<ol class="upperalpha simple" start="10">
+<li><p>Newman, Electrochemical Systems, 2nd Edition, Prentice-Hall, NJ (1991).</p></li>
+</ol>
+<p>K. S. Chen and M. A. Hickner, “Modeling PEM fuel cell performance using the finiteelement
+method and a fully-coupled implicit solution scheme via Newton’s technique”,
+in ASME Proceedings of FUELCELL2006-97032 (2006).</p>
+</section>
+</section>
+<section id="yflux-user">
+<h2><strong>YFLUX_USER</strong><a class="headerlink" href="#yflux-user" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_USER</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id36">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id36" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card is used to set mass flux to a user-prescribed function and
+integrate by parts again. The user should provide detailed flux conditions in the
+<em>mass_flux_user_surf</em> routine in <em>user_bc.c</em>. The flux quantity is specified on a per
+mass basis so the heat and mass transfer coefficients are in units of L/t.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 82%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_USER</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species number of concentration.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float_list&gt;</p></td>
+<td><p>A list of float values separated by spaces which will be
+passed to the user-defined subroutines so the user can vary
+the parameters of the boundary condition. This list of float
+values is passed as a one-dimensional double array to the
+appropriate C function.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id37">
+<h3><strong>Examples</strong><a class="headerlink" href="#id37" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_USER</span> <span class="n">SS</span> <span class="mi">2</span>   <span class="mi">0</span> <span class="mf">.5</span> <span class="mf">.5</span>
+</pre></div>
+</div>
+</section>
+<section id="id38">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id38" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+<section id="id39">
+<h3><strong>References</strong><a class="headerlink" href="#id39" title="Permalink to this headline"></a></h3>
+<p>No References.</p>
+</section>
+</section>
+<section id="yflux-alloy">
+<h2><strong>YFLUX_ALLOY</strong><a class="headerlink" href="#yflux-alloy" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_ALLOY</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer1</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id40">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id40" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card calculates the surface integral for a mass flux transfer
+model for the evaporation rate of molten metal.</p>
+<p>The &lt;float_list&gt; requires six values; definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 81%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YFLUX_ALLOY</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Liquidus temperature of metal alloy, <span class="math notranslate nohighlight">\(T_m\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p>Base Concentration, <span class="math notranslate nohighlight">\(y^\infty\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float3&gt;</p></td>
+<td><p>Coefficient <span class="math notranslate nohighlight">\(c_0\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float4&gt;</p></td>
+<td><p>Coefficient <span class="math notranslate nohighlight">\(c_1\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float5&gt;</p></td>
+<td><p>Coefficient <span class="math notranslate nohighlight">\(c_2\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float6&gt;</p></td>
+<td><p>Coefficient <span class="math notranslate nohighlight">\(c_3\)</span>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id41">
+<h3><strong>Examples</strong><a class="headerlink" href="#id41" title="Permalink to this headline"></a></h3>
+<p>The following is a sample input card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YFLUX_ALLOY</span> <span class="n">SS</span> <span class="mi">10</span> <span class="mi">0</span> <span class="mf">1623.0</span> <span class="mf">0.5</span> <span class="mf">0.01</span> <span class="o">-</span><span class="mf">1e-3</span> <span class="mf">1e-4</span> <span class="o">-</span><span class="mf">1e-5</span>
+</pre></div>
+</div>
+</section>
+<section id="id42">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id42" title="Permalink to this headline"></a></h3>
+<p>Basically the difference between this model and the simple convective mass transfer
+coefficient (say <span class="math notranslate nohighlight">\(k_i\)</span> for <em>YFLUX</em>) is that the transfer coefficient here (the exponential term) has a cubic dependence on temperature.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/153_goma_physics.png"><img alt="../../_images/153_goma_physics.png" src="../../_images/153_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+</section>
+<section id="ytotalflux-const">
+<h2><strong>YTOTALFLUX_CONST</strong><a class="headerlink" href="#ytotalflux-const" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YTOTALFLUX_CONST</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id43">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id43" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card is used to specify a constant total mass flux (including
+contribution from diffusion, migration, and convection) of a given species. This card
+enables the treatment of the situation in which diffusion, migration and convection
+fluxes cancel each other such that the total flux vanishes (e.g. is equal to zero). This
+flux quantity can be specified on a per mass basis (i.e., with units of g/
+<span class="math notranslate nohighlight">\(cm^2\)</span>/s) or on a
+per mole basis (e.g. with units of moles/<span class="math notranslate nohighlight">\(cm^2\)</span>/s), depending on the user’s choice of units
+in the species concentration unknown.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 74%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>YTOTALFLUX_CONST</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td><p>Species number of concentration.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float&gt;</p></td>
+<td><p>Value of total mass flux - the units of this quantity
+depends on the user’s choice of units for species
+concentration.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id44">
+<h3><strong>Examples</strong><a class="headerlink" href="#id44" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">YTOTALFLUX_CONST</span> <span class="n">SS</span> <span class="mi">5</span>   <span class="mi">0</span>   <span class="mf">0.0</span>
+</pre></div>
+</div>
+</section>
+<section id="id45">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id45" title="Permalink to this headline"></a></h3>
+<p>No Discussion.</p>
+</section>
+</section>
+<section id="vl-equil">
+<h2><strong>VL_EQUIL</strong><a class="headerlink" href="#vl-equil" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VL_EQUIL</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer_list</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">float_list</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id46">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id46" title="Permalink to this headline"></a></h3>
+<p><strong>(SIC/MASS)</strong></p>
+<p>This boundary condition card enforces vapor-liquid equilibrium between a gas phase
+and a liquid phase using Raoult’s law. The condition only applies to interphase mass,
+heat, and momentum transfer problems with discontinuous (or multivalued) variables
+at an interface, and it must be invoked on fields that employ the <strong>Q1_D</strong> or <strong>Q2_D</strong>
+interpolation functions to “tie” together or constrain the extra degrees of freedom at
+the interface in question.</p>
+<p>The &lt;integer_list&gt; has three values and the &lt;float_list&gt; has five values; definitions
+of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 84%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>VL_EQUIL</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element block ID of liquid phase.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer3&gt;</p></td>
+<td><p>Element block ID of gas phase.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float1&gt;</p></td>
+<td><p>Base ambient pressure in gas phase.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float2&gt;</p></td>
+<td><p>Molecular weight of first volatile species.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float3&gt;</p></td>
+<td><p>Molecular weight of second volatile species.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float4&gt;</p></td>
+<td><p>Molecular weight of condensed phase.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float5&gt;</p></td>
+<td><p>Molecular weight of insoluble gas phase.</p></td>
+</tr>
+</tbody>
+</table>
+<p>This boundary condition is applied to ternary, two-phase flows that have rapid mass
+exchange between phases, rapid enough to induce a diffusion velocity at the interface,
+and to thermal contact resistance type problems. The best example of this is rapid
+evaporation of a liquid component into a gas. In the current discontinuous mass
+transfer model, we must require the same number of components on either side of
+interface. In this particular boundary, two of three components are considered
+<em>volatile</em>, so they participate in both vapor and liquid phases. The third component
+is  considered either non-volatile or non-condensable, so it remains in a single phase.</p>
+</section>
+<section id="id47">
+<h3><strong>Examples</strong><a class="headerlink" href="#id47" title="Permalink to this headline"></a></h3>
+<p>A sample input card follows for this boundary condition:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VL_EQUIL</span> <span class="n">SS</span> <span class="mi">4</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mf">1.e+06</span> <span class="mf">28.</span> <span class="mf">18.</span> <span class="mf">1800.</span> <span class="mf">18.</span>
+</pre></div>
+</div>
+<p>The above card demonstrates these characteristics: species number is “0”; liquid phase
+block id is 1; gas phase block id is 2; ambient pressure is 1.e6 Pa; the molecular
+weights of the volatile species are 28 and 18; of the condensed phase and insoluble
+portion of the gas phase, 1800 and 18, respectively.</p>
+</section>
+<section id="id48">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id48" title="Permalink to this headline"></a></h3>
+<p>One of the simplest forms of the equilibrium relation is the Raoult’s law, where the
+mole fraction of a species is equal to its mole fraction in the liquid multiplied by the ratio of its pure component vapor pressure to the total pressure in the system.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/154_goma_physics.png"><img alt="../../_images/154_goma_physics.png" src="../../_images/154_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(y_i\)</span> are the mole fraction of species <em>i</em> in the gas phase and
+<span class="math notranslate nohighlight">\(x_i\)</span> is the mole fraction in
+the liquid phase. The molecular weights required in this boundary card are used for
+converting mass fractions to mole fractions. The temperature dependency in the
+equilibrium expression comes from a temperature-dependent vapor pressure model.
+Either Riedel or Antoine temperature-dependent vapor pressure model can be specified
+in the <em>VAPOR PRESSURE</em> material card in order to link temperature to Raoult’s law.</p>
+</section>
+<section id="id49">
+<h3><strong>References</strong><a class="headerlink" href="#id49" title="Permalink to this headline"></a></h3>
+<p>GTM-007.1: New Multicomponent Vapor-Liquid Equilibrium Capabilities in GOMA,
+December 10, 1998, A. C. Sun</p>
+<p>Schunk, P.R. and Rao, R.R. 1994. “Finite element analysis of multicomponent twophase
+flows with interphase mass and momentum transport,” IJNMF, 18, 821-842.</p>
+</section>
+</section>
+<section id="vl-poly">
+<h2><strong>VL_POLY</strong><a class="headerlink" href="#vl-poly" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VL_POLY</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="p">{</span><span class="n">char_string</span><span class="p">}</span> <span class="o">&lt;</span><span class="n">integer_list</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id50">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id50" title="Permalink to this headline"></a></h3>
+<p><strong>(SIC/MASS)</strong></p>
+<p>This boundary condition card enforces vapor-liquid equilibrium between a gas phase
+and a liquid phase using Flory-Huggins activity expression to describe polymer-solvent
+mixtures. The condition only applies to interphase mass, heat, and momentum transfer
+problems with discontinuous (or multivalued) variables at an interface, and it must be
+invoked on fields that employ the <strong>Q1_D</strong> or <strong>Q2_D</strong> interpolation functions to “tie”
+together or constrain the extra degrees of freedom at the interface in question.</p>
+<p>There are three input values in the &lt;integer_list&gt;; definitions of the input parameters
+are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 83%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>VL_POLY</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong> denotes
+side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set in
+EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>{char_string}</p></td>
+<td><p>the concentration basis; two options exist:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>MASS</strong> - the concentration variable in <em>Goma</em> is
+equivalent to mass fractions.</p></li>
+<li><p><strong>VOLUME</strong> - the concentration variable in <em>Goma</em> is
+based on volume fractions for all species.</p></li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number of concentration.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element block id that identifies the liquid phase.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer3&gt;</p></td>
+<td><p>Element block id that identifies the vapor phase.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;float&gt;</p></td>
+<td><p>Total pressure of the system.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id51">
+<h3><strong>Examples</strong><a class="headerlink" href="#id51" title="Permalink to this headline"></a></h3>
+<p>This is a sample input card for this boundary condition:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VL_POLY</span> <span class="n">SS</span> <span class="mi">7</span> <span class="n">MASS</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mf">1.e+05</span>
+</pre></div>
+</div>
+</section>
+<section id="id52">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id52" title="Permalink to this headline"></a></h3>
+<p>One of the simplest forms of the equilibrium relation is the Raoult’s law, where the
+mole fraction of a species is equal to its mole fraction in the liquid multiplied by the ratio of its pure component vapor pressure to the total pressure in the system.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/155_goma_physics.png"><img alt="../../_images/155_goma_physics.png" src="../../_images/155_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/156_goma_physics.png"><img alt="../../_images/156_goma_physics.png" src="../../_images/156_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p><span class="math notranslate nohighlight">\(\gamma_i\)</span> is defined as the activity coefficient of species <em>i</em> and is considered a departure
+function from the Raoult’s law. The fugacity in the liquid is reformulated in terms of
+volume fraction <span class="math notranslate nohighlight">\(\phi_i\)</span> for polymer mixtures to avoid referencing the molecular weight of polymer (Patterson, et. al., 1971).</p>
+<p>Based on an energetic analysis of excluded volume imposed by the polymer, the
+activity coefficient model of Flory-Huggins is widely used for polymer-solvent
+mixtures (Flory, 1953). The general form of the Flory-Huggins model for
+multicomponent mixtures is a summation of binary interactions terms; i.e.,</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/157_goma_physics.png"><img alt="../../_images/157_goma_physics.png" src="../../_images/157_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p><span class="math notranslate nohighlight">\(v_i\)</span> is the molar volume of component <em>i</em> (or the average-number molar volume if <em>i</em> is a polymer). <span class="math notranslate nohighlight">\(\zeta_{ki}\)</span> is the Dirac delta. <span class="math notranslate nohighlight">\(\chi_{jk}\)</span> is known as the Flory-Huggins interaction
+parameter between components <em>j</em> and <em>k</em>, and is obtainable by fitting the solubility data
+to the above model. For a simple binary pair (solvent (1)-polymer (2)) and assuming
+<span class="math notranslate nohighlight">\(v_2\)</span> » <span class="math notranslate nohighlight">\(v_1\)</span>, the above model reduces to a simpler form.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/158_goma_physics.png"><img alt="../../_images/158_goma_physics.png" src="../../_images/158_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+</section>
+<section id="id53">
+<h3><strong>References</strong><a class="headerlink" href="#id53" title="Permalink to this headline"></a></h3>
+<p>Flory, P., Principles of Polymer Chemistry, Cornell University Press, New York (1953)</p>
+<p>Patterson, D., Y.B. Tewari, H.P. Schreiber, and J.E. Guillet, “Application of Gas-Liquid
+Chromatography to the Thermodynamics of Polymer Solutions,”Macromolecules, 4, 3,
+356-358 (1971)</p>
+<p>GTM-007.1: New Multicomponent Vapor-Liquid Equilibrium Capabilities in GOMA,
+December 10, 1998, A. C. Sun</p>
+</section>
+</section>
+<section id="vl-equil-pseudorxn">
+<h2><strong>VL_EQUIL_PSEUDORXN</strong><a class="headerlink" href="#vl-equil-pseudorxn" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VL_EQUIL_PSEUDORXN</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer_list</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id54">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id54" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card enforces vapor-liquid equilibrium between a gas phase
+and a liquid phase species component using Raoult’s law expressed via a finite-rate
+kinetics formalism. The condition only applies to problems containing internal
+interfaces with discontinuous (or multilevel) species unknown variables. The species
+unknown variable must employ the <strong>Q1_D</strong> or <strong>Q2_D</strong> interpolation functions in both
+adjacent element blocks. This boundary condition constrains the species equations on
+both sides of the interface (i.e., supplies a boundary condition) by specifying the
+interfacial mass flux on both sides.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 73%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>VL_EQUIL_PSEUDORXN</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element Block ID of the liquid phase.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer3&gt;</p></td>
+<td><p>Element Block ID of the gas phase.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float&gt;</p></td>
+<td><p>Rate constant for the forward reaction in units of length
+divided by time.</p></td>
+</tr>
+</tbody>
+</table>
+<p>This boundary condition is typically applied to multicomponent two-phase flows that
+have rapid mass exchange between phases. The best example of this is rapid
+evaporation of a liquid component into a gas.</p>
+</section>
+<section id="id55">
+<h3><strong>Examples</strong><a class="headerlink" href="#id55" title="Permalink to this headline"></a></h3>
+<p>The following sample input card</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">VL_EQUIL_PSEUDORXN</span> <span class="n">SS</span> <span class="mi">4</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+<p>demonstrates the following characteristics: species number is “0”; liquid phase element
+block id is “1”; gas phase element block id is “2”; a forward rate constant of 100.0 cm
+<span class="math notranslate nohighlight">\(s^{-1}\)</span>.</p>
+</section>
+<section id="id56">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id56" title="Permalink to this headline"></a></h3>
+<p>The <em>VL_EQUIL_PSEUDORXN</em> boundary condition uses the following equations
+representing a kinetic approach to equilibrium expressed by Raoult’s law, relating
+species <em>k</em> on the liquid side to species <em>k</em> on the gas side.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/159_goma_physics.png"><img alt="../../_images/159_goma_physics.png" src="../../_images/159_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/160_goma_physics.png"><img alt="../../_images/160_goma_physics.png" src="../../_images/160_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/161_goma_physics.png"><img alt="../../_images/161_goma_physics.png" src="../../_images/161_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>and where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/162_goma_physics.png"><img alt="../../_images/162_goma_physics.png" src="../../_images/162_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The usage of the same index, <em>k</em>, on either side of the interface is deliberate and
+represents a stoichiometric limitation to this type of boundary condition.
+<span class="math notranslate nohighlight">\(Y_k^l\)</span> and <span class="math notranslate nohighlight">\(Y_k^g\)</span>
+are the mass fraction of species <em>k</em> on the liquid and gas sides of the interface,
+respectively. <span class="math notranslate nohighlight">\(W_k^l\)</span> is the molecular weight of species <em>k</em>. <span class="math notranslate nohighlight">\(S_k^l\)</span> is the source term for
+creation of species <em>k</em> in the liquid phase at the interface (mol <span class="math notranslate nohighlight">\(cm^{-2}\)</span>
+<span class="math notranslate nohighlight">\(s^{-1}\)</span> ). is the pseudo
+reaction rate ( <span class="math notranslate nohighlight">\(cm s^{-1}\)</span> ) input from the boundary condition card.
+<span class="math notranslate nohighlight">\(K_k^c\)</span> is the concentration
+equilibrium constant, which for the restricted stoichiometry cases covered by this
+boundary condition, is unitless. <span class="math notranslate nohighlight">\(p_k^v\)</span> is the vapor pressure of gas species <em>k</em> above a liquid
+entirely consisting of liquid species <em>k</em>. It is a function of temperature.
+<span class="math notranslate nohighlight">\(\tilde{C}_l\)</span> is the average
+concentration in the liquid (mol <span class="math notranslate nohighlight">\(cm^{-3}\)</span>). <span class="math notranslate nohighlight">\(C_k^l\)</span> and <span class="math notranslate nohighlight">\(C_k^g\)</span> are the liquid and gas concentrations
+of species <em>k</em> (mol <span class="math notranslate nohighlight">\(cm^{-3}\)</span>).</p>
+<p>The choice for the independent variable is arbitrary, although it does change the actual equation formulation for the residual and Jacobian terms arising from the boundary condition. The internal variable Species_Var_Type in the
+Uniform_Problem_Description structure may be queried to determine what the
+actual species independent variable is. Also note, if mole fractions or molar
+concentration are chosen as the independent variable in the problem, the convention
+has been to formulate terms of the residuals in units of moles, cm, and seconds.
+Therefore, division of the equilibrium equations by <span class="math notranslate nohighlight">\(W_k\)</span> would occur before their inclusion into the residual. <span class="math notranslate nohighlight">\(j_k^l\)</span> and <span class="math notranslate nohighlight">\(j_k^g\)</span> are the diffusive flux of species k (gm <span class="math notranslate nohighlight">\(cm^{-2}\)</span> <span class="math notranslate nohighlight">\(s^{-1}\)</span> )
+relative to the mass averaged velocity. <span class="math notranslate nohighlight">\(u_s\)</span> is the velocity of the interface. A typical
+value of <span class="math notranslate nohighlight">\(k^f\)</span> that would lead to good numerical behavior would be 100 cm
+<span class="math notranslate nohighlight">\(s^{-1}\)</span>,
+equivalent to a reaction with a reactive sticking coefficient of 0.01 at 1 atm and 300 K for a molecule whose molecular weight is near to <span class="math notranslate nohighlight">\(N_2\)</span> or <span class="math notranslate nohighlight">\(H_2S\)</span>.</p>
+</section>
+</section>
+<section id="is-equil-pseudorxn">
+<h2><strong>IS_EQUIL_PSEUDORXN</strong><a class="headerlink" href="#is-equil-pseudorxn" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">IS_EQUIL_PSEUDORXN</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer_list</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id57">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id57" title="Permalink to this headline"></a></h3>
+<p><strong>(WIC/MASS)</strong></p>
+<p>This boundary condition card enforces equilibrium between a species component in
+two ideal solution phases via a finite-rate kinetics formalism. The condition only
+applies to problems containing internal interfaces with discontinuous (or multilevel)
+species unknown variables. The species unknown variable must employ the <strong>Q1_D</strong> or
+<strong>Q2_D</strong> interpolation functions in both adjacent element blocks. This boundary
+condition constrains the species equations on both sides of the interface (i.e.,
+supplies a boundary condition) by specifying the interfacial mass flux on both sides.</p>
+<p><em>IS_EQUIL_PSEUDORXN</em> is equivalent to the <em>VL_EQUIL_PSEUDORXN</em> except for
+the fact that we do not assume that one side of the interface is a gas and the other is
+a liquid. Instead, we assume that both materials on either side of the interface are
+ideal solutions, then proceed to formulate an equilibrium expression consistent with
+that.</p>
+<p>The &lt;integer_list&gt; requires three values; definitions of the input parameters are as
+follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 74%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>IS_EQUIL_PSEUDORXN</strong></p></td>
+<td><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer1&gt;</p></td>
+<td><p>Species number.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;integer2&gt;</p></td>
+<td><p>Element Block ID of the first phase, the “+” phase.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer3&gt;</p></td>
+<td><p>Element Block ID of the second phase, the “-” phase.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float&gt;</p></td>
+<td><p>Rate constant for the forward reaction in units of length
+divided by time.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id58">
+<h3><strong>Examples</strong><a class="headerlink" href="#id58" title="Permalink to this headline"></a></h3>
+<p>The sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">IS_EQUIL_PSEUDORXN</span> <span class="n">SS</span> <span class="mi">4</span> <span class="mi">0</span> <span class="mi">1</span> <span class="mi">2</span> <span class="mf">100.</span>
+</pre></div>
+</div>
+<p>demonstrates the following characteristics: species number is “0”; the “+” phase
+element block id is “1”; the “-” phase element block id is “2”; a forward rate constant of 100. cm <span class="math notranslate nohighlight">\(s^{-1}\)</span>.</p>
+</section>
+<section id="id59">
+<h3><strong>Technical Discussion</strong><a class="headerlink" href="#id59" title="Permalink to this headline"></a></h3>
+<p>The <em>IS_EQUIL_PSEUDORXN</em> boundary condition uses the following equations
+representing a kinetic approach to equilibrium expressed by an ideal solution model for
+thermodynamics on either side of the interface. Initially, we relate species <em>k</em> on the + side to species <em>k</em> on the - side of the interface via a kinetic formulation, whose rate constant is fast enough to ensure equilibrium in practice. However, later we may extend the capability to more complicated stoichiometric formulations for equilibrium, since the formulation for the equilibrium expression is readily extensible, unlike <em>Goma’s</em> previous treatment.</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/163_goma_physics.png"><img alt="../../_images/163_goma_physics.png" src="../../_images/163_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/164_goma_physics.png"><img alt="../../_images/164_goma_physics.png" src="../../_images/164_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/165_goma_physics.png"><img alt="../../_images/165_goma_physics.png" src="../../_images/165_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The “-” phase is defined as the reactants, while the “+” phase is defined to be the
+products. The expression for the concentration equilibrium constant, <span class="math notranslate nohighlight">\(K_k^c\)</span> , is based on the ideal solution expression for the chemical potentials for species <em>k</em> in the two phases [Denbigh, p. 249],</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/166_goma_physics.png"><img alt="../../_images/166_goma_physics.png" src="../../_images/166_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where <span class="math notranslate nohighlight">\(\mu_k^{+*}\)</span> (T,P) is defined as the chemical potential of species <em>k</em> in its pure state (or a
+hypothetical pure state if a real pure state doesn’t exist) at temperature <em>T</em> and pressure
+<em>P</em>. <span class="math notranslate nohighlight">\(\mu_k^{+*}\)</span> (T,P) is related to the standard state of species <em>k</em> in phase +, <span class="math notranslate nohighlight">\(\mu_k^+\)</span>, <span class="math notranslate nohighlight">\(\underline{o}\)</span> + (T) , which is
+independent of pressure, through specification of the pressure dependence of the pure
+species k. Two pressure dependencies are initially supported:</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/167_goma_physics.png"><img alt="../../_images/167_goma_physics.png" src="../../_images/167_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/168_goma_physics.png"><img alt="../../_images/168_goma_physics.png" src="../../_images/168_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>With these definitions, <span class="math notranslate nohighlight">\(K_k^c\)</span> can be seen to be equal to</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/169_goma_physics.png"><img alt="../../_images/169_goma_physics.png" src="../../_images/169_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>where</p>
+<figure class="align-center">
+<a class="reference internal image-reference" href="../../_images/170_goma_physics.png"><img alt="../../_images/170_goma_physics.png" src="../../_images/170_goma_physics.png" style="width: 90%;" /></a>
+</figure>
+<p>The chemical potential for a species in a phase will be calculated either from
+CHEMKIN or from the <em>Chemical Potential, Pure Species Chemical Potential, and
+Standard State Chemical Potential cards</em> in the materials database file.</p>
+<p>The choice for the independent variable for the species unknown is relatively arbitrary,although it does change the actual equation formulation for the residual and Jacobian terms arising from the boundary condition. The internal variable Species_Var_Type in the Uniform_Problem_Description structure is queried to determine what the actual species independent variable is. A choice of SPECIES_UNDEFINED_FORM is
+unacceptable. If either mole fractions or molar concentration is chosen as the
+independent variable in the problem, the convention has been to formulate terms of the
+residuals in units of moles, cm, and seconds. Therefore, division of the equilibrium
+equations <span class="math notranslate nohighlight">\(W_k\)</span> by occurs before their inclusion into the residual.
+<span class="math notranslate nohighlight">\(J^l_k\)</span> and <span class="math notranslate nohighlight">\(J^g_k\)</span> are the
+diffusive flux of species <em>k</em>
+( gm <span class="math notranslate nohighlight">\(cm^{-2}\)</span>
+<span class="math notranslate nohighlight">\(s^{-1}\)</span> ) relative to the mass-averaged velocity.
+<span class="math notranslate nohighlight">\(u^s\)</span> is
+the velocity of the interface. A typical value of
+<span class="math notranslate nohighlight">\(k^f\)</span> that would lead to good numerical
+behavior would be 100 cm
+<span class="math notranslate nohighlight">\(s^{-1}\)</span>, equivalent to a reaction with a reactive sticking
+coefficient of 0.01 at 1 atm and 300 K for a molecule whose molecular weight is near to
+<span class="math notranslate nohighlight">\(N_2\)</span> or
+<span class="math notranslate nohighlight">\(H_2 S\)</span>.</p>
+</section>
+<section id="id60">
+<h3><strong>References</strong><a class="headerlink" href="#id60" title="Permalink to this headline"></a></h3>
+<p>Denbigh, K., The Principles of Chemical Equilibrium, Cambridge University Press,
+Cambridge, 1981</p>
+</section>
+</section>
+<section id="surface-charge">
+<h2><strong>SURFACE_CHARGE</strong><a class="headerlink" href="#surface-charge" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SURFACE_CHARGE</span> <span class="n">SS</span> <span class="o">&lt;</span><span class="n">bc_id</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">integer</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="nb">float</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id61">
+<h3><strong>Description / Usage</strong><a class="headerlink" href="#id61" title="Permalink to this headline"></a></h3>
+<p><strong>(SIC/MASS)</strong></p>
+<p>The <em>SURFACE_CHARGE</em> card specifies the electrostatic nature of a surface:
+electrically neutral, positively charged or negatively charged.</p>
+<p>Definitions of the input parameters are as follows:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 18%" />
+<col style="width: 58%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>SURFACE_CHARGE</strong></p></td>
+<td colspan="2"><p>Name of the boundary condition (&lt;bc_name&gt;).</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>SS</strong></p></td>
+<td colspan="2"><p>Type of boundary condition (&lt;bc_type&gt;), where <strong>SS</strong>
+denotes side set in the EXODUS II database.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;bc_id&gt;</p></td>
+<td colspan="2"><p>The boundary flag identifier, an integer associated with
+&lt;bc_type&gt; that identifies the boundary location (side set
+in EXODUS II) in the problem domain.</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;integer&gt;</p></td>
+<td colspan="2"><p>Index of species to which surface charge condition
+applies.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;float&gt;</p></td>
+<td colspan="2"><p><em>z</em>, value of surface charge.</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>0</p></td>
+<td><p>electroneutrality</p></td>
+</tr>
+<tr class="row-odd"><td></td>
+<td><p>positive <em>z</em></p></td>
+<td><p>positively charged surface</p></td>
+</tr>
+<tr class="row-even"><td></td>
+<td><p>negative <em>z</em></p></td>
+<td><p>negatively charged surface</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id62">
+<h3><strong>Examples</strong><a class="headerlink" href="#id62" title="Permalink to this headline"></a></h3>
+<p>The following input card indicates that on side set 1 species 1 is electrically neutral:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BC</span> <span class="o">=</span> <span class="n">SURFACE_CHARGE</span> <span class="n">SS</span> <span class="mi">1</span>   <span class="mi">1</span>   <span class="mf">0.0</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

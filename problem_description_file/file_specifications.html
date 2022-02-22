@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>File Specification &mdash; Goma User Manual 6.1.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="General Specifications" href="general_specifications.html" />
+    <link rel="prev" title="Problem Description (Input File)" href="../problem_description_file.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Goma User Manual
+            <img src="../_static/goma.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                6.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../background.html">Background Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_structure_and_io.html">Code Structure and I/O</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../problem_description_file.html">Problem Description (Input File)</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">File Specification</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fem-file">FEM File</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#description-usage">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#technical-discussion">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#output-exodus-ii-file">Output EXODUS II File</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3">Technical Discussion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4">References</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#guess-file">Guess File</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id5">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#soln-file">SOLN File</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id8">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id9">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#brk-file">Brk File</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id11">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#write-intermediate-results">Write Intermediate Results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id13">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id14">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id15">Technical Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#write-initial-solution">Write Initial Solution</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id16">Description / Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id17">Examples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id18">Technical Discussion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="general_specifications.html">General Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="time_integration.html">Time Integration Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="level_set.html">Level Set Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phase_field.html">Phase Field Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="continuation.html">Continuation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hunting.html">Hunting Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="augmenting_conditions.html">Augmenting Conditions Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solver_specifications.html">Solver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="eigensolver.html">Eigensolver Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="boundary_conditions.html">Boundary Condition Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rotation.html">Rotation Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="problem_description.html">Problem Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing.html">Post Processing Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_fluxes.html">Post Processing Fluxes and Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_particle.html">Post Processing Particle Traces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="post_processing_volume.html">Volumetric Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../material_files.html">Material Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation_lists.html">Appendix 1: Goma Documentation Lists</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../library_mode.html">Appendix 2: Using Goma in Library Mode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Goma User Manual</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../problem_description_file.html">Problem Description (Input File)</a> &raquo;</li>
+      <li>File Specification</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/problem_description_file/file_specifications.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="file-specification">
+<h1>File Specification<a class="headerlink" href="#file-specification" title="Permalink to this headline"></a></h1>
+<p>In general, this first section of the main input file is used to direct <em>Goma</em> I/O through a series of
+named external files that contain information about the finite element mesh, the initial guess of a
+solution vector, and output options for saving solutions for continuation, remesh, etc. The
+required and optional input records are as follows:</p>
+<section id="fem-file">
+<h2>FEM File<a class="headerlink" href="#fem-file" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">FEM</span> <span class="n">file</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="description-usage">
+<h3>Description / Usage<a class="headerlink" href="#description-usage" title="Permalink to this headline"></a></h3>
+<p>This required card specifies the name of the EXODUS II finite element mesh file. Any
+EXODUS II file name is permissible, as specified below.</p>
+<dl class="simple">
+<dt>&lt;file_name&gt;</dt><dd><p>A file name of the form <em>prefix</em>.exoII. The <em>prefix</em> portion is any
+user-specified alpha-numeric string, which can be used as a problem-type
+descriptor. Preprocessors and postprocessors (like AVS) might require the
+“.exoII” suffix so it is a required part of the file designation. The
+maximum length of the file name is 85 characters.</p>
+</dd>
+</dl>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">FEM</span> <span class="n">file</span> <span class="o">=</span> <span class="ow">in</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+</section>
+<section id="technical-discussion">
+<h3>Technical Discussion<a class="headerlink" href="#technical-discussion" title="Permalink to this headline"></a></h3>
+<p>This file contains the finite element discretization of the problem domain. Finite
+element mesh files from other preprocessors may be used with <em>Goma</em> as long as a
+translator from the preprocessor’s output format to the EXODUS II format is available
+to the analyst.</p>
+</section>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this headline"></a></h3>
+<p>The EXODUS II format is documented in:</p>
+<ul class="simple">
+<li><p>EXODUS II: A Finite Element Data Model, Schoof, L. A. and V. R. Yarberry, SAND92-2137, Sandia National Laboratories, Albuquerque, NM.</p></li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
+<section id="output-exodus-ii-file">
+<h2>Output EXODUS II File<a class="headerlink" href="#output-exodus-ii-file" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Output</span> <span class="n">EXODUS</span> <span class="n">II</span> <span class="n">file</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3>Description / Usage<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
+<p>This required card specifies the name of the output EXODUS II file. Any EXODUS II
+file name is permissible, as specified below.</p>
+<dl class="simple">
+<dt>&lt;file_name&gt;</dt><dd><p>A file name of the form <code class="docutils literal notranslate"><span class="pre">*prefix*.exoII</span></code>. The <em>prefix</em> portion is any
+user-specified alpha-numeric string, which can be used as an output file
+descriptor.</p>
+</dd>
+</dl>
+<p>This EXODUS II file contains a replica of the input mesh and boundary condition
+information exactly as it was provided in the <em>FEM file</em>, but has appended to it the
+solution field information appropriate to the problem type. If the name of this output
+EXODUS II file &lt;file_name&gt; is identical to the name of the input EXODUS II file (as
+specified in the <em>FEM file</em> card), then no replication of the input mesh data is performed
+and any results are simply appended to it.</p>
+</section>
+<section id="id2">
+<h3>Examples<a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Output</span> <span class="n">EXODUS</span> <span class="n">II</span> <span class="n">file</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">exoII</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3>Technical Discussion<a class="headerlink" href="#id3" title="Permalink to this headline"></a></h3>
+<p>Although allowed, it is not advisable to make this file name the same as the file name
+input on the <em>FEM file</em> card.</p>
+</section>
+<section id="id4">
+<h3>References<a class="headerlink" href="#id4" title="Permalink to this headline"></a></h3>
+<p>The EXODUS II format is documented in:</p>
+<ul class="simple">
+<li><p>EXODUS II: A Finite Element Data Model, Schoof, L. A. and V. R. Yarberry, SAND92-2137, Sandia National Laboratories, Albuquerque, NM.</p></li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
+<section id="guess-file">
+<h2>Guess File<a class="headerlink" href="#guess-file" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">GUESS</span> <span class="n">file</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id5">
+<h3>Description / Usage<a class="headerlink" href="#id5" title="Permalink to this headline"></a></h3>
+<p>This required card identifies the input file that provides the initial guess for the solution
+vector for continuation or time integration, where</p>
+<dl class="simple">
+<dt>&lt;file_name&gt;</dt><dd><p>Specifies the exact name of the file and can be any file name.</p>
+</dd>
+</dl>
+<p>The file &lt;file_name&gt; is read by <em>Goma</em> only if the value of the <em>Initial Guess</em> (next
+section on <em>General Specifications</em>) card is set to read. The current format of this ASCII
+file is a list of unformatted floating point numbers (the solution variable followed by
+the residual value for that degree of freedom) in the order of the unknown map; this is
+the same format as the file described in the <em>SOLN</em> file card. A solution file from a
+previous simulation may be used.</p>
+</section>
+<section id="id6">
+<h3>Examples<a class="headerlink" href="#id6" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">GUESS</span> <span class="n">file</span> <span class="o">=</span> <span class="n">contin</span><span class="o">.</span><span class="n">dat</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3>Technical Discussion<a class="headerlink" href="#id7" title="Permalink to this headline"></a></h3>
+<p>This file is typically a copy of the <em>SOLN file</em> thus being an exact replica of it. It
+represents the only way to continue a previous solution from an ASCII file. Typically a
+continuation proceeds from a converged solution but the result from an intermediate
+solution could also be used; the user is cautioned about the potential difficulties of
+restarting from non-converged solution. (See <em>Initial Guess</em> card about (re-)starting from
+a binary file.)</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="soln-file">
+<h2>SOLN File<a class="headerlink" href="#soln-file" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SOLN</span> <span class="n">file</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id8">
+<h3>Description / Usage<a class="headerlink" href="#id8" title="Permalink to this headline"></a></h3>
+<p>This required card identifies the ASCII output file that will provide the initial guess for
+continuation or time integration, where</p>
+<dl class="simple">
+<dt>&lt;file_name&gt;</dt><dd><p>Specifies the name of the output file, or if no file is desired, a value of
+<strong>no</strong> or <strong>none</strong> should be entered.</p>
+</dd>
+</dl>
+<p>The current format of this ASCII file is a list of unformatted floating point numbers that
+includes every degree of freedom in the problem in the order specified in the unknown
+map. Other information (residual for that degree of freedom) may appear beyond the
+first column of numbers in this file that is sometimes useful in determining the name
+and location of the corresponding degree-of-freedom. If <strong>no</strong> or <strong>none</strong> is used in place of
+the file name, no ASCII information is written.</p>
+</section>
+<section id="id9">
+<h3>Examples<a class="headerlink" href="#id9" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SOLN</span> <span class="n">file</span> <span class="o">=</span> <span class="n">soln</span><span class="o">.</span><span class="n">dat</span>
+</pre></div>
+</div>
+</section>
+<section id="id10">
+<h3>Technical Discussion<a class="headerlink" href="#id10" title="Permalink to this headline"></a></h3>
+<p>This file represents the primary ASCII output of the <em>Goma</em> solution vector and the
+primary way to continue or restart a solution from an ASCII file. (See <em>Write
+Intermediate Solutions</em> for related information.) When a continuation run is performed,
+this file is copied into the file specified in the <em>GUESS file</em> input card.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="brk-file">
+<h2>Brk File<a class="headerlink" href="#brk-file" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Brk</span> <span class="n">file</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">file_name</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<section id="id11">
+<h3>Description / Usage<a class="headerlink" href="#id11" title="Permalink to this headline"></a></h3>
+<dl class="simple">
+<dt>&lt;file_name&gt;</dt><dd><p>A Brk file in the brk file syntax with specifications for material blocks</p>
+</dd>
+</dl>
+<p>This optional card specifies the name of the Brk file for this problem, if one
+does not exist goma will attempt to create one. The Brk file is used by the brk
+utility to break the Exodus II files on parallel runs for each processor.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Brk files can only be created on single processor runs.</p>
+</div>
+</section>
+<section id="id12">
+<h3>Examples<a class="headerlink" href="#id12" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Brk</span> <span class="n">file</span> <span class="o">=</span> <span class="ow">in</span><span class="o">.</span><span class="n">brk</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="write-intermediate-results">
+<h2>Write Intermediate Results<a class="headerlink" href="#write-intermediate-results" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Write</span> <span class="n">Intermediate</span> <span class="n">Results</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id13">
+<h3>Description / Usage<a class="headerlink" href="#id13" title="Permalink to this headline"></a></h3>
+<p>This optional card controls the output of intermediate results. The permissible values
+for this card are</p>
+<dl class="simple">
+<dt>yes</dt><dd><p>The code will output the latest Newton iteration to a file named ‘tmp.i.d’,
+where i is the Newton iteration number. The format of tmp.i.d will be
+similar to the ASCII results data described for the <em>GUESS file</em> and <em>SOLN
+file</em> cards. Also, the output EXODUS II database (see the <em>Output EXODUS II
+file</em> card) will accumulate the intermediate iterations as time planes of
+the solution.</p>
+</dd>
+<dt>no</dt><dd><p>No intermediate results are written; only the last Newton iteration is
+written to the file named in the <em>SOLN file</em> card, and only the final
+converged iteration is output to the EXODUS II file.</p>
+</dd>
+</dl>
+</section>
+<section id="id14">
+<h3>Examples<a class="headerlink" href="#id14" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Write</span> <span class="n">Intermediate</span> <span class="n">Results</span> <span class="o">=</span> <span class="n">no</span>
+</pre></div>
+</div>
+</section>
+<section id="id15">
+<h3>Technical Discussion<a class="headerlink" href="#id15" title="Permalink to this headline"></a></h3>
+<p>This file is useful to guard against machine crashes or accidental job kills, particularly
+for very large problems, as it can be used to restart a simulation (by using this file as the
+<em>Guess file</em>). The intermediate results in the output EXODUS II database can be a useful
+debugging tool, giving the analyst the ability to use highly relaxed Newton iterations to
+see how a free boundary problem diverges.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="write-initial-solution">
+<h2>Write Initial Solution<a class="headerlink" href="#write-initial-solution" title="Permalink to this headline"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Write</span> <span class="n">initial</span> <span class="n">solution</span> <span class="o">=</span> <span class="p">{</span><span class="n">yes</span> <span class="o">|</span> <span class="n">no</span><span class="p">}</span>
+</pre></div>
+</div>
+<section id="id16">
+<h3>Description / Usage<a class="headerlink" href="#id16" title="Permalink to this headline"></a></h3>
+<p>This optional card controls the output of an initial solution prior to the start of a time
+dependent simulation. The permissible values for this card are:</p>
+<dl class="simple">
+<dt>yes</dt><dd><p>This value sets the flag WRITE_INITIAL_SOLUTION variable to “TRUE”. The
+initial solution vector will be written to an EXODUS II file and to an
+ASCII file (if the number of processors is not greater than
+DP_PROC_PRINT_LIMIT, currently set to 4 in <em>rf_io.h</em>).</p>
+</dd>
+<dt>no</dt><dd><p>No initial solution is written.</p>
+</dd>
+</dl>
+</section>
+<section id="id17">
+<h3>Examples<a class="headerlink" href="#id17" title="Permalink to this headline"></a></h3>
+<p>Following is a sample card:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Write</span> <span class="n">Initial</span> <span class="n">Solution</span> <span class="o">=</span> <span class="n">yes</span>
+</pre></div>
+</div>
+</section>
+<section id="id18">
+<h3>Technical Discussion<a class="headerlink" href="#id18" title="Permalink to this headline"></a></h3>
+<p>This option is useful to activate when help is desired in debugging the startup portion of
+a transient simulation.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../problem_description_file.html" class="btn btn-neutral float-left" title="Problem Description (Input File)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="general_specifications.html" class="btn btn-neutral float-right" title="General Specifications" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019 Goma Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
