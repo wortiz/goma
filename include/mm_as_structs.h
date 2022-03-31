@@ -1497,6 +1497,10 @@ struct Basis_Functions {
   dbl phi[MDE];          /* phi_i */
   dbl dphidxi[MDE][DIM]; /* d(phi_i)/d(xi_j) */
 
+  // Nedelec / vector Basis
+  dbl phi_e[MDE][DIM];          /* vector phi_i e_k */
+  dbl dphidxi_e[MDE][DIM][DIM]; /* vector d(phi_i)/d(xi_j) e_k */
+
   /*
    * beer_belly() fills in these elemental Jacobian things...
    */

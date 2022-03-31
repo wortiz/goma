@@ -2607,54 +2607,29 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
       if (v != -1 && !pd->v[imtrx][v])
         continue;
 
-      /*
-       * don't calculate basis function if interpolation doesn't
-       *  correspond to any variable in the current material
-       *  OR if element shape doesn't match the current element block.
-       */
-      if (v != -1 && bf_ptr->element_shape == ei[imtrx]->ielem_shape) {
-        /*
-         * Now, case the dimensionality and look up basis functions
-         * and their derivatives at the quadrature point
-         * using elemental coordinates
-         */
-        jdof = 0;
+      // Special case for vector Basis
+      if (bf_ptr->interpolation == I_N1) {
+        int jdof = 0;
         switch (pd->Num_Dim) {
-        case 1:
-          for (i = 0; i < ei[imtrx]->dof[v]; i++) {
-            ledof = ei[imtrx]->lvdof_to_ledof[v][i];
-            if (ei[imtrx]->active_interp_ledof[ledof]) {
-              bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
-                                        bf_ptr->element_shape, bf_ptr->interpolation, jdof);
-              bf_ptr->dphidxi[i][0] =
-                  newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
-                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
-              jdof++;
-            } else {
-              bf_ptr->phi[i] = 0.0;
-              bf_ptr->dphidxi[i][0] = 0.0;
-            }
-          }
-          break;
-
         case 2:
           for (i = 0; i < ei[imtrx]->dof[v]; i++) {
             ledof = ei[imtrx]->lvdof_to_ledof[v][i];
             if (ei[imtrx]->active_interp_ledof[ledof]) {
-              bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
-                                        bf_ptr->element_shape, bf_ptr->interpolation, jdof);
-              bf_ptr->dphidxi[i][0] =
-                  newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
-                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
-              bf_ptr->dphidxi[i][1] =
-                  newshape(xi, ei[imtrx]->ielem_type, DPSI_T, ei[imtrx]->dof_list[v][i],
-                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+              for (int d = 0; d < pd->Num_Dim; d++) {
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, bf_ptr->phi_e[i], NULL);
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_S, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, NULL,
+                                      bf_ptr->dphidxi_e[i][0]);
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_T, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, NULL,
+                                      bf_ptr->dphidxi_e[i][1]);
+              }
               jdof++;
-            } else {
-              bf_ptr->phi[i] = 0.0;
-              bf_ptr->dphidxi[i][0] = 0.0;
-              bf_ptr->dphidxi[i][1] = 0.0;
             }
+            bf_ptr->phi[i] = 0.0;
+            bf_ptr->dphidxi[i][0] = 0.0;
+            bf_ptr->dphidxi[i][1] = 0.0;
           }
           break;
 
@@ -2662,26 +2637,107 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
           for (i = 0; i < ei[imtrx]->dof[v]; i++) {
             ledof = ei[imtrx]->lvdof_to_ledof[v][i];
             if (ei[imtrx]->active_interp_ledof[ledof]) {
-              bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
-                                        bf_ptr->element_shape, bf_ptr->interpolation, jdof);
-              bf_ptr->dphidxi[i][0] =
-                  newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
-                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
-              bf_ptr->dphidxi[i][1] =
-                  newshape(xi, ei[imtrx]->ielem_type, DPSI_T, ei[imtrx]->dof_list[v][i],
-                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
-              bf_ptr->dphidxi[i][2] =
-                  newshape(xi, ei[imtrx]->ielem_type, DPSI_U, ei[imtrx]->dof_list[v][i],
-                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+              for (int d = 0; d < pd->Num_Dim; d++) {
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, bf_ptr->phi_e[i], NULL);
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_S, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, NULL,
+                                      bf_ptr->dphidxi_e[i][0]);
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_T, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, NULL,
+                                      bf_ptr->dphidxi_e[i][1]);
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_U, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, bf_ptr->phi_e[i],
+                                      bf_ptr->dphidxi_e[i][2]);
+              }
               jdof++;
-            } else {
-              bf_ptr->phi[i] = 0.0;
-              bf_ptr->dphidxi[i][0] = 0.0;
-              bf_ptr->dphidxi[i][1] = 0.0;
-              bf_ptr->dphidxi[i][2] = 0.0;
             }
+            bf_ptr->phi[i] = 0.0;
+            bf_ptr->dphidxi[i][0] = 0.0;
+            bf_ptr->dphidxi[i][1] = 0.0;
+            bf_ptr->dphidxi[i][2] = 0.0;
           }
           break;
+        }
+
+      } else {
+
+        /*
+         * don't calculate basis function if interpolation doesn't
+         *  correspond to any variable in the current material
+         *  OR if element shape doesn't match the current element block.
+         */
+        if (v != -1 && bf_ptr->element_shape == ei[imtrx]->ielem_shape) {
+          /*
+           * Now, case the dimensionality and look up basis functions
+           * and their derivatives at the quadrature point
+           * using elemental coordinates
+           */
+          jdof = 0;
+          switch (pd->Num_Dim) {
+          case 1:
+            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
+              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
+              if (ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
+                                          bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                bf_ptr->dphidxi[i][0] =
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                jdof++;
+              } else {
+                bf_ptr->phi[i] = 0.0;
+                bf_ptr->dphidxi[i][0] = 0.0;
+              }
+            }
+            break;
+
+          case 2:
+            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
+              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
+              if (ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
+                                          bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                bf_ptr->dphidxi[i][0] =
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                bf_ptr->dphidxi[i][1] =
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_T, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                jdof++;
+              } else {
+                bf_ptr->phi[i] = 0.0;
+                bf_ptr->dphidxi[i][0] = 0.0;
+                bf_ptr->dphidxi[i][1] = 0.0;
+              }
+            }
+            break;
+
+          case 3:
+            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
+              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
+              if (ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
+                                          bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                bf_ptr->dphidxi[i][0] =
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                bf_ptr->dphidxi[i][1] =
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_T, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                bf_ptr->dphidxi[i][2] =
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_U, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
+                jdof++;
+              } else {
+                bf_ptr->phi[i] = 0.0;
+                bf_ptr->dphidxi[i][0] = 0.0;
+                bf_ptr->dphidxi[i][1] = 0.0;
+                bf_ptr->dphidxi[i][2] = 0.0;
+              }
+            }
+            break;
+          }
         }
       }
     }
@@ -4823,3 +4879,395 @@ double calc_tensor_invariant(dbl T[DIM][DIM],       // Original tensor
   return TI;
 
 } // End of calc_tensor_invariants()
+
+void vector_shape_function(Dpi *dpi,
+                           const struct Element_Indices *ei,
+                           const double xi[],
+                           const int Iquant,
+                           const int eshape,
+                           const int interpolation,
+                           const int ledof,
+                           const int vindex,
+                           double *phi_e,
+                           double *dphidxi_e) {
+  const double s = xi[0];
+  const double t = xi[1];
+  const double u = xi[2];
+
+  int global_nodes[MDE] = {0};
+
+  for (int i = 0; i < ei->num_local_nodes; i++) {
+    global_nodes[i] = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + i]];
+  }
+
+  switch (eshape) {
+
+  case TRIANGLE: {
+    if (interpolation == I_N1) {
+      switch (Iquant) {
+      case PSI:
+        switch (ledof) {
+        case 0:
+          if (global_nodes[0] > global_nodes[1]) {
+            phi_e[0] = -1 + t;
+            phi_e[1] = s;
+          } else {
+            phi_e[0] = 1 - t;
+            phi_e[1] = -s;
+          }
+          break;
+        case 1:
+          if (global_nodes[1] > global_nodes[2]) {
+            phi_e[0] = t;
+            phi_e[1] = -s;
+          } else {
+            phi_e[0] = -t;
+            phi_e[1] = s;
+          }
+          break;
+        case 2:
+          if (global_nodes[2] > global_nodes[3]) {
+            phi_e[0] = t;
+            phi_e[1] = -s + 1;
+          } else {
+            phi_e[0] = -t;
+            phi_e[1] = s - 1;
+          }
+          break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Triangle");
+          break;
+        }
+        break;
+      case DPSI_S:
+        switch (ledof) {
+        case 0:
+          if (global_nodes[0] > global_nodes[1]) {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 1.0;
+          } else {
+            dphidxi_e[0] = 0.;
+            dphidxi_e[1] = -1;
+          }
+          break;
+        case 1:
+          if (global_nodes[1] > global_nodes[2]) {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = -1;
+          } else {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 1;
+          }
+          break;
+        case 2:
+          if (global_nodes[2] > global_nodes[3]) {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = -1;
+          } else {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 1;
+          }
+          break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Triangle");
+          break;
+        }
+        break;
+
+      case DPSI_T:
+        switch (ledof) {
+        case 0:
+          if (global_nodes[0] > global_nodes[1]) {
+            dphidxi_e[0] = 1;
+            dphidxi_e[1] = 0;
+          } else {
+            dphidxi_e[0] = -1.;
+            dphidxi_e[1] = 0;
+          }
+          break;
+        case 1:
+          if (global_nodes[1] > global_nodes[2]) {
+            dphidxi_e[0] = 1;
+            dphidxi_e[1] = 0;
+          } else {
+            dphidxi_e[0] = -1;
+            dphidxi_e[1] = 0;
+          }
+          break;
+        case 2:
+          if (global_nodes[2] > global_nodes[3]) {
+            dphidxi_e[0] = 1;
+            dphidxi_e[1] = 0;
+          } else {
+            dphidxi_e[0] = -1;
+            dphidxi_e[1] = 0;
+          }
+          break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Triangle");
+          break;
+        }
+        break;
+      default:
+        GOMA_EH(GOMA_ERROR, "Unknown Iquant");
+        break;
+      }
+
+    } else {
+      GOMA_EH(GOMA_ERROR, "Don't recognize this basis type for triangles");
+    }
+
+  } break;
+  case QUADRILATERAL: {
+    if (interpolation == I_N1) {
+      switch (Iquant) {
+      case PSI:
+        switch (ledof) {
+        case 0:
+          if (global_nodes[0] > global_nodes[1]) {
+            phi_e[0] = -0.25 * (1 - t);
+            phi_e[1] = 0;
+          } else {
+            phi_e[0] = 0.25 * (1 - t);
+            phi_e[1] = 0;
+          }
+          break;
+        case 1:
+          if (global_nodes[1] > global_nodes[2]) {
+            phi_e[0] = 0;
+            phi_e[1] = 0.25 * (1 - s);
+          } else {
+            phi_e[0] = 0;
+            phi_e[1] = -0.25 * (1 - s);
+          }
+          break;
+        case 2:
+          if (global_nodes[2] > global_nodes[3]) {
+            phi_e[0] = 0.25 * (1 + t);
+            phi_e[1] = 0;
+          } else {
+            phi_e[0] = -0.25 * (1 + t);
+            phi_e[1] = 0;
+          }
+          break;
+        case 3:
+          if (global_nodes[3] > global_nodes[4]) {
+            phi_e[0] = 0;
+            phi_e[1] = 0.25 * (1 - s);
+          } else {
+            phi_e[0] = 0;
+            phi_e[1] = -0.25 * (1 - s);
+          }
+          break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Quad");
+          break;
+        }
+        break;
+      case DPSI_S:
+        switch (ledof) {
+        case 0:
+          if (global_nodes[0] > global_nodes[1]) {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 0;
+          } else {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 0;
+          }
+          break;
+        case 1:
+          if (global_nodes[1] > global_nodes[2]) {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = -0.25;
+          } else {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 0.25;
+          }
+          break;
+        case 2:
+          if (global_nodes[2] > global_nodes[3]) {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 0;
+          } else {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 0;
+          }
+          break;
+        case 3:
+          if (global_nodes[3] > global_nodes[4]) {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = -0.25;
+          } else {
+            dphidxi_e[0] = 0;
+            dphidxi_e[1] = 0.25;
+          }
+          break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Quad");
+          break;
+        }
+        break;
+      case DPSI_T:
+        switch (ledof) {
+        case 0:
+          if (global_nodes[0] > global_nodes[1]) {
+            phi_e[0] = 0.25;
+            phi_e[1] = 0;
+          } else {
+            phi_e[0] = -0.25;
+            phi_e[1] = 0;
+          }
+          break;
+        case 1:
+          if (global_nodes[1] > global_nodes[2]) {
+            phi_e[0] = 0;
+            phi_e[1] = 0.;
+          } else {
+            phi_e[0] = 0;
+            phi_e[1] = 0.;
+          }
+          break;
+        case 2:
+          if (global_nodes[2] > global_nodes[3]) {
+            phi_e[0] = 0.25;
+            phi_e[1] = 0;
+          } else {
+            phi_e[0] = -0.25;
+            phi_e[1] = 0;
+          }
+          break;
+        case 3:
+          if (global_nodes[3] > global_nodes[4]) {
+            phi_e[0] = 0;
+            phi_e[1] = 0.;
+          } else {
+            phi_e[0] = 0;
+            phi_e[1] = 0.;
+          }
+          break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Quad");
+          break;
+        }
+        break;
+      default:
+        GOMA_EH(GOMA_ERROR, "Unknown Iquant");
+        break;
+      }
+    } else {
+      GOMA_EH(GOMA_ERROR, "Don't recognize this basis type for QUADRILATERALS");
+    }
+
+  } break;
+  case TETRAHEDRON: {
+    if (interpolation == I_N1) {
+      switch (Iquant) {
+      case PSI:
+        switch (ledof) {
+        case 0:
+          if (global_nodes[0] > global_nodes[1]) {
+            phi_e[0] = -1 + t + u;
+            phi_e[1] = -s;
+            phi_e[2] = -s;
+          } else {
+            phi_e[0] = 1 - t - u;
+            phi_e[1] = s;
+            phi_e[2] = s;
+          }
+          break;
+        case 1:
+          if (global_nodes[1] > global_nodes[2]) {
+            phi_e[0] = t;
+            phi_e[1] = -s;
+            phi_e[2] = 0;
+          } else {
+            phi_e[0] = -t;
+            phi_e[1] = s;
+            phi_e[2] = 0;
+          }
+          break;
+        case 2:
+          if (global_nodes[0] > global_nodes[2]) {
+            phi_e[0] = -t;
+            phi_e[1] = -1 + s + u;
+            phi_e[2] = -t;
+          } else {
+            phi_e[0] = t;
+            phi_e[1] = 1 - s - u;
+            phi_e[2] = t;
+          }
+          break;
+        case 3:
+          if (global_nodes[0] > global_nodes[3]) {
+            phi_e[0] = -u;
+            phi_e[1] = -u;
+            phi_e[2] = -1 + s + t;
+          } else {
+            phi_e[0] = u;
+            phi_e[1] = u;
+            phi_e[2] = 1 - s - t;
+          }
+          break;
+        case 4:
+          if (global_nodes[0] > global_nodes[3]) {
+            phi_e[0] = -u;
+            phi_e[1] = -u;
+            phi_e[2] = -1 + s + t;
+          } else {
+            phi_e[0] = u;
+            phi_e[1] = u;
+            phi_e[2] = 1 - s - t;
+          }
+          break;
+        case 5:
+          if (global_nodes[0] > global_nodes[3]) {
+            phi_e[0] = -u;
+            phi_e[1] = -u;
+            phi_e[2] = -1 + s + t;
+          } else {
+            phi_e[0] = u;
+            phi_e[1] = u;
+            phi_e[2] = 1 - s - t;
+          }
+          break;
+        case 6:
+          if (global_nodes[0] > global_nodes[3]) {
+            phi_e[0] = -u;
+            phi_e[1] = -u;
+            phi_e[2] = -1 + s + t;
+          } else {
+            phi_e[0] = u;
+            phi_e[1] = u;
+            phi_e[2] = 1 - s - t;
+          }
+          break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis TETRAHEDRON");
+          break;
+        }
+        break;
+      default:
+        GOMA_EH(GOMA_ERROR, "Unknown Iquant TETRAHEDRON I_N1");
+        break;
+
+      }
+
+    } else {
+      GOMA_EH(GOMA_ERROR, "Don't recognize this basis type for tetrahedron");
+    }
+
+  } break;
+  case HEXAHEDRON: {
+    if (interpolation == I_N1) {
+      switch (Iquant) {
+      default:
+        GOMA_EH(GOMA_ERROR, "Unknown Iquant HEXAHEDRON I_N1");
+        break;
+      }
+    } else {
+      GOMA_EH(GOMA_ERROR, "Don't recognize this basis type for hexahedron");
+    }
+
+  } break;
+  }
+}
