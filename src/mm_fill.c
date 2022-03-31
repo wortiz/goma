@@ -1693,12 +1693,21 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     }
-    if ((pde[R_EM_E1_REAL] && !pde[R_EM_H1_REAL]) || (pde[R_EM_E2_REAL] && !pde[R_EM_H2_REAL]) ||
-        (pde[R_EM_E3_REAL] && !pde[R_EM_H3_REAL])) {
+    if (((pde[R_EM_E1_REAL] && !pde[R_EM_H1_REAL]) || (pde[R_EM_E2_REAL] && !pde[R_EM_H2_REAL]) ||
+         (pde[R_EM_E3_REAL] && !pde[R_EM_H3_REAL])) &&
+        bf[EM_E1_REAL]->interpolation != I_N1) {
       err = assemble_ewave_curlcurl(time_value, theta, delta_t, R_EM_E1_REAL, EM_E1_REAL);
       GOMA_EH(err, "assemble_ewave");
 #ifdef CHECK_FINITE
       err = CHECKFINITE("assemble_ewave");
+      if (err)
+        return -1;
+#endif
+    } else if (pde[R_EM_E1_REAL] && bf[EM_E1_REAL]->interpolation == I_N1) {
+      err = assemble_ewave_nedelec();
+      GOMA_EH(err, "assemble_ewave_nedelec");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_emwave");
       if (err)
         return -1;
 #endif

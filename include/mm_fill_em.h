@@ -113,4 +113,5 @@ int assemble_ewave_laplacian(double time,       // present time
                              const int em_var); //  variable id - should match me_eqn
 
 int assemble_em_continuity(void);
+int assemble_ewave_nedelec(void);
 #endif /* GOMA_MM_FILL_EM_H */
