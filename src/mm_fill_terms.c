@@ -8224,20 +8224,42 @@ int load_fv(void)
    * EM Wave Vectors...
    */
   if (pdgv[EM_E1_REAL] || pdgv[EM_E2_REAL] || pdgv[EM_E3_REAL]) {
-    for (p = 0; p < DIM; p++) {
-      v = EM_E1_REAL + p;
-      fv->em_er[p] = 0.0;
-      fv_old->em_er[p] = 0.0;
-      fv_dot->em_er[p] = 0.0;
+    if (bf[v]->interpolation == I_N1) {
+      for (p = 0; p < DIM; p++) {
+        v = EM_E1_REAL;
+        fv->em_er[p] = 0.0;
+        fv_old->em_er[p] = 0.0;
+        fv_dot->em_er[p] = 0.0;
 
-      if (pdgv[v]) {
-        dofs = ei[pg->imtrx]->dof[v];
-        for (i = 0; i < dofs; i++) {
-          fv->em_er[p] += *esp->em_er[p][i] * bf[v]->phi[i];
+        if (pdgv[v]) {
+          dofs = ei[pg->imtrx]->dof[v];
+          for (i = 0; i < dofs; i++) {
+            fv->em_er[p] += *esp->em_er[0][i] * bf[v]->phi_e[i][p];
 
-          if (pd->TimeIntegration != STEADY) {
-            fv_old->em_er[p] += *esp_old->em_er[p][i] * bf[v]->phi[i];
-            fv_dot->em_er[p] += *esp_dot->em_er[p][i] * bf[v]->phi[i];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_er[p] += *esp_old->em_er[0][i] * bf[v]->phi_e[i][p];
+              fv_dot->em_er[p] += *esp_dot->em_er[0][i] * bf[v]->phi_e[i][p];
+            }
+          }
+        }
+      }
+
+    } else {
+      for (p = 0; p < DIM; p++) {
+        v = EM_E1_REAL + p;
+        fv->em_er[p] = 0.0;
+        fv_old->em_er[p] = 0.0;
+        fv_dot->em_er[p] = 0.0;
+
+        if (pdgv[v]) {
+          dofs = ei[pg->imtrx]->dof[v];
+          for (i = 0; i < dofs; i++) {
+            fv->em_er[p] += *esp->em_er[p][i] * bf[v]->phi[i];
+
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_er[p] += *esp_old->em_er[p][i] * bf[v]->phi[i];
+              fv_dot->em_er[p] += *esp_dot->em_er[p][i] * bf[v]->phi[i];
+            }
           }
         }
       }
@@ -8245,19 +8267,42 @@ int load_fv(void)
   }
 
   if (pdgv[EM_E1_IMAG] || pdgv[EM_E2_IMAG] || pdgv[EM_E3_IMAG]) {
-    for (p = 0; p < DIM; p++) {
-      v = EM_E1_IMAG + p;
-      fv->em_ei[p] = 0.0;
-      fv_old->em_ei[p] = 0.0;
-      fv_dot->em_ei[p] = 0.0;
-      if (pdgv[v]) {
-        dofs = ei[pg->imtrx]->dof[v];
-        for (i = 0; i < dofs; i++) {
-          fv->em_ei[p] += *esp->em_ei[p][i] * bf[v]->phi[i];
+    if (bf[v]->interpolation == I_N1) {
+      for (p = 0; p < DIM; p++) {
+        v = EM_E1_IMAG;
+        fv->em_ei[p] = 0.0;
+        fv_old->em_ei[p] = 0.0;
+        fv_dot->em_ei[p] = 0.0;
 
-          if (pd->TimeIntegration != STEADY) {
-            fv_old->em_ei[p] += *esp_old->em_ei[p][i] * bf[v]->phi[i];
-            fv_dot->em_ei[p] += *esp_dot->em_ei[p][i] * bf[v]->phi[i];
+        if (pdgv[v]) {
+          dofs = ei[pg->imtrx]->dof[v];
+          for (i = 0; i < dofs; i++) {
+            fv->em_ei[p] += *esp->em_ei[0][i] * bf[v]->phi_e[i][p];
+
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_ei[p] += *esp_old->em_ei[0][i] * bf[v]->phi_e[i][p];
+              fv_dot->em_ei[p] += *esp_dot->em_ei[0][i] * bf[v]->phi_e[i][p];
+            }
+          }
+        }
+      }
+
+    } else {
+      for (p = 0; p < DIM; p++) {
+        v = EM_E1_REAL + p;
+        fv->em_ei[p] = 0.0;
+        fv_old->em_ei[p] = 0.0;
+        fv_dot->em_ei[p] = 0.0;
+
+        if (pdgv[v]) {
+          dofs = ei[pg->imtrx]->dof[v];
+          for (i = 0; i < dofs; i++) {
+            fv->em_ei[p] += *esp->em_ei[p][i] * bf[v]->phi[i];
+
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_ei[p] += *esp_old->em_ei[p][i] * bf[v]->phi[i];
+              fv_dot->em_ei[p] += *esp_dot->em_ei[p][i] * bf[v]->phi[i];
+            }
           }
         }
       }
@@ -9062,30 +9107,52 @@ int load_fv_grads(void)
     }
   }
 
-  if (pd->gv[EM_E1_REAL] && pd->gv[EM_E2_REAL]) {
+  if (pd->gv[EM_E1_REAL]) {
     v = EM_E1_REAL;
     dofs = ei[upd->matrix_index[v]]->dof[v];
     bfn = bf[v];
 
-    for (p = 0; p < DIM; p++) {
-      fv->curl_em_er[p] = 0.0;
-      for (i = 0; i < dofs; i++) {
-        for (a = 0; a < dim; a++) {
-          fv->curl_em_er[p] += *esp->em_er[a][i] * bfn->curl_phi_e[i][a][p];
+    if (bfn->interpolation == I_N1) {
+      for (p = 0; p < DIM; p++) {
+        fv->curl_em_er[p] = 0.0;
+        for (i = 0; i < dofs; i++) {
+          for (a = 0; a < dim; a++) {
+            fv->curl_em_er[p] += *esp->em_er[0][i] * bfn->curl_phi[i][p];
+          }
+        }
+      }
+    } else {
+      for (p = 0; p < DIM; p++) {
+        fv->curl_em_er[p] = 0.0;
+        for (i = 0; i < dofs; i++) {
+          for (a = 0; a < dim; a++) {
+            fv->curl_em_er[p] += *esp->em_er[a][i] * bfn->curl_phi_e[i][a][p];
+          }
         }
       }
     }
   }
-  if (pd->gv[EM_E1_IMAG] && pd->gv[EM_E2_IMAG]) {
+
+  if (pd->gv[EM_E1_IMAG]) {
     v = EM_E1_IMAG;
     dofs = ei[upd->matrix_index[v]]->dof[v];
     bfn = bf[v];
-
-    for (p = 0; p < DIM; p++) {
-      fv->curl_em_ei[p] = 0.0;
-      for (i = 0; i < dofs; i++) {
-        for (a = 0; a < VIM; a++) {
-          fv->curl_em_ei[p] += *esp->em_ei[a][i] * bfn->curl_phi_e[i][a][p];
+    if (bfn->interpolation == I_N1) {
+      for (p = 0; p < DIM; p++) {
+        fv->curl_em_er[p] = 0.0;
+        for (i = 0; i < dofs; i++) {
+          for (a = 0; a < dim; a++) {
+            fv->curl_em_ei[p] += *esp->em_ei[0][i] * bfn->curl_phi[i][p];
+          }
+        }
+      }
+    } else {
+      for (p = 0; p < DIM; p++) {
+        fv->curl_em_ei[p] = 0.0;
+        for (i = 0; i < dofs; i++) {
+          for (a = 0; a < dim; a++) {
+            fv->curl_em_ei[p] += *esp->em_ei[a][i] * bfn->curl_phi_e[i][a][p];
+          }
         }
       }
     }

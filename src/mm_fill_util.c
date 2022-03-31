@@ -1953,7 +1953,7 @@ int load_bf_grad(void)
          * variable.  I had one, but it is not presently being used.
          */
 
-        if (pd->gv[EM_E1_REAL] || CURL_V != -1) {
+        if (bfv->interpolation != I_N1 && (pd->gv[EM_E1_REAL] || CURL_V != -1)) {
           siz = DIM * DIM * MDE * sizeof(double);
           memset(&(bfv->curl_phi_e[0][0][0]), 0, siz);
 
@@ -1973,6 +1973,24 @@ int load_bf_grad(void)
           }
         }
 
+        if (bfv->interpolation == I_N1) {
+          for (i = 0; i < dofs; i++) {
+            for (int d = 0; d < pd->Num_Dim; d++) {
+              bfv->phi_e[i][d] = 0;
+              for (int k = 0; k < pd->Num_Dim; k++) {
+                bfv->phi_e[i][d] += bfv->B[d][k] * bfv->ref_phi_e[i][k];
+              }
+            }
+          }
+
+          for (i = 0; i < dofs; i++) {
+            for (p = 0; p < DIM; p++) {
+              for (k = 0; k < DIM; k++) { /* VIM */
+                bfv->curl_phi[i][p] += (1 / bf[v]->detJ) * bf[v]->J[p][k] * bfv->curl_e[i][k];
+              }
+            }
+          }
+        }
       } /* end of if v */
     }   /* end of basis function loop. */
   }
@@ -2617,13 +2635,9 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             if (ei[imtrx]->active_interp_ledof[ledof]) {
               for (int d = 0; d < pd->Num_Dim; d++) {
                 vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
-                                      bf_ptr->interpolation, jdof, d, bf_ptr->phi_e[i], NULL);
-                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_S, bf_ptr->element_shape,
-                                      bf_ptr->interpolation, jdof, d, NULL,
-                                      bf_ptr->dphidxi_e[i][0]);
-                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_T, bf_ptr->element_shape,
-                                      bf_ptr->interpolation, jdof, d, NULL,
-                                      bf_ptr->dphidxi_e[i][1]);
+                                      bf_ptr->interpolation, jdof, d, bf_ptr->ref_phi_e[i], NULL);
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, NULL, bf_ptr->curl_e[i]);
               }
               jdof++;
             }
@@ -2639,16 +2653,9 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             if (ei[imtrx]->active_interp_ledof[ledof]) {
               for (int d = 0; d < pd->Num_Dim; d++) {
                 vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
-                                      bf_ptr->interpolation, jdof, d, bf_ptr->phi_e[i], NULL);
-                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_S, bf_ptr->element_shape,
-                                      bf_ptr->interpolation, jdof, d, NULL,
-                                      bf_ptr->dphidxi_e[i][0]);
-                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_T, bf_ptr->element_shape,
-                                      bf_ptr->interpolation, jdof, d, NULL,
-                                      bf_ptr->dphidxi_e[i][1]);
-                vector_shape_function(DPI_ptr, ei[imtrx], xi, DPSI_U, bf_ptr->element_shape,
-                                      bf_ptr->interpolation, jdof, d, bf_ptr->phi_e[i],
-                                      bf_ptr->dphidxi_e[i][2]);
+                                      bf_ptr->interpolation, jdof, d, bf_ptr->ref_phi_e[i], NULL);
+                vector_shape_function(DPI_ptr, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
+                                      bf_ptr->interpolation, jdof, d, NULL, bf_ptr->curl_e[i]);
               }
               jdof++;
             }
@@ -4889,7 +4896,7 @@ void vector_shape_function(Dpi *dpi,
                            const int ledof,
                            const int vindex,
                            double *phi_e,
-                           double *dphidxi_e) {
+                           double *curl_e) {
   const double s = xi[0];
   const double t = xi[1];
   const double u = xi[2];
@@ -4932,75 +4939,6 @@ void vector_shape_function(Dpi *dpi,
           } else {
             phi_e[0] = -t;
             phi_e[1] = s - 1;
-          }
-          break;
-        default:
-          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Triangle");
-          break;
-        }
-        break;
-      case DPSI_S:
-        switch (ledof) {
-        case 0:
-          if (global_nodes[0] > global_nodes[1]) {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 1.0;
-          } else {
-            dphidxi_e[0] = 0.;
-            dphidxi_e[1] = -1;
-          }
-          break;
-        case 1:
-          if (global_nodes[1] > global_nodes[2]) {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = -1;
-          } else {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 1;
-          }
-          break;
-        case 2:
-          if (global_nodes[2] > global_nodes[3]) {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = -1;
-          } else {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 1;
-          }
-          break;
-        default:
-          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Triangle");
-          break;
-        }
-        break;
-
-      case DPSI_T:
-        switch (ledof) {
-        case 0:
-          if (global_nodes[0] > global_nodes[1]) {
-            dphidxi_e[0] = 1;
-            dphidxi_e[1] = 0;
-          } else {
-            dphidxi_e[0] = -1.;
-            dphidxi_e[1] = 0;
-          }
-          break;
-        case 1:
-          if (global_nodes[1] > global_nodes[2]) {
-            dphidxi_e[0] = 1;
-            dphidxi_e[1] = 0;
-          } else {
-            dphidxi_e[0] = -1;
-            dphidxi_e[1] = 0;
-          }
-          break;
-        case 2:
-          if (global_nodes[2] > global_nodes[3]) {
-            dphidxi_e[0] = 1;
-            dphidxi_e[1] = 0;
-          } else {
-            dphidxi_e[0] = -1;
-            dphidxi_e[1] = 0;
           }
           break;
         default:
@@ -5057,92 +4995,6 @@ void vector_shape_function(Dpi *dpi,
           } else {
             phi_e[0] = 0;
             phi_e[1] = -0.25 * (1 - s);
-          }
-          break;
-        default:
-          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Quad");
-          break;
-        }
-        break;
-      case DPSI_S:
-        switch (ledof) {
-        case 0:
-          if (global_nodes[0] > global_nodes[1]) {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 0;
-          } else {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 0;
-          }
-          break;
-        case 1:
-          if (global_nodes[1] > global_nodes[2]) {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = -0.25;
-          } else {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 0.25;
-          }
-          break;
-        case 2:
-          if (global_nodes[2] > global_nodes[3]) {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 0;
-          } else {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 0;
-          }
-          break;
-        case 3:
-          if (global_nodes[3] > global_nodes[4]) {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = -0.25;
-          } else {
-            dphidxi_e[0] = 0;
-            dphidxi_e[1] = 0.25;
-          }
-          break;
-        default:
-          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis Quad");
-          break;
-        }
-        break;
-      case DPSI_T:
-        switch (ledof) {
-        case 0:
-          if (global_nodes[0] > global_nodes[1]) {
-            phi_e[0] = 0.25;
-            phi_e[1] = 0;
-          } else {
-            phi_e[0] = -0.25;
-            phi_e[1] = 0;
-          }
-          break;
-        case 1:
-          if (global_nodes[1] > global_nodes[2]) {
-            phi_e[0] = 0;
-            phi_e[1] = 0.;
-          } else {
-            phi_e[0] = 0;
-            phi_e[1] = 0.;
-          }
-          break;
-        case 2:
-          if (global_nodes[2] > global_nodes[3]) {
-            phi_e[0] = 0.25;
-            phi_e[1] = 0;
-          } else {
-            phi_e[0] = -0.25;
-            phi_e[1] = 0;
-          }
-          break;
-        case 3:
-          if (global_nodes[3] > global_nodes[4]) {
-            phi_e[0] = 0;
-            phi_e[1] = 0.;
-          } else {
-            phi_e[0] = 0;
-            phi_e[1] = 0.;
           }
           break;
         default:
@@ -5209,36 +5061,25 @@ void vector_shape_function(Dpi *dpi,
           }
           break;
         case 4:
-          if (global_nodes[0] > global_nodes[3]) {
-            phi_e[0] = -u;
-            phi_e[1] = -u;
-            phi_e[2] = -1 + s + t;
-          } else {
+          if (global_nodes[1] > global_nodes[3]) {
             phi_e[0] = u;
-            phi_e[1] = u;
-            phi_e[2] = 1 - s - t;
+            phi_e[1] = 0;
+            phi_e[2] = -s;
+          } else {
+            phi_e[0] = -u;
+            phi_e[1] = 0;
+            phi_e[2] = s;
           }
           break;
         case 5:
-          if (global_nodes[0] > global_nodes[3]) {
-            phi_e[0] = -u;
-            phi_e[1] = -u;
-            phi_e[2] = -1 + s + t;
-          } else {
-            phi_e[0] = u;
+          if (global_nodes[2] > global_nodes[3]) {
+            phi_e[0] = 0;
             phi_e[1] = u;
-            phi_e[2] = 1 - s - t;
-          }
-          break;
-        case 6:
-          if (global_nodes[0] > global_nodes[3]) {
-            phi_e[0] = -u;
-            phi_e[1] = -u;
-            phi_e[2] = -1 + s + t;
+            phi_e[2] = -t;
           } else {
-            phi_e[0] = u;
-            phi_e[1] = u;
-            phi_e[2] = 1 - s - t;
+            phi_e[0] = 0;
+            phi_e[1] = -u;
+            phi_e[2] = t;
           }
           break;
         default:
@@ -5246,12 +5087,80 @@ void vector_shape_function(Dpi *dpi,
           break;
         }
         break;
+      case CURL_PSI:
+        switch (ledof) {
+        case 0:
+          if (global_nodes[0] > global_nodes[1]) {
+            curl_e[0] = 0;
+            curl_e[1] = 2;
+            curl_e[2] = -2;
+          } else {
+            curl_e[0] = 0;
+            curl_e[1] = -2;
+            curl_e[2] = 2;
+          }
+          break;
+        case 1:
+          if (global_nodes[1] > global_nodes[2]) {
+            curl_e[0] = 0;
+            curl_e[1] = 0;
+            curl_e[2] = -2;
+          } else {
+            curl_e[0] = -0;
+            curl_e[1] = 0;
+            curl_e[2] = 2;
+          }
+          break;
+        case 2:
+          if (global_nodes[0] > global_nodes[2]) {
+            curl_e[0] = 2;
+            curl_e[1] = 0;
+            curl_e[2] = -2;
+          } else {
+            curl_e[0] = -2;
+            curl_e[1] = 0;
+            curl_e[2] = 2;
+          }
+          break;
+        case 3:
+          if (global_nodes[0] > global_nodes[3]) {
+            curl_e[0] = 2;
+            curl_e[1] = -2;
+            curl_e[2] = 0;
+          } else {
+            curl_e[0] = -2;
+            curl_e[1] = 2;
+            curl_e[2] = 0;
+          }
+          break;
+        case 4:
+          if (global_nodes[1] > global_nodes[3]) {
+            curl_e[0] = 0;
+            curl_e[1] = 2;
+            curl_e[2] = 0;
+          } else {
+            curl_e[0] = 0;
+            curl_e[1] = -2;
+            curl_e[2] = 0;
+          }
+          break;
+        case 5:
+          if (global_nodes[2] > global_nodes[3]) {
+            curl_e[0] = -2;
+            curl_e[1] = 0;
+            curl_e[2] = 0;
+          } else {
+            curl_e[0] = 2;
+            curl_e[1] = 0;
+            curl_e[2] = 0;
+          }
+          break;
+        }
+        break;
       default:
         GOMA_EH(GOMA_ERROR, "Unknown Iquant TETRAHEDRON I_N1");
         break;
-
       }
-
     } else {
       GOMA_EH(GOMA_ERROR, "Don't recognize this basis type for tetrahedron");
     }

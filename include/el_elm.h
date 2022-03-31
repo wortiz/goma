@@ -94,6 +94,7 @@ typedef enum type_elem {
 #define DPSI_S 1
 #define DPSI_T 2
 #define DPSI_U 3
+#define CURL_PSI 4
 
 /* define maximum quantities */
 

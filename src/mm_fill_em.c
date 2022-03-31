@@ -942,8 +942,8 @@ int assemble_ewave_curlcurl(double time,      // present time
           for (int q = 0; q < DIM; q++) {
             diffusion_real += bf[eqn_real]->curl_phi_e[i][a][q] * fv->curl_em_er[q];
             diffusion_imag += bf[eqn_imag]->curl_phi_e[i][a][q] * fv->curl_em_ei[q];
-            // diffusion_real += bf->[eqn_real]->phi_e[i][a][q] * fv->em_er[q];
-            // diffusion_imag += bf->[eqn_imag]->phi_e[i][a][q] * fv->em_ei[q];
+            // diffusion_real += bf->[eqn_real]->ref_phi_e[i][a][q] * fv->em_er[q];
+            // diffusion_imag += bf->[eqn_imag]->ref_phi_e[i][a][q] * fv->em_ei[q];
 
             // R = curl(E)
             // diffusion_real += delta(a,q)*bf[eqn_real]->phi[i]*fv->curl_em_er[a];
