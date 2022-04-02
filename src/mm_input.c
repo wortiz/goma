@@ -1122,6 +1122,9 @@ void rd_genl_specs(FILE *ifp, char *input) {
     } else if (!strcmp(input, "TABLE")) {
       efv->i[Num_Var_External] = I_TABLE;
       num_ext_Tables++;
+    } else if (!strcmp(input, "N1")) {
+      efv->i[Num_Var_External] = I_N1;
+      num_ext_Tables++;
     } else {
       sprintf(err_msg, "??? interpolation \"%s\" for external field var", input);
       GOMA_EH(GOMA_ERROR, err_msg);
@@ -8457,6 +8460,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         pd_ptr->w[mtrx_index0][ce] = I_SP;
         GOMA_WH(-1,
                 "CAUTION WITH SUBPARAMETRIC: DON'T USE WITH LAGRANGIAN OR TOTAL_ALE MESH MOTIONS");
+      } else if (!strcasecmp(ts, "N1")) {
+        pd_ptr->w[mtrx_index0][ce] = I_N1;
       } else {
         fprintf(stderr, "%s:\tUnrecognized Galerkin weighting function.\n", yo);
         exit(-1);
@@ -8962,6 +8967,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         upd->XFEM = TRUE;
       } else if (!strcasecmp(ts, "SP")) {
         pd_ptr->i[mtrx_index0][cv] = I_SP;
+      } else if (!strcasecmp(ts, "N1")) {
+        pd_ptr->i[mtrx_index0][cv] = I_N1;
       } else {
         fprintf(stderr, "%s:\tUnrecognized interpolation function for variable.\n", yo);
         exit(-1);

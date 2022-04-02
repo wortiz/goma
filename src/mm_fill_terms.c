@@ -8224,9 +8224,9 @@ int load_fv(void)
    * EM Wave Vectors...
    */
   if (pdgv[EM_E1_REAL] || pdgv[EM_E2_REAL] || pdgv[EM_E3_REAL]) {
+    v = EM_E1_REAL;
     if (bf[v]->interpolation == I_N1) {
       for (p = 0; p < DIM; p++) {
-        v = EM_E1_REAL;
         fv->em_er[p] = 0.0;
         fv_old->em_er[p] = 0.0;
         fv_dot->em_er[p] = 0.0;
@@ -8267,9 +8267,9 @@ int load_fv(void)
   }
 
   if (pdgv[EM_E1_IMAG] || pdgv[EM_E2_IMAG] || pdgv[EM_E3_IMAG]) {
+    v = EM_E1_IMAG;
     if (bf[v]->interpolation == I_N1) {
       for (p = 0; p < DIM; p++) {
-        v = EM_E1_IMAG;
         fv->em_ei[p] = 0.0;
         fv_old->em_ei[p] = 0.0;
         fv_dot->em_ei[p] = 0.0;
@@ -8289,7 +8289,7 @@ int load_fv(void)
 
     } else {
       for (p = 0; p < DIM; p++) {
-        v = EM_E1_REAL + p;
+        v = EM_E1_IMAG + p;
         fv->em_ei[p] = 0.0;
         fv_old->em_ei[p] = 0.0;
         fv_dot->em_ei[p] = 0.0;
@@ -10029,18 +10029,20 @@ int load_fv_grads(void)
    */
   if (pd->gv[EM_E1_REAL] || pd->gv[EM_E2_REAL] || pd->gv[EM_E3_REAL]) {
     v = EM_E1_REAL;
-    dofs = ei[upd->matrix_index[v]]->dof[v];
+    if (bf[v]->interpolation != I_N1) {
+      dofs = ei[upd->matrix_index[v]]->dof[v];
 
-    // grad_vector_fv_fill(esp->em_er, bf[v]->grad_phi_e, dofs, fv->grad_em_er);
-    for (p = 0; p < dim; p++) {
-      for (q = 0; q < dim; q++) {
-        fv->grad_em_er[p][q] = 0.0;
-        fv_old->grad_em_er[p][q] = 0.0;
-        for (r = 0; r < dim; r++) {
-          for (i = 0; i < dofs; i++) {
-            fv->grad_em_er[p][q] += (*esp->em_er[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
-            if (pd->TimeIntegration != STEADY) {
-              fv_old->grad_em_er[p][q] += (*esp_old->em_er[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+      // grad_vector_fv_fill(esp->em_er, bf[v]->grad_phi_e, dofs, fv->grad_em_er);
+      for (p = 0; p < dim; p++) {
+        for (q = 0; q < dim; q++) {
+          fv->grad_em_er[p][q] = 0.0;
+          fv_old->grad_em_er[p][q] = 0.0;
+          for (r = 0; r < dim; r++) {
+            for (i = 0; i < dofs; i++) {
+              fv->grad_em_er[p][q] += (*esp->em_er[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+              if (pd->TimeIntegration != STEADY) {
+                fv_old->grad_em_er[p][q] += (*esp_old->em_er[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+              }
             }
           }
         }
@@ -10057,18 +10059,20 @@ int load_fv_grads(void)
 
   if (pd->gv[EM_E1_IMAG] || pd->gv[EM_E2_IMAG] || pd->gv[EM_E3_IMAG]) {
     v = EM_E1_IMAG;
-    dofs = ei[upd->matrix_index[v]]->dof[v];
+    if (bf[v]->interpolation != I_N1) {
+      dofs = ei[upd->matrix_index[v]]->dof[v];
 
-    // grad_vector_fv_fill(esp->em_ei, bf[v]->grad_phi_e, dofs, fv->grad_em_ei);
-    for (p = 0; p < dim; p++) {
-      for (q = 0; q < dim; q++) {
-        fv->grad_em_ei[p][q] = 0.0;
-        fv_old->grad_em_ei[p][q] = 0.0;
-        for (r = 0; r < dim; r++) {
-          for (i = 0; i < dofs; i++) {
-            fv->grad_em_ei[p][q] += (*esp->em_ei[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
-            if (pd->TimeIntegration != STEADY) {
-              fv_old->grad_em_ei[p][q] += (*esp_old->em_ei[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+      // grad_vector_fv_fill(esp->em_ei, bf[v]->grad_phi_e, dofs, fv->grad_em_ei);
+      for (p = 0; p < dim; p++) {
+        for (q = 0; q < dim; q++) {
+          fv->grad_em_ei[p][q] = 0.0;
+          fv_old->grad_em_ei[p][q] = 0.0;
+          for (r = 0; r < dim; r++) {
+            for (i = 0; i < dofs; i++) {
+              fv->grad_em_ei[p][q] += (*esp->em_ei[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+              if (pd->TimeIntegration != STEADY) {
+                fv_old->grad_em_ei[p][q] += (*esp_old->em_ei[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+              }
             }
           }
         }

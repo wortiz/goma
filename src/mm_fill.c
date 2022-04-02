@@ -1721,6 +1721,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     }
+#if 0
     if (pde[R_EM_CONT_REAL]) {
       err = assemble_em_continuity();
       GOMA_EH(err, "assemble_em_continuity");
@@ -1893,7 +1894,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     }
-
+#endif
     if (pde[R_POR_SINK_MASS]) {
       err = assemble_pore_sink_mass(time_value, theta, delta_t);
       GOMA_EH(err, "assemble_pore_sink_mass");

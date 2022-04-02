@@ -3209,6 +3209,9 @@ int assemble_ewave_nedelec(void) {
   re_coeff = omega * omega * mag_permeability * r_elperm;
   im_coeff = omega * omega * mag_permeability * i_elperm;
 
+  re_coeff = 1.0;
+  im_coeff = 0.0;
+
   int reqn, ieqn;
   double radvection_etm, rdiffusion_etm, rsource_etm;
   double iadvection_etm, idiffusion_etm, isource_etm;
