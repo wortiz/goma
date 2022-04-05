@@ -3941,11 +3941,11 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     if (zero_detJ)
       return -1;
 
-    err = load_fv();
-    GOMA_EH(err, "load_fv");
-
     err = load_bf_grad();
     GOMA_EH(err, "load_bf_grad");
+
+    err = load_fv();
+    GOMA_EH(err, "load_fv");
 
     if (pde[R_MESH1] || pd->v[pg->imtrx][R_MESH1]) {
       err = load_bf_mesh_derivs();

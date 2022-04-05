@@ -1725,6 +1725,9 @@ int load_bf_grad(void)
       if (v != -1 && bfd[b]->element_shape == ei[pg->imtrx]->ielem_shape) {
         bfv = bf[v];
         dofs = ei[imtrx]->dof[v];
+        if (bfv->interpolation == I_N1) {
+          dofs = getdofs(bfv->element_shape, I_Q1);
+        }
 
         /* initialize variables */
         siz = pd->Num_Dim * MDE * sizeof(double);
@@ -1974,6 +1977,7 @@ int load_bf_grad(void)
         }
 
         if (bfv->interpolation == I_N1) {
+          int dofs = ei[pg->imtrx]->dof[v];
           for (i = 0; i < dofs; i++) {
             for (int d = 0; d < pd->Num_Dim; d++) {
               bfv->phi_e[i][d] = 0;
@@ -2663,6 +2667,44 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             bf_ptr->dphidxi[i][0] = 0.0;
             bf_ptr->dphidxi[i][1] = 0.0;
             bf_ptr->dphidxi[i][2] = 0.0;
+          }
+          break;
+        }
+
+        // Calculate mapping using lagrange Q1
+
+        jdof = 0;
+
+        int q1_dof = getdofs(bf_ptr->element_shape, I_Q1);
+        switch (pd->Num_Dim) {
+        case 2:
+          for (i = 0; i < q1_dof; i++) {
+            bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, i,
+                                      bf_ptr->element_shape, I_Q1, jdof);
+            bf_ptr->dphidxi[i][0] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i,
+                         bf_ptr->element_shape, I_Q1, jdof);
+            bf_ptr->dphidxi[i][1] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i,
+                         bf_ptr->element_shape, I_Q1, jdof);
+            jdof++;
+          }
+          break;
+
+        case 3:
+          for (i = 0; i < q1_dof; i++) {
+            bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, i,
+                                      bf_ptr->element_shape, I_Q1, jdof);
+            bf_ptr->dphidxi[i][0] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i,
+                         bf_ptr->element_shape, I_Q1, jdof);
+            bf_ptr->dphidxi[i][1] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i,
+                         bf_ptr->element_shape, I_Q1, jdof);
+            bf_ptr->dphidxi[i][2] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_U, i,
+                         bf_ptr->element_shape, I_Q1, jdof);
+            jdof++;
           }
           break;
         }

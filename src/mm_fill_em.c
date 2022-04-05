@@ -3212,146 +3212,95 @@ int assemble_ewave_nedelec(void) {
   re_coeff = 1.0;
   im_coeff = 0.0;
 
-  int reqn, ieqn;
-  double radvection_etm, rdiffusion_etm, rsource_etm;
-  double iadvection_etm, idiffusion_etm, isource_etm;
-  // double rmass_etm;
-  // double imass_etm;
+  int reqn = R_EM_E1_REAL;
+  int ieqn = R_EM_E1_IMAG;
+  double radvection_etm = pd->etm[pg->imtrx][reqn][(LOG2_ADVECTION)];
+  double rdiffusion_etm = pd->etm[pg->imtrx][reqn][(LOG2_DIFFUSION)];
+  double rsource_etm = pd->etm[pg->imtrx][reqn][(LOG2_SOURCE)];
+  double iadvection_etm = pd->etm[pg->imtrx][ieqn][(LOG2_ADVECTION)];
+  double idiffusion_etm = pd->etm[pg->imtrx][ieqn][(LOG2_DIFFUSION)];
+  double isource_etm = pd->etm[pg->imtrx][ieqn][(LOG2_SOURCE)];
+  int peqn_real = upd->ep[pg->imtrx][eqn_real];
+  int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
   if (af->Assemble_Residual) {
     for (int i = 0; i < ei[pg->imtrx]->dof[eqn_real]; i++) {
-      reqn = R_EM_E1_REAL;
-      ieqn = R_EM_E1_IMAG;
-      // rmass_etm = pd->etm[pg->imtrx][reqn][(LOG2_MASS)];
-      radvection_etm = pd->etm[pg->imtrx][reqn][(LOG2_ADVECTION)];
-      rdiffusion_etm = pd->etm[pg->imtrx][reqn][(LOG2_DIFFUSION)];
-      rsource_etm = pd->etm[pg->imtrx][reqn][(LOG2_SOURCE)];
-      // imass_etm = pd->etm[pg->imtrx][ieqn][(LOG2_MASS)];
-      iadvection_etm = pd->etm[pg->imtrx][ieqn][(LOG2_ADVECTION)];
-      idiffusion_etm = pd->etm[pg->imtrx][ieqn][(LOG2_DIFFUSION)];
-      isource_etm = pd->etm[pg->imtrx][ieqn][(LOG2_SOURCE)];
-
-      if (pd->e[pg->imtrx][R_EM_E1_REAL]) {
-        int peqn_real = upd->ep[pg->imtrx][eqn_real];
-        int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
-
-        double diffusion_real = 0.0;
-        double diffusion_imag = 0.0;
-        for (int q = 0; q < DIM; q++) {
-          diffusion_real += bf[eqn_real]->curl_phi[i][q] * fv->curl_em_er[q];
-          diffusion_imag += bf[eqn_imag]->curl_phi[i][q] * fv->curl_em_ei[q];
-          // diffusion_real += bf->[eqn_real]->ref_phi_e[i][a][q] * fv->em_er[q];
-          // diffusion_imag += bf->[eqn_imag]->ref_phi_e[i][a][q] * fv->em_ei[q];
-
-          // R = curl(E)
-          // diffusion_real += delta(a,q)*bf[eqn_real]->phi[i]*fv->curl_em_er[a];
-          // diffusion_imag += delta(a,q)*bf[eqn_imag]->phi[i]*fv->curl_em_ei[a];
-        }
-        // R = E
-        // diffusion_real = bf[eqn_real]->phi[i]*fv->em_er[a];
-        // diffusion_imag = bf[eqn_imag]->phi[i]*fv->em_ei[a];
-        // double advection_real = 0.0;
-        // double advection_imag = 0.0;
-        double advection_real = 0;
-        double advection_imag = 0;
-        for (int q = 0; q < DIM; q++) {
-          advection_real +=
-              -bf[eqn_real]->phi_e[i][q] * (re_coeff * fv->em_er[q] - im_coeff * fv->em_ei[q]);
-          advection_imag +=
-              -bf[eqn_imag]->phi_e[i][q] * (re_coeff * fv->em_ei[q] + im_coeff * fv->em_er[q]);
-        }
-        double src_real = 0.0;
-        double src_imag = 0.0;
-        lec->R[LEC_R_INDEX(peqn_real, i)] +=
-            (advection_real * radvection_etm + diffusion_real * rdiffusion_etm +
-             src_real * rsource_etm) *
-            bf[eqn_real]->detJ * fv->wt * fv->h3;
-
-        lec->R[LEC_R_INDEX(peqn_imag, i)] +=
-            (advection_imag * iadvection_etm + diffusion_imag * idiffusion_etm +
-             src_imag * isource_etm) *
-            bf[eqn_imag]->detJ * fv->wt * fv->h3;
+      double diffusion_real = 0.0;
+      double diffusion_imag = 0.0;
+      for (int q = 0; q < DIM; q++) {
+        diffusion_real += bf[eqn_real]->curl_phi[i][q] * fv->curl_em_er[q];
+        diffusion_imag += bf[eqn_imag]->curl_phi[i][q] * fv->curl_em_ei[q];
       }
+      double advection_real = 0;
+      double advection_imag = 0;
+      for (int q = 0; q < DIM; q++) {
+        advection_real +=
+            -bf[eqn_real]->phi_e[i][q] * (re_coeff * fv->em_er[q] - im_coeff * fv->em_ei[q]);
+        advection_imag +=
+            -bf[eqn_imag]->phi_e[i][q] * (re_coeff * fv->em_ei[q] + im_coeff * fv->em_er[q]);
+      }
+      double src_real = 0.0;
+      double src_imag = 0.0;
+
+      lec->R[LEC_R_INDEX(peqn_real, i)] +=
+          (advection_real * radvection_etm + diffusion_real * rdiffusion_etm +
+           src_real * rsource_etm) *
+          bf[eqn_real]->detJ * fv->wt * fv->h3;
+
+      lec->R[LEC_R_INDEX(peqn_imag, i)] +=
+          (advection_imag * iadvection_etm + diffusion_imag * idiffusion_etm +
+           src_imag * isource_etm) *
+          bf[eqn_imag]->detJ * fv->wt * fv->h3;
     }
   }
 
   if (af->Assemble_Jacobian) {
     for (int i = 0; i < ei[pg->imtrx]->dof[eqn_real]; i++) {
-      reqn = R_EM_E1_REAL;
-      ieqn = R_EM_E1_IMAG;
-      // rmass_etm = pd->etm[pg->imtrx][reqn][(LOG2_MASS)];
-      radvection_etm = pd->etm[pg->imtrx][reqn][(LOG2_ADVECTION)];
-      rdiffusion_etm = pd->etm[pg->imtrx][reqn][(LOG2_DIFFUSION)];
-      rsource_etm = pd->etm[pg->imtrx][reqn][(LOG2_SOURCE)];
-      // imass_etm = pd->etm[pg->imtrx][ieqn][(LOG2_MASS)];
-      iadvection_etm = pd->etm[pg->imtrx][ieqn][(LOG2_ADVECTION)];
-      idiffusion_etm = pd->etm[pg->imtrx][ieqn][(LOG2_DIFFUSION)];
-      isource_etm = pd->etm[pg->imtrx][ieqn][(LOG2_SOURCE)];
-      if (pd->e[pg->imtrx][R_EM_E1_REAL]) {
-        int eqn_real = EM_E1_REAL;
-        int eqn_imag = EM_E1_IMAG;
-        int peqn_real = upd->ep[pg->imtrx][eqn_real];
-        int peqn_imag = upd->ep[pg->imtrx][eqn_imag];
-
-        // Sensitivity to real parts of electric field
-        if (pd->e[pg->imtrx][R_EM_E1_REAL]) {
-          int var = EM_E1_REAL;
-          int pvar_real = upd->vp[pg->imtrx][var];
-          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            double diffusion_real = 0;
-            double diffusion_imag = 0;
-            for (int q = 0; q < DIM; q++) {
-              diffusion_real += bf[eqn_real]->curl_phi[i][q] * bf[eqn_real]->curl_phi[j][q];
-            }
-            // R = curl(E)
-            // diffusion_real += bf[eqn_real]->phi[i]*bf[eqn_real]->curl_phi_e[j][b][a];
-
-            // Jacobian contribution for R = E
-            // diffusion_real += delta(a,b)*bf[eqn_real]->phi[i]*bf[eqn_real]->phi[j];
-
-            // double advection_real = 0;
-            // double advection_imag = 0;
-            double advection_real = 0;
-            double advection_imag = 0;
-            for (int q = 0; q < DIM; q++) {
-              advection_real += -bf[eqn_real]->phi_e[i][q] * re_coeff * bf[var]->phi_e[j][q];
-              advection_imag += -bf[eqn_imag]->phi_e[i][q] * im_coeff * bf[var]->phi_e[j][q];
-            }
-
-            lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
-                (diffusion_real * rdiffusion_etm + advection_real * radvection_etm) *
-                bf[eqn_real]->detJ * fv->wt * fv->h3;
-
-            lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
-                (diffusion_imag * idiffusion_etm + advection_imag * iadvection_etm) *
-                bf[eqn_imag]->detJ * fv->wt * fv->h3;
-          }
+      int var = EM_E1_REAL;
+      int pvar_real = upd->vp[pg->imtrx][var];
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        double diffusion_real = 0;
+        double diffusion_imag = 0;
+        for (int q = 0; q < DIM; q++) {
+          diffusion_real += bf[eqn_real]->curl_phi[i][q] * bf[eqn_real]->curl_phi[j][q];
+        }
+        double advection_real = 0;
+        double advection_imag = 0;
+        for (int q = 0; q < DIM; q++) {
+          advection_real += -bf[eqn_real]->phi_e[i][q] * re_coeff * bf[var]->phi_e[j][q];
+          advection_imag += -bf[eqn_imag]->phi_e[i][q] * im_coeff * bf[var]->phi_e[j][q];
         }
 
-        // Sensitivity to imaginary parts of electric field
-        if (pd->e[pg->imtrx][R_EM_E1_IMAG]) {
-          int var = EM_E1_IMAG;
-          int pvar_imag = upd->vp[pg->imtrx][var];
-          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            double diffusion_real = 0;
-            double diffusion_imag = 0;
-            for (int q = 0; q < DIM; q++) {
-              diffusion_imag += bf[eqn_imag]->curl_phi[i][q] * bf[var]->curl_phi[j][q];
-            }
-            double advection_real = 0;
-            double advection_imag = 0;
-            for (int q = 0; q < DIM; q++) {
-              advection_real += bf[eqn_real]->phi_e[i][q] * im_coeff * bf[var]->phi_e[j][q];
-              advection_imag += -bf[eqn_imag]->phi_e[i][q] * re_coeff * bf[var]->phi_e[j][q];
-            }
-            lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
-                (diffusion_real * rdiffusion_etm + advection_real * radvection_etm) *
-                bf[eqn_real]->detJ * fv->wt * fv->h3;
+        lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
+            (diffusion_real * rdiffusion_etm + advection_real * radvection_etm) *
+            bf[eqn_real]->detJ * fv->wt * fv->h3;
 
-            lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
-                (diffusion_imag * idiffusion_etm + advection_imag * iadvection_etm) *
-                bf[eqn_imag]->detJ * fv->wt * fv->h3;
-          }
+        lec->J[LEC_J_INDEX(peqn_imag, pvar_real, i, j)] +=
+            (diffusion_imag * idiffusion_etm + advection_imag * iadvection_etm) *
+            bf[eqn_imag]->detJ * fv->wt * fv->h3;
+      }
+
+      // Sensitivity to imaginary parts of electric field
+      var = EM_E1_IMAG;
+      int pvar_imag = upd->vp[pg->imtrx][var];
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        double diffusion_real = 0;
+        double diffusion_imag = 0;
+        for (int q = 0; q < DIM; q++) {
+          diffusion_imag += bf[eqn_imag]->curl_phi[i][q] * bf[var]->curl_phi[j][q];
         }
+        double advection_real = 0;
+        double advection_imag = 0;
+        for (int q = 0; q < DIM; q++) {
+          advection_real += bf[eqn_real]->phi_e[i][q] * im_coeff * bf[var]->phi_e[j][q];
+          advection_imag += -bf[eqn_imag]->phi_e[i][q] * re_coeff * bf[var]->phi_e[j][q];
+        }
+        lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
+            (diffusion_real * rdiffusion_etm + advection_real * radvection_etm) *
+            bf[eqn_real]->detJ * fv->wt * fv->h3;
+
+        lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
+            (diffusion_imag * idiffusion_etm + advection_imag * iadvection_etm) *
+            bf[eqn_imag]->detJ * fv->wt * fv->h3;
       }
     }
   }

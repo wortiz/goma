@@ -7509,6 +7509,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       printf("%s:\t(T,c) = Q2\n", yo);
     }
     pd_ptr->IntegrationMap = I_Q2;
+  } else if (strcasecmp(input, "N1") == 0) {
+    pd_ptr->IntegrationMap = I_N1;
   } else if (strcasecmp(input, "SP") == 0) {
     if (Debug_Flag && ProcID == 0) {
       printf("%s:\t(T,c) = SP\n", yo);
