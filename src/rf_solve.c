@@ -2967,6 +2967,9 @@ int anneal_mesh(double x[],
       find_nodal_stu(ln, ei[pg->imtrx]->ielem_type, xi, xi + 1, xi + 2);
 
       gnn = exo->elem_node_list[exo->elem_node_pntr[ielem] + ln];
+      
+      if (exo->ghost_node_to_base[gnn] == -1)
+        continue;
 
       if (exo->ghost_node_to_base[gnn] == -1)
         continue;

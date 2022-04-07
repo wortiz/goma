@@ -7666,9 +7666,6 @@ int load_fv(void)
     }
   }
 
-  status = load_coordinate_scales(pd->CoordinateSystem, fv);
-  GOMA_EH(status, "load_coordinate_scales(fv)");
-
   /*
    * Velocity (vector)...
    */
@@ -8465,6 +8462,123 @@ int load_fv(void)
     for (w = 0; w < dim; w++) {
       fv->initial_displacements[w] = 0.;
       fv->initial_displacements[w + DIM] = 0.;
+    }
+  }
+
+  return (status);
+}
+
+int load_fv_vector(void)
+
+/*******************************************************************************
+ * load_fv() -- load up values of all relevant field variables at the
+ *              current gauss pt
+ *
+ * input: (assume the appropriate parts of esp, bf, ei, pd are filled in)
+ * ------
+ *
+ *
+ * output: ( this routine fills in the following parts of the fv structure)
+ * -------
+ *		fv->
+ *			T -- temperature	(scalar)
+ *			v -- velocity		(vector)
+ *			d -- mesh displacement	(vector)
+ *			c -- concentration	(multiple scalars)
+ *		      por -- porous media       (multiple scalars)
+ *			P -- pressure		(scalar)
+ *			S -- polymer stress	(tensor)
+ *			G -- velocity gradient	(tensor)
+ *                     pv -- particle velocity  (vector)
+ *                     pG -- particle velocity gradient (tensor)
+ *              mp->StateVector[] is filled in as well, for
+ *                    pertinent entries that make up the specification of
+ *                    the state of the material.
+ *
+ * NOTE: To accommodate shell elements, this function has been modified
+ *       so that fv variables are not zeroed out when they are active
+ *       on an element block other than the current one.
+ *       The check done for variable v is then:
+ *          if ( pd->v[pg->imtrx][v] || upd->vp[pg->imtrx][v] == -1 )
+ *       In many cases below, this conditional zeroing is done in
+ *       a separate small loop before the main one.
+ *
+ *
+ * Return values:
+ *		0 -- if things went OK
+ *	       -1 -- if a problem occurred
+ *
+ * Created:	Fri Mar 18 06:44:41 MST 1994 pasacki@sandia.gov
+ *
+ * Modified:
+ ***************************************************************************/
+{
+  int v;    /* variable type indicator */
+  int i;    /* index */
+  int p, q; /* dimension indeces */
+  int dim;
+  int dofs; /* degrees of freedom for a var in the elem */
+  int w;    /* concentration species and porous media vars counter */
+  int node, index;
+  int N;
+  int mode;
+  int status = 0;
+  int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
+  double rho, *stateVector = mp->StateVector;
+  BASIS_FUNCTIONS_STRUCT *bfv;
+  int transient_run = pd->TimeIntegration != STEADY;
+  int *pdgv = pd->gv;
+
+  status = 0;
+
+   /*
+   * EM Wave Vectors...
+   */
+  if (pdgv[EM_E1_REAL] || pdgv[EM_E2_REAL] || pdgv[EM_E3_REAL]) {
+    v = EM_E1_REAL;
+    if (bf[v]->interpolation == I_N1) {
+      for (p = 0; p < DIM; p++) {
+        fv->em_er[p] = 0.0;
+        fv_old->em_er[p] = 0.0;
+        fv_dot->em_er[p] = 0.0;
+
+        if (pdgv[v]) {
+          dofs = ei[pg->imtrx]->dof[v];
+          for (i = 0; i < dofs; i++) {
+            fv->em_er[p] += *esp->em_er[0][i] * bf[v]->phi_e[i][p];
+
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_er[p] += *esp_old->em_er[0][i] * bf[v]->phi_e[i][p];
+              fv_dot->em_er[p] += *esp_dot->em_er[0][i] * bf[v]->phi_e[i][p];
+            }
+          }
+        }
+      }
+
+    } 
+  }
+
+  if (pdgv[EM_E1_IMAG] || pdgv[EM_E2_IMAG] || pdgv[EM_E3_IMAG]) {
+    v = EM_E1_IMAG;
+    if (bf[v]->interpolation == I_N1) {
+      for (p = 0; p < DIM; p++) {
+        fv->em_ei[p] = 0.0;
+        fv_old->em_ei[p] = 0.0;
+        fv_dot->em_ei[p] = 0.0;
+
+        if (pdgv[v]) {
+          dofs = ei[pg->imtrx]->dof[v];
+          for (i = 0; i < dofs; i++) {
+            fv->em_ei[p] += *esp->em_ei[0][i] * bf[v]->phi_e[i][p];
+
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_ei[p] += *esp_old->em_ei[0][i] * bf[v]->phi_e[i][p];
+              fv_dot->em_ei[p] += *esp_dot->em_ei[0][i] * bf[v]->phi_e[i][p];
+            }
+          }
+        }
+      }
+
     }
   }
 
