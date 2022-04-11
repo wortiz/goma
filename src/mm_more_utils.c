@@ -206,7 +206,8 @@ int goal_post_nodal(const int var) {
          pd_glob[mat]->i[pg->imtrx][var] == I_Q2_HVG ||
          pd_glob[mat]->i[pg->imtrx][var] == I_Q2_LSA || pd_glob[mat]->i[pg->imtrx][var] == I_Q1_D ||
          pd_glob[mat]->i[pg->imtrx][var] == I_Q2_D ||
-         pd_glob[mat]->i[pg->imtrx][var] == I_Q2_D_LSA || pd_glob[mat]->i[pg->imtrx][var] == I_SP);
+         pd_glob[mat]->i[pg->imtrx][var] == I_Q2_D_LSA || pd_glob[mat]->i[pg->imtrx][var] == I_SP
+         || pd_glob[mat]->i[pg->imtrx][var] == I_N1);;
   }
 
   if (post_flag) {

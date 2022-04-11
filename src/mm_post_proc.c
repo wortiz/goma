@@ -322,6 +322,7 @@ int SPECIES_SOURCES = -1; /* continuous species sources*/
 int VISCOUS_STRESS = -1;
 int VISCOUS_STRESS_NORM = -1;
 int VISCOUS_VON_MISES_STRESS = -1;
+int EM_CONTOURS = -1;
 
 int len_u_post_proc = 0; /* size of dynamically allocated u_post_proc
                           * actually is */
@@ -1290,6 +1291,27 @@ static int calc_standard_fields(double **post_proc_vect,
     for (w = 0; w < pd->Num_Species_Eqn; w++) {
       local_post[CONC_CONT + w] = fv->c[w];
       local_lumped[CONC_CONT + w] = 1.;
+    }
+  }
+
+  if (EM_CONTOURS != -1 && pd->v[pg->imtrx][EM_E1_REAL]) {
+    index = 0;
+    for (b = 0; b < dim; b++) {
+
+      if (pd->v[pg->imtrx][EM_E1_REAL]) {
+        local_post[EM_CONTOURS + index] = fv->em_er[b];
+        local_lumped[EM_CONTOURS + index] = 1.;
+        index++;
+      }
+    }
+
+    for (b = 0; b < dim; b++) {
+
+      if (pd->v[pg->imtrx][EM_E1_IMAG]) {
+        local_post[EM_CONTOURS + index] = fv->em_ei[b];
+        local_lumped[EM_CONTOURS + index] = 1.;
+        index++;
+      }
     }
   }
 
@@ -7176,6 +7198,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   iread = look_for_post_proc(ifp, "Fill contours", &FILL_CONT);
   iread = look_for_post_proc(ifp, "Concentration contours", &CONC_CONT);
   iread = look_for_post_proc(ifp, "Stress contours", &STRESS_CONT);
+    iread = look_for_post_proc(ifp, "EM contours", &EM_CONTOURS);
   iread = look_for_post_proc(ifp, "First Invariant of Strain", &FIRST_INVAR_STRAIN);
   iread = look_for_post_proc(ifp, "Second Invariant of Strain", &SEC_INVAR_STRAIN);
   iread = look_for_post_proc(ifp, "Third Invariant of Strain", &THIRD_INVAR_STRAIN);
@@ -9143,6 +9166,57 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
             }
           }
         }
+      }
+    }
+  }
+
+  if (EM_CONTOURS != -1 && Num_Var_In_Type[pg->imtrx][EM_E1_REAL]) {
+    EM_CONTOURS = index_post;
+    int dim = pd->Num_Dim;
+    if (pd->gv[EM_E1_REAL]) {
+      sprintf(species_name, "EM_REALX");
+      sprintf(species_desc, "EM X Vector");
+      set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+      index++;
+      index_post++;
+
+      if (dim > 1) {
+        sprintf(species_name, "EM_REALY");
+        sprintf(species_desc, "EM Y Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+
+      if (dim > 2) {
+        sprintf(species_name, "EM_REALZ");
+        sprintf(species_desc, "EM Z Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+    }
+    if (pd->gv[EM_E1_IMAG]) {
+      sprintf(species_name, "EM_IMAGX");
+      sprintf(species_desc, "EM X Vector");
+      set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+      index++;
+      index_post++;
+
+      if (dim > 1) {
+        sprintf(species_name, "EM_IMAGY");
+        sprintf(species_desc, "EM Y Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+
+      if (dim > 2) {
+        sprintf(species_name, "EM_IMAGZ");
+        sprintf(species_desc, "EM Z Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
       }
     }
   }

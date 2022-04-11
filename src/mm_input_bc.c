@@ -386,6 +386,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case E_ER_2D_BC:
     case E_EI_2D_BC:
     case RESTIME_NOBC_BC:
+    case EM_ER_MMS_BC:
 
       break;
 

@@ -1354,6 +1354,10 @@ Revised:         Summer 1998, SY Tam (UNM)
     err = load_bf_grad();
     GOMA_EH(err, "load_bf_grad");
 
+    
+      err = load_fv_vector();
+      GOMA_EH(err, "load_fv_vector");
+
     /*
      * Finally, load the mesh derivatives of the gradients of the
      * basis functions with respect to physical space coordinates.

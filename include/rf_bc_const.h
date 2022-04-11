@@ -628,6 +628,8 @@
 #define E_ER_FARFIELD_BC 1210
 #define E_EI_FARFIELD_BC 1211
 
+#define EM_ER_MMS_BC 1212
+
 /* pressure */
 
 #define P_BC     100000

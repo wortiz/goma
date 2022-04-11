@@ -15,6 +15,7 @@
  *
  */
 
+#include "mm_qtensor_model.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -3128,10 +3129,9 @@ void complex_cross_vectors(const complex *v0, /* v0 */
         v2[k] += permute(i, j, k) * v0[i] * v1[j];
 } // end of complex_cross_vectors
 
-/* assemble_ewave_nedelec -- assemble terms (Residual &| Jacobian) for EM harmonic
- *                    wave equations
- *                   Substitue H for curl(E) so that goma solves
- *                   1 complex vector equation and 1 complex vector primitive
+/* assemble_ewave_nedelec
+ *
+ *  curl curl E - E = source
  */
 int assemble_ewave_nedelec(void) {
   dbl mag_permeability = mp->magnetic_permeability;
@@ -3147,26 +3147,38 @@ int assemble_ewave_nedelec(void) {
     return (-1);
   }
 
+  dbl x = fv->x[0];
+  dbl y = fv->x[1];
+  dbl z = fv->x[2];
+  //dbl force[DIM] = {
+  //        x * y * (1 - y*y) * (1 - z*z) + 2 * x * y * (1 - z*z),
+  //      y*y * (1 - x*x) * (1 - z*z) + (1 - y*y) * (2 - x*x - z*z),
+  //      y * z * (1 - x*x) * (1 - y*y) + 2 * y * z * (1 - x*x),
+  //};
+  dbl force[DIM] = {y, z, x};
+
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
   if (af->Assemble_Residual) {
     for (int i = 0; i < ei[pg->imtrx]->dof[eqn_real]; i++) {
       double diffusion_real = 0.0;
-   
-      // for (int q = 0; q < DIM; q++) {
-      //   diffusion_real += bf[eqn_real]->curl_phi[i][q] * fv->curl_em_er[q];
-      //   diffusion_imag += bf[eqn_imag]->curl_phi[i][q] * fv->curl_em_ei[q];
-      // }
-      double advection_real = 0;
-     
+
       for (int q = 0; q < DIM; q++) {
-        advection_real += fv->em_er[q];
+        // diffusion_real += bf[reqn]->curl_phi[i][q] * fv->curl_em_er[q];
+      }
+      double advection_real = 0;
+
+      for (int q = 0; q < DIM; q++) {
+        advection_real += bf[reqn]->phi_e[i][q] * fv->em_er[q];
+      }
+
+      dbl source = 0;
+
+      for (int q = 0; q < DIM; q++) {
+        source -= force[q] * bf[reqn]->phi_e[i][q];
       }
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
-          //(advection_real * radvection_etm + diffusion_real * rdiffusion_etm +
-          // src_real * rsource_etm) *
-          advection_real;// *
-          //bf[eqn_real]->detJ * fv->wt * fv->h3;
+          (diffusion_real + advection_real + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;
     }
   }
 
@@ -3175,18 +3187,32 @@ int assemble_ewave_nedelec(void) {
       int var = EM_E1_REAL;
       int pvar_real = upd->vp[pg->imtrx][var];
       for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        
-        double advection_real = 0;
+
+        double diffusion_real = 0.0;
+
         for (int q = 0; q < DIM; q++) {
-          advection_real += bf[var]->phi_e[j][q];
+          // diffusion_real += bf[reqn]->curl_phi[i][q] * bf[var]->curl_phi[j][q];
         }
 
-        lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] += advection_real;
-            // *
-            //bf[eqn_real]->detJ * fv->wt * fv->h3;
+        double advection_real = 0;
+        for (int q = 0; q < DIM; q++) {
+          advection_real += bf[reqn]->phi_e[i][q] * bf[var]->phi_e[j][q];
+        }
+
+        lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
+            (diffusion_real + advection_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
       }
     }
   }
   return (0);
 } // end of assemble_ewave_curlcurl
+
+int em_er_mms_bc(double func[DIM],
+                 double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                 double xi[DIM], /* Local stu coordinates */
+                 const int bc_name,
+                 double *bc_data) {
+
+  return 0;
+}
 #undef I

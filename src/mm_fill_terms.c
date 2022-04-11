@@ -7666,6 +7666,9 @@ int load_fv(void)
     }
   }
 
+  status = load_coordinate_scales(pd->CoordinateSystem, fv);
+  GOMA_EH(status, "load_coordinate_scales(fv)");
+
   /*
    * Velocity (vector)...
    */
@@ -9230,9 +9233,7 @@ int load_fv_grads(void)
       for (p = 0; p < DIM; p++) {
         fv->curl_em_er[p] = 0.0;
         for (i = 0; i < dofs; i++) {
-          for (a = 0; a < dim; a++) {
             fv->curl_em_er[p] += *esp->em_er[0][i] * bfn->curl_phi[i][p];
-          }
         }
       }
     } else {
@@ -9253,11 +9254,9 @@ int load_fv_grads(void)
     bfn = bf[v];
     if (bfn->interpolation == I_N1) {
       for (p = 0; p < DIM; p++) {
-        fv->curl_em_er[p] = 0.0;
+        fv->curl_em_ei[p] = 0.0;
         for (i = 0; i < dofs; i++) {
-          for (a = 0; a < dim; a++) {
             fv->curl_em_ei[p] += *esp->em_ei[0][i] * bfn->curl_phi[i][p];
-          }
         }
       }
     } else {

@@ -1005,7 +1005,7 @@ goma_error goma_setup_petsc_post_proc_matrix(
   // find universe nodes
   PetscInt global_n_dof;
   PetscInt local_dof = dpi->num_internal_nodes + dpi->num_boundary_nodes;
-  MPI_Allreduce(&local_dof, &global_n_dof, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_dof, &global_n_dof, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
 
   err = VecSetSizes(matrix_data->update, local_dof, global_n_dof);
   CHKERRQ(err);
@@ -1335,7 +1335,7 @@ goma_error goma_setup_petsc_matrix(struct GomaLinearSolverData *ams,
   // find universe dof
   PetscInt global_n_dof;
   PetscInt local_dof = internal_dof + boundary_dof;
-  MPI_Allreduce(&local_dof, &global_n_dof, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_dof, &global_n_dof, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
 
   err = VecSetSizes(matrix_data->update, internal_dof + boundary_dof, global_n_dof);
   CHKERRQ(err);
