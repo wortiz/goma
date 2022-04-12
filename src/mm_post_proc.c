@@ -3536,6 +3536,8 @@ void post_process_average(double x[],            /* Solution vector for the curr
       err = load_bf_grad();
       GOMA_EH(err, "load_bf_grad");
 
+      err = load_fv_vector();
+
       if (ei[pg->imtrx]->deforming_mesh &&
           (pd->e[pg->imtrx][R_MESH1] || pd->v[pg->imtrx][R_MESH1])) {
         if (!pd->e[pg->imtrx][R_MESH1]) {
@@ -4179,6 +4181,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
         err = load_bf_grad();
         GOMA_EH(err, "load_bf_grad");
 
+        err = load_fv_vector();
+
         /*
          * Load up physical space gradients of field variables at this
          * Gauss point.
@@ -4329,6 +4333,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
           err = load_bf_grad();
           GOMA_EH(err, "load_bf_grad");
+
+          err = load_fv_vector();
 
           err = load_bf_mesh_derivs();
           GOMA_EH(err, "load_bf_mesh_derivs");
@@ -4885,6 +4891,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       err = load_bf_grad();
       GOMA_EH(err, "load_bf_grad");
 
+      err = load_fv_vector();
+
       err = load_fv_grads();
       GOMA_EH(err, "load_fv_grads");
 
@@ -4990,6 +4998,8 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
 
           err = load_bf_grad();
           GOMA_EH(err, "load_bf_grad");
+
+          err = load_fv_vector();
 
           err = load_fv_grads();
           GOMA_EH(err, "load_fv_grads");
@@ -6180,6 +6190,8 @@ static int abs_error_at_elem(int i_elem,
     err = load_bf_grad();
     GOMA_EH(err, "load_bf_grad");
 
+    err = load_fv_vector();
+
     err = load_fv_grads();
     GOMA_EH(err, "load_fv_grads");
 
@@ -6442,6 +6454,8 @@ static int fill_lhs_lspatch(double *i_node_coords,
        call depends on it! - RRL 10/30/98 */
     err = load_bf_grad();
     GOMA_EH(err, "load_bf_grad");
+
+    err = load_fv_vector();
 
     err = load_fv_grads();
     GOMA_EH(err, "load_fv_grads");
@@ -8534,6 +8548,10 @@ void rd_post_process_specs(FILE *ifp, char *input) {
           pp_average[i]->type = AVG_VISCOSITY;
         } else if (!strncasecmp(variable_name, "SHEARRATE", strlen(variable_name))) {
           strcpy(pp_average[i]->type_name, "SHEARRATE_AVG");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_SHEAR;
+        } else if (!strncasecmp(variable_name, "EM_AVG", strlen(variable_name))) {
+          strcpy(pp_average[i]->type_name, "EM_AVG");
           pp_average[i]->non_variable_type = 1;
           pp_average[i]->type = AVG_SHEAR;
         } else {

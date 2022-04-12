@@ -1991,8 +1991,9 @@ int load_bf_grad(void)
 
           for (i = 0; i < dofs; i++) {
             for (p = 0; p < DIM; p++) {
+              bfv->curl_phi[i][p] = 0;
               for (k = 0; k < DIM; k++) { /* VIM */
-                bfv->curl_phi[i][p] += (1 / bf[v]->detJ) * bf[v]->J[p][k] * bfv->curl_e[i][k];
+                bfv->curl_phi[i][p] += (1 / bf[v]->detJ) * bf[v]->J[k][p] * bfv->curl_e[i][k];
               }
             }
           }
@@ -2705,22 +2706,6 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
           }
           break;
         }
-        dbl sum_phi[DIM] = {0.0};
-        for (int j = 0; j < ei[imtrx]->dof[v]; j++) {
-
-          for (int i = 0; i < DIM; i++) {
-            sum_phi[i] += bf_ptr->ref_phi_e[j][i];
-          }
-        }
-
-        dbl total = 0;
-        for (int p = 0; p < DIM; p++) {
-          total += fabs(sum_phi[p]);
-        }
-
-        if (total < (1.5 - 1e-14))
-          printf("e %d sum_phi = [%g,%g,%g]\n", ei[pg->imtrx]->ielem, sum_phi[0], sum_phi[1],
-                 sum_phi[2]);
       } else {
 
         /*
@@ -5139,7 +5124,7 @@ void vector_shape_function(Dpi *dpi,
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
-          phi_e[1] = sign * 0.25 * (1+s)*(1+u);
+          phi_e[1] = sign * 0.25 * (1 + s) * (1 + u);
           phi_e[2] = sign * 0;
         } break;
         case 10: {
@@ -5155,7 +5140,7 @@ void vector_shape_function(Dpi *dpi,
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * 0;
-          phi_e[1] = sign * 0.25 * -(1-s)*(1+u);
+          phi_e[1] = sign * 0.25 * -(1 - s) * (1 + u);
           phi_e[2] = sign * 0;
         } break;
         default:
@@ -5164,9 +5149,107 @@ void vector_shape_function(Dpi *dpi,
         }
         break;
       case CURL_PSI:
-        curl_e[0] = 0;
-        curl_e[1] = 0;
-        curl_e[2] = 0;
+        switch (ledof) {
+        case 0: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0;
+          curl_e[1] = sign * 0.25 * (t - 1);
+          curl_e[2] = sign * 0.25 * (1 - u);
+        } break;
+        case 1: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.25 * (1 + s);
+          curl_e[1] = sign * 0;
+          curl_e[2] = sign * 0.25 * (1 - u);
+        } break;
+        case 2: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0;
+          curl_e[1] = sign * 0.25 * (1 + t);
+          curl_e[2] = sign * 0.25 * (1 - u);
+        } break;
+        case 3: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.25 * (s - 1);
+          curl_e[1] = sign * 0.25;
+          curl_e[2] = sign * 0.25 * (1 - u);
+        } break;
+        case 4: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.25 * (s - 1);
+          curl_e[1] = sign * 0.25 * (1 - t);
+          curl_e[2] = sign * 0.;
+        } break;
+        case 5: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.25 * -(1 + s);
+          curl_e[1] = sign * 0.25 * (t - 1);
+          curl_e[2] = sign * 0.;
+        } break;
+        case 6: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.25 * (1 + s);
+          curl_e[1] = sign * 0.25 * -(1 + t);
+          curl_e[2] = sign * 0.;
+        } break;
+        case 7: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.25 * (1 - s);
+          curl_e[1] = sign * 0.25 * (1 + t);
+          curl_e[2] = sign * 0.;
+        } break;
+        case 8: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.;
+          curl_e[1] = sign * 0.25 * (1 - t);
+          curl_e[2] = sign * 0.25 * (1 + u);
+        } break;
+        case 9: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.25 * -(1 + s);
+          curl_e[1] = sign * 0.;
+          curl_e[2] = sign * 0.25 * (1 + u);
+        } break;
+        case 10: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.;
+          curl_e[1] = sign * 0.25 * -(t + 1);
+          curl_e[2] = sign * 0.25 * (1 + u);
+        } break;
+        case 11: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 0.25 * (1 - s);
+          curl_e[1] = sign * 0.;
+          curl_e[2] = sign * 0.25 * (1 + u);
+        } break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF HEX N1");
+          break;
+        }
         break;
       default:
         GOMA_EH(GOMA_ERROR, "Unknown Iquant HEXAHEDRON I_N1");

@@ -3150,12 +3150,13 @@ int assemble_ewave_nedelec(void) {
   dbl x = fv->x[0];
   dbl y = fv->x[1];
   dbl z = fv->x[2];
-  //dbl force[DIM] = {
-  //        x * y * (1 - y*y) * (1 - z*z) + 2 * x * y * (1 - z*z),
-  //      y*y * (1 - x*x) * (1 - z*z) + (1 - y*y) * (2 - x*x - z*z),
-  //      y * z * (1 - x*x) * (1 - y*y) + 2 * y * z * (1 - x*x),
-  //};
-  dbl force[DIM] = {y, z, x};
+  dbl force[DIM] = {
+          x * y * (1 - y*y) * (1 - z*z) + 2 * x * y * (1 - z*z),
+        y*y * (1 - x*x) * (1 - z*z) + (1 - y*y) * (2 - x*x - z*z),
+        y * z * (1 - x*x) * (1 - y*y) + 2 * y * z * (1 - x*x),
+  };
+  //dbl force[DIM] = {0, 1, 1};
+  //dbl force[DIM] = {cos(x)*sin(y), sin(y)*cos(z), sin(x)*cos(z)};
 
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
@@ -3164,7 +3165,7 @@ int assemble_ewave_nedelec(void) {
       double diffusion_real = 0.0;
 
       for (int q = 0; q < DIM; q++) {
-        // diffusion_real += bf[reqn]->curl_phi[i][q] * fv->curl_em_er[q];
+        //diffusion_real += bf[reqn]->curl_phi[i][q] * fv->curl_em_er[q];
       }
       double advection_real = 0;
 
@@ -3191,7 +3192,7 @@ int assemble_ewave_nedelec(void) {
         double diffusion_real = 0.0;
 
         for (int q = 0; q < DIM; q++) {
-          // diffusion_real += bf[reqn]->curl_phi[i][q] * bf[var]->curl_phi[j][q];
+          //diffusion_real += bf[reqn]->curl_phi[i][q] * bf[var]->curl_phi[j][q];
         }
 
         double advection_real = 0;
