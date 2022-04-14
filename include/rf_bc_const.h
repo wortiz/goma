@@ -208,6 +208,8 @@
 #define WEAK_SHARP_INT    17
 #define STRONG_SHARP_INT  18
 #define LS_SPECIAL        19
+#define STRONG_INT_NEDELEC        20
+#define WEAK_INT_NEDELEC        21
 
 /* define some other catagories */
 #define STRESS 6 /* Six components in each mode */
@@ -624,6 +626,8 @@
 
 #define E_ER_2D_BC 1204
 #define E_EI_2D_BC 1205
+
+#define EM_MMS_SIDE_BC 1206
 
 #define E_ER_FARFIELD_BC 1210
 #define E_EI_FARFIELD_BC 1211

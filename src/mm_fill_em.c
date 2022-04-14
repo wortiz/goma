@@ -3150,13 +3150,8 @@ int assemble_ewave_nedelec(void) {
   dbl x = fv->x[0];
   dbl y = fv->x[1];
   dbl z = fv->x[2];
-  dbl force[DIM] = {
-          x * y * (1 - y*y) * (1 - z*z) + 2 * x * y * (1 - z*z),
-        y*y * (1 - x*x) * (1 - z*z) + (1 - y*y) * (2 - x*x - z*z),
-        y * z * (1 - x*x) * (1 - y*y) + 2 * y * z * (1 - x*x),
-  };
-  //dbl force[DIM] = {0, 1, 1};
-  //dbl force[DIM] = {cos(x)*sin(y), sin(y)*cos(z), sin(x)*cos(z)};
+  dbl force[DIM];
+  em_mms_force(x,y,z,force);
 
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
@@ -3176,6 +3171,7 @@ int assemble_ewave_nedelec(void) {
       dbl source = 0;
 
       for (int q = 0; q < DIM; q++) {
+        //source -= force[q] * bf[reqn]->curl_phi[i][q];
         source -= force[q] * bf[reqn]->phi_e[i][q];
       }
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
@@ -3208,12 +3204,30 @@ int assemble_ewave_nedelec(void) {
   return (0);
 } // end of assemble_ewave_curlcurl
 
-int em_er_mms_bc(double func[DIM],
-                 double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                 double xi[DIM], /* Local stu coordinates */
-                 const int bc_name,
-                 double *bc_data) {
+int em_mms_force(dbl x, dbl y, dbl z, dbl force[DIM]) {
 
+//  force[0] =
+//      x * y * (1 - y*y) * (1 - z*z) + 2 * x * y * (1 - z*z);
+//  force[1] =    y*y * (1 - x*x) * (1 - z*z) + (1 - y*y) * (2 - x*x - z*z);
+//  force[2] =    y * z * (1 - x*x) * (1 - y*y) + 2 * y * z * (1 - x*x);
+  force[0] = 0;
+  force[1] = 0;
+  force[2] = -y;
+  force[0] = y*y;
+  force[1] = x*y;
+  force[2] = 0;
+  //dbl force[DIM] = {0, 1, 1};
+  //dbl force[DIM] = {cos(x)*sin(y), sin(y)*cos(z), sin(x)*cos(z)};
+  return 0;
+}
+
+int em_mms_exact(dbl x, dbl y, dbl z, dbl exact[DIM]) {
+  //exact[0] = (1.0 - y*y)*(1.0 - z*z);
+  //exact[1] = (1.0 - x*x)*(1.0 - z*z);
+  //exact[2] = (1.0 - x*x)*(1.0 - y*y);
+  exact[0] = y*y;
+  exact[1] = x*y;
+  exact[2] = 0;
   return 0;
 }
 #undef I

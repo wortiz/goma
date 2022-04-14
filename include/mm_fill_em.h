@@ -114,4 +114,6 @@ int assemble_ewave_laplacian(double time,       // present time
 
 int assemble_em_continuity(void);
 int assemble_ewave_nedelec(void);
+int em_mms_force(dbl x, dbl y, dbl z, dbl force[DIM]) ;
+int em_mms_exact(dbl x, dbl y, dbl z, dbl exact[DIM]) ;
 #endif /* GOMA_MM_FILL_EM_H */

@@ -247,6 +247,9 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
     err = load_bf_grad();
     GOMA_EH(err, "load_bf_grad");
 
+    err = load_fv_vector();
+    GOMA_EH(err, "load_fv_vector");
+
     err = load_bf_mesh_derivs();
     GOMA_EH(err, "load_bf_mesh_derivs");
 
@@ -2386,6 +2389,513 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
   return (status);
 }
 /* END of routine apply_integrated_bc */
+
+int apply_nedelec_bc(double x[],            /* Solution vector for the current processor    */
+                     double resid_vector[], /* Residual vector for the current processor    */
+                     const double delta_t,  /* current time step size                       */
+                     const double theta,    /* parameter (0 to 1) to vary time integration
+                                             *  ( implicit - 0 to explicit - 1)             */
+                     const PG_DATA *pg_data,
+                     const int ielem,      /* element number */
+                     const int ielem_type, /* element type */
+                     const int num_local_nodes,
+                     const int ielem_dim,
+                     const int iconnect_ptr,
+                     ELEM_SIDE_BC_STRUCT *elem_side_bc, /* Pointer to an element side boundary
+                                                         * condition structure */
+                     const int num_total_nodes,
+                     const int bc_application, /* flag indicating whether to integrate
+                                                * strong or weak BC's */
+                     const double time_value,
+                     SGRID *grid,
+                     const Exo_DB *exo)
+
+/****************************************************************************
+ *
+ * apply_integrated_bc():
+ *
+ *    Calculate the local element contributions to boundary conditions which
+ *    involve integrations along element edges.
+ *
+ ****************************************************************************/
+{
+  int ip, w, i, I, ibc, k, j, id, icount, ss_index, is_ns, mn, lnn;
+  int iapply, matID_apply, id_side, i_basis = -1, skip_other_side;
+  int new_way = FALSE, ledof, mn_first;
+  int eqn, ieqn, var, pvar, p, q, index_eq, ldof_eqn, lvdesc, jlv;
+  int err, status = 0;
+  int bc_input_id, ip_total;
+  int contact_flag = FALSE;
+  int imode;
+  int stress_bc = 0;
+  double v_attach;
+  double phi_i, tmp;
+  double *phi_ptr, *jac_ptr;
+  double s, t, u; /* Gaussian quadrature point locations  */
+  double xi[DIM]; /* Local element coordinates of Gauss point. */
+  double x_dot[MAX_PDIM];
+  double x_rs_dot[MAX_PDIM];
+  double wt, weight, pb[DIM];
+  double xsurf[MAX_PDIM];
+  double dsigma_dx[DIM][MDE];
+  double func[DIM];
+  double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
+  double func_stress[MAX_MODES][6];
+  double d_func_stress[MAX_MODES][6][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
+  double cfunc[MDE][DIM];
+  double d_cfunc[MDE][DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
+  double time_intermediate = time_value - theta * delta_t; /* time at which bc's are
+                                                              evaluated */
+  static INTERFACE_SOURCE_STRUCT *is = NULL;
+  static JACOBIAN_VAR_DESC_STRUCT jacCol;
+  BOUNDARY_CONDITION_STRUCT *bc;
+  MATRL_PROP_STRUCT *mp_2;
+  struct BC_descriptions *bc_desc;
+  VARIABLE_DESCRIPTION_STRUCT *vd;
+  double surface_centroid[DIM];
+  int interface_id = -1;
+
+  tran->time_value = time_intermediate;
+
+  /***************************************************************************/
+  /*     START OF SURFACE LOOPS THAT REQUIRE INTEGRATION (WEAK SENSE)        */
+  /*                AND REQUIRE ROTATION IN TO N-T FORM                      */
+  /***************************************************************************/
+
+  /* Find out the number of surface quadrature points
+   *  -this is assumed independent of the type of boundary condition
+   *   applied at the surface
+   */
+
+  if (ls != NULL && ls->SubElemIntegration && ls->elem_overlap_state) {
+    Subgrid_Int.ip_total = get_subelement_integration_pts(
+        &Subgrid_Int.s, &Subgrid_Int.wt, &Subgrid_Int.ip_sign, 0., elem_side_bc->id_side - 1, 0);
+    ip_total = Subgrid_Int.ip_total;
+  } else if (ls != NULL && ls->Integration_Depth > 0 && ls->elem_overlap_state) {
+#ifdef SUBELEMENT_FOR_SUBGRID
+    /* DRN: you can also do subgrid integration with the following.
+       it recursive divides element to create small subelements and then
+       creates subgrid integration points */
+    Subgrid_Int.ip_total = get_subelement_integration_pts(
+        &Subgrid_Int.s, &Subgrid_Int.wt, &Subgrid_Int.ip_sign, 0., elem_side_bc->id_side - 1, 0);
+    ip_total = Subgrid_Int.ip_total;
+#else
+    /* Tom - We need subgrid integration along this element side here */
+    /* for now just use regular gauss integration */
+    find_surf_center_st(ielem_type, elem_side_bc->id_side, ielem_dim, surface_centroid, &s, &t);
+
+    ip_total = gather_surface_subgrid_integration_pts(grid, elem_side_bc->id_side, surface_centroid,
+                                                      Subgrid_Int.s, Subgrid_Int.wt, 0);
+
+    /* print_subgrid_surface_integration_pts( Subgrid_Int.s, Subgrid_Int.wt, ip_total);  */
+
+#endif
+  } else {
+    ip_total = elem_info(NQUAD_SURF, ielem_type);
+  }
+
+  /*
+   *  Loop over the quadrature points at the surface
+   */
+  for (ip = 0; ip < ip_total; ip++) {
+
+    if (ls != NULL && ls->SubElemIntegration && ls->elem_overlap_state) {
+      ls->Elem_Sign = Subgrid_Int.ip_sign[ip];
+      xi[0] = Subgrid_Int.s[ip][0];
+      xi[1] = Subgrid_Int.s[ip][1];
+      xi[2] = Subgrid_Int.s[ip][2];
+      /* DRN: Are these really needed? I'll put garbage in them so someone knows not to! */
+      s = 1.e30;
+      t = 1.e30;
+      wt = Subgrid_Int.wt[ip];
+    } else if (ls != NULL && ls->Integration_Depth > 0 && ls->elem_overlap_state) {
+#ifdef SUBELEMENT_FOR_SUBGRID
+      ls->Elem_Sign = 0;
+      xi[0] = Subgrid_Int.s[ip][0];
+      xi[1] = Subgrid_Int.s[ip][1];
+      xi[2] = Subgrid_Int.s[ip][2];
+      /* DRN: Are these really needed? I'll put garbage in them so someone knows not to! */
+      s = 1.e30;
+      t = 1.e30;
+      wt = Subgrid_Int.wt[ip];
+#else
+      /* Tom - We need subgrid integration along this element side here */
+      /* for now just use regular gauss integration */
+      if (ls != NULL)
+        ls->Elem_Sign = 0;
+      xi[0] = Subgrid_Int.s[ip][0];
+      xi[1] = Subgrid_Int.s[ip][1];
+      xi[2] = Subgrid_Int.s[ip][2];
+      /* DRN: Are these really needed? I'll put garbage in them so someone knows not to! */
+      s = 1.e30;
+      t = 1.e30;
+      wt = Subgrid_Int.wt[ip];
+      /* find the quadrature point locations (s, t) for current ip
+         find_surf_st(ip, ielem_type, elem_side_bc->id_side, pd->Num_Dim, xi, &s, &t, &u);
+         find the quadrature weight for current surface ip
+         wt = Gq_surf_weight(ip, ielem_type); */
+#endif
+    } else {
+      if (ls != NULL)
+        ls->Elem_Sign = 0;
+      /* find the quadrature point locations (s, t) for current ip */
+      find_surf_st(ip, ielem_type, elem_side_bc->id_side, ei[pg->imtrx]->ielem_dim, xi, &s, &t, &u);
+      /* find the quadrature weight for current surface ip */
+      wt = Gq_surf_weight(ip, ielem_type);
+    }
+
+    err = load_basis_functions(xi, bfd);
+    GOMA_EH(err, "problem from load_basis_functions");
+
+    err = beer_belly();
+    GOMA_EH(err, "beer_belly");
+
+    /*
+     *  precalculate variables at current integration pt.
+     *  for the current material comprising the current element
+     */
+    err = load_fv();
+    GOMA_EH(err, "load_fv");
+
+    /* What's going on here */
+
+    err = load_bf_grad();
+    GOMA_EH(err, "load_bf_grad");
+
+    err = load_fv_vector();
+    GOMA_EH(err, "load_fv_vector");
+
+
+    err = load_bf_mesh_derivs();
+    GOMA_EH(err, "load_bf_mesh_derivs");
+
+    /* calculate the determinant of the surface jacobian and the normal to
+     * the surface all at one time */
+    surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
+                                   (int)elem_side_bc->id_side, (int)elem_side_bc->num_nodes_on_side,
+                                   (elem_side_bc->local_elem_node_id));
+
+    if (ielem_dim != 3) {
+      calc_surf_tangent(ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
+                        (int)elem_side_bc->num_nodes_on_side, (elem_side_bc->local_elem_node_id));
+    }
+
+    /*
+     * Load up physical space gradients of field variables at this
+     * Gauss point.
+     */
+    err = load_fv_grads();
+    GOMA_EH(err, "load_fv_grads");
+
+    err = load_fv_mesh_derivs(1);
+    GOMA_EH(err, "load_fv_mesh_derivs");
+
+    /*
+     * Load up commonly used physical properties such as density at
+     * the current quadrature point using the material state vector.
+     */
+    load_properties(mp, time_value);
+
+    /*
+     * Determine the State Variable Vector for the material
+     * on the "other" side of the interface, i.e., the material
+     * located at the interface that is not the current material.
+     * Then, calculate common properties using that state vector.
+     * At the end of this loop, mp_2 should be pointing to the
+     * material on the other side of the interface, and its
+     * constituitive properties should be filled in.
+     */
+    for (i = 0; i < elem_side_bc->Num_MatID; i++) {
+      mp_2 = mp_glob[elem_side_bc->MatID_List[i]];
+      if (mp_2 != mp) {
+        load_matrl_statevector(mp_2);
+        load_properties(mp_2, time_value);
+        break;
+      }
+    }
+
+    /*
+     * Load up porous media variables and properties, if needed
+     */
+    if (mp->PorousMediaType == POROUS_UNSATURATED || mp->PorousMediaType == POROUS_SATURATED ||
+        mp->PorousMediaType == POROUS_TWO_PHASE) {
+      err = load_porous_properties();
+      GOMA_EH(err, "load_porous_properties");
+    }
+
+    if (mp->SurfaceTensionModel != CONSTANT) {
+      load_surface_tension(dsigma_dx);
+      if (neg_elem_volume)
+        return (status);
+    }
+
+    if (TimeIntegration != STEADY && pd->e[pg->imtrx][MESH_DISPLACEMENT1]) {
+      for (icount = 0; icount < ielem_dim; icount++) {
+        x_dot[icount] = fv_dot->x[icount];
+        /* calculate surface position for wall repulsion/no penetration condition */
+        xsurf[icount] = fv->x0[icount];
+      }
+
+      if (pd->e[pg->imtrx][SOLID_DISPLACEMENT1]) {
+        for (icount = 0; icount < VIM; icount++)
+          x_rs_dot[icount] = 0.;
+        for (icount = 0; icount < ielem_dim; icount++) {
+          /* Notice how I use here fv->d_rs instead of fv->x_rs
+           * (which doesn't exist) because
+           * x_rs_dot = d(X_rs)/dt = d(Coor[][] + d_rs)/dt = d(d_rs)/dt
+           */
+          x_rs_dot[icount] = fv_dot->d_rs[icount];
+        }
+      }
+    } else {
+      for (icount = 0; icount < ielem_dim; icount++) {
+        x_rs_dot[icount] = 0.;
+        x_dot[icount] = 0.;
+        xsurf[icount] = fv->x0[icount];
+      }
+    }
+
+    /*
+     *  Loop over all of the boundary conditions assigned to this side
+     *  of the element
+     */
+    do_LSA_mods(LSA_SURFACE);
+
+    for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
+      /*
+       *  Create a couple of pointers to cut down on the
+       *  amount of indirect addressing
+       */
+      bc = BC_Types + bc_input_id;
+      bc_desc = bc->desc;
+
+      ss_index = in_list(bc->BC_ID, 0, exo->num_side_sets, &(ss_to_blks[0][0]));
+      is_ns = strcmp(BC_Types[bc_input_id].Set_Type, "NS");
+      if (ss_index == -1 && is_ns != 0) {
+        sprintf(Err_Msg, "Could not find BC_ID %d in ss_to_blks", BC_Types[bc_input_id].BC_ID);
+        GOMA_EH(GOMA_ERROR, Err_Msg);
+      }
+
+      new_way = FALSE;
+      iapply = 0;
+      skip_other_side = FALSE;
+      if (is_ns != 0) {
+        if (ei[pg->imtrx]->elem_blk_id == ss_to_blks[1][ss_index]) {
+          iapply = 1;
+        }
+      }
+
+      /*
+       *  However, override if the side set is an external one. In
+       *  other words, if the side set is an external side set, we will
+       *  apply the boundary condition no matter what.
+       */
+      if (SS_Internal_Boundary != NULL) {
+        if (SS_Internal_Boundary[ss_index] == -1) {
+          iapply = 1;
+        }
+      }
+
+      /*  check to see if this bc is an integrated bc and thus to be handled
+       *  by this routine and not others. Also, this routine is called
+       *  twice by matrix fill, once for weakly integrated bc's and once for
+       *  strongly integrated bc's. Only go forward with the pertinent bc
+       *  from here.
+       */
+      if (bc_desc->method == bc_application) {
+        eqn = bc_desc->equation;
+
+        /* Initialize the general function to zero may have more than one entry
+         * for vector conditions like capillary.
+         * If not the new way, first do a
+         * really long and expense zeroing of a vast amount of basically unused
+         * array locations.
+         */
+        if (!new_way) {
+          func[0] = 0.0;
+          func[1] = 0.0;
+          func[2] = 0.0;
+
+          if (bc_desc->vector == VECTOR) /* save some initialization if not a vector cond */
+            memset(d_func, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
+          else
+            memset(d_func, 0, (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
+
+          memset(func_stress, 0.0, MAX_MODES * 6 * sizeof(double));
+          memset(d_func_stress, 0.0,
+                 MAX_MODES * 6 * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
+        }
+        /*
+         * Here's a RECIPE for adding new boundary conditions so you don't have any
+         * excuses not to add new ones.  The changes should be made in at least
+         * four files (rf_bc_const.h, mm_names.h, mm_input.c, and bc_[method].c)
+         * for some boundary conditions you may want to make additions elsewhere also.
+         * One example of extra additions is in el_exoII_io.c where the ss_dup_list
+         * is created - you may want to adapt the logic for rotation of new conditions.
+         * (note that these lines are repeated at each place where you need to
+         * make changes):
+         *  Boundary Condition  Step 1: add Macro Substitution for your new boundary
+         *                              condition in rf_bc_const.h - this is how you
+         *      rf_bc_const.h           will refer to the new boundary condition
+         *                              throughout the code.  Make sure the integer
+         *                              you choose is unique from all the other BC
+         *                              types.
+         *  Boundary Condition  Step 2: add a description of your boundary condition
+         *                              to the BC_Desc structure array in mm_names.h.
+         *      mm_names.h              This structure includes information about the
+         *                              type of boundary condition, which equation it
+         *                              applies to, what variables it is sensitive to,
+         *                              whether to rotate mesh or momentum equations,
+         *                              etc.  It is very important that you fill out
+         *                              this structure carefully, otherwise the code
+         *                              won't know what to do.
+         *  Boundary Condition  Step 3: add your BC case to the correct format listing
+         *                              for reading the necessary arguments from the
+         *      mm_input_bc.c           input file in mm_input_bc.c.
+         *
+         *  Boundary Condition  Step 4: Add a function call (and a function) in the
+         *                              correct routine for evaluating your boundary
+         *      bc_colloc.c             condition.  This will probably in bc_colloc.c
+         *      bc_integ.c              for collocated conditions or bc_integ.c for
+         *                              strong or weak integrated conditions.
+         *  Boundary Condition  Step 5: use and enjoy your new boundary condition
+         *
+         * Step 4 should be done below (or in bc_colloc.c), and add your new function at
+         *     the end of this file (see fplane)
+         */
+
+        switch (bc->BC_Name) {
+        case EM_MMS_SIDE_BC:
+        {
+          dbl exact[DIM];
+          em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
+          for (int i = 0; i < pd->Num_Dim; i++) {
+            exact[i] -= fv->em_er[i];
+          }
+          cross_really_simple_vectors(fv->snormal, exact, func);
+          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
+            for (int i = 0; i < pd->Num_Dim; i++) {
+              exact[i] = -bf[EM_E1_REAL]->phi_e[j][i];
+            }
+            dbl d_exact[DIM];
+            cross_really_simple_vectors(fv->snormal, exact, d_exact);
+            for (int i = 0; i < pd->Num_Dim; i++) {
+              d_func[i][EM_E1_REAL][j] = d_exact[i];
+            }
+          }
+        } break;
+        default:
+          sprintf(Err_Msg, "Integrated BC %s not found", bc_desc->name1);
+          GOMA_EH(GOMA_ERROR, Err_Msg);
+          break;
+
+        } /* end of switch over bc type */
+
+        /*
+         *  If we have determined that the current boundary condition need
+         *  only be applied on one side of the interface and we are currently
+         *  on the other side of the interface, skip processing the rest
+         *  of this surface integral for this particular boundary condition.
+         *  Go directly to the next surface boundary condition on the current
+         *  side.
+         */
+        if (skip_other_side)
+          continue;
+
+        /**********************************************************************/
+        /*        LOOP OVER THE LOCAL ELEMENT NODE NUMBER                     */
+        /*        FOR NODES THAT LIE ON THE CURRENT SURFACE		      */
+        /* this is a loop designed to loop over equations that lie on         */
+        /*  current surface                                                   */
+        /*    ADD the Boundary condition functions into the Residual          */
+        /*         vector and Jacobian Matrix                                 */
+        /**********************************************************************/
+
+
+        for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+
+              /*
+               *   for weakly integrated boundary conditions,
+               *   weight the function by wt
+               */
+              weight = wt;
+
+              dbl nxphi[DIM] = {
+                  0
+              };
+
+              ldof_eqn = i;
+
+              cross_really_simple_vectors(fv->snormal, bf[eqn]->phi_e[i], nxphi);
+
+              /*
+               * For strong conditions weight the function by BIG_PENALTY
+               */
+              if (bc_desc->method == STRONG_INT_NEDELEC) {
+                weight *= BIG_PENALTY;
+              }
+              ieqn = upd->ep[pg->imtrx][eqn];
+
+              for (int p = 0; p < pd->Num_Dim; p++) {
+                if (ldof_eqn != -1) {
+                  lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->sdet * nxphi[p] * func[p];
+
+                  if (af->Assemble_Jacobian && ldof_eqn != -1) {
+
+                    /* OLD METHOD */
+
+                    /* if mesh displacement is variable,
+                   *  put in this sensitivity first
+                   * ... unless we are computing the mass matrix
+                   * for LSA.  In that case, we don't include
+                   * this first term b/c it doesn't involve any
+                   * primary time derivative variables.
+                     */
+                    if (!af->Assemble_LSA_Mass_Matrix) {
+                      for (q = 0; q < pd->Num_Dim; q++) {
+                        var = MESH_DISPLACEMENT1 + q;
+                        pvar = upd->vp[pg->imtrx][var];
+                        if (pvar != -1) {
+                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                                weight * nxphi[p] * func[p] * fv->dsurfdet_dx[q][j];
+                          }
+                        }
+                      }
+                    }
+
+                    /* now add in sensitivity of BC function to
+                   * variables
+                     */
+                    for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
+                      pvar = upd->vp[pg->imtrx][var];
+                      if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
+                        if (var != MASS_FRACTION) {
+                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                                weight * fv->sdet * nxphi[p] * d_func[p][var][j];
+                          }
+                        } else {
+                          /* variable type is MASS_FRACTION */
+                          for (w = 0; w < pd->Num_Species_Eqn; w++) {
+                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                              lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
+                                  weight * fv->sdet * nxphi[p] *
+                                  d_func[p][MAX_VARIABLE_TYPES + w][j];
+                            }
+                          } /* end of loop over species */
+                        }   /* end of if MASS_FRACTION */
+                      }     /* end of variable exists and BC is sensitive to it */
+                    }       /* end of var loop over variable types */
+                  }         /* end of NEWTON */
+                }
+              }
+            } /* end of if (Res_BC != NULL) - i.e. apply residual at this node */
+      }       /* end for (i=0; i< num_nodes_on_side; i++) */
+    }         /*(end for ibc) */
+  }           /*End for ip = 1,...*/
+  return (status);
+}
 
 int equation_index_auto_rotate(const ELEM_SIDE_BC_STRUCT *elem_side_bc,
                                int I,

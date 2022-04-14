@@ -1993,7 +1993,7 @@ int load_bf_grad(void)
             for (p = 0; p < DIM; p++) {
               bfv->curl_phi[i][p] = 0;
               for (k = 0; k < DIM; k++) { /* VIM */
-                bfv->curl_phi[i][p] += (1 / bf[v]->detJ) * bf[v]->J[k][p] * bfv->curl_e[i][k];
+                bfv->curl_phi[i][p] += (1 / bf[v]->detJ) * bf[v]->J[p][k] * bfv->curl_e[i][k];
               }
             }
           }

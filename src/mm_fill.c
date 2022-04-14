@@ -2718,9 +2718,14 @@ Revised:         Summer 1998, SY Tam (UNM)
       call_shell_grad = 0;
       call_sharp_int = FALSE;
 
+      int call_nedelec = 0;
+
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
         if (BC_Types[bc_input_id].desc->method == WEAK_INT_SURF) {
           call_int = 1;
+        }
+        if (BC_Types[bc_input_id].desc->method == WEAK_INT_NEDELEC) {
+          call_nedelec = 1;
         }
         if ((BC_Types[bc_input_id].desc->method == WEAK_SHELL_GRAD ||
              BC_Types[bc_input_id].desc->method == STRONG_SHELL_GRAD) &&
@@ -2773,6 +2778,21 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
       if (neg_elem_volume)
         return -1;
+      if (call_nedelec) {
+        err = apply_nedelec_bc(x, resid_vector, delta_t, theta, &pg_data, ielem, ielem_type,
+                                  num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
+                                  num_total_nodes, WEAK_INT_SURF, time_value, element_search_grid,
+                                  exo);
+        GOMA_EH(err, " apply_integrated_bc");
+#ifdef CHECK_FINITE
+        err = CHECKFINITE("apply_integrated_bc");
+        if (err)
+          return -1;
+#endif
+        if (neg_elem_volume)
+          return -1;
+      }
+
 
     } while ((elem_side_bc = elem_side_bc->next_side_bc) != NULL);
   } /* END if (First_Elem_Side_BC_Array[ielem] != NULL) */
@@ -3068,10 +3088,13 @@ Revised:         Summer 1998, SY Tam (UNM)
       call_int = 0;
       call_col = 0;
       call_contact = 0.;
+int      call_nedelec = 0.;
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
         bct = BC_Types[bc_input_id].desc->method;
         if (bct == STRONG_INT_SURF)
           call_int = 1;
+        if (bct == STRONG_INT_NEDELEC)
+          call_nedelec = 1;
         if (bct == COLLOCATE_SURF)
           call_col = 1;
         if (bct == CONTACT_SURF)
@@ -3186,6 +3209,28 @@ Revised:         Summer 1998, SY Tam (UNM)
           return -1;
 
         ls = ls_save;
+      }
+      if (call_nedelec) {
+        err = apply_nedelec_bc(x, resid_vector, delta_t, theta, &pg_data, ielem, ielem_type,
+                                  num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
+                                  num_total_nodes, STRONG_INT_NEDELEC, time_value, element_search_grid,
+                                  exo);
+        GOMA_EH(err, " apply_integrated_bc");
+#ifdef CHECK_FINITE
+        err = CHECKFINITE("apply_integrated_bc");
+        if (err)
+          return -1;
+#endif
+        /*printf("Element: %d, ID_side: %d \n", ei[pg->imtrx]->ielem, elem_side_bc->id_side );
+          for(i3=0; i3< (int)  elem_side_bc->num_nodes_on_side; i3++)
+          {
+          id3 = (int) elem_side_bc->local_elem_node_id[i3]; I3 =  I = Proc_Elem_Connect[iconnect_ptr
+          + id3]; printf("\tI: %d, R[0][%d]: %7.4g, R[1][%d]: %7.4g\n", I3, id3, lec->R[0][id3],
+          id3,  lec->R[1][id3]);
+          }*/
+
+        if (neg_elem_volume)
+          return -1;
       }
       /****************************************************************************/
     } while ((elem_side_bc = elem_side_bc->next_side_bc) != NULL);

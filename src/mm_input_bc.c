@@ -386,7 +386,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case E_ER_2D_BC:
     case E_EI_2D_BC:
     case RESTIME_NOBC_BC:
-    case EM_ER_MMS_BC:
+    case EM_MMS_SIDE_BC:
 
       break;
 
@@ -3433,6 +3433,8 @@ static int BC_consistency(struct Boundary_Condition *BC_Type) {
     case CONTACT_SURF:
     case EMBEDDED_SURF:
     case WEAK_SHARP_INT:
+    case WEAK_INT_NEDELEC:
+    case STRONG_INT_NEDELEC:
       break;
     case LS_SPECIAL:
       if (BC_Type->desc->BC_Name != LS_ADC_OLD_BC) {
