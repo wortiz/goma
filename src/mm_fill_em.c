@@ -3160,7 +3160,7 @@ int assemble_ewave_nedelec(void) {
       double diffusion_real = 0.0;
 
       for (int q = 0; q < DIM; q++) {
-        //diffusion_real += bf[reqn]->curl_phi[i][q] * fv->curl_em_er[q];
+       diffusion_real += bf[reqn]->curl_phi[i][q] * fv->curl_em_er[q];
       }
       double advection_real = 0;
 
@@ -3171,7 +3171,6 @@ int assemble_ewave_nedelec(void) {
       dbl source = 0;
 
       for (int q = 0; q < DIM; q++) {
-        //source -= force[q] * bf[reqn]->curl_phi[i][q];
         source -= force[q] * bf[reqn]->phi_e[i][q];
       }
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
@@ -3188,7 +3187,7 @@ int assemble_ewave_nedelec(void) {
         double diffusion_real = 0.0;
 
         for (int q = 0; q < DIM; q++) {
-          //diffusion_real += bf[reqn]->curl_phi[i][q] * bf[var]->curl_phi[j][q];
+         diffusion_real += bf[reqn]->curl_phi[i][q] * bf[var]->curl_phi[j][q];
         }
 
         double advection_real = 0;
@@ -3210,12 +3209,27 @@ int em_mms_force(dbl x, dbl y, dbl z, dbl force[DIM]) {
 //      x * y * (1 - y*y) * (1 - z*z) + 2 * x * y * (1 - z*z);
 //  force[1] =    y*y * (1 - x*x) * (1 - z*z) + (1 - y*y) * (2 - x*x - z*z);
 //  force[2] =    y * z * (1 - x*x) * (1 - y*y) + 2 * y * z * (1 - x*x);
-  force[0] = 0;
-  force[1] = 0;
-  force[2] = -y;
-  force[0] = y*y;
-  force[1] = x*y;
-  force[2] = 0;
+  //force[0] = 0;
+  //force[1] = 0;
+  //force[2] = -y;
+  //force[0] = -1;
+  //force[1] = 0;
+  //force[2] = 0;
+  //force[0] = y*y;
+  //force[1] = x*y;
+  //force[2] = 0;
+  //force[0] = -cos(z);
+  //force[1] = -cos(x);
+  //force[2] = -cos(y);
+  //force[0] = sin(y);
+  //force[1] = sin(z);
+  //force[2] = sin(x);
+  //force[0] = 2*sin(y);
+  //force[1] = 2*sin(z);
+  //force[2] = 2*sin(x);
+  force[0] = (-2*y*y - 2*z*z + (1-y*y) * (1-z*z) + 4);
+  force[1] = (-2*x*x - 2*z*z + (1-x*x) * (1-z*z) + 4);
+  force[2] = (-2*x*x - 2*y*y + (1-x*x) * (1-y*y) + 4);
   //dbl force[DIM] = {0, 1, 1};
   //dbl force[DIM] = {cos(x)*sin(y), sin(y)*cos(z), sin(x)*cos(z)};
   return 0;
@@ -3225,9 +3239,15 @@ int em_mms_exact(dbl x, dbl y, dbl z, dbl exact[DIM]) {
   //exact[0] = (1.0 - y*y)*(1.0 - z*z);
   //exact[1] = (1.0 - x*x)*(1.0 - z*z);
   //exact[2] = (1.0 - x*x)*(1.0 - y*y);
-  exact[0] = y*y;
-  exact[1] = x*y;
-  exact[2] = 0;
+  //exact[0] = y*y;
+  //exact[1] = x*y;
+  //exact[2] = 0;
+  //exact[0] = sin(y);
+  //exact[1] = sin(z);
+  //exact[2] = sin(x);
+  exact[0] = (1-y*y)*(1-z*z);
+  exact[1] = (1-x*x)*(1-z*z);
+  exact[2] = (1-y*y)*(1-x*x);
   return 0;
 }
 #undef I

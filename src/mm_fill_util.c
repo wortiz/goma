@@ -1990,10 +1990,10 @@ int load_bf_grad(void)
           }
 
           for (i = 0; i < dofs; i++) {
-            for (p = 0; p < DIM; p++) {
-              bfv->curl_phi[i][p] = 0;
-              for (k = 0; k < DIM; k++) { /* VIM */
-                bfv->curl_phi[i][p] += (1 / bf[v]->detJ) * bf[v]->J[p][k] * bfv->curl_e[i][k];
+            for (int d = 0; d < pd->Num_Dim; d++) {
+              bfv->curl_phi[i][d] = 0;
+              for (int k = 0; k < pd->Num_Dim; k++) {
+                bfv->curl_phi[i][d] += (1 / bfv->detJ) * bfv->J[k][d] * bfv->curl_e[i][k];
               }
             }
           }
@@ -4979,13 +4979,13 @@ void vector_shape_function(Dpi *dpi,
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
-          phi_e[0] = sign * t;
-          phi_e[1] = sign * (1 - s - u);
-          phi_e[2] = sign * t;
+          phi_e[0] = sign * (1 - t - u);
+          phi_e[1] = sign * s;
+          phi_e[2] = sign * s;
         } break;
         case 1: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * (-t);
           phi_e[1] = sign * s;
@@ -4995,9 +4995,9 @@ void vector_shape_function(Dpi *dpi,
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
-          phi_e[0] = sign * (1 - t - u);
-          phi_e[1] = sign * s;
-          phi_e[2] = sign * s;
+          phi_e[0] = sign * t;
+          phi_e[1] = sign * (1 - s - u);
+          phi_e[2] = sign * t;
         } break;
         case 3: {
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
@@ -5011,17 +5011,17 @@ void vector_shape_function(Dpi *dpi,
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
-          phi_e[0] = 0;
-          phi_e[1] = sign * (-u);
-          phi_e[2] = sign * t;
-        } break;
-        case 5: {
-          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
-          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
-          int sign = SGN(gnn_1 - gnn_2);
           phi_e[0] = sign * (-u);
           phi_e[1] = 0;
           phi_e[2] = sign * (s);
+        } break;
+        case 5: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int sign = SGN(gnn_1 - gnn_2);
+          phi_e[0] = 0;
+          phi_e[1] = sign * (-u);
+          phi_e[2] = sign * t;
         } break;
         default:
           GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis TETRAHEDRON");
@@ -5029,9 +5029,59 @@ void vector_shape_function(Dpi *dpi,
         }
         break;
       case CURL_PSI:
-        curl_e[0] = 0;
-        curl_e[1] = 0;
-        curl_e[2] = 0;
+        switch (ledof) {
+        case 0: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = sign * -2.;
+          curl_e[2] = sign * 2.;
+        } break;
+        case 1: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0;
+          curl_e[1] = 0;
+          curl_e[2] = sign * 2.;
+        } break;
+        case 2: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 2.;
+          curl_e[1] = 0;
+          curl_e[2] = sign * -2.;
+        } break;
+        case 3: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * -2.;
+          curl_e[1] = sign * 2.;
+          curl_e[2] = 0;
+        } break;
+        case 4: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = sign * -2.;
+          curl_e[2] = 0.;
+        } break;
+        case 5: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = sign * 2.;
+          curl_e[1] = 0;
+          curl_e[2] = 0;
+        } break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis TETRAHEDRON");
+          break;
+        }
         break;
       default:
         GOMA_EH(GOMA_ERROR, "Unknown Iquant TETRAHEDRON I_N1");
@@ -5154,7 +5204,7 @@ void vector_shape_function(Dpi *dpi,
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
           int sign = SGN(gnn_1 - gnn_2);
-          curl_e[0] = sign * 0;
+          curl_e[0] = 0;
           curl_e[1] = sign * 0.25 * (t - 1);
           curl_e[2] = sign * 0.25 * (1 - u);
         } break;
@@ -5163,14 +5213,14 @@ void vector_shape_function(Dpi *dpi,
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (1 + s);
-          curl_e[1] = sign * 0;
+          curl_e[1] = 0;
           curl_e[2] = sign * 0.25 * (1 - u);
         } break;
         case 2: {
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
           int sign = SGN(gnn_1 - gnn_2);
-          curl_e[0] = sign * 0;
+          curl_e[0] = 0;
           curl_e[1] = sign * 0.25 * (1 + t);
           curl_e[2] = sign * 0.25 * (1 - u);
         } break;
@@ -5179,7 +5229,7 @@ void vector_shape_function(Dpi *dpi,
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (s - 1);
-          curl_e[1] = sign * 0.25;
+          curl_e[1] = 0;
           curl_e[2] = sign * 0.25 * (1 - u);
         } break;
         case 4: {
@@ -5188,23 +5238,23 @@ void vector_shape_function(Dpi *dpi,
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (s - 1);
           curl_e[1] = sign * 0.25 * (1 - t);
-          curl_e[2] = sign * 0.;
+          curl_e[2] = 0.;
         } break;
         case 5: {
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
           int sign = SGN(gnn_1 - gnn_2);
-          curl_e[0] = sign * 0.25 * -(1 + s);
+          curl_e[0] = sign * 0.25 * (-1 - s);
           curl_e[1] = sign * 0.25 * (t - 1);
-          curl_e[2] = sign * 0.;
+          curl_e[2] = 0.;
         } break;
         case 6: {
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (1 + s);
-          curl_e[1] = sign * 0.25 * -(1 + t);
-          curl_e[2] = sign * 0.;
+          curl_e[1] = sign * 0.25 * (-1 - t);
+          curl_e[2] = 0.;
         } break;
         case 7: {
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
@@ -5212,13 +5262,13 @@ void vector_shape_function(Dpi *dpi,
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (1 - s);
           curl_e[1] = sign * 0.25 * (1 + t);
-          curl_e[2] = sign * 0.;
+          curl_e[2] = 0.;
         } break;
         case 8: {
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
           int sign = SGN(gnn_1 - gnn_2);
-          curl_e[0] = sign * 0.;
+          curl_e[0] = 0.;
           curl_e[1] = sign * 0.25 * (1 - t);
           curl_e[2] = sign * 0.25 * (1 + u);
         } break;
@@ -5226,16 +5276,16 @@ void vector_shape_function(Dpi *dpi,
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 5]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
           int sign = SGN(gnn_1 - gnn_2);
-          curl_e[0] = sign * 0.25 * -(1 + s);
-          curl_e[1] = sign * 0.;
+          curl_e[0] = sign * 0.25 * (-1 - s);
+          curl_e[1] = 0.;
           curl_e[2] = sign * 0.25 * (1 + u);
         } break;
         case 10: {
           int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 6]];
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 7]];
           int sign = SGN(gnn_1 - gnn_2);
-          curl_e[0] = sign * 0.;
-          curl_e[1] = sign * 0.25 * -(t + 1);
+          curl_e[0] = 0.;
+          curl_e[1] = sign * 0.25 * (-1 - t);
           curl_e[2] = sign * 0.25 * (1 + u);
         } break;
         case 11: {
@@ -5243,7 +5293,7 @@ void vector_shape_function(Dpi *dpi,
           int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 4]];
           int sign = SGN(gnn_1 - gnn_2);
           curl_e[0] = sign * 0.25 * (1 - s);
-          curl_e[1] = sign * 0.;
+          curl_e[1] = 0.;
           curl_e[2] = sign * 0.25 * (1 + u);
         } break;
         default:
