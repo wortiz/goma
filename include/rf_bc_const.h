@@ -628,6 +628,7 @@
 #define E_EI_2D_BC 1205
 
 #define EM_MMS_SIDE_BC 1206
+#define EM_MMS_SIDE_IMAG_BC 1207
 
 #define E_ER_FARFIELD_BC 1210
 #define E_EI_FARFIELD_BC 1211

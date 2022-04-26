@@ -3143,38 +3143,49 @@ int assemble_ewave_nedelec(void) {
    * Bail out fast if there's nothing to do...
    * But we might have the wrong eqn
    */
-  if (!pd->e[pg->imtrx][eqn_real]) {
+  if (!pd->e[pg->imtrx][eqn_real] || !pd->e[pg->imtrx][eqn_imag]) {
     return (-1);
   }
 
   dbl x = fv->x[0];
   dbl y = fv->x[1];
   dbl z = fv->x[2];
-  dbl force[DIM];
+  complex double force[DIM];
   em_mms_force(x,y,z,force);
 
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
+  int ieqn = R_EM_E1_IMAG;
+  int peqn_imag = upd->ep[pg->imtrx][ieqn];
   if (af->Assemble_Residual) {
     for (int i = 0; i < ei[pg->imtrx]->dof[eqn_real]; i++) {
       double diffusion_real = 0.0;
+      double diffusion_imag = 0.0;
 
       for (int q = 0; q < DIM; q++) {
        diffusion_real += bf[reqn]->curl_phi[i][q] * fv->curl_em_er[q];
+       diffusion_imag += bf[ieqn]->curl_phi[i][q] * fv->curl_em_ei[q];
       }
+
       double advection_real = 0;
+      double advection_imag = 0;
 
       for (int q = 0; q < DIM; q++) {
         advection_real += bf[reqn]->phi_e[i][q] * fv->em_er[q];
+        advection_imag += bf[ieqn]->phi_e[i][q] * fv->em_ei[q];
       }
 
-      dbl source = 0;
+      dbl source_real = 0;
+      dbl source_imag = 0;
 
       for (int q = 0; q < DIM; q++) {
-        source -= force[q] * bf[reqn]->phi_e[i][q];
+        source_real -= creal(force[q]) * bf[reqn]->phi_e[i][q];
+        source_imag -= cimag(force[q]) * bf[ieqn]->phi_e[i][q];
       }
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
-          (diffusion_real + advection_real + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;
+          (diffusion_real + advection_real + source_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
+      lec->R[LEC_R_INDEX(peqn_imag, i)] +=
+          (diffusion_imag + advection_imag + source_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
     }
   }
 
@@ -3198,12 +3209,31 @@ int assemble_ewave_nedelec(void) {
         lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
             (diffusion_real + advection_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
       }
+
+      var = EM_E1_IMAG;
+      int pvar_imag = upd->vp[pg->imtrx][var];
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+        double diffusion_imag = 0.0;
+
+        for (int q = 0; q < DIM; q++) {
+         diffusion_imag += bf[reqn]->curl_phi[i][q] * bf[var]->curl_phi[j][q];
+        }
+
+        double advection_imag = 0;
+        for (int q = 0; q < DIM; q++) {
+          advection_imag += bf[reqn]->phi_e[i][q] * bf[var]->phi_e[j][q];
+        }
+
+        lec->J[LEC_J_INDEX(peqn_imag, pvar_imag, i, j)] +=
+            (diffusion_imag + advection_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+      }
     }
   }
   return (0);
 } // end of assemble_ewave_curlcurl
 
-int em_mms_force(dbl x, dbl y, dbl z, dbl force[DIM]) {
+int em_mms_force(dbl x, dbl y, dbl z, complex double force[DIM]) {
 
 //  force[0] =
 //      x * y * (1 - y*y) * (1 - z*z) + 2 * x * y * (1 - z*z);
@@ -3227,15 +3257,22 @@ int em_mms_force(dbl x, dbl y, dbl z, dbl force[DIM]) {
   //force[0] = 2*sin(y);
   //force[1] = 2*sin(z);
   //force[2] = 2*sin(x);
-  force[0] = (-2*y*y - 2*z*z + (1-y*y) * (1-z*z) + 4);
-  force[1] = (-2*x*x - 2*z*z + (1-x*x) * (1-z*z) + 4);
-  force[2] = (-2*x*x - 2*y*y + (1-x*x) * (1-y*y) + 4);
+  //force[0] = (-2*y*y - 2*z*z + (1-y*y) * (1-z*z) + 4);
+  //force[1] = (-2*x*x - 2*z*z + (1-x*x) * (1-z*z) + 4);
+  //force[2] = (-2*x*x - 2*y*y + (1-x*x) * (1-y*y) + 4);
+  complex double I = _Complex_I;
+  force[0] = 0.25*cexp(-I*(x*sin(M_PI/9.0) + y/2.0));
+  force[1] = cexp(-I*(x*sin(M_PI/9.0) + z/2.0))*sin(M_PI/9.0) * sin(M_PI/9.0) +
+   0.25*cexp(-I*(x*sin(M_PI/9.0) + z/2.0)) -
+   0.5*cexp(-I*(x*sin(M_PI/9.0) + y/2.0))*sin(M_PI/9.0);
+  force[2] = cexp(-I*(x*sin(M_PI/9.0) + y/2.0))*sin(M_PI/9.0)*sin(M_PI/9.0)+
+   0.25*cexp(-I*(x*sin(M_PI/9.0) + y/2.0));
   //dbl force[DIM] = {0, 1, 1};
   //dbl force[DIM] = {cos(x)*sin(y), sin(y)*cos(z), sin(x)*cos(z)};
   return 0;
 }
 
-int em_mms_exact(dbl x, dbl y, dbl z, dbl exact[DIM]) {
+int em_mms_exact(dbl x, dbl y, dbl z, complex double exact[DIM]) {
   //exact[0] = (1.0 - y*y)*(1.0 - z*z);
   //exact[1] = (1.0 - x*x)*(1.0 - z*z);
   //exact[2] = (1.0 - x*x)*(1.0 - y*y);
@@ -3245,9 +3282,10 @@ int em_mms_exact(dbl x, dbl y, dbl z, dbl exact[DIM]) {
   //exact[0] = sin(y);
   //exact[1] = sin(z);
   //exact[2] = sin(x);
-  exact[0] = (1-y*y)*(1-z*z);
-  exact[1] = (1-x*x)*(1-z*z);
-  exact[2] = (1-y*y)*(1-x*x);
+  complex double I = _Complex_I;
+  exact[0] = cexp(-I*(x*sin(M_PI/9.0) + y/2.0));
+  exact[1] = cexp(-I*(x*sin(M_PI/9.0) + z/2.0));
+  exact[2] = cexp(-I*(x*sin(M_PI/9.0) + y/2.0));
   return 0;
 }
 #undef I

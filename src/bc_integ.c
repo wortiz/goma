@@ -60,6 +60,7 @@
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_ns_bc.h"
+#include "mm_qtensor_model.h"
 #include "mm_shell_bc.h"
 #include "rd_mesh.h"
 #include "rf_bc.h"
@@ -2767,20 +2768,49 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         switch (bc->BC_Name) {
         case EM_MMS_SIDE_BC:
         {
-          dbl exact[DIM];
+          complex double exact[DIM];
           em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
+          dbl exact_real[DIM];
           for (int i = 0; i < pd->Num_Dim; i++) {
-            exact[i] -= fv->em_er[i];
+            exact_real[i] = creal(exact[i]);
           }
-          cross_really_simple_vectors(fv->snormal, exact, func);
+
+          for (int i = 0; i < pd->Num_Dim; i++) {
+            exact_real[i] -= fv->em_er[i];
+          }
+          cross_really_simple_vectors(fv->snormal, exact_real, func);
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
             for (int i = 0; i < pd->Num_Dim; i++) {
-              exact[i] = -bf[EM_E1_REAL]->phi_e[j][i];
+              exact_real[i] = -bf[EM_E1_REAL]->phi_e[j][i];
             }
             dbl d_exact[DIM];
-            cross_really_simple_vectors(fv->snormal, exact, d_exact);
+            cross_really_simple_vectors(fv->snormal, exact_real, d_exact);
             for (int i = 0; i < pd->Num_Dim; i++) {
               d_func[i][EM_E1_REAL][j] = d_exact[i];
+            }
+          }
+        } break;
+        case EM_MMS_SIDE_IMAG_BC:
+        {
+          complex double exact[DIM];
+          em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
+          dbl exact_imag[DIM];
+          for (int i = 0; i < pd->Num_Dim; i++) {
+            exact_imag[i] = cimag(exact[i]);
+          }
+
+          for (int i = 0; i < pd->Num_Dim; i++) {
+            exact_imag[i] -= fv->em_er[i];
+          }
+          cross_really_simple_vectors(fv->snormal, exact_imag, func);
+          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+            for (int i = 0; i < pd->Num_Dim; i++) {
+              exact_imag[i] = -bf[EM_E1_IMAG]->phi_e[j][i];
+            }
+            dbl d_exact[DIM];
+            cross_really_simple_vectors(fv->snormal, exact_imag, d_exact);
+            for (int i = 0; i < pd->Num_Dim; i++) {
+              d_func[i][EM_E1_IMAG][j] = d_exact[i];
             }
           }
         } break;
