@@ -550,7 +550,7 @@ double shape(const double s, /* quadrature point coordinates */
     case PSI:          /* shape function */
       switch (Inode) { /* select specific shape function */
       case 0:
-        value = (1. - s - t - u) * (2. * (1 - s - t - u) - 1.);
+        value = (1 - s - t -u) * (2. * (1 - s -t -u) - 1.);
         break;
       case 1:
         value = s * (2. * s - 1.);
