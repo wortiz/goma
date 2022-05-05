@@ -48,10 +48,10 @@ ARCHIVER=ar
 
 # if mpi is built by the script these get reset later.
 MPI_C_COMPILER="mpicc" 
-MPI_CXX_COMPILER="mpiCC"
-# mpif90 and mpif77 are depricated in favor of just mpifort.
-MPI_F90_COMPILER="mpifort"
-MPI_F77_COMPILER="mpifort"
+MPI_CXX_COMPILER="mpicxx"
+# mpif90 and mpif77 are depricated in favor of just mpif90.
+MPI_F90_COMPILER="mpif90"
+MPI_F77_COMPILER="mpif77"
 MPI_RUNNER="mpirun"
 FORTRAN_LIBS="-lgfortran"
 
@@ -232,8 +232,8 @@ fi
 echo "Start Goma Build" >> $BUILD_LOG
 echo "Start Goma Compile" >> $COMPILE_LOG
 
-HDF5_VERSION="1.12.1"
-HDF5_MD5="442469fbf43626006346e679c22cf10a"
+HDF5_VERSION="1.12.2"
+HDF5_MD5="4f4c87981ee5e3db12975f0904b634e2"
 
 NETCDF_VERSION="c-4.8.1"
 NETCDF_MD5="8da8665f1f185b85bc8127bc0bad0ee6"
@@ -242,19 +242,19 @@ TRILINOS_VERSION="13.2.0"
 TRILINOS_VERSION_DASH="13-2-0"
 TRILINOS_MD5="099680cd3660dba5ec447ddc50a8406c"
 
-MUMPS_VERSION="5.4.1"
-MUMPS_MD5="93be789bf9c6c341a78c16038da3241b"
+MUMPS_VERSION="5.5.0"
+MUMPS_MD5="08eb0887bfd1e570ce7faecbd8bf97c0"
 
-OPENMPI_VERSION="4.1.1"
-OPENMPI_MD5="9aa7cb64a8b1a773cac719e700d5bb2a"
+OPENMPI_VERSION="4.1.3"
+OPENMPI_MD5="292fcbce24b1e6c18218e0fdcdc080e4"
 OPENMPI_ARCHIVE_URL="https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-$OPENMPI_VERSION.tar.bz2"
 OPENMPI_EXTRA_CONFIGURE_FLAGS=""
 
 CMAKE_VERSION="3.21.1"
 CMAKE_MD5="1d8d33628f1c56b0c3cda67abddbea91"
 
-SUITESPARSE_VERSION="5.10.1"
-SUITESPARSE_MD5="68bb912f3cf3d2b01f30ebafef690302"
+SUITESPARSE_VERSION="5.12.0"
+SUITESPARSE_MD5="08292a05b16acf37767090875d210ced"
 
 MATIO_VERSION="1.5.21"
 MATIO_MD5="afeb5d21b234699fd5b9dc4564afe1ca"
@@ -265,8 +265,8 @@ SCALAPACK_MD5="2397d36790d1445383bc3cdb1e18ca5f"
 LAPACK_VERSION="3.8.0"
 LAPACK_MD5="96591affdbf58c450d45c1daa540dbd2"
 
-PETSC_VERSION="3.16.5"
-PETSC_MD5="8f76758279ccc08744f64a1fc986f118"
+PETSC_VERSION="3.17.1"
+PETSC_MD5="7a39f099b99f2b03edb9e02876cebb6d"
 
 OMEGA_H_VERSION="9.34.8"
 OMEGA_H_MD5="daa3efaf5ea3aed32d2d60760d1a928e"
@@ -445,8 +445,8 @@ function setCompilerVars() {
         if [ "$MPI_NAME" == "open" ]; then
             export MPI_C_COMPILER="mpicc"
             export MPI_CXX_COMPILER="mpic++"
-            export MPI_F90_COMPILER="mpifort"
-            export MPI_F77_COMPILER="mpifort"
+            export MPI_F90_COMPILER="mpif90"
+            export MPI_F77_COMPILER="mpif77"
         else
             export MPI_C_COMPILER="mpiicc"
             export MPI_CXX_COMPILER="mpiicpc"
@@ -469,15 +469,15 @@ function setCompilerVars() {
             export GCC_EXTRA_FFLAGS="-fallow-argument-mismatch"
         fi
         export MPI_C_COMPILER="mpicc"
-        export MPI_CXX_COMPILER="mpiCC"
+        export MPI_CXX_COMPILER="mpicxx"
         # mpif90 and mpif77 are depricated in favor of just mpifort.
         if [ "$MPI_NAME" == "intel" ]; then
             # Intel calls their mpi fortran compiler mpifc (for some reason
             export MPI_F90_COMPILER="mpifc"
             export MPI_F77_COMPILER="mpifc"
         else
-            export MPI_F90_COMPILER="mpifort"
-            export MPI_F77_COMPILER="mpifort"
+            export MPI_F90_COMPILER="mpif90"
+            export MPI_F77_COMPILER="mpif77"
         fi
         export MPI_RUNNER="mpirun"
         export FORTRAN_LIBS="-lgfortran"
@@ -1093,7 +1093,7 @@ if [[ "$MATH_LIBRARIES" == "netlib blas" ]]; then
 	mv $tempdir $LAPACK_DIR/src
 	mkdir $LAPACK_DIR/src/build
         cd $LAPACK_DIR/src/build
-        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=$LAPACK_DIR $LAPACK_DIR/src 2>&1 | tee -a $COMPILE_LOG
+        CC=$MPI_C_COMPILER CXX=$MPI_CXX_COMPILER FC=$MPI_F90_COMPILER cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=$LAPACK_DIR $LAPACK_DIR/src 2>&1 | tee -a $COMPILE_LOG
 	make -j$MAKE_JOBS 2>&1 | tee -a $COMPILE_LOG
 	make install 2>&1 | tee -a $COMPILE_LOG
 	cd $GOMA_LIB
@@ -1165,23 +1165,36 @@ else
 
     log_echo ${MPI_C_COMPILER}
     if [ -z "${BLAS_FLAGS}" ]; then
-        make config AUTOCC="no" CC="${MPI_C_COMPILER}" \
+	targets=(SuiteSparse_config AMD BTF CAMD CCOLAMD COLAMD CHOLMOD CXSparse LDL KLU UMFPACK RBio SPQR)
+	make CUDA="no" AUTOCC="no" CC="${MPI_C_COMPILER}" \
              CXX="${MPI_CXX_COMPILER}" \
              BLAS="$NON_INTEL_BLAS_LINK" \
              LAPACK="$SUITESPARSE_NON_INTEL_LAPACK_LINK" \
-             AR="${ARCHIVER}" 2>&1 | tee -a $COMPILE_LOG
-        make AUTOCC="no" CC="${MPI_C_COMPILER}" \
-             CXX="${MPI_CXX_COMPILER}" \
-             BLAS="$NON_INTEL_BLAS_LINK" \
-             LAPACK="$SUITESPARSE_NON_INTEL_LAPACK_LINK" \
-             JOBS="$MAKE_JOBS" \
-             AR="${ARCHIVER}" 2>&1 | tee -a $COMPILE_LOG
+	     MY_METIS_LIB="-L$GOMA_LIB/parmetis-4.0.3/lib -lmetis" \
+	     MY_METIS_INC="$GOMA_LIB/parmetis-4.0.3/include" \
+	     AR="${ARCHIVER}" -C SuiteSparse_config library config 2>&1 | tee -a $COMPILE_LOG
+	for target in "${targets[@]}"; do
+	    make CUDA="no" AUTOCC="no" CC="${MPI_C_COMPILER}" \
+                 CXX="${MPI_CXX_COMPILER}" \
+                 BLAS="$NON_INTEL_BLAS_LINK" \
+                 LAPACK="$SUITESPARSE_NON_INTEL_LAPACK_LINK" \
+	         MY_METIS_LIB="-L$GOMA_LIB/parmetis-4.0.3/lib -lmetis" \
+	         MY_METIS_INC="$GOMA_LIB/parmetis-4.0.3/include" \
+	         AR="${ARCHIVER}" -C $target library 2>&1 | tee -a $COMPILE_LOG
+	    make CUDA="no" AUTOCC="no" CC="${MPI_C_COMPILER}" \
+                 CXX="${MPI_CXX_COMPILER}" \
+                 BLAS="$NON_INTEL_BLAS_LINK" \
+                 LAPACK="$SUITESPARSE_NON_INTEL_LAPACK_LINK" \
+	         MY_METIS_LIB="-L$GOMA_LIB/parmetis-4.0.3/lib -lmetis" \
+	         MY_METIS_INC="$GOMA_LIB/parmetis-4.0.3/include" \
+	         AR="${ARCHIVER}" -C $target install 2>&1 | tee -a $COMPILE_LOG
+        done
     else
-        make config AUTOCC="no" CC="${MPI_C_COMPILER} ${COMPILER_FLAG_MPI}" \
+        make config CUDA="no" AUTOCC="no" CC="${MPI_C_COMPILER} ${COMPILER_FLAG_MPI}" \
              CXX="${MPI_CXX_COMPILER} ${COMPILER_FLAG_MPI}" \
              JOBS="$MAKE_JOBS" \
              AR="${ARCHIVER}" BLAS_FLAGS="${BLAS_FLAGS}" 2>&1 | tee -a $COMPILE_LOG
-        make AUTOCC="no" CC="${MPI_C_COMPILER} ${COMPILER_FLAG_MPI}" \
+        make CUDA="no" AUTOCC="no" CC="${MPI_C_COMPILER} ${COMPILER_FLAG_MPI}" \
              CXX="${MPI_CXX_COMPILER} ${COMPILER_FLAG_MPI}" \
              JOBS="$MAKE_JOBS" \
              AR="${ARCHIVER}" BLAS_FLAGS="${BLAS_FLAGS}" 2>&1 | tee -a $COMPILE_LOG
@@ -2741,9 +2754,13 @@ else
 fi
 
 #make trilinos
+
+
+
+cd $GOMA_LIB
+
 rm -rf $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
 mkdir $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
-cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
 
 rm -f CMakeCache.txt
 
@@ -2756,6 +2773,124 @@ TRILINOS_INSTALL=$GOMA_LIB/trilinos-$TRILINOS_VERSION
 if [ -e $TRILINOS_INSTALL/bin/aprepro ]; then
     log_echo "Trilinos is already built!"
 else
+cd $GOMA_LIB/Trilinos-trilinos-release-$TRILINOS_VERSION_DASH/packages/aztecoo/src
+cat << "EOF" > az_aztec_h.patch 
+731c731
+<   extern char *AZ_allocate(unsigned int iii);
+---
+>   extern char *AZ_allocate(size_t iii);
+1024c1024
+<   extern double *AZ_manage_memory(unsigned int size, int action, int type,
+---
+>   extern double *AZ_manage_memory(size_t size, int action, int type,
+1198c1198
+<   extern char *AZ_realloc(void *ptr, unsigned int size);
+---
+>   extern char *AZ_realloc(void *ptr, size_t size);
+EOF
+patch -f az_aztec.h < az_aztec_h.patch
+rm az_aztec_h.patch
+
+cat << "EOF" > az_util_c.patch 
+843c843
+<   (void) AZ_manage_memory((unsigned int) 0, AZ_CLEAR, label, (char *) NULL,
+---
+>   (void) AZ_manage_memory((size_t) 0, AZ_CLEAR, label, (char *) NULL,
+851c851
+< double *AZ_manage_memory(unsigned int input_size, int action, int type,
+---
+> double *AZ_manage_memory(size_t input_size, int action, int type,
+936c936
+<     int     size;
+---
+>     size_t  size;
+941c941
+<   long int size;
+---
+>   size_t                size, aligned_size;
+945,946c945,946
+<   long int aligned_str_mem, aligned_j, aligned_size;
+< double *dtmp;
+---
+>   unsigned int          aligned_str_mem, aligned_j;
+>   double *dtmp;
+949c949
+<   size = (long int) input_size;
+---
+>   size = input_size;
+997,998c997
+<       dtmp = (double *) AZ_allocate((unsigned int) (aligned_str_mem+aligned_j+
+<                                                 aligned_size) );
+---
+>       dtmp = (double *) AZ_allocate(aligned_str_mem+aligned_j+aligned_size);
+1183,1184c1182
+<     dtmp    = (double *) AZ_realloc((char *) dtmp,(unsigned int)
+<                                     aligned_str_mem+aligned_j+aligned_size);
+---
+>     dtmp    = (double *) AZ_realloc((char *) dtmp, aligned_str_mem+aligned_j+aligned_size);
+1872c1870
+<    int size;
+---
+>    size_t size;
+1902c1900
+< char *AZ_allocate(unsigned int isize) {
+---
+> char *AZ_allocate(size_t isize) {
+1917,1918c1915,1917
+<     int *size_ptr, i;
+<     unsigned int size;
+---
+>     int i;
+>     size_t size;
+>     size_t *size_ptr; 
+1952c1951
+<     size_ptr = (int *) ptr;
+---
+>     size_ptr = (size_t *) ptr;
+1992c1991
+<    int *iptr, size, i;
+---
+>    int i;
+1993a1993,1994
+>    size_t size;
+>    size_t* iptr;
+2023c2024
+<            iptr = (int *) ptr;
+---
+>            iptr = (size_t *) ptr;
+2073c2074
+< char *AZ_realloc(void *vptr, unsigned int new_size) {
+---
+> char *AZ_realloc(void *vptr, size_t new_size) {
+2076c2077
+<    int i, *iptr, size, *new_size_ptr;
+---
+>    int i;
+2079d2079
+<    int newmsize, smaller;
+2080a2081,2082
+>    size_t size, newmsize, smaller;
+>    size_t *iptr, *new_size_ptr; 
+2108c2110
+<            iptr = (int *) ptr;
+---
+>            iptr = (size_t *) ptr;
+2128c2130
+<     new_size_ptr = (int *) new_ptr;
+---
+>     new_size_ptr = (size_t *) new_ptr;
+2175c2177
+< char *AZ_allocate(unsigned int size) {
+---
+> char *AZ_allocate(size_t size) {
+2185c2187
+< char *AZ_realloc(void *ptr, unsigned int size) {
+---
+> char *AZ_realloc(void *ptr, size_t size) {
+EOF
+patch -f az_util.c < az_util_c.patch
+rm az_util_c.patch 
+cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
     cmake \
 -D CMAKE_AR=/usr/bin/ar \
 -D CMAKE_RANLIB=/usr/bin/ranlib \
@@ -2868,8 +3003,9 @@ export PETSC_ARCH=arch-linux-c-opt
 if [ -e $PETSC_DIR/$PETSC_ARCH/lib/libpetsc.a ]; then
     log_echo "PETSc is already built!"
 else
-    ./configure --with-shared-libraries=0 --with-cc=$(which mpicc) --with-cxx=$(which mpiCC) --with-fc=$(which mpifort) --with-debugging=0 COPTFLAGS='-O3' CXXOPTFLAGS='-O3' FOPTFLAGS='-O3' --download-hypre --with-scalapack=1 --with-scalapack-dir=$(readlink --canonicalize-missing "${SCALAPACK_LIBRARY_DIR}/..") --with-superlu_dist=1 --with-superlu_dist-dir=$GOMA_LIB/superlu_dist-$SUPERLU_DIST_VERSION --with-metis=1 --with-metis-dir=$GOMA_LIB/parmetis-4.0.3 --with-parmetis=1 --with-parmetis-dir=$GOMA_LIB/parmetis-4.0.3 --with-blas-lib=${NON_INTEL_BLAS_LIBRARY} --with-lapack-lib=${NON_INTEL_LAPACK_LIBRARY} --with-mumps=1 --with-mumps-dir="$GOMA_LIB/MUMPS_$MUMPS_VERSION"  2>&1 | tee -a $COMPILE_LOG
-    make -j$MAKE_JOBS 2>&1 all | tee -a $COMPILE_LOG
+    ./configure --with-shared-libraries=0 --with-cc=$(which mpicc) --with-cxx=$(which mpicxx) --with-fc=$(which mpif90) --with-debugging=0 COPTFLAGS='-O3' CXXOPTFLAGS='-O3' FOPTFLAGS='-O3' --download-hypre --with-scalapack=1 --with-scalapack-dir=$(readlink --canonicalize-missing "${SCALAPACK_LIBRARY_DIR}/..") --with-superlu_dist=1 --with-superlu_dist-dir=$GOMA_LIB/superlu_dist-$SUPERLU_DIST_VERSION --with-metis=1 --with-metis-dir=$GOMA_LIB/parmetis-4.0.3 --with-parmetis=1 --with-parmetis-dir=$GOMA_LIB/parmetis-4.0.3 --with-blas-lib=${NON_INTEL_BLAS_LIBRARY} --with-lapack-lib=${NON_INTEL_LAPACK_LIBRARY} --with-mumps=1 --with-mumps-dir="$GOMA_LIB/MUMPS_$MUMPS_VERSION"  2>&1 | tee -a $COMPILE_LOG
+    make -j$MAKE_JOBS all 2>&1 | tee -a $COMPILE_LOG
+    make check 2>&1 | tee -a $COMPILE_LOG
     if [ -e $PETSC_DIR/$PETSC_ARCH/lib/libpetsc.a ]; then
         log_echo "PETSc built!"
     else
@@ -2898,4 +3034,7 @@ if [ "$build_cmake" == "true" ] ; then
     echo "export PATH=$GOMA_LIB/cmake-$CMAKE_VERSION-linux-x86_64/bin:\$PATH" >> config.sh
 fi
 
+log_echo
 log_echo "An example bash configuration file has been written to $GOMA_LIB/config.sh"
+log_echo
+log_echo "Activate with $ source $GOMA_LIB/config.sh"

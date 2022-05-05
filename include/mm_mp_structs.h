@@ -1159,6 +1159,7 @@ struct Viscoelastic_Nonmodal {
   dbl shockcapture;
   int shockcaptureModel;
 
+  int ptt_type;
   /* This is the adaptive viscosity scaling. If if it zero
    * we get the standard formulation, if nonzero we get
    * numerical viscosity that may stabilize the stress equations
@@ -1306,8 +1307,9 @@ struct Variable_Initialization {
   double init_val_minus; /* Value in negative LS phase */
   double init_val_plus;  /* Value in positive LS phase */
   int slave_block;       /* this is set TRUE in order that this initialization value
-                                                        is not applied to nodes that are shared with
-                            adjacent blocks */
+                           is not applied to nodes that are shared with adjacent blocks */
+  int len_u_pars;
+  double *u_pars;
 };
 
 struct Second_LS_Phase_Properties {
