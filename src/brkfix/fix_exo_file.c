@@ -273,7 +273,8 @@ int fix_exo_file(int num_procs, const char *exo_mono_name) {
      */
 
     rd_exo(poly, polylith_name, 0,
-           (EXODB_ACTION_RD_INIT + EXODB_ACTION_RD_MESH + EXODB_ACTION_NO_GOMA));
+           (EXODB_ACTION_RD_INIT + EXODB_ACTION_RD_MESH + EXODB_ACTION_NO_GOMA +
+            EXODB_ACTION_RD_RES0));
     zero_base(poly);
     setup_base_mesh(dpin, poly, 1);
     rd_dpi(poly, dpin, polylith_name, false);
@@ -286,12 +287,16 @@ int fix_exo_file(int num_procs, const char *exo_mono_name) {
 
     build_global_conn(poly, dpin, mono, fix_data);
 
+    // element truth table checking
+    for (int i = 0; i < (mono->num_elem_blocks * mono->num_elem_vars); i++) {
+      mono->elem_var_tab[i] |= poly->elem_var_tab[i];
+    }
+
     /*
      * Contribute to the node set node list and distribution factor list...
      */
 
     free_element_blocks(poly);
-
     free_exo(poly);
     free(poly);
 
@@ -299,8 +304,34 @@ int fix_exo_file(int num_procs, const char *exo_mono_name) {
     free(dpin);
   }
 
+  /*
+   * Use the first (0) processor to get goma specific netcdf info if available
+   */
+  strcpy(polylith_name, exo_mono_name);
+  strcpy(monolith_file_name, polylith_name);
+  multiname(polylith_name, 0, num_procs);
+
+  poly = alloc_struct_1(Exo_DB, 1);
+  dpin = alloc_struct_1(Dpi, 1);
+
+  init_exo_struct(poly);
+  init_dpi_struct(dpin);
+
+  rd_exo(
+      poly, polylith_name, 0,
+      (EXODB_ACTION_RD_INIT + EXODB_ACTION_RD_MESH + EXODB_ACTION_RD_RES0 + EXODB_ACTION_NO_GOMA));
+  zero_base(poly);
+  setup_base_mesh(dpin, poly, 1);
+  rd_dpi(poly, dpin, polylith_name, false);
+
   build_global_ns(dpin, mono, fix_data);
   build_global_ss(dpin, mono, fix_data);
+
+  free_dpi(dpin);
+  free(dpin);
+  free_element_blocks(poly);
+  free_exo(poly);
+  free(poly);
 
   one_base(mono, 1);
   wr_mesh_exo(mono, monolith_file_name, 0);
