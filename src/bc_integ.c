@@ -2716,10 +2716,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           func[1] = 0.0;
           func[2] = 0.0;
 
-          if (bc_desc->vector == VECTOR) /* save some initialization if not a vector cond */
-            memset(d_func, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
-          else
-            memset(d_func, 0, (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
+          memset(d_func, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
 
           memset(func_stress, 0.0, MAX_MODES * 6 * sizeof(double));
           memset(d_func_stress, 0.0,
@@ -2908,7 +2905,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           }
 
           for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_imag[i] -= fv->em_er[i];
+            exact_imag[i] -= fv->em_ei[i];
           }
           cross_really_simple_vectors(fv->snormal, exact_imag, func);
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {

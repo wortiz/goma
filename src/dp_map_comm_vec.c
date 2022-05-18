@@ -536,14 +536,14 @@ void output_comm_stats(Dpi *dpi, Comm_Ex **cx)
   gavg_mesg = gavg_double(avg_mesg);
 
   if (ProcID == 0) {
-    printf("\n\n----------------- Communications Stats ------------\n");
-    printf("\n\t\tNumber of Neighbors\n");
-    printf("\t\tMax: %5d (Proc = %d)\t\t Avg: %6.3f\t\tMin: %d (Proc = %d)\n", gmax_neighbor,
+    printf("\n\n-------------------------- Communications Stats --------------------------\n\n");
+    printf("Number of Neighbors\n");
+    printf("Max: %5d (Proc = %d)\tAvg: %6.3f\tMin: %d (Proc = %d)\n", gmax_neighbor,
            gmax_neighbor_proc, gavg_neighbor, gmin_neighbor, gmin_neighbor_proc);
-    printf("\n\t\tSize of Messages\n");
-    printf("\t\tMax: %5d (Proc = %d)\t\t Avg: %6.3f\t\tMin: %d (Proc = %d)\n", max_mesg,
+    printf("\nSize of Messages\n");
+    printf("Max: %5d (Proc = %d)\tAvg: %6.3f\tMin: %d (Proc = %d)\n", max_mesg,
            gmax_mesg_proc, gavg_mesg, min_mesg, gmin_mesg_proc);
-    printf("--------------------------------------------------\n");
+    printf("\n--------------------------------------------------------------------------\n");
     fflush(stdout);
   }
 }

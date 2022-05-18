@@ -3158,12 +3158,12 @@ bool relative_permittivity_model(complex double *permittivity_out,
     dbl L = MAX(L_mag - pml_inner_radius, 0.0);
     dbl L_c[DIM] = {L * fabs(x / L_mag), L * fabs(y / L_mag), L * fabs(z / L_mag)};
 
-    dbl cond[DIM] = {cond_max * pow( L_c[0]/d, power), 1 + cond_max * pow(L_c[1]/d, power),
-                      cond_max * pow( L_c[2]/d, power)};
+    dbl cond[DIM] = {cond_max * pow(L_c[0] / d, power), 1 + cond_max * pow(L_c[1] / d, power),
+                     cond_max * pow(L_c[2] / d, power)};
 
-    complex double s[DIM] = {amp * (1 - _Complex_I * cond[0]/omega),
-                             amp * (1 - _Complex_I * cond[1]/omega),
-                             amp * (1 - _Complex_I * cond[2]/omega)};
+    complex double s[DIM] = {amp * (1 - _Complex_I * cond[0] / omega),
+                             amp * (1 - _Complex_I * cond[1] / omega),
+                             amp * (1 - _Complex_I * cond[2] / omega)};
 
     permittivity_matrix[0] = s[1] * s[2] / s[0];
     permittivity_matrix[1] = s[0] * s[2] / s[1];
@@ -3207,12 +3207,12 @@ bool relative_permeability_model(complex double *permeability_out,
     dbl L = MAX(L_mag - pml_inner_radius, 0.0);
     dbl L_c[DIM] = {L * fabs(x / L_mag), L * fabs(y / L_mag), L * fabs(z / L_mag)};
 
-    dbl cond[DIM] = {cond_max * pow( L_c[0]/d, power), 1 + cond_max * pow(L_c[1]/d, power),
-                      cond_max * pow( L_c[2]/d, power)};
+    dbl cond[DIM] = {cond_max * pow(L_c[0] / d, power), 1 + cond_max * pow(L_c[1] / d, power),
+                     cond_max * pow(L_c[2] / d, power)};
 
-    complex double s[DIM] = {amp * (1 - _Complex_I * cond[0]/omega),
-                             amp * (1 - _Complex_I * cond[1]/omega),
-                             amp * (1 - _Complex_I * cond[2]/omega)};
+    complex double s[DIM] = {amp * (1 - _Complex_I * cond[0] / omega),
+                             amp * (1 - _Complex_I * cond[1] / omega),
+                             amp * (1 - _Complex_I * cond[2] / omega)};
 
     permeability_matrix[0] = s[1] * s[2] / s[0];
     permeability_matrix[1] = s[0] * s[2] / s[1];
@@ -3269,11 +3269,11 @@ int assemble_ewave_nedelec(void) {
   complex double permeability;
   bool permeability_is_matrix = relative_permeability_model(&permeability, permeability_matrix);
   bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
-  complex double force[DIM];
+  complex double force[DIM] = {0.0};
   em_mms_force(x, y, z, force);
-  complex double wave[DIM];
+  complex double wave[DIM] = {0.0};
   complex double curl_wave[DIM];
-  plane_wave(x, y, z, omega, wave, curl_wave);
+  //plane_wave(x, y, z, omega, wave, curl_wave);
 
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
@@ -3297,25 +3297,26 @@ int assemble_ewave_nedelec(void) {
 
       for (int q = 0; q < DIM; q++) {
         if (permittivity_is_matrix) {
-          advection -= omega * omega * bf[ieqn]->phi_e[i][q] * ((permittivity_matrix[q] *
-                       (fv->em_er[q] + fv->em_ei[q])) + ((1-permittivity_matrix[q]) *_Complex_I + wave[q]));
+          advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
+                       ((permittivity_matrix[q] * (fv->em_er[q] + fv->em_ei[q] * _Complex_I)) +
+                        ((1 - permittivity_matrix[q]) * _Complex_I * wave[q]));
         } else {
-          advection -= omega * omega * bf[ieqn]->phi_e[i][q] * ((permittivity *
-                       (fv->em_er[q] + fv->em_ei[q])) + ((1-permittivity) *_Complex_I + wave[q]));
+          advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
+                       ((permittivity * (fv->em_er[q] + fv->em_ei[q] * _Complex_I)) +
+                        ((1 - permittivity) * _Complex_I * wave[q]));
         }
       }
 
-      dbl source_real = 0;
-      dbl source_imag = 0;
+      complex double source = 0;
 
-      // for (int q = 0; q < DIM; q++) {
-      //   source_real -= creal(force[q]) * bf[reqn]->phi_e[i][q];
-      //   source_imag -= cimag(force[q]) * bf[ieqn]->phi_e[i][q];
-      // }
+      for (int q = 0; q < DIM; q++) {
+        source -= force[q] * bf[reqn]->phi_e[i][q];
+      }
+
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
-          (creal(diffusion + advection) + source_real) * bf[eqn_real]->detJ * fv->wt * fv->h3;
+          creal(diffusion + advection + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;
       lec->R[LEC_R_INDEX(peqn_imag, i)] +=
-          (cimag(diffusion + advection) + source_imag) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
+          cimag(diffusion + advection + source) * bf[eqn_imag]->detJ * fv->wt * fv->h3;
     }
   }
 
@@ -3414,19 +3415,34 @@ int em_mms_force(dbl x, dbl y, dbl z, complex double force[DIM]) {
   // force[0] = sin(y);
   // force[1] = sin(z);
   // force[2] = sin(x);
-  // force[0] = 2*sin(y);
-  // force[1] = 2*sin(z);
-  // force[2] = 2*sin(x);
+  x *= 0.005;
+  y *= 0.005;
+  z *= 0.005;
+  complex double I = _Complex_I;
+  force[0] = 1.000025*sin(y);
+  force[1] = 1.000025*sin(z);
+  force[2] = 1.000025*sin(x);
+  force[0] += I*1.000025*sin(y);
+  force[1] += I*1.000025*sin(z);
+  force[2] += I*1.000025*sin(x);
   // force[0] = (-2*y*y - 2*z*z + (1-y*y) * (1-z*z) + 4);
   // force[1] = (-2*x*x - 2*z*z + (1-x*x) * (1-z*z) + 4);
   // force[2] = (-2*x*x - 2*y*y + (1-x*x) * (1-y*y) + 4);
-  complex double I = _Complex_I;
-  force[0] = 0.25 * cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0));
-  force[1] = cexp(-I * (x * sin(M_PI / 9.0) + z / 2.0)) * sin(M_PI / 9.0) * sin(M_PI / 9.0) +
-             0.25 * cexp(-I * (x * sin(M_PI / 9.0) + z / 2.0)) -
-             0.5 * cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0)) * sin(M_PI / 9.0);
-  force[2] = cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0)) * sin(M_PI / 9.0) * sin(M_PI / 9.0) +
-             0.25 * cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0));
+  //force[0] = -0.75 * cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0));
+  //force[1] = 0.75 * cexp(-I * (x * sin(M_PI / 9.0) + z / 2.0)) +
+  //           cexp(-I * (x * sin(M_PI / 9.0) + z / 2.0)) * sin(M_PI / 9) * sin(M_PI / 9) -
+  //           0.5 * cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0)) * sin(M_PI / 9);
+  //force[2] = -0.75 * cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0)) +
+  //           cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0)) * sin(M_PI / 9);
+
+  //force[0] = -0.75 * cexp(-I * (x + y / 2.0));
+  //force[1] = x*x*cexp(-I*x*z/2)/4 + z*z*cexp(-I*z*z/2)/4 - cexp(-I*x*z/2) - cexp(-I*(x+y/2))/2;
+  //force[2] = cexp(-I*(x+y/2))/4;
+
+  //force[0] = 0;
+  //force[1] = -sin(x)*cos(y);
+  //force[2] = -I*sin(z)*cos(x);
+
   // dbl force[DIM] = {0, 1, 1};
   // dbl force[DIM] = {cos(x)*sin(y), sin(y)*cos(z), sin(x)*cos(z)};
   return 0;
@@ -3439,13 +3455,22 @@ int em_mms_exact(dbl x, dbl y, dbl z, complex double exact[DIM]) {
   // exact[0] = y*y;
   // exact[1] = x*y;
   // exact[2] = 0;
-  // exact[0] = sin(y);
-  // exact[1] = sin(z);
-  // exact[2] = sin(x);
+  x *= 0.005;
+  y *= 0.005;
+  z *= 0.005;
   complex double I = _Complex_I;
-  exact[0] = cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0));
-  exact[1] = cexp(-I * (x * sin(M_PI / 9.0) + z / 2.0));
-  exact[2] = cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0));
+   exact[0] = sin(y);
+   exact[1] = sin(z);
+   exact[2] = sin(x);
+  exact[0] += I*sin(y);
+  exact[1] += I*sin(z);
+  exact[2] += I*sin(x);
+  //exact[0] = cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0));
+  //exact[1] = cexp(-I * (x * sin(M_PI / 9.0) + z / 2.0));
+  //exact[2] = cexp(-I * (x * sin(M_PI / 9.0) + y / 2.0));
+  //exact[0] = cos(x)*sin(y) + sin(x)*cos(z)*I;
+  //exact[1] = 0;
+  //exact[2] = 0;
   return 0;
 }
 #undef I
