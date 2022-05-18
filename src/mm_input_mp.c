@@ -3315,7 +3315,20 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                         &(mat_ptr->u_permittivity), &(mat_ptr->len_u_permittivity), model_name,
                         SCALAR_INPUT, &NO_SPECIES, es);
   if (model_read == -1) {
-    if (strncmp(model_name, " ", 1) != 0) {
+    if (strcmp(model_name, "COMPLEX_CONSTANT") == 0) {
+      mat_ptr->PermittivityModel = COMPLEX_CONSTANT;
+      if (fscanf(imp, "%lf %lf", &(mat_ptr->permittivity), &(mat_ptr->permittivity_imag)) != 2) {
+        GOMA_EH(GOMA_ERROR, "Expected 2 constants for %s = %s", search_string, model_name);
+      }
+    } else if (strcmp(model_name, "RADIAL_PML") == 0) {
+      mat_ptr->PermittivityModel = RADIAL_PML;
+      num_const = read_constants(imp, &(mat_ptr->u_permittivity), 0);
+      if (num_const != 5) {
+        GOMA_EH(GOMA_ERROR, "Expected 5 constants for %s = %s", search_string, model_name);
+      }
+      mat_ptr->len_u_permittivity = num_const;
+    } else if (strncmp(model_name, " ", 1) != 0) {
+
       SPF(err_msg, "Syntax error or invalid model for %s\n", search_string);
       GOMA_EH(GOMA_ERROR, err_msg);
     } else {
@@ -3336,7 +3349,19 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       &(mat_ptr->u_magnetic_permeability), &(mat_ptr->len_u_magnetic_permeability), model_name,
       SCALAR_INPUT, &NO_SPECIES, es);
   if (model_read == -1) {
-    if (strncmp(model_name, " ", 1) != 0) {
+    if (strcmp(model_name, "COMPLEX_CONSTANT") == 0) {
+      mat_ptr->PermeabilityModel = COMPLEX_CONSTANT;
+      if (fscanf(imp, "%lf %lf", &(mat_ptr->permeability), &(mat_ptr->permeability_imag)) != 2) {
+        GOMA_EH(GOMA_ERROR, "Expected 2 constants for %s = %s", search_string, model_name);
+      }
+    } else if (strcmp(model_name, "RADIAL_PML") == 0) {
+      mat_ptr->PermeabilityModel = RADIAL_PML;
+      num_const = read_constants(imp, &(mat_ptr->u_permeability), 0);
+      if (num_const != 5) {
+        GOMA_EH(GOMA_ERROR, "Expected 5 constants for %s = %s", search_string, model_name);
+      }
+      mat_ptr->len_u_permeability = num_const;
+    } else if (strncmp(model_name, " ", 1) != 0) {
       SPF(err_msg, "Syntax error or invalid model for %s\n", search_string);
       GOMA_EH(GOMA_ERROR, err_msg);
     } else {

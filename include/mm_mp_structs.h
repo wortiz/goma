@@ -187,6 +187,7 @@ struct Material_Properties {
   int elec_cond_external_field;
 
   dbl permittivity;
+  dbl permittivity_imag;
   dbl d_permittivity[MAX_VARIABLE_TYPES + MAX_CONC];
   int len_u_permittivity;
   dbl *u_permittivity;
@@ -536,6 +537,7 @@ struct Material_Properties {
   dbl d_specific_heat[MAX_VARIABLE_TYPES + MAX_CONC + MAX_PMV];
 
   dbl permeability;
+  dbl permeability_imag;
   dbl perm_tensor[DIM][DIM];
   int PermeabilityModel;
   dbl d_permeability[MAX_VARIABLE_TYPES + MAX_CONC + MAX_PMV];

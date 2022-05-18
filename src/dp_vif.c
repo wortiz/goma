@@ -1446,6 +1446,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->density, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->electrical_conductivity, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->permittivity, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->permittivity_imag, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->magnetic_permeability, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->VoltageFormulation, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->heat_capacity, 1, MPI_DOUBLE);
@@ -1466,6 +1467,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->matrix_density, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->specific_heat, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->permeability, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->permeability_imag, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->PorousLiqCompress, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->PorousLiqRefPress, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->rel_gas_perm, 1, MPI_DOUBLE);

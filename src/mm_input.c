@@ -1300,6 +1300,16 @@ void rd_genl_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
+  iread = look_for_optional(ifp, "Magnetic Frequency", input, '=');
+  if (iread == 1) {
+    if (fscanf(ifp, "%lf", &upd->Acoustic_Frequency) != 1) {
+      GOMA_EH(GOMA_ERROR, "error reading Magnetic Frequency");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Magnetic Frequency",
+             upd->Acoustic_Frequency);
+    ECHO(echo_string, echo_file);
+  }
+
   upd->Process_Temperature = 25.0;
   iread = look_for_optional(ifp, "Process Temperature", input, '=');
   if (iread == 1) {

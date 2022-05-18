@@ -2566,7 +2566,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
     err = load_fv_vector();
     GOMA_EH(err, "load_fv_vector");
 
-
     err = load_bf_mesh_derivs();
     GOMA_EH(err, "load_bf_mesh_derivs");
 
@@ -2766,8 +2765,118 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
          */
 
         switch (bc->BC_Name) {
-        case EM_MMS_SIDE_BC:
-        {
+        case EM_ABSORBING_REAL_BC: {
+          dbl omega = upd->Acoustic_Frequency;
+          dbl x = fv->x[0];
+          dbl y = fv->x[1];
+          dbl z = fv->x[2];
+          complex double wave[DIM];
+          complex double curl_wave[DIM];
+          plane_wave(x, y, z, omega, wave, curl_wave);
+          dbl F[DIM];
+
+          dbl curl_wave_real[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
+          dbl wave_x_normal[DIM] = {0.0};
+          cross_really_simple_vectors(curl_wave_real, fv->snormal, wave_x_normal);
+
+          dbl Ei_T[DIM] = {0.0};
+          dbl n_x_Ei[DIM] = {0.0};
+          dbl Ei_imag[DIM] = {cimag(wave[0]), cimag(wave[1]), cimag(wave[2])};
+
+          cross_really_simple_vectors(fv->snormal, Ei_imag, n_x_Ei);
+          cross_really_simple_vectors(n_x_Ei, fv->snormal, Ei_T);
+
+          func[0] += omega * Ei_T[0] - wave_x_normal[0];
+          func[1] += omega * Ei_T[1] - wave_x_normal[1];
+          func[2] += omega * Ei_T[2] - wave_x_normal[2];
+
+          {
+            dbl E_T[DIM] = {0.0};
+            dbl n_x_E[DIM] = {0.0};
+            dbl E_imag[DIM] = {fv->em_ei[0] + cimag(wave[0]), fv->em_ei[1] + cimag(wave[1]),
+                               fv->em_ei[2] + cimag(wave[2])};
+
+            cross_really_simple_vectors(fv->snormal, E_imag, n_x_E);
+            cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+
+            func[0] += omega * E_T[0];
+            func[1] += omega * E_T[0];
+            func[2] += omega * E_T[0];
+          }
+          {
+            for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+              dbl E_T[DIM] = {0.0};
+              dbl n_x_E[DIM] = {0.0};
+              dbl E_imag[DIM] = {bf[EM_E1_IMAG]->phi_e[j][0] + cimag(wave[0]),
+                                 bf[EM_E1_IMAG]->phi_e[j][1] + cimag(wave[1]),
+                                 bf[EM_E1_IMAG]->phi_e[j][2] + cimag(wave[2])};
+
+              cross_really_simple_vectors(fv->snormal, E_imag, n_x_E);
+              cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+
+              d_func[0][EM_E1_IMAG][j] += omega * E_T[0];
+              d_func[1][EM_E1_IMAG][j] += omega * E_T[0];
+              d_func[2][EM_E1_IMAG][j] += omega * E_T[0];
+            }
+          }
+        } break;
+        case EM_ABSORBING_IMAG_BC: {
+          dbl omega = upd->Acoustic_Frequency;
+          dbl x = fv->x[0];
+          dbl y = fv->x[1];
+          dbl z = fv->x[2];
+          complex double wave[DIM];
+          complex double curl_wave[DIM];
+          plane_wave(x, y, z, omega, wave, curl_wave);
+
+          //dbl F[DIM];
+
+          //dbl curl_wave_imag[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
+          //dbl wave_x_normal[DIM] = {0.0};
+          //cross_really_simple_vectors(curl_wave_imag, fv->snormal, wave_x_normal);
+
+          //dbl Ei_T[DIM] = {0.0};
+          //dbl n_x_Ei[DIM] = {0.0};
+          //dbl Ei_real[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
+
+          //cross_really_simple_vectors(fv->snormal, Ei_real, n_x_Ei);
+          //cross_really_simple_vectors(n_x_Ei, fv->snormal, Ei_T);
+
+          //func[0] += omega * Ei_T[0] - wave_x_normal[0];
+          //func[1] += omega * Ei_T[1] - wave_x_normal[1];
+          //func[2] += omega * Ei_T[2] - wave_x_normal[2];
+
+          //{
+          //  dbl E_T[DIM] = {0.0};
+          //  dbl n_x_E[DIM] = {0.0};
+          //  dbl E_real[DIM] = {fv->em_er[0] + creal(wave[0]), fv->em_er[1] + creal(wave[1]),
+          //                     fv->em_er[2] + creal(wave[2])};
+
+          //  cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
+          //  cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+
+          //  func[0] += omega * E_T[0];
+          //  func[1] += omega * E_T[0];
+          //  func[2] += omega * E_T[0];
+          //}
+          //{
+          //  for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+          //    dbl E_T[DIM] = {0.0};
+          //    dbl n_x_E[DIM] = {0.0};
+          //    dbl E_real[DIM] = {bf[EM_E1_REAL]->phi_e[j][0] + creal(wave[0]),
+          //                       bf[EM_E1_REAL]->phi_e[j][1] + creal(wave[1]),
+          //                       bf[EM_E1_REAL]->phi_e[j][2] + creal(wave[2])};
+
+          //    cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
+          //    cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+
+          //    d_func[0][EM_E1_IMAG][j] += omega * E_T[0];
+          //    d_func[1][EM_E1_IMAG][j] += omega * E_T[0];
+          //    d_func[2][EM_E1_IMAG][j] += omega * E_T[0];
+          //  }
+          //}
+        } break;
+        case EM_MMS_SIDE_BC: {
           complex double exact[DIM];
           em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
           dbl exact_real[DIM];
@@ -2790,8 +2899,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
             }
           }
         } break;
-        case EM_MMS_SIDE_IMAG_BC:
-        {
+        case EM_MMS_SIDE_IMAG_BC: {
           complex double exact[DIM];
           em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
           dbl exact_imag[DIM];
@@ -2841,89 +2949,85 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         /*         vector and Jacobian Matrix                                 */
         /**********************************************************************/
 
-
         for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
 
-              /*
-               *   for weakly integrated boundary conditions,
-               *   weight the function by wt
-               */
-              weight = wt;
+          /*
+           *   for weakly integrated boundary conditions,
+           *   weight the function by wt
+           */
+          weight = wt;
 
-              dbl nxphi[DIM] = {
-                  0
-              };
+          dbl nxphi[DIM] = {0};
 
-              ldof_eqn = i;
+          ldof_eqn = i;
 
-              cross_really_simple_vectors(fv->snormal, bf[eqn]->phi_e[i], nxphi);
+          cross_really_simple_vectors(fv->snormal, bf[eqn]->phi_e[i], nxphi);
 
-              /*
-               * For strong conditions weight the function by BIG_PENALTY
-               */
-              if (bc_desc->method == STRONG_INT_NEDELEC) {
-                weight *= BIG_PENALTY;
-              }
-              ieqn = upd->ep[pg->imtrx][eqn];
+          /*
+           * For strong conditions weight the function by BIG_PENALTY
+           */
+          if (bc_desc->method == STRONG_INT_NEDELEC) {
+            weight *= BIG_PENALTY;
+          }
+          ieqn = upd->ep[pg->imtrx][eqn];
 
-              for (int p = 0; p < pd->Num_Dim; p++) {
-                if (ldof_eqn != -1) {
-                  lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->sdet * nxphi[p] * func[p];
+          for (int p = 0; p < pd->Num_Dim; p++) {
+            if (ldof_eqn != -1) {
+              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->sdet * nxphi[p] * func[p];
 
-                  if (af->Assemble_Jacobian && ldof_eqn != -1) {
+              if (af->Assemble_Jacobian && ldof_eqn != -1) {
 
-                    /* OLD METHOD */
+                /* OLD METHOD */
 
-                    /* if mesh displacement is variable,
-                   *  put in this sensitivity first
-                   * ... unless we are computing the mass matrix
-                   * for LSA.  In that case, we don't include
-                   * this first term b/c it doesn't involve any
-                   * primary time derivative variables.
-                     */
-                    if (!af->Assemble_LSA_Mass_Matrix) {
-                      for (q = 0; q < pd->Num_Dim; q++) {
-                        var = MESH_DISPLACEMENT1 + q;
-                        pvar = upd->vp[pg->imtrx][var];
-                        if (pvar != -1) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                                weight * nxphi[p] * func[p] * fv->dsurfdet_dx[q][j];
-                          }
-                        }
+                /* if mesh displacement is variable,
+                 *  put in this sensitivity first
+                 * ... unless we are computing the mass matrix
+                 * for LSA.  In that case, we don't include
+                 * this first term b/c it doesn't involve any
+                 * primary time derivative variables.
+                 */
+                if (!af->Assemble_LSA_Mass_Matrix) {
+                  for (q = 0; q < pd->Num_Dim; q++) {
+                    var = MESH_DISPLACEMENT1 + q;
+                    pvar = upd->vp[pg->imtrx][var];
+                    if (pvar != -1) {
+                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                        lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                            weight * nxphi[p] * func[p] * fv->dsurfdet_dx[q][j];
                       }
                     }
-
-                    /* now add in sensitivity of BC function to
-                   * variables
-                     */
-                    for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                      pvar = upd->vp[pg->imtrx][var];
-                      if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
-                        if (var != MASS_FRACTION) {
-                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                                weight * fv->sdet * nxphi[p] * d_func[p][var][j];
-                          }
-                        } else {
-                          /* variable type is MASS_FRACTION */
-                          for (w = 0; w < pd->Num_Species_Eqn; w++) {
-                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                              lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
-                                  weight * fv->sdet * nxphi[p] *
-                                  d_func[p][MAX_VARIABLE_TYPES + w][j];
-                            }
-                          } /* end of loop over species */
-                        }   /* end of if MASS_FRACTION */
-                      }     /* end of variable exists and BC is sensitive to it */
-                    }       /* end of var loop over variable types */
-                  }         /* end of NEWTON */
+                  }
                 }
-              }
-            } /* end of if (Res_BC != NULL) - i.e. apply residual at this node */
-      }       /* end for (i=0; i< num_nodes_on_side; i++) */
-    }         /*(end for ibc) */
-  }           /*End for ip = 1,...*/
+
+                /* now add in sensitivity of BC function to
+                 * variables
+                 */
+                for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
+                  pvar = upd->vp[pg->imtrx][var];
+                  if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
+                    if (var != MASS_FRACTION) {
+                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                        lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                            weight * fv->sdet * nxphi[p] * d_func[p][var][j];
+                      }
+                    } else {
+                      /* variable type is MASS_FRACTION */
+                      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                          lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
+                              weight * fv->sdet * nxphi[p] * d_func[p][MAX_VARIABLE_TYPES + w][j];
+                        }
+                      } /* end of loop over species */
+                    }   /* end of if MASS_FRACTION */
+                  }     /* end of variable exists and BC is sensitive to it */
+                }       /* end of var loop over variable types */
+              }         /* end of NEWTON */
+            }
+          }
+        } /* end of if (Res_BC != NULL) - i.e. apply residual at this node */
+      }   /* end for (i=0; i< num_nodes_on_side; i++) */
+    }     /*(end for ibc) */
+  }       /*End for ip = 1,...*/
   return (status);
 }
 
