@@ -2716,10 +2716,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           func[1] = 0.0;
           func[2] = 0.0;
 
-          if (bc_desc->vector == VECTOR) /* save some initialization if not a vector cond */
             memset(d_func, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
-          else
-            memset(d_func, 0, (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
 
           memset(func_stress, 0.0, MAX_MODES * 6 * sizeof(double));
           memset(d_func_stress, 0.0,
@@ -2781,6 +2778,25 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
             cross_really_simple_vectors(fv->snormal, exact, d_exact);
             for (int i = 0; i < pd->Num_Dim; i++) {
               d_func[i][EM_E1_REAL][j] = d_exact[i];
+            }
+          }
+        } break;
+        case EM_MMS_SIDE_IMAG_BC:
+        {
+          dbl exact[DIM];
+          em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
+          for (int i = 0; i < pd->Num_Dim; i++) {
+            exact[i] -= fv->em_ei[i];
+          }
+          cross_really_simple_vectors(fv->snormal, exact, func);
+          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
+            for (int i = 0; i < pd->Num_Dim; i++) {
+              exact[i] = -bf[EM_E1_IMAG]->phi_e[j][i];
+            }
+            dbl d_exact[DIM];
+            cross_really_simple_vectors(fv->snormal, exact, d_exact);
+            for (int i = 0; i < pd->Num_Dim; i++) {
+              d_func[i][EM_E1_IMAG][j] = d_exact[i];
             }
           }
         } break;
