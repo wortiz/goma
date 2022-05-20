@@ -1300,6 +1300,16 @@ void rd_genl_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
+  iread = look_for_optional(ifp, "Magnetic Frequency", input, '=');
+  if (iread == 1) {
+    if (fscanf(ifp, "%lf", &upd->Acoustic_Frequency) != 1) {
+      GOMA_EH(GOMA_ERROR, "error reading Magnetic Frequency");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Magnetic Frequency",
+             upd->Acoustic_Frequency);
+    ECHO(echo_string, echo_file);
+  }
+
   upd->Process_Temperature = 25.0;
   iread = look_for_optional(ifp, "Process Temperature", input, '=');
   if (iread == 1) {
@@ -4972,6 +4982,7 @@ void rd_ac_specs(FILE *ifp, char *input) {
       break;
 
     case AC_POSITION:
+    case AC_ANGLE:
       /*
        *  first  int - NSID Node set ID to be used
        *  second int - CoordID direction to be used
@@ -9450,7 +9461,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_BOUNDARY)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_DIFFUSION)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_SOURCE)])) != 5) {
-          if (TimeIntegration == TRANSIENT) {
+          if (TimeIntegration == TRANSIENT || Linear_Stability != LSA_NONE) {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = 1.0;
           } else {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = .0;
@@ -9497,7 +9508,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_DIFFUSION)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_SOURCE)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_POROUS_BRINK)])) != 6) {
-          if (TimeIntegration == TRANSIENT) {
+          if (TimeIntegration == TRANSIENT || Linear_Stability != LSA_NONE) {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = 1.0;
           } else {
             pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)] = .0;

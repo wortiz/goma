@@ -1061,6 +1061,8 @@ void noahs_ark(void) {
       ddd_add_member(n, &Var_init_mat[i][j].var, 1, MPI_INT);
       ddd_add_member(n, &Var_init_mat[i][j].ktype, 1, MPI_INT);
       ddd_add_member(n, &Var_init_mat[i][j].init_val, 1, MPI_DOUBLE);
+      ddd_add_member(n, &Var_init_mat[i][j].slave_block, 1, MPI_INT);
+      ddd_add_member(n, &Var_init_mat[i][j].len_u_pars, 1, MPI_INT);
     }
   }
 
@@ -1444,6 +1446,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->density, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->electrical_conductivity, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->permittivity, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->permittivity_imag, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->magnetic_permeability, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->VoltageFormulation, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->heat_capacity, 1, MPI_DOUBLE);
@@ -1464,6 +1467,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->matrix_density, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->specific_heat, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->permeability, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->permeability_imag, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->PorousLiqCompress, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->PorousLiqRefPress, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->rel_gas_perm, 1, MPI_DOUBLE);
@@ -2176,6 +2180,7 @@ void noahs_ark(void) {
      */
 
     ddd_add_member(n, &vn_glob[i]->ConstitutiveEquation, 1, MPI_INT);
+    ddd_add_member(n, &vn_glob[i]->ptt_type, 1, MPI_INT);
     ddd_add_member(n, &vn_glob[i]->wt_func, 1, MPI_DOUBLE);
     ddd_add_member(n, &vn_glob[i]->wt_funcModel, 1, MPI_INT);
     ddd_add_member(n, &vn_glob[i]->eps, 1, MPI_DOUBLE);
@@ -3067,6 +3072,10 @@ void ark_landing(void) {
 
     dalloc(v->len_dg_J_model_wt, v->dg_J_model_wt);
     dalloc(v->len_shift, v->shift);
+
+    for (j = 0; j < Num_Var_Init_Mat[i]; j++) {
+      dalloc(Var_init_mat[i][j].len_u_pars, Var_init_mat[i][j].u_pars);
+    }
   }
 
   dalloc(len_u_post_proc, u_post_proc);
@@ -3348,6 +3357,10 @@ void noahs_dove(void) {
     crdv(v->len_dg_J_model_wt, v->dg_J_model_wt);
 
     crdv(v->len_shift, v->shift);
+
+    for (j = 0; j < Num_Var_Init_Mat[i]; j++) {
+      crdv(Var_init_mat[i][j].len_u_pars, Var_init_mat[i][j].u_pars);
+    }
   }
 
   for (i = 0; i < Num_BC; i++) {

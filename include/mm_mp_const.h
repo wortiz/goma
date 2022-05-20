@@ -154,6 +154,10 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define V_CONDUCTIVITY 0
 #define V_PERMITTIVITY 1
 
+// Electromagnetic
+#define COMPLEX_CONSTANT 2
+#define RADIAL_PML 3
+
 /* Viscoelastic Constitutive equation parameters */
 
 #define NOPOLYMER         0
@@ -166,7 +170,9 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define SARAMITO_PTT      12
 #define MODIFIED_WLF      39
 
-/* MMH */
+// PTT forms
+#define PTT_EXPONENTIAL 0
+#define PTT_LINEAR      1
 
 /**********************************************************************************/
 /*  Density Models
@@ -657,7 +663,8 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 
 /*  CARREAU_WLF  */
 
-#define TAGC_WLFC2 4550
+#define TAGC_WLFC2   4550
+#define TAGC_REFTEMP 4560
 
 /* these are for the BINGHAM yielding material model */
 

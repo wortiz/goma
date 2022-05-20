@@ -20,6 +20,9 @@
 #undef EXTERN
 #endif
 
+#include <complex.h>
+#undef I
+
 #ifdef GOMA_MM_FILL_EM_C
 #define EXTERN /* do nothing */
 #endif
@@ -114,6 +117,8 @@ int assemble_ewave_laplacian(double time,       // present time
 
 int assemble_em_continuity(void);
 int assemble_ewave_nedelec(void);
-int em_mms_force(dbl x, dbl y, dbl z, dbl force[DIM]) ;
-int em_mms_exact(dbl x, dbl y, dbl z, dbl exact[DIM]) ;
+int em_mms_force(dbl x, dbl y, dbl z, complex double force[DIM]) ;
+int em_mms_exact(dbl x, dbl y, dbl z, complex double exact[DIM]) ;
+int plane_wave(
+    dbl x, dbl y, dbl z, dbl omega, complex double wave[DIM], complex double curl_wave[DIM]);
 #endif /* GOMA_MM_FILL_EM_H */
