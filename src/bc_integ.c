@@ -2826,52 +2826,52 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           complex double curl_wave[DIM];
           plane_wave(x, y, z, omega, wave, curl_wave);
 
-          //dbl F[DIM];
+          dbl F[DIM];
 
-          //dbl curl_wave_imag[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
-          //dbl wave_x_normal[DIM] = {0.0};
-          //cross_really_simple_vectors(curl_wave_imag, fv->snormal, wave_x_normal);
+          dbl curl_wave_imag[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
+          dbl wave_x_normal[DIM] = {0.0};
+          cross_really_simple_vectors(curl_wave_imag, fv->snormal, wave_x_normal);
 
-          //dbl Ei_T[DIM] = {0.0};
-          //dbl n_x_Ei[DIM] = {0.0};
-          //dbl Ei_real[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
+          dbl Ei_T[DIM] = {0.0};
+          dbl n_x_Ei[DIM] = {0.0};
+          dbl Ei_real[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
 
-          //cross_really_simple_vectors(fv->snormal, Ei_real, n_x_Ei);
-          //cross_really_simple_vectors(n_x_Ei, fv->snormal, Ei_T);
+          cross_really_simple_vectors(fv->snormal, Ei_real, n_x_Ei);
+          cross_really_simple_vectors(n_x_Ei, fv->snormal, Ei_T);
 
-          //func[0] += omega * Ei_T[0] - wave_x_normal[0];
-          //func[1] += omega * Ei_T[1] - wave_x_normal[1];
-          //func[2] += omega * Ei_T[2] - wave_x_normal[2];
+          func[0] += omega * Ei_T[0] - wave_x_normal[0];
+          func[1] += omega * Ei_T[1] - wave_x_normal[1];
+          func[2] += omega * Ei_T[2] - wave_x_normal[2];
 
-          //{
-          //  dbl E_T[DIM] = {0.0};
-          //  dbl n_x_E[DIM] = {0.0};
-          //  dbl E_real[DIM] = {fv->em_er[0] + creal(wave[0]), fv->em_er[1] + creal(wave[1]),
-          //                     fv->em_er[2] + creal(wave[2])};
+          {
+            dbl E_T[DIM] = {0.0};
+            dbl n_x_E[DIM] = {0.0};
+            dbl E_real[DIM] = {fv->em_er[0] + creal(wave[0]), fv->em_er[1] + creal(wave[1]),
+                               fv->em_er[2] + creal(wave[2])};
 
-          //  cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
-          //  cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+            cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
+            cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
 
-          //  func[0] += omega * E_T[0];
-          //  func[1] += omega * E_T[0];
-          //  func[2] += omega * E_T[0];
-          //}
-          //{
-          //  for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-          //    dbl E_T[DIM] = {0.0};
-          //    dbl n_x_E[DIM] = {0.0};
-          //    dbl E_real[DIM] = {bf[EM_E1_REAL]->phi_e[j][0] + creal(wave[0]),
-          //                       bf[EM_E1_REAL]->phi_e[j][1] + creal(wave[1]),
-          //                       bf[EM_E1_REAL]->phi_e[j][2] + creal(wave[2])};
+            func[0] += omega * E_T[0];
+            func[1] += omega * E_T[0];
+            func[2] += omega * E_T[0];
+          }
+          {
+            for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+              dbl E_T[DIM] = {0.0};
+              dbl n_x_E[DIM] = {0.0};
+              dbl E_real[DIM] = {bf[EM_E1_REAL]->phi_e[j][0] + creal(wave[0]),
+                                 bf[EM_E1_REAL]->phi_e[j][1] + creal(wave[1]),
+                                 bf[EM_E1_REAL]->phi_e[j][2] + creal(wave[2])};
 
-          //    cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
-          //    cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+              cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
+              cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
 
-          //    d_func[0][EM_E1_IMAG][j] += omega * E_T[0];
-          //    d_func[1][EM_E1_IMAG][j] += omega * E_T[0];
-          //    d_func[2][EM_E1_IMAG][j] += omega * E_T[0];
-          //  }
-          //}
+              d_func[0][EM_E1_IMAG][j] += omega * E_T[0];
+              d_func[1][EM_E1_IMAG][j] += omega * E_T[0];
+              d_func[2][EM_E1_IMAG][j] += omega * E_T[0];
+            }
+          }
         } break;
         case EM_MMS_SIDE_BC: {
           complex double exact[DIM];

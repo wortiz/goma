@@ -3210,9 +3210,9 @@ bool relative_permeability_model(complex double *permeability_out,
     dbl cond[DIM] = {cond_max * pow(L_c[0] / d, power), 1 + cond_max * pow(L_c[1] / d, power),
                      cond_max * pow(L_c[2] / d, power)};
 
-    complex double s[DIM] = {amp * (1 - _Complex_I * cond[0] / omega),
-                             amp * (1 - _Complex_I * cond[1] / omega),
-                             amp * (1 - _Complex_I * cond[2] / omega)};
+    complex double s[DIM] = {amp * (1 + _Complex_I * cond[0] / omega),
+                             amp * (1 + _Complex_I * cond[1] / omega),
+                             amp * (1 + _Complex_I * cond[2] / omega)};
 
     permeability_matrix[0] = s[1] * s[2] / s[0];
     permeability_matrix[1] = s[0] * s[2] / s[1];
@@ -3274,6 +3274,7 @@ int assemble_ewave_nedelec(void) {
   complex double wave[DIM] = {0.0};
   complex double curl_wave[DIM];
   plane_wave(x, y, z, omega, wave, curl_wave);
+  wave[2] = 0;
 
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
@@ -3298,12 +3299,14 @@ int assemble_ewave_nedelec(void) {
       for (int q = 0; q < DIM; q++) {
         if (permittivity_is_matrix) {
           advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
-                       ((permittivity_matrix[q] * (fv->em_er[q] + fv->em_ei[q] * _Complex_I)) +
-                        ((1 - permittivity_matrix[q]) * _Complex_I * wave[q]));
+                       (permittivity_matrix[q] * (fv->em_er[q] + fv->em_ei[q] * _Complex_I));
+          advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
+                       (1-permittivity_matrix[q] * (wave[q]));
         } else {
           advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
-                       ((permittivity * (fv->em_er[q] + fv->em_ei[q] * _Complex_I)) +
-                        ((1 - permittivity) * _Complex_I * wave[q]));
+                       ((permittivity * (fv->em_er[q] + fv->em_ei[q] * _Complex_I + wave[q])));
+          advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
+                       (1-permittivity * (wave[q]));
         }
       }
 

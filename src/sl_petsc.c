@@ -1,3 +1,5 @@
+#include <stddef.h>
+#include <mpi.h>
 #ifdef GOMA_ENABLE_PETSC
 #include <petscksp.h>
 #include <petscmat.h>
@@ -1204,8 +1206,18 @@ static goma_error initialize_petsc_matrix(struct GomaLinearSolverData *ams,
   ams->npu = num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx];
   ams->npu_plus = num_universe_dofs[pg->imtrx];
 
-  DPRINTF(stdout, "\n%-30s= %d\n", "Number of unknowns", num_universe_dofs[pg->imtrx]);
-  DPRINTF(stdout, "\n%-30s= %ld\n", "Number of matrix nonzeroes", (long)nnz);
+  size_t local_dofs = num_universe_dofs[pg->imtrx];
+  size_t global_dofs = num_universe_dofs[pg->imtrx];
+  size_t local_nnz = nnz;
+  size_t global_nnz = nnz;
+
+  MPI_Allreduce(&local_dofs, &global_dofs, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_nnz, &global_nnz, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+
+
+
+  DPRINTF(stdout, "\n%-30s= %ld\n", "Number of unknowns", global_dofs);
+  DPRINTF(stdout, "\n%-30s= %ld\n", "Number of matrix nonzeroes", global_nnz);
 
   free(d_nnz);
   free(o_nnz);
