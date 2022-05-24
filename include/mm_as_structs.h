@@ -3198,6 +3198,7 @@ struct Lubrication_Auxiliaries {
   double gradP_tangent[DIM]; /* Tangent vector of the pressure gradient */
   double gradP_normal[DIM];  /* Unit vector perpendicular to the pressure */
   double H;                  /* Lubrication Gap Height */
+  double srate;              /* Lubrication Characteristic Shear Rate */
 
   double dgradP_mag_dP;          /* Pressure gradient magnitude sensitivities w.r.t.
                                     pressure */
@@ -3228,6 +3229,7 @@ struct Lubrication_Auxiliaries {
                                           shear rate */
   double dq_dcross_shear[DIM][MDE];    /* Flow rate sensitivities w.r.t. cross
                                           stream shear stress */
+  double dq_dgradp[DIM][DIM][MDE];     /* Flow rate sensitivities w.r.t. pressure gradient */
 
   double dv_avg_dh[DIM][MDE];  /* Average velocity sensitivities w.r.t. height */
   double dv_avg_dh1[DIM][MDE]; /* Average velocity sensitivities w.r.t. height */
@@ -3256,9 +3258,10 @@ struct Lubrication_Auxiliaries {
                                            bottom wall shear rate */
   double dv_avg_dcross_shear[DIM][MDE]; /* Average velocity sensitivities w.r.t.
                                            cross stream shear stress */
-  double dH_dmesh[DIM][MDE];            /* lubrication gap sensitivities w.r.t. mesh */
-  double dH_drealsolid[DIM][MDE];       /* lubrication gap sensitivities w.r.t. real
-                                           solid */
+  double dv_dgradp[DIM][DIM][MDE]; /* Average velocity sensitivities w.r.t. pressure gradient */
+  double dH_dmesh[DIM][MDE];       /* lubrication gap sensitivities w.r.t. mesh */
+  double dH_drealsolid[DIM][MDE];  /* lubrication gap sensitivities w.r.t. real
+                                      solid */
 };
 
 typedef struct Lubrication_Auxiliaries LUBRICATION_AUXILIARIES_STRUCT;

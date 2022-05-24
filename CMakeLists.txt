@@ -130,6 +130,7 @@ endif()
 # Exodus
 find_package(SEACASExodus REQUIRED HINTS ${Trilinos_DIR}/../SEACASExodus)
 message(STATUS "SEACASExodus_DIR = ${SEACASExodus_DIR}")
+message(STATUS "PETSC_DIR = $ENV{PETSC_DIR}")
 
 option(ENABLE_PETSC "ENABLE_PETSC" ON)
 if(ENABLE_PETSC)
@@ -145,15 +146,15 @@ if(ENABLE_PETSC)
     # Determine PETSc compilers
     if(PETSC_FOUND)
       execute_process(
-        COMMAND pkg-config PETSc --variable=ccompiler
+        COMMAND ${PKG_CONFIG_EXECUTABLE} PETSc --variable=ccompiler
         COMMAND tr -d '\n'
         OUTPUT_VARIABLE PETSC_C_COMPILER)
       execute_process(
-        COMMAND pkg-config PETSc --variable=cxxcompiler
+        COMMAND ${PKG_CONFIG_EXECUTABLE} PETSc --variable=cxxcompiler
         COMMAND tr -d '\n'
         OUTPUT_VARIABLE PETSC_CXX_COMPILER)
       execute_process(
-        COMMAND pkg-config PETSc --variable=fcompiler
+        COMMAND ${PKG_CONFIG_EXECUTABLE} PETSc --variable=fcompiler
         COMMAND tr -d '\n'
         OUTPUT_VARIABLE PETSC_FORTRAN_COMPILER)
       if(ENABLE_PETSC)
@@ -375,6 +376,7 @@ option_definition(PARALLEL ON)
 option_definition(FP_EXCEPT OFF)
 option_definition(ANALEIG_PLEASE OFF)
 option_definition(DO_NO_UNROLL OFF)
+option_definition(USERMAT_INITIALIZATION OFF)
 option_definition(ENABLE_LOGGING OFF)
 set(MDE
     "27"
@@ -392,6 +394,10 @@ set(MAX_PROB_VAR
     "15"
     CACHE STRING "set MAX_PROB_VAR")
 list(APPEND GOMA_COMPILE_DEFINITIONS MAX_PROB_VAR=${MAX_PROB_VAR})
+set(MAX_NUMBER_MATLS
+    "9"
+    CACHE STRING "set MAX_NUMBER_MATLS")
+list(APPEND GOMA_COMPILE_DEFINITIONS MAX_NUMBER_MATLS=${MAX_NUMBER_MATLS})
 
 set(GOMA_INCLUDES
     include/adapt/omega_h_interface.h
@@ -831,7 +837,10 @@ option(ENABLE_WARNINGS "ENABLE_WARNINGS" ON)
 execute_process(
   COMMAND git describe --dirty --always --tags
   OUTPUT_VARIABLE goma_git_version
-  RESULT_VARIABLE goma_using_git)
+  RESULT_VARIABLE goma_using_git
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  ERROR_QUIET)
+  
 if(goma_using_git EQUAL 0)
   string(REGEX REPLACE "\n$" "" goma_git_version "${goma_git_version}")
 else()
@@ -839,6 +848,7 @@ else()
 endif()
 if(goma_git_version)
   list(APPEND GOMA_COMPILE_DEFINITIONS GIT_VERSION=${goma_git_version})
+  MESSAGE(STATUS "Git found setting version: ${goma_git_version}")
 endif()
 
 message(STATUS "CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
@@ -1012,8 +1022,28 @@ if(ENABLE_WARNINGS)
       -Wimplicit-fallthrough>)
 endif()
 
+add_executable(fix_exe src/fix_main.c)
+set_target_properties(fix_exe PROPERTIES OUTPUT_NAME "fix")
+target_include_directories(fix_exe PUBLIC include)
+target_include_directories(fix_exe SYSTEM PRIVATE ${GOMA_TPL_INCLUDES})
+target_link_libraries(fix_exe PUBLIC ${GOMA_TPL_LIBRARIES} goma goma_user
+                                      goma_util)
+target_compile_definitions(fix_exe PUBLIC ${GOMA_COMPILE_DEFINITIONS})
+if(ENABLE_WARNINGS)
+  target_compile_options(
+    fix_exe
+    PRIVATE
+      $<$<AND:$<C_COMPILER_ID:Clang>,$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>>:-Wall
+      -Wextra
+      -Wno-unused-parameter>
+      $<$<AND:$<C_COMPILER_ID:GNU>,$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>>:-Wall
+      -Wextra
+      -Wno-unused-parameter
+      -Wimplicit-fallthrough>)
+endif()
+
 install(
-  TARGETS goma_exe
+  TARGETS goma_exe fix_exe
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin

@@ -1636,7 +1636,7 @@ void init_vec(
       if (pd->v[pg->imtrx][var]) {
         for (i = 0; i < DPI_ptr->num_owned_nodes; i++) {
           idv = Index_Solution(i, var, 0, 0, -1, pg->imtrx);
-          if (idv != 1) {
+          if (idv != -1) {
             if (u[idv] < Var_init[0].init_val_min)
               u[idv] = Var_init[0].init_val_min;
             if (u[idv] > Var_init[0].init_val_max)
@@ -1805,6 +1805,13 @@ void init_vec(
       e_start = exo->eb_ptr[ebi];
       e_end = exo->eb_ptr[ebi + 1];
 
+      for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
+        if (Var_init_mat[mn][j].len_u_pars < 0) {
+          DPRINTF(stdout, "\tSetting MAT %d %s number %d (variable [%d]) to %g\n", mn,
+                  Var_Name[Var_init_mat[mn][j].var].name1, Var_init_mat[mn][j].ktype,
+                  Var_init_mat[mn][j].var, Var_init_mat[mn][j].init_val);
+        }
+      }
       /*
        *  Loop over each element in the element block
        */
@@ -1833,7 +1840,8 @@ void init_vec(
              * a valid interpolation for that variable in the
              * current element block
              */
-            if (nunks > 0 && pd->i[pg->imtrx][var] && !slaved) {
+            if (nunks > 0 && pd->i[pg->imtrx][var] && !slaved &&
+                Var_init_mat[mn][j].len_u_pars < 0) {
               /*
                * Check against ktype here to make sure we have
                * an associated unknown
@@ -1894,7 +1902,11 @@ void init_vec(
       }     /* end for e_start=ielem<e_end */
     }       /* end if (Num_Var_Init_Mat[mn] > 0 */
   }
-  safer_free((void **)&block_order);
+  /*  safer_free((void **) &block_order);  */
+  /*
+   *  Exchange the degrees of freedom with neighboring processors
+   */
+  exchange_dof(cx, dpi, u, pg->imtrx);
 
   /*
    * check for external variables which have to be read in
@@ -1984,6 +1996,144 @@ void init_vec(
                         exo, FALSE, 0.);
     }
   }
+  exchange_dof(cx, dpi, u, pg->imtrx);
+  /* User initialization part
+   * Loop over element blocks that exist for this processor, determine
+   * which material corresponds to it.
+   */
+  for (ebj = 0; ebj < exo->num_elem_blocks; ebj++) {
+    ebi = block_order[ebj];
+    mn = Matilda[ebi];
+    if (mn < 0) {
+      continue;
+    }
+    pd = pd_glob[mn];
+    mp = mp_glob[mn];
+    if (Num_Var_Init_Mat[mn] > 0) {
+      e_start = exo->eb_ptr[ebi];
+      e_end = exo->eb_ptr[ebi + 1];
+
+      for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
+        if (Var_init_mat[mn][j].len_u_pars > 0) {
+          DPRINTF(stdout, "\tSetting MAT %d %s number %d (variable [%d]) to USER %g\n", mn,
+                  Var_Name[Var_init_mat[mn][j].var].name1, Var_init_mat[mn][j].ktype,
+                  Var_init_mat[mn][j].var, Var_init_mat[mn][j].init_val);
+          DPRINTF(stdout, "\tUser parameters");
+          for (i = 0; i < Var_init_mat[mn][j].len_u_pars; i++) {
+            DPRINTF(stdout, "\t %g", Var_init_mat[mn][j].u_pars[i]);
+          }
+          DPRINTF(stdout, "\n");
+        }
+      }
+      /*
+       *  Loop over each element in the element block
+       */
+      for (ielem = e_start; ielem < e_end; ielem++) {
+        ielem_type = Elem_Type(exo, ielem);
+        num_nodes = elem_info(NNODES, ielem_type);
+        index = Proc_Connect_Ptr[ielem];
+        /*
+         *  Loop over each local node in the element
+         */
+        for (n = 0; n < num_nodes; n++) {
+          i = Proc_Elem_Connect[index++];
+          nv = Nodes[i]->Nodal_Vars_Info[pg->imtrx];
+          for (j = 0; j < Num_Var_Init_Mat[mn]; j++) {
+            int slaved = Var_init_mat[mn][j].slave_block;
+
+            var = Var_init_mat[mn][j].var;
+            nunks = get_nv_ndofs_modMF(nv, var);
+
+            if (slaved == 1)
+              slaved = Nodes[i]->Mat_List.Length > 1;
+
+            /*
+             * We only want to initialize a variable at a node
+             * if we have an unknown at that node, and there is
+             * a valid interpolation for that variable in the
+             * current element block
+             */
+            if (nunks > 0 && pd->i[pg->imtrx][var] && !slaved &&
+                Var_init_mat[mn][j].len_u_pars >= 0) {
+              double xpt[DIM] = {0, 0, 0}, var_val[MAX_VARIABLE_TYPES];
+              int dir;
+              for (dir = 0; dir < pd->Num_Dim; dir++) {
+                xpt[dir] = Coor[dir][i];
+              }
+              init_vec_value(var_val, 0.0, MAX_VARIABLE_TYPES);
+              for (a = 0; a < MAX_VARIABLE_TYPES; a++) {
+                if (pd->v[pg->imtrx][a]) {
+                  k = Index_Solution(i, a, 0, 0, mn, pg->imtrx);
+                  if (k != -1) {
+                    var_val[a] = u[k];
+                  }
+                }
+              }
+              /*
+               * Check against ktype here to make sure we have
+               * an associated unknown
+               */
+              if (var == MASS_FRACTION && Var_init_mat[mn][j].ktype >= pd->Num_Species_Eqn) {
+                continue;
+              }
+              if (nunks == 1) {
+                ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
+                                        Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
+              } else {
+                /*
+                 * Ok, there is more than one degree of freedom for this
+                 * variable type at this node. Why? Let's break down
+                 * the reason
+                 *  HKM -> we can't take this block out, until we
+                 *         get rid of the debugging section below.
+                 */
+                interpType = pd->i[pg->imtrx][var];
+                if (interpType == I_P0 || interpType == I_P1) {
+                  /*
+                   *  For P0 and P1 interpolation, only first dof is set
+                   */
+                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                  u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
+                                          Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
+                } else if (interpType == I_PQ1 || interpType == I_PQ2) {
+                  /*
+                   * For linear and quadratic discontinuous interpolations
+                   * all degrees of freedom in the element, which are all
+                   * located at the centroid node, are set to the same
+                   * value. Thus, find out how many degrees of freedom there
+                   * are (also in the Variable_Description structure) and
+                   * then set all of them to the initialization value
+                   * set in the input deck.
+                   */
+                  ndof = 4;
+                  if (interpType == I_PQ2)
+                    ndof = 9;
+                  for (k = 0; k < ndof; k++) {
+                    ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, k, mn, pg->imtrx);
+                    u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
+                                            Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
+                  }
+                } else {
+                  /*
+                   * For the case of discontinuous variables, we need to know
+                   * which unknown to apply the condition to.
+                   *
+                   *   This currently is determined by a even odd
+                   *   scheme wrt the element block id.
+                   */
+                  ipos = Index_Solution(i, var, Var_init_mat[mn][j].ktype, 0, mn, pg->imtrx);
+                  u[ipos] = user_mat_init(var, i, Var_init_mat[mn][j].init_val,
+                                          Var_init_mat[mn][j].u_pars, xpt, mn, var_val);
+                }
+              }
+            }
+          } /* end for j<Num_Var_Init_Mat[mn] */
+        }   /* end for n<num_nodes */
+      }     /* end for e_start=ielem<e_end */
+    }       /* end if (Num_Var_Init_Mat[mn] > 0 */
+  }         /* end for element blocks */
+  safer_free((void **)&block_order);
 
   /*
    *  Exchange the degrees of freedom with neighboring processors
