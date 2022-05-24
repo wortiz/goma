@@ -2764,114 +2764,179 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         switch (bc->BC_Name) {
         case EM_ABSORBING_REAL_BC: {
           dbl omega = upd->Acoustic_Frequency;
-          dbl x = fv->x[0];
-          dbl y = fv->x[1];
-          dbl z = fv->x[2];
-          complex double wave[DIM];
-          complex double curl_wave[DIM];
-          plane_wave(x, y, z, omega, wave, curl_wave);
-          dbl F[DIM];
+          //dbl x = fv->x[0];
+          //dbl y = fv->x[1];
+          //dbl z = fv->x[2];
+          //complex double wave[DIM];
+          //complex double curl_wave[DIM];
+          //plane_wave(x, y, z, omega, wave, curl_wave);
 
-          dbl curl_wave_real[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
-          dbl wave_x_normal[DIM] = {0.0};
-          cross_really_simple_vectors(curl_wave_real, fv->snormal, wave_x_normal);
+          //double nxcurl[DIM];
+          //dbl curl_wave_real[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
 
-          dbl Ei_T[DIM] = {0.0};
-          dbl n_x_Ei[DIM] = {0.0};
-          dbl Ei_imag[DIM] = {cimag(wave[0]), cimag(wave[1]), cimag(wave[2])};
+          //cross_really_simple_vectors(fv->snormal, curl_wave_real, nxcurl);
 
-          cross_really_simple_vectors(fv->snormal, Ei_imag, n_x_Ei);
-          cross_really_simple_vectors(n_x_Ei, fv->snormal, Ei_T);
+          //dbl Ei_imag[DIM] = {-omega*cimag(wave[0]), -omega*cimag(wave[1]), -omega*cimag(wave[2])};
+          //double nxnxE[DIM];
+          //double nxE[DIM];
+          //cross_really_simple_vectors(fv->snormal, Ei_imag, nxE);
+          //cross_really_simple_vectors(fv->snormal, nxE, nxnxE);
 
-          func[0] += omega * Ei_T[0] - wave_x_normal[0];
-          func[1] += omega * Ei_T[1] - wave_x_normal[1];
-          func[2] += omega * Ei_T[2] - wave_x_normal[2];
+          //func[0] = nxnxE[0];
+          //func[1] = nxnxE[1];
+          //func[2] = nxnxE[2];
 
-          {
-            dbl E_T[DIM] = {0.0};
-            dbl n_x_E[DIM] = {0.0};
-            dbl E_imag[DIM] = {fv->em_ei[0] + cimag(wave[0]), fv->em_ei[1] + cimag(wave[1]),
-                               fv->em_ei[2] + cimag(wave[2])};
-
-            cross_really_simple_vectors(fv->snormal, E_imag, n_x_E);
-            cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
-
-            func[0] += omega * E_T[0];
-            func[1] += omega * E_T[0];
-            func[2] += omega * E_T[0];
+          func[0] += omega*fv->em_ei[0];
+          func[1] += omega*fv->em_ei[1];
+          func[2] += omega*fv->em_ei[2];
+          //func[0] += -omega*fv->em_ei[0];
+          //func[1] += -omega*fv->em_ei[1];
+          //func[2] += -omega*fv->em_ei[2];
+          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+            d_func[0][EM_E1_IMAG][j] += omega * bf[EM_E1_IMAG]->phi_e[j][0];
+            d_func[1][EM_E1_IMAG][j] += omega * bf[EM_E1_IMAG]->phi_e[j][1];
+            d_func[2][EM_E1_IMAG][j] += omega * bf[EM_E1_IMAG]->phi_e[j][2];
           }
-          {
-            for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-              dbl E_T[DIM] = {0.0};
-              dbl n_x_E[DIM] = {0.0};
-              dbl E_imag[DIM] = {bf[EM_E1_IMAG]->phi_e[j][0] + cimag(wave[0]),
-                                 bf[EM_E1_IMAG]->phi_e[j][1] + cimag(wave[1]),
-                                 bf[EM_E1_IMAG]->phi_e[j][2] + cimag(wave[2])};
+          //dbl omega = upd->Acoustic_Frequency;
+          //dbl x = fv->x[0];
+          //dbl y = fv->x[1];
+          //dbl z = fv->x[2];
+          //complex double wave[DIM];
+          //complex double curl_wave[DIM];
+          //plane_wave(x, y, z, omega, wave, curl_wave);
+          //dbl F[DIM];
 
-              cross_really_simple_vectors(fv->snormal, E_imag, n_x_E);
-              cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+          //dbl curl_wave_real[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
+          //dbl wave_x_normal[DIM] = {0.0};
+          //cross_really_simple_vectors(curl_wave_real, fv->snormal, wave_x_normal);
 
-              d_func[0][EM_E1_IMAG][j] += omega * E_T[0];
-              d_func[1][EM_E1_IMAG][j] += omega * E_T[0];
-              d_func[2][EM_E1_IMAG][j] += omega * E_T[0];
-            }
-          }
+          //dbl Ei_T[DIM] = {0.0};
+          //dbl n_x_Ei[DIM] = {0.0};
+          //dbl Ei_imag[DIM] = {cimag(wave[0]), cimag(wave[1]), cimag(wave[2])};
+
+          //cross_really_simple_vectors(fv->snormal, Ei_imag, n_x_Ei);
+          //cross_really_simple_vectors(n_x_Ei, fv->snormal, Ei_T);
+
+          //func[0] += omega * Ei_T[0] - wave_x_normal[0];
+          //func[1] += omega * Ei_T[1] - wave_x_normal[1];
+          //func[2] += omega * Ei_T[2] - wave_x_normal[2];
+
+          //{
+          //  dbl E_T[DIM] = {0.0};
+          //  dbl n_x_E[DIM] = {0.0};
+          //  dbl E_imag[DIM] = {fv->em_ei[0] + cimag(wave[0]), fv->em_ei[1] + cimag(wave[1]),
+          //                     fv->em_ei[2] + cimag(wave[2])};
+
+          //  cross_really_simple_vectors(fv->snormal, E_imag, n_x_E);
+          //  cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+
+          //  func[0] += omega * E_T[0];
+          //  func[1] += omega * E_T[0];
+          //  func[2] += omega * E_T[0];
+          //}
+          //{
+          //  for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+          //    dbl E_T[DIM] = {0.0};
+          //    dbl n_x_E[DIM] = {0.0};
+          //    dbl E_imag[DIM] = {bf[EM_E1_IMAG]->phi_e[j][0] + cimag(wave[0]),
+          //                       bf[EM_E1_IMAG]->phi_e[j][1] + cimag(wave[1]),
+          //                       bf[EM_E1_IMAG]->phi_e[j][2] + cimag(wave[2])};
+
+          //    cross_really_simple_vectors(fv->snormal, E_imag, n_x_E);
+          //    cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+
+          //    d_func[0][EM_E1_IMAG][j] += omega * E_T[0];
+          //    d_func[1][EM_E1_IMAG][j] += omega * E_T[0];
+          //    d_func[2][EM_E1_IMAG][j] += omega * E_T[0];
+          //  }
+          //}
         } break;
         case EM_ABSORBING_IMAG_BC: {
           dbl omega = upd->Acoustic_Frequency;
-          dbl x = fv->x[0];
-          dbl y = fv->x[1];
-          dbl z = fv->x[2];
-          complex double wave[DIM];
-          complex double curl_wave[DIM];
-          plane_wave(x, y, z, omega, wave, curl_wave);
+          //dbl x = fv->x[0];
+          //dbl y = fv->x[1];
+          //dbl z = fv->x[2];
+          //complex double wave[DIM];
+          //complex double curl_wave[DIM];
+          //plane_wave(x, y, z, omega, wave, curl_wave);
 
-          dbl F[DIM];
+          //double nxcurl[DIM];
+          //dbl curl_wave_real[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
 
-          dbl curl_wave_imag[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
-          dbl wave_x_normal[DIM] = {0.0};
-          cross_really_simple_vectors(curl_wave_imag, fv->snormal, wave_x_normal);
+          //cross_really_simple_vectors(fv->snormal, curl_wave_real, nxcurl);
 
-          dbl Ei_T[DIM] = {0.0};
-          dbl n_x_Ei[DIM] = {0.0};
-          dbl Ei_real[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
+          //dbl Ei_real[DIM] = {-omega*creal(wave[0]), -omega*creal(wave[1]), -omega*creal(wave[2])};
+          //double nxnxE[DIM];
+          //double nxE[DIM];
+          //cross_really_simple_vectors(fv->snormal, Ei_real, nxE);
+          //cross_really_simple_vectors(fv->snormal, nxE, nxnxE);
 
-          cross_really_simple_vectors(fv->snormal, Ei_real, n_x_Ei);
-          cross_really_simple_vectors(n_x_Ei, fv->snormal, Ei_T);
+          //func[0] = nxnxE[0];
+          //func[1] = nxnxE[1];
+          //func[2] = nxnxE[2];
 
-          func[0] += omega * Ei_T[0] - wave_x_normal[0];
-          func[1] += omega * Ei_T[1] - wave_x_normal[1];
-          func[2] += omega * Ei_T[2] - wave_x_normal[2];
-
-          {
-            dbl E_T[DIM] = {0.0};
-            dbl n_x_E[DIM] = {0.0};
-            dbl E_real[DIM] = {fv->em_er[0] + creal(wave[0]), fv->em_er[1] + creal(wave[1]),
-                               fv->em_er[2] + creal(wave[2])};
-
-            cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
-            cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
-
-            func[0] += omega * E_T[0];
-            func[1] += omega * E_T[0];
-            func[2] += omega * E_T[0];
+          func[0] -= omega*fv->em_er[0];
+          func[1] -= omega*fv->em_er[1];
+          func[2] -= omega*fv->em_er[2];
+          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
+            d_func[0][EM_E1_REAL][j] -= omega * bf[EM_E1_REAL]->phi_e[j][0];
+            d_func[1][EM_E1_REAL][j] -= omega * bf[EM_E1_REAL]->phi_e[j][1];
+            d_func[2][EM_E1_REAL][j] -= omega * bf[EM_E1_REAL]->phi_e[j][2];
           }
-          {
-            for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-              dbl E_T[DIM] = {0.0};
-              dbl n_x_E[DIM] = {0.0};
-              dbl E_real[DIM] = {bf[EM_E1_REAL]->phi_e[j][0] + creal(wave[0]),
-                                 bf[EM_E1_REAL]->phi_e[j][1] + creal(wave[1]),
-                                 bf[EM_E1_REAL]->phi_e[j][2] + creal(wave[2])};
+          //dbl omega = upd->Acoustic_Frequency;
+          //dbl x = fv->x[0];
+          //dbl y = fv->x[1];
+          //dbl z = fv->x[2];
+          //complex double wave[DIM];
+          //complex double curl_wave[DIM];
+          //plane_wave(x, y, z, omega, wave, curl_wave);
 
-              cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
-              cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+          //dbl F[DIM];
 
-              d_func[0][EM_E1_IMAG][j] += omega * E_T[0];
-              d_func[1][EM_E1_IMAG][j] += omega * E_T[0];
-              d_func[2][EM_E1_IMAG][j] += omega * E_T[0];
-            }
-          }
+          //dbl curl_wave_imag[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
+          //dbl wave_x_normal[DIM] = {0.0};
+          //cross_really_simple_vectors(curl_wave_imag, fv->snormal, wave_x_normal);
+
+          //dbl Ei_T[DIM] = {0.0};
+          //dbl n_x_Ei[DIM] = {0.0};
+          //dbl Ei_real[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
+
+          //cross_really_simple_vectors(fv->snormal, Ei_real, n_x_Ei);
+          //cross_really_simple_vectors(n_x_Ei, fv->snormal, Ei_T);
+
+          //func[0] += omega * Ei_T[0] - wave_x_normal[0];
+          //func[1] += omega * Ei_T[1] - wave_x_normal[1];
+          //func[2] += omega * Ei_T[2] - wave_x_normal[2];
+
+          //{
+          //  dbl E_T[DIM] = {0.0};
+          //  dbl n_x_E[DIM] = {0.0};
+          //  dbl E_real[DIM] = {fv->em_er[0] + creal(wave[0]), fv->em_er[1] + creal(wave[1]),
+          //                     fv->em_er[2] + creal(wave[2])};
+
+          //  cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
+          //  cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+
+          //  func[0] += omega * E_T[0];
+          //  func[1] += omega * E_T[0];
+          //  func[2] += omega * E_T[0];
+          //}
+          //{
+          //  for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
+          //    dbl E_T[DIM] = {0.0};
+          //    dbl n_x_E[DIM] = {0.0};
+          //    dbl E_real[DIM] = {bf[EM_E1_REAL]->phi_e[j][0] + creal(wave[0]),
+          //                       bf[EM_E1_REAL]->phi_e[j][1] + creal(wave[1]),
+          //                       bf[EM_E1_REAL]->phi_e[j][2] + creal(wave[2])};
+
+          //    cross_really_simple_vectors(fv->snormal, E_real, n_x_E);
+          //    cross_really_simple_vectors(n_x_E, fv->snormal, E_T);
+
+          //    d_func[0][EM_E1_IMAG][j] += omega * E_T[0];
+          //    d_func[1][EM_E1_IMAG][j] += omega * E_T[0];
+          //    d_func[2][EM_E1_IMAG][j] += omega * E_T[0];
+          //  }
+          //}
         } break;
         case EM_MMS_SIDE_BC: {
           complex double exact[DIM];
@@ -2959,6 +3024,9 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           ldof_eqn = i;
 
           cross_really_simple_vectors(fv->snormal, bf[eqn]->phi_e[i], nxphi);
+          nxphi[0] = bf[eqn]->phi_e[i][0];
+          nxphi[1] = bf[eqn]->phi_e[i][1];
+          nxphi[2] = bf[eqn]->phi_e[i][2];
 
           /*
            * For strong conditions weight the function by BIG_PENALTY

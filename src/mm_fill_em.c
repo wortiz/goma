@@ -3263,6 +3263,8 @@ int assemble_ewave_nedelec(void) {
   dbl z = fv->x[2];
   dbl omega = upd->Acoustic_Frequency;
 
+  dbl sigma = mp->electrical_conductivity;
+
   complex double permeability_matrix[DIM]; // diagonal matrix if exists
   complex double permittivity_matrix[DIM]; // diagonal matrix if exists
   complex double permittivity;
@@ -3274,7 +3276,6 @@ int assemble_ewave_nedelec(void) {
   complex double wave[DIM] = {0.0};
   complex double curl_wave[DIM];
   plane_wave(x, y, z, omega, wave, curl_wave);
-  wave[2] = 0;
 
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
@@ -3300,20 +3301,18 @@ int assemble_ewave_nedelec(void) {
         if (permittivity_is_matrix) {
           advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
                        (permittivity_matrix[q] * (fv->em_er[q] + fv->em_ei[q] * _Complex_I));
-          advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
-                       (1-permittivity_matrix[q] * (wave[q]));
         } else {
           advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
-                       ((permittivity * (fv->em_er[q] + fv->em_ei[q] * _Complex_I + wave[q])));
-          advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
-                       (1-permittivity * (wave[q]));
+                       (((permittivity + _Complex_I*sigma/omega) * (fv->em_er[q] + fv->em_ei[q] * _Complex_I)));
         }
       }
 
       complex double source = 0;
 
       for (int q = 0; q < DIM; q++) {
-        source -= force[q] * bf[reqn]->phi_e[i][q];
+        if (!permittivity_is_matrix) {
+        source += omega*omega*(1-permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
+        }
       }
 
       lec->R[LEC_R_INDEX(peqn_real, i)] +=

@@ -2781,7 +2781,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (call_nedelec) {
         err = apply_nedelec_bc(x, resid_vector, delta_t, theta, &pg_data, ielem, ielem_type,
                                   num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
-                                  num_total_nodes, WEAK_INT_SURF, time_value, element_search_grid,
+                                  num_total_nodes, WEAK_INT_NEDELEC, time_value, element_search_grid,
                                   exo);
         GOMA_EH(err, " apply_integrated_bc");
 #ifdef CHECK_FINITE
