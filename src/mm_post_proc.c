@@ -3411,7 +3411,7 @@ static int calc_standard_fields(double **post_proc_vect,
      *  check to make sure that unknowns are defined at this node,
      *  otherwise don't add anything to this node
      */
-    ldof = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
+    ldof = bf[pd->ProjectionVar]->interpolation == I_N1 ? i : ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
     if (ldof >= 0) {
       phi_i = bf[eqn]->phi[ldof];
       for (var = 0; var < rd->TotalNVPostOutput; var++) {

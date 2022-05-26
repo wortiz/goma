@@ -1511,6 +1511,7 @@ struct Basis_Functions {
    *  determinant of the jacobian of the matrix transformation
    *  of the ShapeVar shape function.
    */
+  int shape_dof;
   dbl detJ;
   dbl B[DIM][DIM]; /* inverse Jacobian */
   dbl d_det_J_dm[DIM][MDE];

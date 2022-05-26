@@ -172,6 +172,10 @@ int beer_belly(void) {
 
   mdof = ei[imtrx]->dof[ShapeVar];
 
+  if (MapBf->interpolation == I_N1) {
+    mdof = MapBf->shape_dof;
+  }
+
   /*
    * For every type "t" of unique basis function used in this problem,
    * initialize appropriate arrays...
@@ -232,7 +236,7 @@ int beer_belly(void) {
       }
     } else {
       for (k = 0; k < mdof; k++) {
-        node = ei[imtrx]->dof_list[ShapeVar][k];
+        node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
 
         index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[imtrx]->ielem] + node];
 
@@ -260,7 +264,7 @@ int beer_belly(void) {
         }
       } else {
         for (k = 0; k < mdof; k++) {
-          node = ei[imtrx]->dof_list[ShapeVar][k];
+          node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
           index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[imtrx]->ielem] + node];
           MapBf->J[i][j] += Coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
         }
@@ -1726,7 +1730,7 @@ int load_bf_grad(void)
         bfv = bf[v];
         dofs = ei[imtrx]->dof[v];
         if (bfv->interpolation == I_N1) {
-          dofs = getdofs(bfv->element_shape, I_Q1);
+          dofs = bfv->shape_dof;
         }
 
         /* initialize variables */
@@ -2674,20 +2678,21 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
           break;
         }
 
-        // Calculate mapping using lagrange Q1
+        // Calculate mapping using lagrange Q2
 
         jdof = 0;
 
-        int q1_dof = getdofs(bf_ptr->element_shape, I_Q1);
+        int q1_dof = getdofs(bf_ptr->element_shape, I_Q2);
+        bf_ptr->shape_dof = q1_dof;
         switch (pd->Num_Dim) {
         case 2:
           for (i = 0; i < q1_dof; i++) {
             bf_ptr->phi[i] =
-                newshape(xi, ei[imtrx]->ielem_type, PSI, i, bf_ptr->element_shape, I_Q1, jdof);
+                newshape(xi, ei[imtrx]->ielem_type, PSI, i, bf_ptr->element_shape, I_Q2, jdof);
             bf_ptr->dphidxi[i][0] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i, bf_ptr->element_shape, I_Q1, jdof);
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i, bf_ptr->element_shape, I_Q2, jdof);
             bf_ptr->dphidxi[i][1] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i, bf_ptr->element_shape, I_Q1, jdof);
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i, bf_ptr->element_shape, I_Q2, jdof);
             jdof++;
           }
           break;
@@ -2695,13 +2700,13 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
         case 3:
           for (i = 0; i < q1_dof; i++) {
             bf_ptr->phi[i] =
-                newshape(xi, ei[imtrx]->ielem_type, PSI, i, bf_ptr->element_shape, I_Q1, jdof);
+                newshape(xi, ei[imtrx]->ielem_type, PSI, i, bf_ptr->element_shape, I_Q2, jdof);
             bf_ptr->dphidxi[i][0] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i, bf_ptr->element_shape, I_Q1, jdof);
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i, bf_ptr->element_shape, I_Q2, jdof);
             bf_ptr->dphidxi[i][1] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i, bf_ptr->element_shape, I_Q1, jdof);
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i, bf_ptr->element_shape, I_Q2, jdof);
             bf_ptr->dphidxi[i][2] =
-                newshape(xi, ei[imtrx]->ielem_type, DPSI_U, i, bf_ptr->element_shape, I_Q1, jdof);
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_U, i, bf_ptr->element_shape, I_Q2, jdof);
             jdof++;
           }
           break;
