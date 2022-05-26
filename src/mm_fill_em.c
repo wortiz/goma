@@ -3303,7 +3303,7 @@ int assemble_ewave_nedelec(void) {
                        (permittivity_matrix[q] * (fv->em_er[q] + fv->em_ei[q] * _Complex_I));
         } else {
           advection -= omega * omega * bf[ieqn]->phi_e[i][q] *
-                       (((permittivity + _Complex_I*sigma/omega) * (fv->em_er[q] + fv->em_ei[q] * _Complex_I)));
+                       (((permittivity - _Complex_I*sigma/omega) * (fv->em_er[q] + fv->em_ei[q] * _Complex_I)));
         }
       }
 
@@ -3348,7 +3348,7 @@ int assemble_ewave_nedelec(void) {
                          (bf[var]->phi_e[j][q]);
           } else {
             advection -=
-                omega * omega * bf[ieqn]->phi_e[i][q] * (permittivity) * (bf[var]->phi_e[j][q]);
+                omega * omega * bf[ieqn]->phi_e[i][q] * (permittivity - _Complex_I*sigma/omega) * (bf[var]->phi_e[j][q]);
           }
         }
 
@@ -3381,7 +3381,7 @@ int assemble_ewave_nedelec(void) {
             advection -= omega * omega * bf[ieqn]->phi_e[i][q] * (permittivity_matrix[q]) *
                          (bf[var]->phi_e[j][q] * _Complex_I);
           } else {
-            advection -= omega * omega * bf[ieqn]->phi_e[i][q] * (permittivity) *
+            advection -= omega * omega * bf[ieqn]->phi_e[i][q] * (permittivity - _Complex_I * sigma/omega) *
                          (bf[var]->phi_e[j][q] * _Complex_I);
           }
         }
