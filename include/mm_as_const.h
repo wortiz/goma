@@ -180,8 +180,8 @@
 #define I_Q2_HV 42 /* Lagrangian quadratic with discontinuous enrichment for jump in value. */
 #define I_Q2_HVG \
   43 /* Lagrangian quadratic with discontinuous enrichment for jump in value and gradient. */
-#define I_TABLE 44 /* Table Interpolation	*/
-#define I_N1 45 // Nedelec First Kind
+#define I_TABLE          44 /* Table Interpolation	*/
+#define I_N1             45 // Nedelec First Kind
 #define MAX_INTERP_TYPES 46
 
 /*

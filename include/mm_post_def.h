@@ -32,55 +32,56 @@
  *  requests.
  */
 
-#define FORCE_NORMAL            0
-#define FORCE_TANGENT1          1
-#define FORCE_TANGENT2          2
-#define FORCE_X                 3
-#define FORCE_Y                 4
-#define FORCE_Z                 5
-#define VOLUME_FLUX             6
-#define SPECIES_FLUX            7
-#define HEAT_FLUX               8
-#define TORQUE                  9
-#define AVERAGE_CONC            10
-#define SURF_DISSIP             11
-#define AREA                    12
-#define VOL_REVOLUTION          13
-#define PORE_LIQ_FLUX           14
-#define CHARGED_SPECIES_FLUX    15
-#define CURRENT_FICKIAN         16
-#define CURRENT                 17
-#define NEG_LS_FLUX             18
-#define POS_LS_FLUX             19
-#define N_DOT_X                 20
-#define ELEC_FORCE_NORMAL       21
-#define ELEC_FORCE_TANGENT1     22
-#define ELEC_FORCE_TANGENT2     23
-#define ELEC_FORCE_X            24
-#define ELEC_FORCE_Y            25
-#define ELEC_FORCE_Z            26
-#define NET_SURF_CHARGE         27
-#define DELTA                   28
-#define ACOUSTIC_FLUX_NORMAL    29
-#define ACOUSTIC_FLUX_TANGENT1  301
-#define ACOUSTIC_FLUX_TANGENT2  311
-#define ACOUSTIC_FLUX_X         321
-#define ACOUSTIC_FLUX_Y         331
-#define ACOUSTIC_FLUX_Z         341
-#define ACOUSTIC_INTENSITY      351
-#define LS_DCA                  361
-#define SHELL_VOLUME_FLUX       30
-#define FORCE_X_POS             371
-#define FORCE_Y_POS             372
-#define FORCE_Z_POS             373
-#define FORCE_X_NEG             374
-#define FORCE_Y_NEG             375
-#define FORCE_Z_NEG             376
-#define SPECIES_FLUX_REVOLUTION 398
-#define REPULSIVE_FORCE         399
-#define POYNTING_X              400
-#define POYNTING_Y              401
-#define POYNTING_Z              402
+#define FORCE_NORMAL             0
+#define FORCE_TANGENT1           1
+#define FORCE_TANGENT2           2
+#define FORCE_X                  3
+#define FORCE_Y                  4
+#define FORCE_Z                  5
+#define VOLUME_FLUX              6
+#define SPECIES_FLUX             7
+#define HEAT_FLUX                8
+#define TORQUE                   9
+#define AVERAGE_CONC             10
+#define SURF_DISSIP              11
+#define AREA                     12
+#define VOL_REVOLUTION           13
+#define PORE_LIQ_FLUX            14
+#define CHARGED_SPECIES_FLUX     15
+#define CURRENT_FICKIAN          16
+#define CURRENT                  17
+#define NEG_LS_FLUX              18
+#define POS_LS_FLUX              19
+#define N_DOT_X                  20
+#define ELEC_FORCE_NORMAL        21
+#define ELEC_FORCE_TANGENT1      22
+#define ELEC_FORCE_TANGENT2      23
+#define ELEC_FORCE_X             24
+#define ELEC_FORCE_Y             25
+#define ELEC_FORCE_Z             26
+#define NET_SURF_CHARGE          27
+#define DELTA                    28
+#define ACOUSTIC_FLUX_NORMAL     29
+#define ACOUSTIC_FLUX_TANGENT1   301
+#define ACOUSTIC_FLUX_TANGENT2   311
+#define ACOUSTIC_FLUX_X          321
+#define ACOUSTIC_FLUX_Y          331
+#define ACOUSTIC_FLUX_Z          341
+#define ACOUSTIC_INTENSITY       351
+#define LS_DCA                   361
+#define SHELL_VOLUME_FLUX        30
+#define FORCE_X_POS              371
+#define FORCE_Y_POS              372
+#define FORCE_Z_POS              373
+#define FORCE_X_NEG              374
+#define FORCE_Y_NEG              375
+#define FORCE_Z_NEG              376
+#define SPECIES_FLUX_REVOLUTION  398
+#define REPULSIVE_FORCE          399
+#define POYNTING_X               400
+#define POYNTING_Y               401
+#define POYNTING_Z               402
+#define SCATTERING_CROSS_SECTION 403
 
 #define I_VOLUME              0
 #define I_DISSIP              1
@@ -145,7 +146,7 @@ typedef struct Post_Processing_Flux_Names FLUX_NAME_STRUCT;
 extern FLUX_NAME_STRUCT pp_flux_names[];
 extern int Num_Flux_Names;
 
-struct Post_Processing_Flux_Names pp_flux_names[49] = {
+struct Post_Processing_Flux_Names pp_flux_names[50] = {
     {"FORCE_NORMAL", FORCE_NORMAL},
     {"FORCE_TANGENT1", FORCE_TANGENT1},
     {"FORCE_TANGENT2", FORCE_TANGENT2},
@@ -195,6 +196,7 @@ struct Post_Processing_Flux_Names pp_flux_names[49] = {
     {"POYNTING_X", POYNTING_X},
     {"POYNTING_Y", POYNTING_Y},
     {"POYNTING_Z", POYNTING_Z},
+    {"SCATTERING_CROSS_SECTION", SCATTERING_CROSS_SECTION},
 };
 
 int Num_Flux_Names = sizeof(pp_flux_names) / sizeof(struct Post_Processing_Flux_Names);
@@ -410,7 +412,7 @@ typedef struct Post_Processing_Averages {
   int non_variable_type;
 } pp_Average;
 
-enum AverageExtraTypes { AVG_DENSITY, AVG_HEAVISIDE, AVG_VISCOSITY, AVG_SHEAR, AVG_EM};
+enum AverageExtraTypes { AVG_DENSITY, AVG_HEAVISIDE, AVG_VISCOSITY, AVG_SHEAR, AVG_EM };
 
 /*
  * All of these variables are actually defined in mm_post_proc.c
@@ -651,6 +653,7 @@ extern int VISCOUS_STRESS;  /* Viscous stress */
 extern int VISCOUS_STRESS_NORM;
 extern int VISCOUS_VON_MISES_STRESS;
 extern int EM_CONTOURS;
+extern int TOTAL_EM_CONTOURS;
 
 /*
  *  Post-processing Step 1: add a new variable flag to end of mm_post_proc.h

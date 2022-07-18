@@ -1421,6 +1421,8 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case EM_HI_FARFIELD_DIRECT_BC:
     case E_ER_FARFIELD_BC:
     case E_EI_FARFIELD_BC:
+    case EM_FARFIELD_REAL_NED_BC:
+    case EM_FARFIELD_IMAG_NED_BC:
 
       if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
                  &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],

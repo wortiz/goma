@@ -117,8 +117,16 @@ int assemble_ewave_laplacian(double time,       // present time
 
 int assemble_em_continuity(void);
 int assemble_ewave_nedelec(void);
-int em_mms_force(dbl x, dbl y, dbl z, complex double force[DIM]) ;
-int em_mms_exact(dbl x, dbl y, dbl z, complex double exact[DIM]) ;
+int em_mms_force(dbl x, dbl y, dbl z, complex double force[DIM]);
+int em_mms_exact(dbl x, dbl y, dbl z, complex double exact[DIM]);
 int plane_wave(
     dbl x, dbl y, dbl z, dbl omega, complex double wave[DIM], complex double curl_wave[DIM]);
+bool relative_permittivity_model(complex double *permittivity_out,
+                                 complex double *permittivity_matrix);
+int apply_ewave_nedelec_farfield(double func[DIM],
+                                 double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                                 double xi[DIM], /* Local stu coordinates */
+                                 double time,    // present time
+                                 const int bc_name,
+                                 double *bc_data);
 #endif /* GOMA_MM_FILL_EM_H */

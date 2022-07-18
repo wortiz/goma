@@ -7598,6 +7598,10 @@ int load_fv(void)
       v = pd->ShapeVar;
       dofs = ei[upd->matrix_index[v]]->dof[v];
 
+      if (bf[v]->interpolation == I_N1) {
+        dofs = bf[v]->shape_dof;
+      }
+
       fv->d[p] = 0.0;
       fv_old->d[p] = 0.0;
       fv_dot->d[p] = 0.0;
@@ -7605,7 +7609,11 @@ int load_fv(void)
 
       fv->x[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        node = ei[upd->matrix_index[v]]->dof_list[v][i];
+        if (bf[v]->interpolation == I_N1) {
+          node = i;
+        } else {
+          node = ei[upd->matrix_index[v]]->dof_list[v][i];
+        }
         index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[v]]->ielem] + node];
         fv->x[p] += (Coor[p][index]) * bf[v]->phi[i];
       }
@@ -8534,7 +8542,7 @@ int load_fv_vector(void)
 
   status = 0;
 
-   /*
+  /*
    * EM Wave Vectors...
    */
   if (pdgv[EM_E1_REAL] || pdgv[EM_E2_REAL] || pdgv[EM_E3_REAL]) {
@@ -8557,8 +8565,7 @@ int load_fv_vector(void)
           }
         }
       }
-
-    } 
+    }
   }
 
   if (pdgv[EM_E1_IMAG] || pdgv[EM_E2_IMAG] || pdgv[EM_E3_IMAG]) {
@@ -8581,7 +8588,6 @@ int load_fv_vector(void)
           }
         }
       }
-
     }
   }
 
@@ -9233,7 +9239,7 @@ int load_fv_grads(void)
       for (p = 0; p < DIM; p++) {
         fv->curl_em_er[p] = 0.0;
         for (i = 0; i < dofs; i++) {
-            fv->curl_em_er[p] += *esp->em_er[0][i] * bfn->curl_phi[i][p];
+          fv->curl_em_er[p] += *esp->em_er[0][i] * bfn->curl_phi[i][p];
         }
       }
     } else {
@@ -9256,7 +9262,7 @@ int load_fv_grads(void)
       for (p = 0; p < DIM; p++) {
         fv->curl_em_ei[p] = 0.0;
         for (i = 0; i < dofs; i++) {
-            fv->curl_em_ei[p] += *esp->em_ei[0][i] * bfn->curl_phi[i][p];
+          fv->curl_em_ei[p] += *esp->em_ei[0][i] * bfn->curl_phi[i][p];
         }
       }
     } else {

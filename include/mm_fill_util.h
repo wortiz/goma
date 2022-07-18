@@ -211,7 +211,7 @@ extern void set_solid_inertia(void);
 
 extern int fill_variable_vector(int inode, int ivec_varType[], int ivec_matID[]);
 
-void vector_shape_function(Dpi * dpi,
+void vector_shape_function(Dpi *dpi,
                            const struct Element_Indices *ei,
                            const double xi[],
                            const int Iquant,

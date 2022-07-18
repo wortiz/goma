@@ -1357,9 +1357,8 @@ Revised:         Summer 1998, SY Tam (UNM)
     err = load_bf_grad();
     GOMA_EH(err, "load_bf_grad");
 
-    
-      err = load_fv_vector();
-      GOMA_EH(err, "load_fv_vector");
+    err = load_fv_vector();
+    GOMA_EH(err, "load_fv_vector");
 
     /*
      * Finally, load the mesh derivatives of the gradients of the
@@ -2783,9 +2782,9 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
       if (call_nedelec) {
         err = apply_nedelec_bc(x, resid_vector, delta_t, theta, &pg_data, ielem, ielem_type,
-                                  num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
-                                  num_total_nodes, WEAK_INT_NEDELEC, time_value, element_search_grid,
-                                  exo);
+                               num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
+                               num_total_nodes, WEAK_INT_NEDELEC, time_value, element_search_grid,
+                               exo);
         GOMA_EH(err, " apply_integrated_bc");
 #ifdef CHECK_FINITE
         err = CHECKFINITE("apply_integrated_bc");
@@ -2795,7 +2794,6 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (neg_elem_volume)
           return -1;
       }
-
 
     } while ((elem_side_bc = elem_side_bc->next_side_bc) != NULL);
   } /* END if (First_Elem_Side_BC_Array[ielem] != NULL) */
@@ -3091,7 +3089,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       call_int = 0;
       call_col = 0;
       call_contact = 0.;
-int      call_nedelec = 0.;
+      int call_nedelec = 0.;
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
         bct = BC_Types[bc_input_id].desc->method;
         if (bct == STRONG_INT_SURF)
@@ -3215,9 +3213,9 @@ int      call_nedelec = 0.;
       }
       if (call_nedelec) {
         err = apply_nedelec_bc(x, resid_vector, delta_t, theta, &pg_data, ielem, ielem_type,
-                                  num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
-                                  num_total_nodes, STRONG_INT_NEDELEC, time_value, element_search_grid,
-                                  exo);
+                               num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
+                               num_total_nodes, STRONG_INT_NEDELEC, time_value, element_search_grid,
+                               exo);
         GOMA_EH(err, " apply_integrated_bc");
 #ifdef CHECK_FINITE
         err = CHECKFINITE("apply_integrated_bc");
@@ -3491,8 +3489,9 @@ int      call_nedelec = 0.;
     MMH_ip = -1;
   }
 
-  if ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
-      (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1)) {
+  if (Proc_NS_List_Length > 0 &&
+      ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
+       (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1))) {
     if (zeroCA == 0) {
       int count = 0, Num_CAs_done = 0;
       for (j = 0; j < MAX_CA; j++) {

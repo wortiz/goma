@@ -156,7 +156,7 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 
 // Electromagnetic
 #define COMPLEX_CONSTANT 2
-#define RADIAL_PML 3
+#define RADIAL_PML       3
 
 /* Viscoelastic Constitutive equation parameters */
 

@@ -18,6 +18,7 @@
 
 /* Standard include files */
 
+#include "mm_fill_em.h"
 #include "rf_solve.h"
 #include <math.h>
 #include <stdio.h>
@@ -323,6 +324,7 @@ int VISCOUS_STRESS = -1;
 int VISCOUS_STRESS_NORM = -1;
 int VISCOUS_VON_MISES_STRESS = -1;
 int EM_CONTOURS = -1;
+int TOTAL_EM_CONTOURS = -1;
 
 int len_u_post_proc = 0; /* size of dynamically allocated u_post_proc
                           * actually is */
@@ -1324,6 +1326,40 @@ static int calc_standard_fields(double **post_proc_vect,
     }
   }
 
+  if (TOTAL_EM_CONTOURS != -1 && pd->v[pg->imtrx][EM_E1_REAL]) {
+    index = 0;
+    const double c0 = 3e14;
+    dbl x = fv->x[0];
+    dbl y = fv->x[1];
+    dbl z = fv->x[2];
+    dbl freq = upd->Acoustic_Frequency;
+    dbl lambda0 = c0 / freq;
+    dbl k0 = 2 * M_PI / lambda0;
+    complex double wave[3] = {0};
+    complex double curl_wave[3];
+    if (mp->PermittivityModel != RADIAL_PML) {
+      plane_wave(x, y, z, k0, wave, curl_wave);
+    }
+
+    for (b = 0; b < dim; b++) {
+
+      if (pd->v[pg->imtrx][EM_E1_REAL]) {
+        local_post[TOTAL_EM_CONTOURS + index] = fv->em_er[b] + creal(wave[b]);
+        local_lumped[TOTAL_EM_CONTOURS + index] = 1.;
+        index++;
+      }
+    }
+
+    for (b = 0; b < dim; b++) {
+
+      if (pd->v[pg->imtrx][EM_E1_IMAG]) {
+        local_post[TOTAL_EM_CONTOURS + index] = fv->em_ei[b] + cimag(wave[b]);
+        local_lumped[TOTAL_EM_CONTOURS + index] = 1.;
+        index++;
+      }
+    }
+  }
+
   if (STRESS_CONT != -1 && pd->v[pg->imtrx][POLYMER_STRESS11]) {
     index = 0;
     for (mode = 0; mode < vn->modes; mode++) {
@@ -2291,13 +2327,39 @@ static int calc_standard_fields(double **post_proc_vect,
     /*  EM vector, E & H formulation   */
     else if (pd->e[pg->imtrx][R_EM_E1_REAL] || pd->e[pg->imtrx][R_EM_E2_REAL] ||
              pd->e[pg->imtrx][R_EM_E3_REAL]) {
-      for (a = 0; a < DIM; a++) {
-        for (b = 0; b < DIM; b++) {
-          for (c = 0; c < DIM; c++) {
-            poynt[a] += 0.5 * permute(b, c, a) *
-                        (fv->em_er[b] * fv->em_hr[c] + fv->em_ei[b] * fv->em_hi[c]);
-          }
+      const double c0 = 3e14;
+      const double nu0 = 120 * M_PI;
+      const double e0 = (1e-9) / (36 * M_PI);
+      const double mu0 = 4 * M_PI * 1e-13;
+
+      dbl freq = upd->Acoustic_Frequency;
+      dbl lambda0 = c0 / freq;
+      dbl k0 = 2 * M_PI / lambda0;
+      dbl Z0 = mu0 * c0;
+      complex double permittivity;
+      complex double permittivity_matrix[DIM];
+      bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
+      if (!permittivity_is_matrix) {
+
+        dbl Z1 = Z0 / sqrt(creal(permittivity));
+        dbl S0 = 1 / (2 * Z1);
+
+        complex double j = _Complex_I;
+        complex double E_s[DIM] = {fv->em_er[0] + j * fv->em_ei[0], fv->em_er[1] + j * fv->em_ei[1],
+                                   fv->em_er[2] + j * fv->em_ei[2]};
+        complex double curl_E_s[DIM] = {fv->curl_em_er[0] + j * fv->curl_em_ei[0],
+                                        fv->curl_em_er[1] + j * fv->curl_em_ei[1],
+                                        fv->curl_em_er[2] + j * fv->curl_em_ei[2]};
+
+        complex double H_s[DIM] = {0.0, 0.0, 0.0};
+
+        for (int i = 0; i < DIM; i++) {
+          H_s[i] = conj((1 / (j * k0 * mu0)) * curl_E_s[i]);
         }
+
+        poynt[0] = creal(E_s[1] * H_s[2] - E_s[2] * H_s[1]);
+        poynt[1] = creal(E_s[2] * H_s[0] - E_s[0] * H_s[2]);
+        poynt[2] = creal(E_s[0] * H_s[1] - E_s[1] * H_s[0]);
       }
     }
     for (a = 0; a < dim; a++) {
@@ -3411,7 +3473,9 @@ static int calc_standard_fields(double **post_proc_vect,
      *  check to make sure that unknowns are defined at this node,
      *  otherwise don't add anything to this node
      */
-    ldof = bf[pd->ProjectionVar]->interpolation == I_N1 ? i : ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
+    ldof = bf[pd->ProjectionVar]->interpolation == I_N1
+               ? i
+               : ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
     if (ldof >= 0) {
       phi_i = bf[eqn]->phi[ldof];
       for (var = 0; var < rd->TotalNVPostOutput; var++) {
@@ -7221,7 +7285,8 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   iread = look_for_post_proc(ifp, "Fill contours", &FILL_CONT);
   iread = look_for_post_proc(ifp, "Concentration contours", &CONC_CONT);
   iread = look_for_post_proc(ifp, "Stress contours", &STRESS_CONT);
-    iread = look_for_post_proc(ifp, "EM contours", &EM_CONTOURS);
+  iread = look_for_post_proc(ifp, "EM contours", &EM_CONTOURS);
+  iread = look_for_post_proc(ifp, "Total EM", &TOTAL_EM_CONTOURS);
   iread = look_for_post_proc(ifp, "First Invariant of Strain", &FIRST_INVAR_STRAIN);
   iread = look_for_post_proc(ifp, "Second Invariant of Strain", &SEC_INVAR_STRAIN);
   iread = look_for_post_proc(ifp, "Third Invariant of Strain", &THIRD_INVAR_STRAIN);
@@ -9240,6 +9305,56 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
       if (dim > 2) {
         sprintf(species_name, "EM_IMAGZ");
+        sprintf(species_desc, "EM Z Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+    }
+  }
+  if (TOTAL_EM_CONTOURS != -1 && Num_Var_In_Type[pg->imtrx][EM_E1_REAL]) {
+    TOTAL_EM_CONTOURS = index_post;
+    int dim = pd->Num_Dim;
+    if (pd->gv[EM_E1_REAL]) {
+      sprintf(species_name, "EM_TOT_REALX");
+      sprintf(species_desc, "EM X Vector");
+      set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+      index++;
+      index_post++;
+
+      if (dim > 1) {
+        sprintf(species_name, "EM_TOT_REALY");
+        sprintf(species_desc, "EM Y Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+
+      if (dim > 2) {
+        sprintf(species_name, "EM_TOT_REALZ");
+        sprintf(species_desc, "EM Z Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+    }
+    if (pd->gv[EM_E1_IMAG]) {
+      sprintf(species_name, "EM_TOT_IMAGX");
+      sprintf(species_desc, "EM X Vector");
+      set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+      index++;
+      index_post++;
+
+      if (dim > 1) {
+        sprintf(species_name, "EM_TOT_IMAGY");
+        sprintf(species_desc, "EM Y Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+
+      if (dim > 2) {
+        sprintf(species_name, "EM_TOT_IMAGZ");
         sprintf(species_desc, "EM Z Vector");
         set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
         index++;

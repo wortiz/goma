@@ -17,7 +17,8 @@
  */
 
 /* Standard include files */
-
+#include <complex.h>
+#undef I
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +45,7 @@
 #include "mm_eh.h"
 #include "mm_fill_aux.h"
 #include "mm_fill_common.h"
+#include "mm_fill_em.h"
 #include "mm_fill_fill.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_porous.h"
@@ -504,6 +506,9 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
             err = load_bf_grad();
             GOMA_EH(err, "load_bf_grad");
+
+            err = load_fv_vector();
+            GOMA_EH(err, "load_fv_vector");
 
             err = load_bf_mesh_derivs();
             GOMA_EH(err, "load_bf_mesh_derivs");
@@ -1853,6 +1858,64 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 GOMA_EH(GOMA_ERROR, "Torque cannot be calculated in this case.");
               }
               break;
+            case SCATTERING_CROSS_SECTION: {
+              const double c0 = 3e14;
+              const double nu0 = 120 * M_PI;
+              const double e0 = (1e-9) / (36 * M_PI);
+              const double mu0 = 4 * M_PI * 1e-13;
+
+              dbl freq = upd->Acoustic_Frequency;
+              dbl lambda0 = c0 / freq;
+              dbl k0 = 2 * M_PI / lambda0;
+              dbl Z0 = mu0 * c0;
+              complex double permittivity;
+              complex double permittivity_matrix[DIM];
+              bool permittivity_is_matrix =
+                  relative_permittivity_model(&permittivity, permittivity_matrix);
+              if (permittivity_is_matrix) {
+                GOMA_EH(GOMA_ERROR, "Trying to compute scattered cross section when permittivity "
+                                    "is a matrix, not supported");
+              }
+              dbl Z1 = Z0 / sqrt(creal(12.25));
+              dbl S0 = 1 / (2 * Z1);
+
+              complex double j = _Complex_I;
+              complex double E_s[DIM] = {fv->em_er[0] + j * fv->em_ei[0],
+                                         fv->em_er[1] + j * fv->em_ei[1],
+                                         fv->em_er[2] + j * fv->em_ei[2]};
+              complex double curl_E_s[DIM] = {fv->curl_em_er[0] + j * fv->curl_em_ei[0],
+                                              fv->curl_em_er[1] + j * fv->curl_em_ei[1],
+                                              fv->curl_em_er[2] + j * fv->curl_em_ei[2]};
+
+              complex double H_s[DIM] = {0.0, 0.0, 0.0};
+
+              for (int i = 0; i < DIM; i++) {
+                H_s[i] = conj((c0 / (j * freq)) * curl_E_s[i]);
+              }
+
+              complex double P[DIM] = {
+                  E_s[1] * H_s[2] - E_s[2] * H_s[1],
+                  E_s[2] * H_s[0] - E_s[0] * H_s[2],
+                  E_s[0] * H_s[1] - E_s[1] * H_s[0],
+              };
+
+              for (a = 0; a < dim; a++) {
+                local_q += (1 / S0) * creal(P[a]) * fv->snormal[a];
+                // local_q += creal(P[a]) * fv->snormal[a];
+              }
+              printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, lambda0 = %g, mu0 = %g, local_q = "
+                     "%g\n",
+                     S0, k0, Z0, lambda0, mu0, local_q);
+              // printf("E = [%g + i %g] [%g + i %g] [%g + i %g]\nH =  [%g + i %g] [%g + i %g] [%g +
+              // "
+              //        "i %g]\nS = [%g + i %g] [%g + i %g] [%g + i %g] \n",
+              //        creal(E_s[0]), cimag(E_s[0]), creal(E_s[1]), cimag(E_s[1]), creal(E_s[2]),
+              //        cimag(E_s[2]), creal(H_s[0]), cimag(H_s[0]), creal(H_s[1]), cimag(H_s[1]),
+              //        creal(H_s[2]), cimag(H_s[2]), creal(P[0]), cimag(P[0]), creal(P[1]),
+              //        cimag(P[1]), creal(P[2]), cimag(P[2]));
+              //
+              local_flux += weight * det * local_q;
+            } break;
 
             case N_DOT_X:
               /*

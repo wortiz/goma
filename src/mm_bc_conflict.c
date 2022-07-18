@@ -2611,8 +2611,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                       if (BC_Types[ibc1].desc->method == WEAK_INT_SURF ||
                           BC_Types[ibc1].desc->method == WEAK_SHARP_INT ||
                           BC_Types[ibc1].desc->method == WEAK_INT_NEDELEC ||
-                        BC_Types[ibc1].desc->method == STRONG_INT_NEDELEC) {
-                          save_this_bc1[q][j] = 1;
+                          BC_Types[ibc1].desc->method == STRONG_INT_NEDELEC) {
+                        save_this_bc1[q][j] = 1;
 
                         /* retain all weak conditions */
                       } else if (BC_Types[ibc1].desc->method == WEAK_SHIFT) {

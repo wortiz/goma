@@ -1074,7 +1074,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       DPRINTF(stdout, "%7.1e ", Norm[0][2]);
 
     fflush(stdout);
-    
+
     if ((inewton > 0) && (Norm[0][2] < Epsilon[pg->imtrx][0]) &&
         (Norm[0][0] < Epsilon[pg->imtrx][0]) && (Norm[2][2] < Epsilon[pg->imtrx][0]) &&
         (Norm[2][0] < Epsilon[pg->imtrx][0])) {
