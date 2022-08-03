@@ -3430,8 +3430,9 @@ Revised:         Summer 1998, SY Tam (UNM)
     MMH_ip = -1;
   }
 
-  if ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
-      (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1)) {
+  if (Proc_NS_List_Length > 0 &&
+      ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
+       (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1))) {
     if (zeroCA == 0) {
       int count = 0, Num_CAs_done = 0;
       for (j = 0; j < MAX_CA; j++) {
@@ -3442,7 +3443,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       }
 
       if (count != Num_CAs_done) {
-        GOMA_WH(-1, "\nNot all contact angle conditions were applied!\n");
+        GOMA_WH(-1, "\n!@!Not all contact angle conditions were applied!\n");
         for (j = 0; j < count; j++) {
           fprintf(stderr, "CA:%d ID:%d fselem:%d sselem:%d Proc:%d\n", j, CA_id[j], CA_fselem[j],
                   CA_sselem[j], CA_proc[j]);
@@ -4774,8 +4775,9 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     P0PRINTF("%s: ends\n", yo);
     MMH_ip = -1;
   }
-  if ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
-      (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1)) {
+  if (Proc_NS_List_Length > 0 &&
+      ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
+       (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1))) {
     if (zeroCA == 0) {
       int count = 0, Num_CAs_done = 0;
       for (j = 0; j < MAX_CA; j++) {

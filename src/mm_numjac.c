@@ -587,7 +587,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
           i = coloring->rowptr[idx];
           var_i = idv[pg->imtrx][i][0];
           var_j = idv[pg->imtrx][j][0];
-          int gnode;
+          int gnode = 0;
           int ivd;
           int i_offset;
           int idof;

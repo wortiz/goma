@@ -2286,18 +2286,57 @@ int assemble_momentum(dbl time,       /* current time */
   /*** Density ***/
   rho = density(d_rho, time);
 
+  supg_terms.supg_tau = 0.0;
   if (supg != 0.) {
-    dbl gamma[DIM][DIM];
+    dbl hh_siz = 0.;
+    for (p = 0; p < dim; p++) {
+      hh_siz += pg_data->hsquared[p];
+    }
+    // Average value of h**2 in the element
+    hh_siz = hh_siz / ((dbl)dim);
 
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
-        gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+    // Average value of v**2 in the element
+    dbl vv_speed = 0.0;
+    for (a = 0; a < WIM; a++) {
+      vv_speed += pg_data->v_avg[a] * pg_data->v_avg[a];
+    }
+
+    // Use vv_speed and hh_siz for tau_pspg, note it has a continuous dependence on Re
+    dbl tau_pspg1 = pg_data->rho_avg * pg_data->rho_avg * vv_speed / hh_siz + (9.0 * pg_data->mu_avg * pg_data->mu_avg) / (hh_siz * hh_siz);
+    if (pd->TimeIntegration != STEADY) {
+      tau_pspg1 += 4.0 / (dt * dt);
+    }
+    dbl tau_pspg = PS_scaling / sqrt(tau_pspg1);
+    supg_terms.supg_tau = tau_pspg;
+
+    // tau_pspg derivatives wrt v from vv_speed
+    if (pd->v[pg->imtrx][VELOCITY1]) {
+      for (b = 0; b < dim; b++) {
+        var = VELOCITY1 + b;
+        if (pd->v[pg->imtrx][var]) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            supg_terms.d_supg_tau_dv[b][j] = -tau_pspg / tau_pspg1;
+            supg_terms.d_supg_tau_dv[b][j] *= pg_data->rho_avg * pg_data->rho_avg / hh_siz * pg_data->v_avg[b] * pg_data->dv_dnode[b][j];
+          }
+        }
       }
     }
 
-    dbl mu = viscosity(gn, gamma, NULL);
-    supg_tau(&supg_terms, dim, (2 / (rho * sqrt(3))) * mu, pg_data, dt,
-             mp->Mwt_funcModel == SUPG_SHAKIB, VELOCITY1);
+    // tau_pspg derivatives wrt mesh from hh_siz
+    if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+      for (b = 0; b < dim; b++) {
+        var = MESH_DISPLACEMENT1 + b;
+        if (pd->v[pg->imtrx][var]) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            supg_terms.d_supg_tau_dX[b][j] = tau_pspg / tau_pspg1;
+            supg_terms.d_supg_tau_dX[b][j] *=
+                (pg_data->rho_avg * pg_data->rho_avg * vv_speed + 18.0 * pg_data->mu_avg * pg_data->mu_avg / hh_siz) /
+                (hh_siz * hh_siz);
+            supg_terms.d_supg_tau_dX[b][j] *= pg_data->hhv[b][b] * pg_data->dhv_dxnode[b][j] / ((dbl)dim);
+          }
+        }
+      }
+    }
   }
   /* end Petrov-Galerkin addition */
 

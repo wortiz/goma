@@ -1215,7 +1215,7 @@ int assemble_stress_fortin(dbl tt, /* parameter to vary time integration from
   int evss_gradv = 0;
 
   int i, j, status, mode;
-  dbl v[DIM];      /* Velocity field. */
+  dbl v[DIM] = {0.0};      /* Velocity field. */
   dbl x_dot[DIM];  /* current position field derivative wrt time. */
   dbl h3;          /* Volume element (scale factors). */
   dbl dh3dmesh_pj; /* Sensitivity to (p,j) mesh dof. */
@@ -2383,7 +2383,7 @@ int assemble_stress_log_conf(dbl tt,
 
   int i, j, status, mode;
   int logc_gradv = 0;
-  dbl v[DIM];
+  dbl v[DIM] = {0.0};
   dbl x_dot[DIM];
   dbl h3;
 
@@ -2748,7 +2748,7 @@ int assemble_stress_log_conf(dbl tt,
                   for (int w = 0; w < dim; w++) {
                     tmp += (v[w] - x_dot[w]) * (v[w] - x_dot[w]);
                   }
-                  tmp = 1.0 / sqrt(tmp);
+                  tmp = 1.0 / sqrt(tmp + 1e-16);
                   for (int w = 0; w < dim; w++) {
                     s[w] = (v[w] - x_dot[w]) * tmp;
                   }
@@ -2793,10 +2793,10 @@ int assemble_stress_log_conf(dbl tt,
                   }
                   magv = sqrt(magv);
 
-                  dbl tau_dcdd = 0.5 * he * magv * magv * pow((1.0 / mags) * hrgn, 1.0);
-                  // dbl tau_dcdd = (1.0 / mags) * hrgn * hrgn;
-                  tau_dcdd = 1 / sqrt(1.0 / (supg_terms.supg_tau * supg_terms.supg_tau) +
-                                      1.0 / (tau_dcdd * tau_dcdd));
+                  //dbl tau_dcdd = 0.5 * he * magv * magv * pow((1.0 / mags) * hrgn, 1.0);
+                  dbl tau_dcdd = (1.0 / mags) * hrgn * hrgn;
+                  tau_dcdd = 1 / sqrt(1.0 / (supg_terms.supg_tau * supg_terms.supg_tau + 1e-32) +
+                                      1.0 / (tau_dcdd * tau_dcdd + 1e-32));
                   dbl ss[DIM][DIM] = {{0.0}};
                   dbl rr[DIM][DIM] = {{0.0}};
                   dbl rdots = 0.0;
@@ -3112,8 +3112,17 @@ int assemble_stress_log_conf_transient(dbl tt, dbl dt, PG_DATA *pg_data) {
     // PTT exponent
     eps = ve[mode]->eps;
 
-    // Exponential term for PTT
-    Z = exp(eps * (trace - (double)VIM));
+    // PTT
+    Z = 1;
+    if (vn->ConstitutiveEquation == PTT) {
+      if (vn->ptt_type == PTT_LINEAR) {
+        Z = 1 + eps * (trace - (double)VIM);
+      } else if (vn->ptt_type == PTT_EXPONENTIAL) {
+        Z = exp(eps * (trace - (double)VIM));
+      } else {
+        GOMA_EH(GOMA_ERROR, "Unrecognized PTT Form %d", vn->ptt_type);
+      }
+    }
 
     siz = sizeof(double) * DIM * DIM;
     memset(tmp1, 0, siz);
@@ -6400,7 +6409,18 @@ void compute_saramito_model_terms(dbl *sCoeff,
    * https://en.wikipedia.org/wiki/Cauchy_stress_tensor#Invariants_of_the_stress_deviator_tensor
    */
 
-  const dbl yieldStress = gn_local->tau_y;
+  dbl yieldStress;
+  if (ve[0]->yieldModel == CONSTANT) {
+    yieldStress = gn_local->tau_y;
+  } else if (ls != NULL && ve[0]->yieldModel == VE_LEVEL_SET) {
+    double pos_yieldStress = ve[0]->pos_ls.yieldStress;
+    double neg_yieldStress = gn_local->tau_y;
+    double width = ls->Length_Scale;
+    goma_error err = level_set_property(neg_yieldStress, pos_yieldStress, width, &yieldStress, NULL);
+    GOMA_EH(err, "level_set_property() failed for mobility parameter.");
+  } else {
+    GOMA_EH(GOMA_ERROR, "Unknown yieldStress parameter model");
+  }
   const dbl yieldExpon = gn_local->fexp;
   const dbl m = 1. / gn_local->nexp;
 

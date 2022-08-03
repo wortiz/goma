@@ -2556,11 +2556,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       dbl tau_y_val;
       dbl fexp_val;
       dbl nexp_val;
+      mm = 0;
 
       strcpy(search_string, "Polymer Yield Stress");
       model_read = look_for_mat_prop(imp, search_string, &(ConstitutiveEquation), &tau_y_val,
                                      NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
+      ve_glob[mn][mm]->yieldModel = CONSTANT;
       if (model_read < 1) {
         if (model_read == -1)
           SPF(err_msg, "%s card is missing.", search_string);
@@ -2569,6 +2571,28 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         fprintf(stderr, "%s\n", err_msg);
         exit(-1);
       }
+
+      strcpy(search_string, "Positive Level Set Polymer Yield Stress");
+      model_read =
+          look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model, modal_data, es);
+
+      if (model_read == 1) {
+
+        if (ls == NULL)
+          GOMA_EH(
+              GOMA_ERROR,
+              "Positive Level Set Polymer Yield Stress requires activation of Level Set Tracking.\n");
+
+        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+          ve_glob[mn][mm]->pos_ls.yieldStress = modal_data[mm];
+          ve_glob[mn][mm]->yieldModel = VE_LEVEL_SET;
+        }
+
+        ECHO(es, echo_file);
+      } else if (model_read == -2) {
+        GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
+      }
+
 
       strcpy(search_string, "Yield Exponent");
       model_read = look_for_mat_prop(imp, search_string, &(ConstitutiveEquation), &fexp_val,

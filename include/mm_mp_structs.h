@@ -1119,6 +1119,8 @@ struct Positive_LS_Viscoelastic_Properties {
   double xi; /* This is the PTT upper convected / lower convected weight parameter */
 
   double eps; /* This is the PTT elongational parameter */
+
+  dbl yieldStress; /* This is the PTT elongational parameter */
 };
 
 struct Viscoelastic_Constitutive {
@@ -1138,6 +1140,8 @@ struct Viscoelastic_Constitutive {
 
   dbl eps; /* This is the PTT elongational parameter */
   int epsModel;
+
+  int yieldModel;
 
   struct Positive_LS_Viscoelastic_Properties pos_ls;
 };
