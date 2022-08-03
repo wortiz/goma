@@ -2579,9 +2579,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (model_read == 1) {
 
         if (ls == NULL)
-          GOMA_EH(
-              GOMA_ERROR,
-              "Positive Level Set Polymer Yield Stress requires activation of Level Set Tracking.\n");
+          GOMA_EH(GOMA_ERROR, "Positive Level Set Polymer Yield Stress requires activation of "
+                              "Level Set Tracking.\n");
 
         for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
           ve_glob[mn][mm]->pos_ls.yieldStress = modal_data[mm];
@@ -2592,7 +2591,6 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       } else if (model_read == -2) {
         GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
       }
-
 
       strcpy(search_string, "Yield Exponent");
       model_read = look_for_mat_prop(imp, search_string, &(ConstitutiveEquation), &fexp_val,

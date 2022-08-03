@@ -666,8 +666,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   }
 
   for (iAC = 0; iAC < nAC; iAC++) {
-    if (augc[iAC].Type != AC_USERBC && augc[iAC].Type != AC_FLUX) {
-      GOMA_EH(GOMA_ERROR, "Can only use BC and flux AC's in segregated solve");
+    if (augc[iAC].Type != AC_USERBC && augc[iAC].Type != AC_FLUX && augc[iAC].Type != AC_LGRM) {
+      GOMA_EH(GOMA_ERROR, "Can only use BC and flux AC's in segregated solve, found type %d",
+              augc[iAC].Type);
     }
   }
 
@@ -721,6 +722,22 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
         if (upd->vp[imtrx][R_MOMENTUM1] > -1) {
           GOMA_WH(-1, "Associating FLUX AC with momentum matrix");
+          found = TRUE;
+          matrix_augc[imtrx][matrix_nAC[imtrx]] = augc[iAC];
+          invACidx[imtrx][matrix_nAC[imtrx]] = iAC;
+          matrix_nAC[imtrx]++;
+        }
+      }
+
+      if (!found) {
+        GOMA_EH(GOMA_ERROR, "Could not associate FLUX AC with momentum matrix");
+      }
+    } else if (augc[iAC].Type == AC_LGRM) {
+      int found = FALSE;
+      int imtrx;
+      for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+        if (upd->vp[imtrx][R_MOMENTUM1] > -1) {
+          GOMA_WH(-1, "Associating LGRM AC with momentum matrix");
           found = TRUE;
           matrix_augc[imtrx][matrix_nAC[imtrx]] = augc[iAC];
           invACidx[imtrx][matrix_nAC[imtrx]] = iAC;

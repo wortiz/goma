@@ -1215,10 +1215,10 @@ int assemble_stress_fortin(dbl tt, /* parameter to vary time integration from
   int evss_gradv = 0;
 
   int i, j, status, mode;
-  dbl v[DIM] = {0.0};      /* Velocity field. */
-  dbl x_dot[DIM];  /* current position field derivative wrt time. */
-  dbl h3;          /* Volume element (scale factors). */
-  dbl dh3dmesh_pj; /* Sensitivity to (p,j) mesh dof. */
+  dbl v[DIM] = {0.0}; /* Velocity field. */
+  dbl x_dot[DIM];     /* current position field derivative wrt time. */
+  dbl h3;             /* Volume element (scale factors). */
+  dbl dh3dmesh_pj;    /* Sensitivity to (p,j) mesh dof. */
 
   dbl grad_v[DIM][DIM];
   dbl gamma[DIM][DIM]; /* Shear-rate tensor based on velocity */
@@ -2793,7 +2793,7 @@ int assemble_stress_log_conf(dbl tt,
                   }
                   magv = sqrt(magv);
 
-                  //dbl tau_dcdd = 0.5 * he * magv * magv * pow((1.0 / mags) * hrgn, 1.0);
+                  // dbl tau_dcdd = 0.5 * he * magv * magv * pow((1.0 / mags) * hrgn, 1.0);
                   dbl tau_dcdd = (1.0 / mags) * hrgn * hrgn;
                   tau_dcdd = 1 / sqrt(1.0 / (supg_terms.supg_tau * supg_terms.supg_tau + 1e-32) +
                                       1.0 / (tau_dcdd * tau_dcdd + 1e-32));
@@ -6416,7 +6416,8 @@ void compute_saramito_model_terms(dbl *sCoeff,
     double pos_yieldStress = ve[0]->pos_ls.yieldStress;
     double neg_yieldStress = gn_local->tau_y;
     double width = ls->Length_Scale;
-    goma_error err = level_set_property(neg_yieldStress, pos_yieldStress, width, &yieldStress, NULL);
+    goma_error err =
+        level_set_property(neg_yieldStress, pos_yieldStress, width, &yieldStress, NULL);
     GOMA_EH(err, "level_set_property() failed for mobility parameter.");
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown yieldStress parameter model");

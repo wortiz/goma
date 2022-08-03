@@ -2302,7 +2302,8 @@ int assemble_momentum(dbl time,       /* current time */
     }
 
     // Use vv_speed and hh_siz for tau_pspg, note it has a continuous dependence on Re
-    dbl tau_pspg1 = pg_data->rho_avg * pg_data->rho_avg * vv_speed / hh_siz + (9.0 * pg_data->mu_avg * pg_data->mu_avg) / (hh_siz * hh_siz);
+    dbl tau_pspg1 = pg_data->rho_avg * pg_data->rho_avg * vv_speed / hh_siz +
+                    (9.0 * pg_data->mu_avg * pg_data->mu_avg) / (hh_siz * hh_siz);
     if (pd->TimeIntegration != STEADY) {
       tau_pspg1 += 4.0 / (dt * dt);
     }
@@ -2316,7 +2317,8 @@ int assemble_momentum(dbl time,       /* current time */
         if (pd->v[pg->imtrx][var]) {
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             supg_terms.d_supg_tau_dv[b][j] = -tau_pspg / tau_pspg1;
-            supg_terms.d_supg_tau_dv[b][j] *= pg_data->rho_avg * pg_data->rho_avg / hh_siz * pg_data->v_avg[b] * pg_data->dv_dnode[b][j];
+            supg_terms.d_supg_tau_dv[b][j] *= pg_data->rho_avg * pg_data->rho_avg / hh_siz *
+                                              pg_data->v_avg[b] * pg_data->dv_dnode[b][j];
           }
         }
       }
@@ -2329,10 +2331,11 @@ int assemble_momentum(dbl time,       /* current time */
         if (pd->v[pg->imtrx][var]) {
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             supg_terms.d_supg_tau_dX[b][j] = tau_pspg / tau_pspg1;
+            supg_terms.d_supg_tau_dX[b][j] *= (pg_data->rho_avg * pg_data->rho_avg * vv_speed +
+                                               18.0 * pg_data->mu_avg * pg_data->mu_avg / hh_siz) /
+                                              (hh_siz * hh_siz);
             supg_terms.d_supg_tau_dX[b][j] *=
-                (pg_data->rho_avg * pg_data->rho_avg * vv_speed + 18.0 * pg_data->mu_avg * pg_data->mu_avg / hh_siz) /
-                (hh_siz * hh_siz);
-            supg_terms.d_supg_tau_dX[b][j] *= pg_data->hhv[b][b] * pg_data->dhv_dxnode[b][j] / ((dbl)dim);
+                pg_data->hhv[b][b] * pg_data->dhv_dxnode[b][j] / ((dbl)dim);
           }
         }
       }
@@ -3719,7 +3722,7 @@ int assemble_momentum(dbl time,       /* current time */
            * J_m_G
            */
           if (gn->ConstitutiveEquation == BINGHAM_MIXED ||
-              (pdv[POLYMER_STRESS11] &&
+              (pd->gv[POLYMER_STRESS11] &&
                (vn->evssModel == EVSS_F || vn->evssModel == LOG_CONF ||
                 vn->evssModel == EVSS_GRADV || vn->evssModel == LOG_CONF_GRADV))) {
             for (b = 0; b < VIM; b++) {
@@ -4283,8 +4286,7 @@ int assemble_continuity(dbl time_value, /* current time */
      */
 
     w0 =
-        (int)
-            mp->u_density[0]; /* This is the species number that is transported HYDRODYNAMICally  */
+        (int)mp->u_density[0]; /* This is the species number that is transported HYDRODYNAMICally */
 
     hydro_flux(&s_terms, w0, tt, dt, pg_data->hsquared);
 
@@ -27046,7 +27048,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
   }
 
-  if (d_Pi != NULL && pd->gv[VELOCITY_GRADIENT11] && pd->gv[POLYMER_STRESS11]) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][VELOCITY_GRADIENT11] && pd->gv[POLYMER_STRESS11]) {
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
         for (b = 0; b < VIM; b++) {
@@ -27064,7 +27066,8 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
       }
     }
   }
-  if (d_Pi != NULL && pd->gv[VELOCITY_GRADIENT11] && gn->ConstitutiveEquation == BINGHAM_MIXED) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][VELOCITY_GRADIENT11] &&
+      gn->ConstitutiveEquation == BINGHAM_MIXED) {
     dbl tau_y = gn->tau_y;
     for (p = 0; p < VIM; p++) {
       for (q = 0; q < VIM; q++) {
