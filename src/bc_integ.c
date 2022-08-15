@@ -2974,7 +2974,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         } break;
         case EM_FARFIELD_REAL_NED_BC:
         case EM_FARFIELD_IMAG_NED_BC:
-          apply_ewave_curlcurl_farfield_vec(func, d_func, xi, time_value, (int)bc->BC_Name,
+          apply_ewave_nedelec_farfield(func, d_func, xi, time_value, (int)bc->BC_Name,
                                             bc->BC_Data_Float);
           break;
         default:

@@ -116,7 +116,7 @@ int assemble_ewave_laplacian(double time,       // present time
                              const int em_var); //  variable id - should match me_eqn
 
 int assemble_em_continuity(void);
-int assemble_ewave_nedelec(void);
+int assemble_ewave_nedelec(dbl time);
 int em_mms_force(dbl x, dbl y, dbl z, complex double force[DIM]);
 int em_mms_exact(dbl x, dbl y, dbl z, complex double exact[DIM]);
 int plane_wave(

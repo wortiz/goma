@@ -3125,7 +3125,7 @@ struct BC_descriptions BC_Desc[] = {
      SINGLE_PHASE,
      DVI_SINGLE_PHASE_DB},
     {"EM_FARFIELD_REAL_NED",
-     "EM_FARFIELD_NED_BC",
+     "EM_FARFIELD_REAL_NED_BC",
      WEAK_INT_NEDELEC,
      EM_FARFIELD_REAL_NED_BC,
      R_EM_E1_REAL,

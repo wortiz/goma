@@ -1712,7 +1712,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     } else if (pde[R_EM_E1_REAL] && bf[EM_E1_REAL]->interpolation == I_N1) {
-      err = assemble_ewave_nedelec();
+      err = assemble_ewave_nedelec(time_value);
       GOMA_EH(err, "assemble_ewave_nedelec");
 #ifdef CHECK_FINITE
       err = CHECKFINITE("assemble_emwave");

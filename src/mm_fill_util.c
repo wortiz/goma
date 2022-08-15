@@ -4774,14 +4774,14 @@ void determine_ProjectionVar(PROBLEM_DESCRIPTION_STRUCT *pd_ptr)
       ((var = var_if_interp_type_enabled(pd_ptr, I_Q2_GP)) != -1) ||
       ((var = var_if_interp_type_enabled(pd_ptr, I_Q2_GN)) != -1) ||
       ((var = var_if_interp_type_enabled(pd_ptr, I_Q2_XV)) != -1) ||
+      ((var = var_if_interp_type_enabled(pd_ptr, I_N1)) != -1) ||
       ((var = var_if_interp_type_enabled(pd_ptr, I_SP)) != -1) ||
       ((var = var_if_interp_type_enabled(pd_ptr, I_Q1)) != -1) ||
       ((var = var_if_interp_type_enabled(pd_ptr, I_Q1_D)) != -1) ||
       ((var = var_if_interp_type_enabled(pd_ptr, I_Q1_G)) != -1) ||
       ((var = var_if_interp_type_enabled(pd_ptr, I_Q1_GP)) != -1) ||
       ((var = var_if_interp_type_enabled(pd_ptr, I_Q1_GN)) != -1) ||
-      ((var = var_if_interp_type_enabled(pd_ptr, I_Q1_XV)) != -1) ||
-      ((var = var_if_interp_type_enabled(pd_ptr, I_N1)) != -1)) {
+      ((var = var_if_interp_type_enabled(pd_ptr, I_Q1_XV)) != -1)) {
     pd_ptr->ProjectionVar = var;
   } else {
     P0PRINTF("Warning: No suitable basis function was found for a Projection "
