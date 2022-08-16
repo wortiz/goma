@@ -1667,6 +1667,14 @@ goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams) {
   return GOMA_SUCCESS;
 }
 
+int petsc_set_diagonal_only(struct GomaLinearSolverData *ams, int irow) {
+  PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;
+  MatSetOption(matrix_data->mat, MAT_NO_OFF_PROC_ZERO_ROWS, PETSC_TRUE);
+  PetscInt rows[1] = {matrix_data->local_to_global[irow]};
+  CHKERRQ(MatZeroRows(matrix_data->mat, 1, rows, 1.0, NULL, NULL));
+  return 0;
+}
+
 // vim: expandtab sw=2 ts=8
 int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *its) {
   PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;

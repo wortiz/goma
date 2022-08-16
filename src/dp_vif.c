@@ -2257,12 +2257,14 @@ void noahs_ark(void) {
       ddd_add_member(n, &ve_glob[i][mode]->eps, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->epsModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->yieldModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->saramitoNexpModel, 1, MPI_INT);
 
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.time_const, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.alpha, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.xi, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.eps, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.yieldStress, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->pos_ls.saramito_nexp, 1, MPI_DOUBLE);
     }
 
     /*

@@ -63,6 +63,10 @@
 #endif
 #endif
 
+#ifdef GOMA_ENABLE_PETSC
+#include "sl_petsc.h"
+#endif
+
 #include "az_aztec.h"
 
 /* goma include files (of course!) */
@@ -10593,6 +10597,26 @@ void check_xfem_contribution(
       if (fabs(xfem->active_vol[irow]) < eps * xfem->tot_vol[irow]) {
 
         EpetraSetDiagonalOnly(ams, ams->GlobalIDs[irow]);
+        resid[irow] = x[irow] - x_old_static[irow];
+
+        if (FALSE && xfem->active_vol[irow] != 0.) /* debugging */
+        {
+          DPRINTF(stderr, "kill partial equation, row=%d, n = %d, active/tot=%g\n", irow,
+                  idv[pg->imtrx][irow][2] + 1, fabs(xfem->active_vol[irow]) / xfem->tot_vol[irow]);
+        }
+      }
+    }
+  } else if (strcmp(Matrix_Format, "petsc") == 0) {
+    for (irow = 0; irow < N; irow++) {
+      eqn = idv[pg->imtrx][irow][0];
+      if (eqn == R_MASS || eqn == R_ENERGY) {
+        eps = eps_diffusive;
+      } else {
+        eps = eps_standard;
+      }
+      if (fabs(xfem->active_vol[irow]) < eps * xfem->tot_vol[irow]) {
+
+        petsc_set_diagonal_only(ams, irow);
         resid[irow] = x[irow] - x_old_static[irow];
 
         if (FALSE && xfem->active_vol[irow] != 0.) /* debugging */

@@ -87,5 +87,6 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
 goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, double *scale);
 
 goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams);
+int petsc_set_diagonal_only(struct GomaLinearSolverData *ams, int irow);
 #endif
 #endif // GOMA_SL_PETSC_H

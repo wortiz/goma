@@ -6418,12 +6418,24 @@ void compute_saramito_model_terms(dbl *sCoeff,
     double width = ls->Length_Scale;
     goma_error err =
         level_set_property(neg_yieldStress, pos_yieldStress, width, &yieldStress, NULL);
-    GOMA_EH(err, "level_set_property() failed for mobility parameter.");
+    GOMA_EH(err, "level_set_property() failed for yield stress parameter.");
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown yieldStress parameter model");
   }
   const dbl yieldExpon = gn_local->fexp;
-  const dbl m = 1. / gn_local->nexp;
+  dbl m = 1.;
+  if (ve[0]->saramitoNexpModel == CONSTANT) {
+    m = 1. / gn_local->nexp;
+  } else if (ls != NULL && ve[0]->saramitoNexpModel == VE_LEVEL_SET) {
+    double pos_mexp = 1. / ve[0]->pos_ls.saramito_nexp;
+    double neg_mexp = 1. / gn_local->nexp;
+    double width = ls->Length_Scale;
+    goma_error err =
+        level_set_property(neg_mexp, pos_mexp, width, &m, NULL);
+    GOMA_EH(err, "level_set_property() failed for Saramito nexp parameter.");
+  } else {
+    GOMA_EH(GOMA_ERROR, "Unknown Saramito nexp parameter model");
+  }
 
   dbl traceOverVIM = 0;
   for (int i = 0; i < VIM; i++) {

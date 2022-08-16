@@ -2616,6 +2616,25 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           GOMA_EH(GOMA_ERROR, err_msg);
         }
       }
+      strcpy(search_string, "Positive Level Set Saramito Power Law Exponent");
+      model_read =
+          look_for_modal_prop(imp, search_string, vn_glob[mn]->modes, &matl_model, modal_data, es);
+
+      if (model_read == 1) {
+
+        if (ls == NULL)
+          GOMA_EH(GOMA_ERROR, "Positive Level Set Saramito Power Law Exponent requires activation of "
+                              "Level Set Tracking.\n");
+
+        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+          ve_glob[mn][mm]->pos_ls.saramito_nexp = modal_data[mm];
+          ve_glob[mn][mm]->saramitoNexpModel = VE_LEVEL_SET;
+        }
+
+        ECHO(es, echo_file);
+      } else if (model_read == -2) {
+        GOMA_EH(GOMA_ERROR, "Only CONSTANT %s mode model supported.", search_string);
+      }
 
       for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
         ve_glob[mn][mm]->gn->tau_y = tau_y_val;

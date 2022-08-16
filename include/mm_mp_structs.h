@@ -1121,6 +1121,7 @@ struct Positive_LS_Viscoelastic_Properties {
   double eps; /* This is the PTT elongational parameter */
 
   dbl yieldStress; /* This is the PTT elongational parameter */
+  dbl saramito_nexp;
 };
 
 struct Viscoelastic_Constitutive {
@@ -1142,6 +1143,8 @@ struct Viscoelastic_Constitutive {
   int epsModel;
 
   int yieldModel;
+
+  int saramitoNexpModel;
 
   struct Positive_LS_Viscoelastic_Properties pos_ls;
 };
