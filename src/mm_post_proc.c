@@ -1307,7 +1307,7 @@ static int calc_standard_fields(double **post_proc_vect,
 
   if (EM_CONTOURS != -1 && pd->v[pg->imtrx][EM_E1_REAL]) {
     index = 0;
-    for (b = 0; b < dim; b++) {
+    for (b = 0; b < DIM; b++) {
 
       if (pd->v[pg->imtrx][EM_E1_REAL]) {
         local_post[EM_CONTOURS + index] = fv->em_er[b];
@@ -1316,7 +1316,7 @@ static int calc_standard_fields(double **post_proc_vect,
       }
     }
 
-    for (b = 0; b < dim; b++) {
+    for (b = 0; b < DIM; b++) {
 
       if (pd->v[pg->imtrx][EM_E1_IMAG]) {
         local_post[EM_CONTOURS + index] = fv->em_ei[b];
@@ -1341,7 +1341,7 @@ static int calc_standard_fields(double **post_proc_vect,
       plane_wave(x, y, z, k0, wave, curl_wave);
     }
 
-    for (b = 0; b < dim; b++) {
+    for (b = 0; b < DIM; b++) {
 
       if (pd->v[pg->imtrx][EM_E1_REAL]) {
         local_post[TOTAL_EM_CONTOURS + index] = fv->em_er[b] + creal(wave[b]);
@@ -1350,7 +1350,7 @@ static int calc_standard_fields(double **post_proc_vect,
       }
     }
 
-    for (b = 0; b < dim; b++) {
+    for (b = 0; b < DIM; b++) {
 
       if (pd->v[pg->imtrx][EM_E1_IMAG]) {
         local_post[TOTAL_EM_CONTOURS + index] = fv->em_ei[b] + cimag(wave[b]);
@@ -9264,7 +9264,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
   if (EM_CONTOURS != -1 && Num_Var_In_Type[pg->imtrx][EM_E1_REAL]) {
     EM_CONTOURS = index_post;
-    int dim = pd->Num_Dim;
+    int dim = DIM;
     if (pd->gv[EM_E1_REAL]) {
       sprintf(species_name, "EM_REALX");
       sprintf(species_desc, "EM X Vector");
@@ -9314,7 +9314,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
   }
   if (TOTAL_EM_CONTOURS != -1 && Num_Var_In_Type[pg->imtrx][EM_E1_REAL]) {
     TOTAL_EM_CONTOURS = index_post;
-    int dim = pd->Num_Dim;
+    int dim = DIM;
     if (pd->gv[EM_E1_REAL]) {
       sprintf(species_name, "EM_TOT_REALX");
       sprintf(species_desc, "EM X Vector");

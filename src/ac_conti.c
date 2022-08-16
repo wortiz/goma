@@ -62,6 +62,7 @@
 #include "rf_solver_const.h"
 #include "rf_util.h"
 #include "sl_auxutil.h"
+#include "sl_petsc.h"
 #include "sl_util.h" /* defines sl_init() */
 #include "sl_util_structs.h"
 #include "std.h"
@@ -592,6 +593,11 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   } else
     GOMA_EH(GOMA_ERROR, "Attempted to allocate unknown sparse matrix format");
 
+#ifdef GOMA_ENABLE_PETSC
+  if (upd->petsc_solve_post_proc && rd->TotalNVPostOutput) {
+    goma_setup_petsc_post_proc_matrix(exo, dpi, x, x_old, xdot, xdot_old);
+  }
+#endif
   init_vec(x, cx, exo, dpi, x_AC, nAC, &timeValueRead);
 
   /*  if read ACs, update data floats */

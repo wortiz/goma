@@ -3170,29 +3170,26 @@ bool relative_permittivity_model(complex double *permittivity_out,
       permittivity_matrix[2] = 1.0;
       return true;
     } else {
-      dbl L_c[DIM] = {L * fabs(x / L_mag), L * fabs(y / L_mag), L * fabs(z / L_mag)};
-      //
-      //    dbl cond[DIM] = {cond_max * pow(L_c[0] / d, power), cond_max * pow(L_c[1] / d, power),
-      //                     cond_max * pow(L_c[2] / d, power)};
-      //
-      //    complex double s[DIM] = {amp * (1 - _Complex_I * cond[0] / k0),
-      //                             amp * (1 - _Complex_I * cond[1] / k0),
-      //                             amp * (1 - _Complex_I * cond[2] / k0)};
+      dbl L_c[DIM] = {d, d , d};
+      dbl pml_x = x * L / d;
+      dbl pml_y = y * L / d;
+      dbl pml_z = z * L / d;
+
       dbl amax[DIM];
-      amax[0] = L_c[0] < 1e-8 ? 1 : 1 + amp * pow(fabs(x / L_c[0]), power);
-      amax[1] = L_c[1] < 1e-8 ? 1 : 1 + amp * pow(fabs(y / L_c[1]), power);
-      amax[2] = L_c[2] < 1e-8 ? 1 : 1 + amp * pow(fabs(z / L_c[2]), power);
+      amax[0] = L_c[0] < 1e-8 ? 1 : 1 + amp * pow(fabs(pml_x / L_c[0]), power);
+      amax[1] = L_c[1] < 1e-8 ? 1 : 1 + amp * pow(fabs(pml_y / L_c[1]), power);
+      amax[2] = L_c[2] < 1e-8 ? 1 : 1 + amp * pow(fabs(pml_z / L_c[2]), power);
 
       dbl cond[DIM];
       cond[0] = L_c[0] < 1e-8 ? 0
-                              : cond_max * sin(fabs(M_PI * x / (2 * L_c[0]))) *
-                                    sin(fabs(M_PI * x / (2 * L_c[0])));
+                              : cond_max * sin(fabs(M_PI * pml_x / (2 * L_c[0]))) *
+                                    sin(fabs(M_PI * pml_x / (2 * L_c[0])));
       cond[1] = L_c[1] < 1e-8 ? 0
-                              : cond_max * sin(fabs(M_PI * y / (2 * L_c[1]))) *
-                                    sin(fabs(M_PI * y / (2 * L_c[1])));
+                              : cond_max * sin(fabs(M_PI * pml_y / (2 * L_c[1]))) *
+                                    sin(fabs(M_PI * pml_y / (2 * L_c[1])));
       cond[2] = L_c[2] < 1e-8 ? 0
-                              : cond_max * sin(fabs(M_PI * z / (2 * L_c[2]))) *
-                                    sin(fabs(M_PI * z / (2 * L_c[2])));
+                              : cond_max * sin(fabs(M_PI * pml_z / (2 * L_c[2]))) *
+                                    sin(fabs(M_PI * pml_z / (2 * L_c[2])));
 
       complex double s[DIM] = {amax[0] * (1 + _Complex_I * nu0 * cond[0] / k0),
                                amax[1] * (1 + _Complex_I * nu0 * cond[1] / k0),
@@ -3253,23 +3250,26 @@ bool relative_permeability_model(complex double *permeability_out,
       permeability_matrix[2] = 1.0;
       return true;
     } else {
-      dbl L_c[DIM] = {L * fabs(x / L_mag), L * fabs(y / L_mag), L * fabs(z / L_mag)};
+      dbl L_c[DIM] = {d, d , d};
+      dbl pml_x = x * L / d;
+      dbl pml_y = y * L / d;
+      dbl pml_z = z * L / d;
 
       dbl amax[DIM];
-      amax[0] = L_c[0] < 1e-8 ? 1 : 1 + amp * pow(fabs(x / L_c[0]), power);
-      amax[1] = L_c[1] < 1e-8 ? 1 : 1 + amp * pow(fabs(y / L_c[1]), power);
-      amax[2] = L_c[2] < 1e-8 ? 1 : 1 + amp * pow(fabs(z / L_c[2]), power);
+      amax[0] = L_c[0] < 1e-8 ? 1 : 1 + amp * pow(fabs(pml_x / L_c[0]), power);
+      amax[1] = L_c[1] < 1e-8 ? 1 : 1 + amp * pow(fabs(pml_y / L_c[1]), power);
+      amax[2] = L_c[2] < 1e-8 ? 1 : 1 + amp * pow(fabs(pml_z / L_c[2]), power);
 
       dbl cond[DIM];
       cond[0] = L_c[0] < 1e-8 ? 0
-                              : cond_max * sin(fabs(M_PI * x / (2 * L_c[0]))) *
-                                    sin(fabs(M_PI * x / (2 * L_c[0])));
+                              : cond_max * sin(fabs(M_PI * pml_x / (2 * L_c[0]))) *
+                                    sin(fabs(M_PI * pml_x / (2 * L_c[0])));
       cond[1] = L_c[1] < 1e-8 ? 0
-                              : cond_max * sin(fabs(M_PI * y / (2 * L_c[1]))) *
-                                    sin(fabs(M_PI * y / (2 * L_c[1])));
+                              : cond_max * sin(fabs(M_PI * pml_y / (2 * L_c[1]))) *
+                                    sin(fabs(M_PI * pml_y / (2 * L_c[1])));
       cond[2] = L_c[2] < 1e-8 ? 0
-                              : cond_max * sin(fabs(M_PI * z / (2 * L_c[2]))) *
-                                    sin(fabs(M_PI * z / (2 * L_c[2])));
+                              : cond_max * sin(fabs(M_PI * pml_z / (2 * L_c[2]))) *
+                                    sin(fabs(M_PI * pml_z / (2 * L_c[2])));
 
       complex double s[DIM] = {amax[0] * (1 + _Complex_I * nu0 * cond[0] / k0),
                                amax[1] * (1 + _Complex_I * nu0 * cond[1] / k0),
@@ -3301,8 +3301,8 @@ int plane_wave(
 
   // wave[0] = cexp(_Complex_I*omega*(x *sin(0)*cos(0) + y*sin(0)*sin(0) + z*cos(0)));//E0 *
   // cexp(-_Complex_I * omega * z);
-  wave[0] = E0 * cexp(-_Complex_I * omega * z);
-  curl_wave[1] = -E0 * _Complex_I * omega * cexp(-_Complex_I * omega * z);
+  wave[0] = E0 * cexp(-_Complex_I * omega * y);
+  curl_wave[2] = E0 * _Complex_I * omega * cexp(-_Complex_I * omega * y);
 
   return 0;
 }
@@ -3311,7 +3311,7 @@ int plane_wave(
  *
  *  curl curl E - E = source
  */
-int assemble_ewave_nedelec(double time) {
+int assemble_ewave_nedelec(dbl time) {
   int eqn_real = EM_E1_REAL;
   int eqn_imag = EM_E1_IMAG;
 
@@ -3360,42 +3360,6 @@ int assemble_ewave_nedelec(double time) {
   bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
   complex double force[DIM] = {0.0};
   // em_mms_force(x, y, z, force);
-  dbl mag_permeability = mp->magnetic_permeability;
-  double omega, re_coeff, im_coeff;
-  int eqn = R_EM_E1_REAL;
-
-  if (!pd->e[pg->imtrx][eqn]) {
-    return (1);
-  }
-
-  omega = upd->Acoustic_Frequency;
-  dbl n; /* Refractive index. */
-  CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct;
-  CONDUCTIVITY_DEPENDENCE_STRUCT *d_n = &d_n_struct;
-
-  dbl k; /* Extinction coefficient */
-  CONDUCTIVITY_DEPENDENCE_STRUCT d_k_struct;
-  CONDUCTIVITY_DEPENDENCE_STRUCT *d_k = &d_k_struct;
-
-  n = refractive_index(d_n, time);
-  k = extinction_index(d_k, time);
-
-  // Compute complex material properties
-  complex double cpx_refractive_index, cpx_rel_permittivity,
-      cpx_permittivity; //, impedance;
-  double r_elperm, i_elperm;
-
-  cpx_refractive_index = n + _Complex_I * k; // k > 0 is extinction
-  cpx_rel_permittivity = SQUARE(cpx_refractive_index);
-  cpx_permittivity = cpx_rel_permittivity * mp->permittivity;
-
-  // assumed to be constant in an element block
-  r_elperm = creal(cpx_permittivity);
-  i_elperm = cimag(cpx_permittivity);
-  re_coeff = omega * omega * mag_permeability * r_elperm;
-  im_coeff = omega * omega * mag_permeability * i_elperm;
-
-  complex double coeff = re_coeff + im_coeff * _Complex_I;
 
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
@@ -3418,21 +3382,28 @@ int assemble_ewave_nedelec(double time) {
       complex double advection = 0;
 
       for (int q = 0; q < DIM; q++) {
-        advection -= coeff * bf[ieqn]->phi_e[i][q] * (fv->em_er[q] + fv->em_ei[q] * _Complex_I);
+        if (permittivity_is_matrix) {
+          advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] *
+                       (permittivity_matrix[q] * (fv->em_er[q] + fv->em_ei[q] * _Complex_I));
+        } else {
+          advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] *
+                       (((permittivity - _Complex_I * sigma / k0) *
+                         (fv->em_er[q] + fv->em_ei[q] * _Complex_I)));
+        }
       }
 
       complex double source = 0;
 
-      // for (int q = 0; q < DIM; q++) {
-      //   if (!permittivity_is_matrix) {
-      //     if (DOUBLE_NONZERO(permittivity - 1)) {
+      for (int q = 0; q < DIM; q++) {
+        if (!permittivity_is_matrix) {
+          if (DOUBLE_NONZERO(permittivity - 1)) {
 
-      //       source -= bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (curl_wave[q]);
-      //       source += k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-      //     }
-      //     //  //source += k0*k0*(permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-      //   }
-      // }
+            source += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (curl_wave[q]);
+            source -= k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
+          }
+          //  //source += k0*k0*(permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
+        }
+      }
 
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
           creal(diffusion + advection + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;
@@ -3462,7 +3433,13 @@ int assemble_ewave_nedelec(double time) {
         complex double advection = 0;
 
         for (int q = 0; q < DIM; q++) {
-          advection -= coeff * bf[ieqn]->phi_e[i][q] * (bf[var]->phi_e[j][q]);
+          if (permittivity_is_matrix) {
+            advection -=
+                k0 * k0 * bf[ieqn]->phi_e[i][q] * (permittivity_matrix[q]) * (bf[var]->phi_e[j][q]);
+          } else {
+            advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] *
+                         (permittivity - _Complex_I * sigma / k0) * (bf[var]->phi_e[j][q]);
+          }
         }
 
         lec->J[LEC_J_INDEX(peqn_real, pvar_real, i, j)] +=
@@ -3494,7 +3471,9 @@ int assemble_ewave_nedelec(double time) {
             advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] * (permittivity_matrix[q]) *
                          (bf[var]->phi_e[j][q] * _Complex_I);
           } else {
-            advection -= coeff * bf[ieqn]->phi_e[i][q] * (bf[var]->phi_e[j][q] * _Complex_I);
+            advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] *
+                         (permittivity - _Complex_I * sigma / k0) *
+                         (bf[var]->phi_e[j][q] * _Complex_I);
           }
         }
 
@@ -3678,19 +3657,9 @@ int apply_ewave_nedelec_farfield(double func[DIM],
   // permittivity of the far-field medium
   double n_2, k_2;
 
-  // P[0] = bc_data[0] + _Complex_I * bc_data[3];
-  // P[1] = bc_data[1] + _Complex_I * bc_data[4];
-  // P[2] = bc_data[2] + _Complex_I * bc_data[5];
-
-  complex double normal[DIM] = {fv->snormal[0], fv->snormal[1], fv->snormal[2]};
-  complex double temp[DIM];
-  complex double nxt[DIM];
-  temp[0] = bc_data[0] + _Complex_I * bc_data[3];
-  temp[1] = bc_data[1] + _Complex_I * bc_data[4];
-  temp[2] = bc_data[2] + _Complex_I * bc_data[5];
-
-  complex_cross_vectors(normal, temp, nxt);
-  complex_cross_vectors(normal, temp, P);
+  P[0] = bc_data[0] + _Complex_I * bc_data[3];
+  P[1] = bc_data[1] + _Complex_I * bc_data[4];
+  P[2] = bc_data[2] + _Complex_I * bc_data[5];
 
   // Need the impedance of the far-field material (superstrate)
   // use refractive index and extinction coefficient

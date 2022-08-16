@@ -1996,8 +1996,12 @@ int load_bf_grad(void)
           for (i = 0; i < dofs; i++) {
             for (int d = 0; d < pd->Num_Dim; d++) {
               bfv->curl_phi[i][d] = 0;
-              for (int k = 0; k < pd->Num_Dim; k++) {
-                bfv->curl_phi[i][d] += (1 / bfv->detJ) * bfv->J[k][d] * bfv->curl_e[i][k];
+              for (int k = 0; k < DIM; k++) {
+                if (pd->Num_Dim < DIM) {
+                  bfv->curl_phi[i][d] += (1 / bfv->detJ) * bfv->curl_e[i][k];
+                } else {
+                  bfv->curl_phi[i][d] += (1 / bfv->detJ) * bfv->J[k][d] * bfv->curl_e[i][k];
+                }
               }
             }
           }
@@ -4975,6 +4979,170 @@ void vector_shape_function(Dpi *dpi,
   const double u = xi[2];
 
   switch (eshape) {
+  case QUADRILATERAL: {
+    if (interpolation == I_N1) {
+      switch (Iquant) {
+      case PSI:
+        switch (ledof) {
+        case 0: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int sign = SGN(gnn_1 - gnn_2);
+          phi_e[0] = sign * (1-t)/4.;
+          phi_e[1] = sign * 0;
+          phi_e[2] = 0;
+        } break;
+        case 1: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int sign = SGN(gnn_1 - gnn_2);
+          phi_e[0] = sign * 0;
+          phi_e[1] = sign * (1+s)/4.;
+          phi_e[2] = 0;
+        } break;
+        case 2: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int sign = SGN(gnn_1 - gnn_2);
+          phi_e[0] = sign * -(1+t)/4.;
+          phi_e[1] = sign * 0;
+          phi_e[2] = 0;
+        } break;
+        case 3: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int sign = SGN(gnn_1 - gnn_2);
+          phi_e[0] = sign * 0;
+          phi_e[1] = sign * -(1-s)/4.;
+          phi_e[2] = 0;
+        } break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis TRIANGLE");
+          break;
+        }
+        break;
+      case CURL_PSI:
+        switch (ledof) {
+        case 0: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = 0;
+          curl_e[2] = sign * 0.25;
+        } break;
+        case 1: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = 0;
+          curl_e[2] = sign * 0.25;
+        } break;
+        case 2: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = 0;
+          curl_e[2] = sign * 0.25;
+        } break;
+        case 3: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 3]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = 0;
+          curl_e[2] = sign * 0.25;
+        } break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis TETRAHEDRON");
+          break;
+        }
+        break;
+      default:
+        GOMA_EH(GOMA_ERROR, "Unknown Iquant TETRAHEDRON I_N1");
+        break;
+      }
+    } else {
+      GOMA_EH(GOMA_ERROR, "Don't recognize this basis type for tetrahedron");
+    }
+
+  } break;
+  case TRIANGLE: {
+    if (interpolation == I_N1) {
+      switch (Iquant) {
+      case PSI:
+        switch (ledof) {
+        case 0: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int sign = SGN(gnn_1 - gnn_2);
+          phi_e[0] = sign * (-t);
+          phi_e[1] = sign * s;
+          phi_e[2] = 0;
+        } break;
+        case 1: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int sign = SGN(gnn_1 - gnn_2);
+          phi_e[0] = sign * t;
+          phi_e[1] = sign * (1-s);
+          phi_e[2] = 0;
+        } break;
+        case 2: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int sign = SGN(gnn_1 - gnn_2);
+          phi_e[0] = sign * (1-t);
+          phi_e[1] = sign * (s);
+          phi_e[2] = 0;
+        } break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis TRIANGLE");
+          break;
+        }
+        break;
+      case CURL_PSI:
+        switch (ledof) {
+        case 0: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = 0;
+          curl_e[2] = sign * 2.0;
+        } break;
+        case 1: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 1]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = 0;
+          curl_e[2] = sign * 2.0;
+        } break;
+        case 2: {
+          int gnn_1 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 2]];
+          int gnn_2 = dpi->node_index_global[Proc_Elem_Connect[ei->iconnect_ptr + 0]];
+          int sign = SGN(gnn_1 - gnn_2);
+          curl_e[0] = 0.;
+          curl_e[1] = 0;
+          curl_e[2] = sign * 2.0;
+        } break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown DOF for N1 Basis TETRAHEDRON");
+          break;
+        }
+        break;
+      default:
+        GOMA_EH(GOMA_ERROR, "Unknown Iquant TETRAHEDRON I_N1");
+        break;
+      }
+    } else {
+      GOMA_EH(GOMA_ERROR, "Don't recognize this basis type for tetrahedron");
+    }
+
+  } break;
   case TETRAHEDRON: {
     if (interpolation == I_N1) {
       switch (Iquant) {

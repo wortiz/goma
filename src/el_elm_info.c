@@ -993,7 +993,7 @@ int dof_lnode_interp_type(const int n,
       }
       break;
     case I_N1:
-      return (n >= 5 && n < 9) ? 1 : 0;
+      return (n >= 4 && n < 8) ? 1 : 0;
     default:
       GOMA_EH(GOMA_ERROR, "Unrecognized quadrilateral interpolation.");
       break;

@@ -2821,7 +2821,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           complex double ABC[DIM];
 
           for (int i = 0; i < DIM; i++) {
-            ABC[i] = -j * ke * E[i]; // + Uinc[i];
+            ABC[i] = j * ke * E[i]; // + Uinc[i];
             // ABC[i] = j * ke * E[i] + Uinc[i];
             // ABC[i] = Uinc[i];
           }
@@ -2833,9 +2833,9 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
             dbl Ei_imag[DIM] = {ke * bf[EM_E1_IMAG]->phi_e[j][0], ke * bf[EM_E1_IMAG]->phi_e[j][1],
                                 ke * bf[EM_E1_IMAG]->phi_e[j][2]};
-            d_func[0][EM_E1_IMAG][j] -= -Ei_imag[0];
-            d_func[1][EM_E1_IMAG][j] -= -Ei_imag[1];
-            d_func[2][EM_E1_IMAG][j] -= -Ei_imag[2];
+            d_func[0][EM_E1_IMAG][j] -= Ei_imag[0];
+            d_func[1][EM_E1_IMAG][j] -= Ei_imag[1];
+            d_func[2][EM_E1_IMAG][j] -= Ei_imag[2];
           }
         } break;
         case EM_ABSORBING_IMAG_BC: {
@@ -2896,7 +2896,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 
           for (int i = 0; i < DIM; i++) {
             // ABC[i] = j * ke * E[i] + Uinc[i];
-            ABC[i] = -j * ke * E[i];
+            ABC[i] = j * ke * E[i];
             // ABC[i] = Uinc[i];
           }
 
