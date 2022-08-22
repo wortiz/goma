@@ -104,7 +104,7 @@
 /* #define MAX_NUM_SS_DUPLICATIONS 2000 */
 
 #ifndef MAX_SS_PER_NODE
-#define MAX_SS_PER_NODE 30
+#define MAX_SS_PER_NODE 60
 #endif
 
 #ifndef MAX_MAT_PER_SS
@@ -210,6 +210,7 @@
 #define LS_SPECIAL         19
 #define STRONG_INT_NEDELEC 20
 #define WEAK_INT_NEDELEC   21
+#define WEAK_INT_TANGENT_NEDELEC   22
 
 /* define some other catagories */
 #define STRESS 6 /* Six components in each mode */
@@ -639,6 +640,8 @@
 
 #define EM_FARFIELD_REAL_NED_BC 1213
 #define EM_FARFIELD_IMAG_NED_BC 1214
+#define EM_FARFIELD_INC_REAL_NED_BC 1215
+#define EM_FARFIELD_INC_IMAG_NED_BC 1216
 
 /* pressure */
 

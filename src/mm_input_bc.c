@@ -1423,6 +1423,8 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case E_EI_FARFIELD_BC:
     case EM_FARFIELD_REAL_NED_BC:
     case EM_FARFIELD_IMAG_NED_BC:
+    case EM_FARFIELD_INC_REAL_NED_BC:
+    case EM_FARFIELD_INC_IMAG_NED_BC:
 
       if (fscanf(ifp, "%lf %lf %lf %lf %lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
                  &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
@@ -3440,6 +3442,7 @@ static int BC_consistency(struct Boundary_Condition *BC_Type) {
     case EMBEDDED_SURF:
     case WEAK_SHARP_INT:
     case WEAK_INT_NEDELEC:
+    case WEAK_INT_TANGENT_NEDELEC:
     case STRONG_INT_NEDELEC:
       break;
     case LS_SPECIAL:

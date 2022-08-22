@@ -2974,8 +2974,10 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         } break;
         case EM_FARFIELD_REAL_NED_BC:
         case EM_FARFIELD_IMAG_NED_BC:
+        case EM_FARFIELD_INC_REAL_NED_BC:
+        case EM_FARFIELD_INC_IMAG_NED_BC:
           apply_ewave_nedelec_farfield(func, d_func, xi, time_value, (int)bc->BC_Name,
-                                            bc->BC_Data_Float);
+                                       bc->BC_Data_Float);
           break;
         default:
           sprintf(Err_Msg, "Integrated BC %s not found", bc_desc->name1);
@@ -3016,10 +3018,13 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 
           ldof_eqn = i;
 
-          cross_really_simple_vectors(bf[eqn]->phi_e[i], fv->snormal, nxphi);
-          nxphi[0] = bf[eqn]->phi_e[i][0];
-          nxphi[1] = bf[eqn]->phi_e[i][1];
-          nxphi[2] = bf[eqn]->phi_e[i][2];
+          if (bc_desc->method == WEAK_INT_TANGENT_NEDELEC) {
+            cross_really_simple_vectors(bf[eqn]->phi_e[i], fv->snormal, nxphi);
+          } else {
+            nxphi[0] = bf[eqn]->phi_e[i][0];
+            nxphi[1] = bf[eqn]->phi_e[i][1];
+            nxphi[2] = bf[eqn]->phi_e[i][2];
+          }
 
           /*
            * For strong conditions weight the function by BIG_PENALTY

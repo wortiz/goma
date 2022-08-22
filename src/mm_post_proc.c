@@ -3753,6 +3753,9 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
 
         avg_sum[i][global_node] += gammadot;
       } break;
+      case AVG_TEMPERATURE: {
+        avg_sum[i][global_node] += fv->T;
+      } break;
       default:
         GOMA_EH(GOMA_ERROR, "Unknown nodal average non-variable type");
         break;
@@ -8624,10 +8627,10 @@ void rd_post_process_specs(FILE *ifp, char *input) {
           strcpy(pp_average[i]->type_name, "SHEARRATE_AVG");
           pp_average[i]->non_variable_type = 1;
           pp_average[i]->type = AVG_SHEAR;
-        } else if (!strncasecmp(variable_name, "EM_AVG", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "EM_AVG");
+        } else if (!strncasecmp(variable_name, "TEMPERATURE", strlen(variable_name))) {
+          strcpy(pp_average[i]->type_name, "TEMPERATURE_AVG");
           pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_SHEAR;
+          pp_average[i]->type = AVG_TEMPERATURE;
         } else {
           fprintf(stderr, "Error reading unknown variable type: %s\n", variable_name);
           GOMA_EH(GOMA_ERROR, "Unknown variable type for post processing");

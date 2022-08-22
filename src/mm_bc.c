@@ -915,6 +915,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
             BC_Types[ibc].desc->method == WEAK_SHELL_GRAD ||
             BC_Types[ibc].desc->method == STRONG_SHELL_GRAD ||
             BC_Types[ibc].desc->method == STRONG_INT_NEDELEC ||
+            BC_Types[ibc].desc->method == WEAK_INT_TANGENT_NEDELEC ||
             BC_Types[ibc].desc->method == WEAK_INT_NEDELEC) {
           /*
            * Resolve what material's variables this boundary condition will
@@ -1005,6 +1006,7 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
           BC_Types[ibc].desc->method == WEAK_SHELL_GRAD ||
           BC_Types[ibc].desc->method == STRONG_SHELL_GRAD ||
           BC_Types[ibc].desc->method == STRONG_INT_NEDELEC ||
+          BC_Types[ibc].desc->method == WEAK_INT_TANGENT_NEDELEC ||
           BC_Types[ibc].desc->method == WEAK_INT_NEDELEC) {
 
         /* Loop over the total number of side sets defined on the current processor */

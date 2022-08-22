@@ -2721,6 +2721,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       call_sharp_int = FALSE;
 
       int call_nedelec = 0;
+      int call_tangent_nedelec = 0;
 
       for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
         if (BC_Types[bc_input_id].desc->method == WEAK_INT_SURF) {
@@ -2728,6 +2729,9 @@ Revised:         Summer 1998, SY Tam (UNM)
         }
         if (BC_Types[bc_input_id].desc->method == WEAK_INT_NEDELEC) {
           call_nedelec = 1;
+        }
+        if (BC_Types[bc_input_id].desc->method == WEAK_INT_TANGENT_NEDELEC) {
+          call_tangent_nedelec = 1;
         }
         if ((BC_Types[bc_input_id].desc->method == WEAK_SHELL_GRAD ||
              BC_Types[bc_input_id].desc->method == STRONG_SHELL_GRAD) &&
@@ -2784,6 +2788,20 @@ Revised:         Summer 1998, SY Tam (UNM)
         err = apply_nedelec_bc(x, resid_vector, delta_t, theta, &pg_data, ielem, ielem_type,
                                num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
                                num_total_nodes, WEAK_INT_NEDELEC, time_value, element_search_grid,
+                               exo);
+        GOMA_EH(err, " apply_integrated_bc");
+#ifdef CHECK_FINITE
+        err = CHECKFINITE("apply_integrated_bc");
+        if (err)
+          return -1;
+#endif
+        if (neg_elem_volume)
+          return -1;
+      }
+      if (call_tangent_nedelec) {
+        err = apply_nedelec_bc(x, resid_vector, delta_t, theta, &pg_data, ielem, ielem_type,
+                               num_local_nodes, ielem_dim, iconnect_ptr, elem_side_bc,
+                               num_total_nodes, WEAK_INT_TANGENT_NEDELEC, time_value, element_search_grid,
                                exo);
         GOMA_EH(err, " apply_integrated_bc");
 #ifdef CHECK_FINITE
