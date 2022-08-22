@@ -3716,7 +3716,7 @@ int apply_ewave_nedelec_farfield(double func[DIM],
   case EM_FARFIELD_REAL_NED_BC:
 
     for (int p = 0; p < pd->Num_Dim; p++) {
-      func[p] += creal(cpx_coeff * (nxE[p]));
+      func[p] += creal(cpx_coeff * (E_1[p]));
     }
     for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
       double nxphir[DIM];
@@ -3724,10 +3724,10 @@ int apply_ewave_nedelec_farfield(double func[DIM],
       cross_really_simple_vectors(fv->snormal, bf[EM_E1_REAL]->phi_e[j], nxphir);
       cross_really_simple_vectors(fv->snormal, bf[EM_E1_IMAG]->phi_e[j], nxphii);
       for (int p = 0; p < pd->Num_Dim; p++) {
-        double Rphi_j = nxphir[p];
-        double Iphi_j = nxphii[p];
-        //double Rphi_j = bf[EM_E1_REAL]->phi_e[j][p];
-        //double Iphi_j = bf[EM_E1_IMAG]->phi_e[j][p];
+        //double Rphi_j = nxphir[p];
+        //double Iphi_j = nxphii[p];
+        double Rphi_j = bf[EM_E1_REAL]->phi_e[j][p];
+        double Iphi_j = bf[EM_E1_IMAG]->phi_e[j][p];
         // d(Re[f{z}])/d(Re[z]) = Re(f'(z))
         d_func[p][EM_E1_REAL][j] = creal(cpx_coeff * Rphi_j);
 
@@ -3739,7 +3739,7 @@ int apply_ewave_nedelec_farfield(double func[DIM],
   case EM_FARFIELD_IMAG_NED_BC:
 
     for (int p = 0; p < DIM; p++) {
-      func[p] += cimag(cpx_coeff * (nxE[p]));
+      func[p] += cimag(cpx_coeff * (E_1[p]));
     }
     for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
       double nxphir[DIM];
@@ -3747,10 +3747,10 @@ int apply_ewave_nedelec_farfield(double func[DIM],
       cross_really_simple_vectors(fv->snormal, bf[EM_E1_REAL]->phi_e[j], nxphir);
       cross_really_simple_vectors(fv->snormal, bf[EM_E1_IMAG]->phi_e[j], nxphii);
       for (int p = 0; p < DIM; p++) {
-        double Rphi_j = nxphir[p];
-        double Iphi_j = nxphii[p];
-        //double Rphi_j = bf[EM_E1_REAL]->phi_e[j][p];
-        //double Iphi_j = bf[EM_E1_IMAG]->phi_e[j][p];
+        //double Rphi_j = nxphir[p];
+        //double Iphi_j = nxphii[p];
+        double Rphi_j = bf[EM_E1_REAL]->phi_e[j][p];
+        double Iphi_j = bf[EM_E1_IMAG]->phi_e[j][p];
         d_func[p][EM_E1_REAL][j] = cimag(cpx_coeff * Rphi_j);
         d_func[p][EM_E1_IMAG][j] = creal(cpx_coeff * Iphi_j);
       }
