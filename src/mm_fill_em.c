@@ -3352,12 +3352,12 @@ int assemble_ewave_nedelec(double time) {
   //   fclose(f);
   // }
 
-  complex double permeability_matrix[DIM]; // diagonal matrix if exists
-  complex double permittivity_matrix[DIM]; // diagonal matrix if exists
-  complex double permittivity;
-  complex double permeability;
-  bool permeability_is_matrix = relative_permeability_model(&permeability, permeability_matrix);
-  bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
+  //complex double permeability_matrix[DIM]; // diagonal matrix if exists
+  //complex double permittivity_matrix[DIM]; // diagonal matrix if exists
+  //complex double permittivity;
+  //complex double permeability;
+  //bool permeability_is_matrix = relative_permeability_model(&permeability, permeability_matrix);
+  //bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
   complex double force[DIM] = {0.0};
   // em_mms_force(x, y, z, force);
   dbl mag_permeability = mp->magnetic_permeability;
@@ -3406,13 +3406,15 @@ int assemble_ewave_nedelec(double time) {
       complex double diffusion = 0.0;
 
       for (int q = 0; q < DIM; q++) {
-        if (permeability_is_matrix) {
-          diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
+        //if (permeability_is_matrix) {
+        //  diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
+        //               (fv->curl_em_er[q] + fv->curl_em_ei[q] * _Complex_I);
+        //} else {
+        //  diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) *
+        //               (fv->curl_em_er[q] + fv->curl_em_ei[q] * _Complex_I);
+        //}
+        diffusion += bf[ieqn]->curl_phi[i][q] * 
                        (fv->curl_em_er[q] + fv->curl_em_ei[q] * _Complex_I);
-        } else {
-          diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) *
-                       (fv->curl_em_er[q] + fv->curl_em_ei[q] * _Complex_I);
-        }
       }
 
       complex double advection = 0;
@@ -3450,13 +3452,8 @@ int assemble_ewave_nedelec(double time) {
         complex double diffusion = 0.0;
 
         for (int q = 0; q < DIM; q++) {
-          if (permeability_is_matrix) {
-            diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
-                         (bf[var]->curl_phi[j][q]);
-          } else {
             diffusion +=
-                bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (bf[var]->curl_phi[j][q]);
-          }
+                bf[ieqn]->curl_phi[i][q] * (bf[var]->curl_phi[j][q]);
         }
 
         complex double advection = 0;
@@ -3478,24 +3475,14 @@ int assemble_ewave_nedelec(double time) {
         complex double diffusion = 0.0;
 
         for (int q = 0; q < DIM; q++) {
-          if (permeability_is_matrix) {
-            diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability_matrix[q]) *
+            diffusion += bf[ieqn]->curl_phi[i][q] *
                          (bf[var]->curl_phi[j][q] * _Complex_I);
-          } else {
-            diffusion += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) *
-                         (bf[var]->curl_phi[j][q] * _Complex_I);
-          }
         }
 
         complex double advection = 0;
 
         for (int q = 0; q < DIM; q++) {
-          if (permittivity_is_matrix) {
-            advection -= k0 * k0 * bf[ieqn]->phi_e[i][q] * (permittivity_matrix[q]) *
-                         (bf[var]->phi_e[j][q] * _Complex_I);
-          } else {
             advection -= coeff * bf[ieqn]->phi_e[i][q] * (bf[var]->phi_e[j][q] * _Complex_I);
-          }
         }
 
         lec->J[LEC_J_INDEX(peqn_real, pvar_imag, i, j)] +=
