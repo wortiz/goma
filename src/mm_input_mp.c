@@ -2604,6 +2604,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         fprintf(stderr, "%s\n", err_msg);
         exit(-1);
       }
+      ve_glob[mn][mm]->saramitoNexpModel = CONSTANT;
       strcpy(search_string, "Saramito Power Law Exponent");
       model_read = look_for_mat_prop(imp, search_string, &(ConstitutiveEquation), &nexp_val,
                                      NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);

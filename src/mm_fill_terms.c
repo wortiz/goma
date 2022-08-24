@@ -20308,6 +20308,8 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
     GOMA_EH(GOMA_ERROR, "Calc surf dependencies not implemented");
   }
 
+  scale = 10.0;
+
   /*
    * Residuals ____________________________________________________________________________
    */
@@ -27112,7 +27114,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
               var = v_s[mode][b][c];
               for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                 d_Pi->S[p][q][mode][b][c][j] =
-                    ((double)delta(b, p) * (double)delta(c, q)) * bf[var]->phi[j] +
+                    Heaviside * ((double)delta(b, p) * (double)delta(c, q)) * bf[var]->phi[j] +
                     mu_over_mu_num * d_mun_dS[mode][b][c][j] *
                         (gamma[p][q] - evss_f * gamma_cont[p][q]);
               }

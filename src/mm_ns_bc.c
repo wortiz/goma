@@ -4170,21 +4170,21 @@ static double slip_coefficient(const double beta0,
     }
   }
 
-  load_lsi(gas_phase_factor * width);
-  if (af->Assemble_Jacobian)
-    load_lsi_derivs();
+  //load_lsi(gas_phase_factor * width);
+  //if (af->Assemble_Jacobian)
+  //  load_lsi_derivs();
 
-  if (sign_gas * F >= contact_fraction * width && lsi->near) /* and add if it is "near" */
-  /* This implies complete slip if gas and it is near contact
-     such that pressure gradient will drive gas out */
-  {
-    beta = exp((beta0_log - beta1_log) * lsi->delta / lsi->delta_max + beta1_log);
-    if (af->Assemble_Jacobian) {
-      for (j = 0; j < ei[pg->imtrx]->dof[LS]; j++) {
-        d_beta_dF[j] = beta * (beta0_log - beta1_log) * lsi->d_delta_dF[j] / lsi->delta_max;
-      }
-    }
-  }
+  //if (sign_gas * F >= contact_fraction * width && lsi->near) /* and add if it is "near" */
+  ///* This implies complete slip if gas and it is near contact
+  //   such that pressure gradient will drive gas out */
+  //{
+  //  beta = exp((beta0_log - beta1_log) * lsi->delta / lsi->delta_max + beta1_log);
+  //  if (af->Assemble_Jacobian) {
+  //    for (j = 0; j < ei[pg->imtrx]->dof[LS]; j++) {
+  //      d_beta_dF[j] = beta * (beta0_log - beta1_log) * lsi->d_delta_dF[j] / lsi->delta_max;
+  //    }
+  //  }
+  //}
 
   /* restore LS variables  */
   if (gas_phase_factor != 1.) {
