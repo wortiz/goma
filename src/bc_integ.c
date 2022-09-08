@@ -2821,21 +2821,25 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           complex double ABC[DIM];
 
           for (int i = 0; i < DIM; i++) {
-            ABC[i] = j * ke * E[i]; // + Uinc[i];
+            ABC[i] = creal(j * ke * E[i]); // + Uinc[i];
             // ABC[i] = j * ke * E[i] + Uinc[i];
             // ABC[i] = Uinc[i];
           }
 
-          for (int i = 0; i < DIM; i++) {
-            func[i] += creal(ABC[i]);
-          }
+          cross_really_simple_vectors(fv->snormal, ABC, func);
+
+          //for (int i = 0; i < DIM; i++) {
+          //  func[i] += creal(ABC[i]);
+          //}
 
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
             dbl Ei_imag[DIM] = {ke * bf[EM_E1_IMAG]->phi_e[j][0], ke * bf[EM_E1_IMAG]->phi_e[j][1],
                                 ke * bf[EM_E1_IMAG]->phi_e[j][2]};
-            d_func[0][EM_E1_IMAG][j] -= Ei_imag[0];
-            d_func[1][EM_E1_IMAG][j] -= Ei_imag[1];
-            d_func[2][EM_E1_IMAG][j] -= Ei_imag[2];
+            dbl deriv[DIM];
+            cross_really_simple_vectors(fv->snormal, Ei_imag, deriv);
+            d_func[0][EM_E1_IMAG][j] -= deriv[0];
+            d_func[1][EM_E1_IMAG][j] -= deriv[1];
+            d_func[2][EM_E1_IMAG][j] -= deriv[2];
           }
         } break;
         case EM_ABSORBING_IMAG_BC: {
@@ -2896,20 +2900,23 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 
           for (int i = 0; i < DIM; i++) {
             // ABC[i] = j * ke * E[i] + Uinc[i];
-            ABC[i] = j * ke * E[i];
+            ABC[i] = cimag(j * ke * E[i]);
             // ABC[i] = Uinc[i];
           }
+          cross_really_simple_vectors(fv->snormal, ABC, func);
 
-          for (int i = 0; i < DIM; i++) {
-            func[i] += cimag(ABC[i]);
-          }
+          //for (int i = 0; i < DIM; i++) {
+          //  func[i] += cimag(ABC[i]);
+          //}
 
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
             dbl Ei_real[DIM] = {ke * bf[EM_E1_REAL]->phi_e[j][0], ke * bf[EM_E1_REAL]->phi_e[j][1],
                                 ke * bf[EM_E1_REAL]->phi_e[j][2]};
-            d_func[0][EM_E1_REAL][j] -= Ei_real[0];
-            d_func[1][EM_E1_REAL][j] -= Ei_real[1];
-            d_func[2][EM_E1_REAL][j] -= Ei_real[2];
+            dbl deriv[DIM];
+            cross_really_simple_vectors(fv->snormal, Ei_real, deriv);
+            d_func[0][EM_E1_REAL][j] = deriv[0];
+            d_func[1][EM_E1_REAL][j] = deriv[1];
+            d_func[2][EM_E1_REAL][j] = deriv[2];
           }
         } break;
         case EM_MMS_SIDE_BC: {
@@ -2930,13 +2937,13 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           for (int i = 0; i < pd->Num_Dim; i++) {
             exact_real[i] -= fv->em_er[i];
           }
-          // cross_really_simple_vectors(fv->snormal, exact_real, func);
+          cross_really_simple_vectors(fv->snormal, exact_real, func);
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
             for (int i = 0; i < pd->Num_Dim; i++) {
               exact_real[i] = -bf[EM_E1_REAL]->phi_e[j][i];
             }
             dbl d_exact[DIM];
-            // cross_really_simple_vectors(fv->snormal, exact_real, d_exact);
+            cross_really_simple_vectors(fv->snormal, exact_real, d_exact);
             for (int i = 0; i < pd->Num_Dim; i++) {
               d_func[i][EM_E1_REAL][j] = d_exact[i];
             }
@@ -2960,13 +2967,13 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           for (int i = 0; i < pd->Num_Dim; i++) {
             exact_imag[i] -= fv->em_ei[i];
           }
-          // cross_really_simple_vectors(fv->snormal, exact_imag, func);
+          cross_really_simple_vectors(fv->snormal, exact_imag, func);
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
             for (int i = 0; i < pd->Num_Dim; i++) {
               exact_imag[i] = -bf[EM_E1_IMAG]->phi_e[j][i];
             }
             dbl d_exact[DIM] = {0.0};
-            // cross_really_simple_vectors(fv->snormal, exact_imag, d_exact);
+            cross_really_simple_vectors(fv->snormal, exact_imag, d_exact);
             for (int i = 0; i < pd->Num_Dim; i++) {
               d_func[i][EM_E1_IMAG][j] = d_exact[i];
             }
@@ -3017,9 +3024,9 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           ldof_eqn = i;
 
           cross_really_simple_vectors(bf[eqn]->phi_e[i], fv->snormal, nxphi);
-          nxphi[0] = bf[eqn]->phi_e[i][0];
-          nxphi[1] = bf[eqn]->phi_e[i][1];
-          nxphi[2] = bf[eqn]->phi_e[i][2];
+          //nxphi[0] = bf[eqn]->phi_e[i][0];
+          //nxphi[1] = bf[eqn]->phi_e[i][1];
+          //nxphi[2] = bf[eqn]->phi_e[i][2];
 
           /*
            * For strong conditions weight the function by BIG_PENALTY
