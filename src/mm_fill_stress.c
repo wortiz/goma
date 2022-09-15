@@ -6434,7 +6434,7 @@ void compute_saramito_model_terms(dbl *sCoeff,
         level_set_property(neg_mexp, pos_mexp, width, &m, NULL);
     GOMA_EH(err, "level_set_property() failed for Saramito nexp parameter.");
   } else {
-    GOMA_EH(GOMA_ERROR, "Unknown Saramito nexp parameter model");
+    GOMA_EH(GOMA_ERROR, "Unknown Saramito nexp parameter model %d", ve[0]->saramitoNexpModel);
   }
 
   dbl traceOverVIM = 0;

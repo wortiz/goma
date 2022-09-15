@@ -20308,7 +20308,7 @@ int assemble_cap_denner_diffusion_n(double dt, double scale) {
     GOMA_EH(GOMA_ERROR, "Calc surf dependencies not implemented");
   }
 
-  scale = 10.0;
+  scale = 50.0;
 
   /*
    * Residuals ____________________________________________________________________________
@@ -26571,6 +26571,8 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
       GOMA_EH(GOMA_ERROR, "Unknown Level Set Ghost Stress value");
       break;
     }
+    load_lsi(ls->Length_Scale);
+    //Heaviside = Heaviside * Heaviside;
   }
 
   if (evss_f) {

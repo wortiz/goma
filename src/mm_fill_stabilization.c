@@ -628,6 +628,8 @@ int calc_pspg(dbl pspg[DIM],
   dbl tau_pspg1 = 0.;
   dbl d_tau_pspg_dX[DIM][MDE];
   dbl d_tau_pspg_dv[DIM][MDE];
+  dbl d_tau_pspg_dG[DIM][DIM][MDE];
+  dbl d_tau_pspg_dS[MAX_MODES][DIM][DIM][MDE];
 
   dbl hh_siz, vv_speed;
 
@@ -635,7 +637,7 @@ int calc_pspg(dbl pspg[DIM],
 
   int w0 = 0;
 
-  int mode;
+  int mode = 0;
 
   /* For particle momentum model.
    */
@@ -758,8 +760,37 @@ int calc_pspg(dbl pspg[DIM],
       vv_speed += v_avg[a] * v_avg[a];
     }
 
+    dbl ts[DIM][DIM];
+
+    dbl mu_num = 0;
+    dbl d_mun_dS[MAX_MODES][DIM][DIM][MDE];
+    dbl d_mun_dG[DIM][DIM][MDE];
+    int evss_f = 0;
+    dbl gamma_cont[DIM][DIM];
+    if (pd->gv[POLYMER_STRESS11] && (vn->evssModel == EVSS_F || vn->evssModel == EVSS_GRADV)) {
+      evss_f = 1;
+    }
+
+    if (evss_f) {
+      memset(ts, 0, sizeof(dbl) * DIM * DIM);
+      for (a = 0; a < VIM; a++) {
+        for (b = 0; b < VIM; b++) {
+          for (int mode = 0; mode < vn->modes; mode++) {
+            ts[a][b] += fv->S[mode][a][b];
+          }
+        }
+      }
+      for (a = 0; a < VIM; a++) {
+        for (b = 0; b < VIM; b++) {
+          gamma_cont[a][b] = fv->G[a][b] + fv->G[b][a];
+        }
+      }
+      mu_num = numerical_viscosity(ts, gamma_cont, d_mun_dS, d_mun_dG);
+    }
+
     // Use vv_speed and hh_siz for tau_pspg, note it has a continuous dependence on Re
-    tau_pspg1 = rho_avg * rho_avg * vv_speed / hh_siz + (9.0 * mu_avg * mu_avg) / (hh_siz * hh_siz);
+    tau_pspg1 = rho_avg * rho_avg * vv_speed / hh_siz +
+                (9.0 * mu_avg * mu_avg) / (hh_siz * hh_siz) + mu_num * mu_num / (hh_siz * hh_siz);
     if (pd->TimeIntegration != STEADY) {
       tau_pspg1 += 4.0 / (dt * dt);
     }
@@ -785,10 +816,41 @@ int calc_pspg(dbl pspg[DIM],
         if (pd->v[pg->imtrx][var]) {
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_tau_pspg_dX[b][j] = tau_pspg / tau_pspg1;
-            d_tau_pspg_dX[b][j] *=
-                (rho_avg * rho_avg * vv_speed + 18.0 * mu_avg * mu_avg / hh_siz) /
-                (hh_siz * hh_siz);
+            d_tau_pspg_dX[b][j] *= (rho_avg * rho_avg * vv_speed + 18.0 * mu_avg * mu_avg / hh_siz +
+                                    2 * (mu_num * mu_num / hh_siz)) /
+                                   (hh_siz * hh_siz);
             d_tau_pspg_dX[b][j] *= pg_data->hhv[b][b] * pg_data->dhv_dxnode[b][j] / ((dbl)dim);
+          }
+        }
+      }
+    }
+
+    if (d_pspg != NULL && evss_f && pd->v[pg->imtrx][R_GRADIENT11] && pspg_local) {
+      for (int a = 0; a < dim; a++) {
+        for (int b = 0; b < dim; b++) {
+          var = v_g[a][b];
+          if (pd->v[pg->imtrx][var]) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              d_tau_pspg_dG[a][b][j] = tau_pspg / tau_pspg1;
+              d_tau_pspg_dG[a][b][j] *= 2.0 * d_mun_dG[a][b][j] * mu_num / (hh_siz * hh_siz);
+            }
+          }
+        }
+      }
+    }
+
+    if (d_pspg != NULL && evss_f && pd->v[pg->imtrx][R_STRESS11] && pspg_local) {
+      for (int mode = 0; mode < vn->modes; mode++) {
+        for (int a = 0; a < dim; a++) {
+          for (int b = 0; b < dim; b++) {
+            var = v_s[mode][a][b];
+            if (pd->v[pg->imtrx][var]) {
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                d_tau_pspg_dS[mode][a][b][j] = tau_pspg / tau_pspg1;
+                d_tau_pspg_dS[mode][a][b][j] *=
+                    2.0 * d_mun_dS[mode][a][b][j] * mu_num / (hh_siz * hh_siz);
+              }
+            }
           }
         }
       }
@@ -861,8 +923,8 @@ int calc_pspg(dbl pspg[DIM],
               tau_adv_dv += pspg_rho * pspg_rho * bf[var]->phi[j] * G[a][b] * fv->v[a];
             }
 
-            // d_tau_pspg_dv[b][j] = -PS_scaling * pspg_rho * 0.5 * tau_pspg * tau_pspg * tau_pspg *
-            // tau_adv_dv;
+            // d_tau_pspg_dv[b][j] = -PS_scaling * pspg_rho * 0.5 * tau_pspg * tau_pspg * tau_pspg
+            // * tau_adv_dv;
             d_tau_pspg_dv[b][j] =
                 -PS_scaling * pspg_rho * 0.5 * (tau_adv_dv)*tau_pspg * tau_pspg * tau_pspg;
           }
@@ -1340,7 +1402,8 @@ int calc_pspg(dbl pspg[DIM],
                 diffusion *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_DIFFUSION)];
               }
 
-              d_pspg->S[a][mode][b][c][j] = tau_pspg * diffusion;
+              d_pspg->S[a][mode][b][c][j] =
+                  tau_pspg * diffusion + d_tau_pspg_dS[mode][b][c][j] * momentum[a];
             }
           }
         }
@@ -1372,7 +1435,8 @@ int calc_pspg(dbl pspg[DIM],
               diffusion *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_DIFFUSION)];
             }
 
-            d_pspg->g[a][b][c][j] = tau_pspg * diffusion;
+            d_pspg->g[a][b][c][j] =
+                tau_pspg * diffusion + d_tau_pspg_dS[mode][b][c][j] * momentum[a];
           }
         }
       }

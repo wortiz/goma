@@ -2582,7 +2582,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           GOMA_EH(GOMA_ERROR, "Positive Level Set Polymer Yield Stress requires activation of "
                               "Level Set Tracking.\n");
 
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+        for (int mm = 0; mm < vn_glob[mn]->modes; mm++) {
           ve_glob[mn][mm]->pos_ls.yieldStress = modal_data[mm];
           ve_glob[mn][mm]->yieldModel = VE_LEVEL_SET;
         }
@@ -2604,6 +2604,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         fprintf(stderr, "%s\n", err_msg);
         exit(-1);
       }
+
       ve_glob[mn][mm]->saramitoNexpModel = CONSTANT;
       strcpy(search_string, "Saramito Power Law Exponent");
       model_read = look_for_mat_prop(imp, search_string, &(ConstitutiveEquation), &nexp_val,
@@ -2627,7 +2628,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           GOMA_EH(GOMA_ERROR, "Positive Level Set Saramito Power Law Exponent requires activation of "
                               "Level Set Tracking.\n");
 
-        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+        for (int mm = 0; mm < vn_glob[mn]->modes; mm++) {
           ve_glob[mn][mm]->pos_ls.saramito_nexp = modal_data[mm];
           ve_glob[mn][mm]->saramitoNexpModel = VE_LEVEL_SET;
         }
