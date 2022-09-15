@@ -676,6 +676,27 @@ int calc_pspg(dbl pspg[DIM],
     memset(d_pspg->g, 0, sizeof(dbl) * DIM * DIM * DIM * MDE);
   }
 
+  double Heaviside = 1;
+  if (ls != NULL && ls->ghost_stress) {
+    load_lsi(ls->Length_Scale);
+    switch (ls->ghost_stress) {
+    case LS_OFF:
+      Heaviside = 1;
+      break;
+    case LS_POSITIVE:
+      Heaviside = lsi->H;
+      break;
+    case LS_NEGATIVE:
+      Heaviside = 1 - lsi->H;
+      break;
+    default:
+      GOMA_EH(GOMA_ERROR, "Unknown Level Set Ghost Stress value");
+      break;
+    }
+    load_lsi(ls->Length_Scale);
+    //Heaviside = Heaviside * Heaviside;
+  }
+
   /* This is the flag for the standard global PSPG */
   if (PSPG == 1) {
     pspg_global = TRUE;
@@ -785,7 +806,10 @@ int calc_pspg(dbl pspg[DIM],
           gamma_cont[a][b] = fv->G[a][b] + fv->G[b][a];
         }
       }
+      dbl save = vn->eps;
+      vn->eps = 1.0;
       mu_num = numerical_viscosity(ts, gamma_cont, d_mun_dS, d_mun_dG);
+      vn->eps = save;
     }
 
     // Use vv_speed and hh_siz for tau_pspg, note it has a continuous dependence on Re
@@ -1160,7 +1184,7 @@ int calc_pspg(dbl pspg[DIM],
 
     diffusion = 0.;
     if (pd->e[upd->matrix_index[meqn]][meqn] & T_DIFFUSION) {
-      diffusion = grad_P[a] - div_s[a];
+      diffusion = grad_P[a] - Heaviside * div_s[a];
       /*diffusion  -= div_tau_p[a]  */
       diffusion -= mu * div_G[a];
       diffusion *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_DIFFUSION)];
@@ -1388,14 +1412,14 @@ int calc_pspg(dbl pspg[DIM],
 
               diffusion = 0.;
               if (pd->e[upd->matrix_index[meqn]][meqn] & T_DIFFUSION) {
-                diffusion = -(dbl)delta(a, c) * bf[var]->grad_phi[j][b];
+                diffusion = -Heaviside * (dbl)delta(a, c) * bf[var]->grad_phi[j][b];
 
                 if (pd->CoordinateSystem != CARTESIAN) {
                   for (r = 0; r < VIM; r++) {
-                    diffusion -= (dbl)delta(a, c) * phi_j * fv->grad_e[b][r][c];
+                    diffusion -= Heaviside * (dbl)delta(a, c) * phi_j * fv->grad_e[b][r][c];
                   }
                   for (r = 0; r < WIM; r++) {
-                    diffusion -= (dbl)delta(a, r) * phi_j * fv->grad_e[c][b][r];
+                    diffusion -= Heaviside * (dbl)delta(a, r) * phi_j * fv->grad_e[c][b][r];
                   }
                 }
 
