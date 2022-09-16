@@ -2625,8 +2625,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       if (model_read == 1) {
 
         if (ls == NULL)
-          GOMA_EH(GOMA_ERROR, "Positive Level Set Saramito Power Law Exponent requires activation of "
-                              "Level Set Tracking.\n");
+          GOMA_EH(GOMA_ERROR,
+                  "Positive Level Set Saramito Power Law Exponent requires activation of "
+                  "Level Set Tracking.\n");
 
         for (int mm = 0; mm < vn_glob[mn]->modes; mm++) {
           ve_glob[mn][mm]->pos_ls.saramito_nexp = modal_data[mm];

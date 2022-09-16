@@ -694,7 +694,7 @@ int calc_pspg(dbl pspg[DIM],
       break;
     }
     load_lsi(ls->Length_Scale);
-    //Heaviside = Heaviside * Heaviside;
+    // Heaviside = Heaviside * Heaviside;
   }
 
   /* This is the flag for the standard global PSPG */
@@ -855,8 +855,8 @@ int calc_pspg(dbl pspg[DIM],
           var = v_g[a][b];
           if (pd->v[pg->imtrx][var]) {
             for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-              d_tau_pspg_dG[a][b][j] = tau_pspg / tau_pspg1;
-              d_tau_pspg_dG[a][b][j] *= 2.0 * d_mun_dG[a][b][j] * mu_num / (hh_siz * hh_siz);
+              d_tau_pspg_dG[a][b][j] = -tau_pspg / tau_pspg1;
+              d_tau_pspg_dG[a][b][j] *= d_mun_dG[a][b][j] * mu_num / (hh_siz * hh_siz);
             }
           }
         }
@@ -870,9 +870,9 @@ int calc_pspg(dbl pspg[DIM],
             var = v_s[mode][a][b];
             if (pd->v[pg->imtrx][var]) {
               for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                d_tau_pspg_dS[mode][a][b][j] = tau_pspg / tau_pspg1;
+                d_tau_pspg_dS[mode][a][b][j] = -tau_pspg / tau_pspg1;
                 d_tau_pspg_dS[mode][a][b][j] *=
-                    2.0 * d_mun_dS[mode][a][b][j] * mu_num / (hh_siz * hh_siz);
+                    d_mun_dS[mode][a][b][j] * mu_num / (hh_siz * hh_siz);
               }
             }
           }
@@ -1459,8 +1459,7 @@ int calc_pspg(dbl pspg[DIM],
               diffusion *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_DIFFUSION)];
             }
 
-            d_pspg->g[a][b][c][j] =
-                tau_pspg * diffusion + d_tau_pspg_dS[mode][b][c][j] * momentum[a];
+            d_pspg->g[a][b][c][j] = tau_pspg * diffusion + d_tau_pspg_dG[b][c][j] * momentum[a];
           }
         }
       }

@@ -2298,14 +2298,14 @@ int assemble_momentum(dbl time,       /* current time */
     }
     vmag = sqrt(vmag);
     dbl gamma[DIM][DIM];
-      for (a = 0; a < VIM; a++) {
-        for (b = 0; b < VIM; b++) {
-          gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
-        }
+    for (a = 0; a < VIM; a++) {
+      for (b = 0; b < VIM; b++) {
+        gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
       }
+    }
     dbl mu = viscosity(gn, gamma, NULL);
 
-    tau_lsic = vmag * (hh_siz/2) + hh_siz / (4*mu);
+    tau_lsic = vmag * (hh_siz / 2) + hh_siz / (4 * mu);
   }
 
   /*** Density ***/
@@ -2741,7 +2741,8 @@ int assemble_momentum(dbl time,       /* current time */
            */
 
           /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
-          R[ii] += mass + advection + porous + diffusion + source + continuity_stabilization + lsic_stab;
+          R[ii] +=
+              mass + advection + porous + diffusion + source + continuity_stabilization + lsic_stab;
 
 #ifdef DEBUG_MOMENTUM_RES
           printf("R_m[%d][%d] += %10f %10f %10f %10f %10f\n", a, i, mass, advection, porous,
@@ -3339,8 +3340,8 @@ int assemble_momentum(dbl time,       /* current time */
                   for (int a = 0; a < WIM; a++) {
                     vmag += fv->v[a] * fv->v[a];
                   }
-                  vmag = sqrt(vmag+1e-16);
-                  //dbl mu = viscosity(gn, gamma, NULL);
+                  vmag = sqrt(vmag + 1e-16);
+                  // dbl mu = viscosity(gn, gamma, NULL);
 
                   dbl d_tau_lsic = fv->v[b] * phi_j * (1.0 / vmag) * hh_siz / (2);
 
@@ -3362,7 +3363,8 @@ int assemble_momentum(dbl time,       /* current time */
                   continuity_stabilization *= d_cont_gls->v[b][j] * d_area;
                 }
 
-                J[j] += mass + advection + porous + diffusion + source + continuity_stabilization + lsic_stab;
+                J[j] += mass + advection + porous + diffusion + source + continuity_stabilization +
+                        lsic_stab;
 
                 /*lec->J[LEC_J_INDEX(peqn,pvar,ii,j)] +=  mass + advection + porous + diffusion +
                  * source; */
@@ -26572,7 +26574,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
       break;
     }
     load_lsi(ls->Length_Scale);
-    //Heaviside = Heaviside * Heaviside;
+    // Heaviside = Heaviside * Heaviside;
   }
 
   if (evss_f) {
@@ -26616,7 +26618,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     mu_over_mu_num = mus;
     mu = mu_num * mus;
 
-    //if (fv->F > 0.2 * ls->Length_Scale) {
+    // if (fv->F > 0.2 * ls->Length_Scale) {
     //  load_lsi(8*ls->Length_Scale);
     //  dbl mu_fake= 10 * (1-lsi->H);
     //  mu += mu_fake;
@@ -26816,7 +26818,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   if (pd->gv[POLYMER_STRESS11]) {
     for (a = 0; a < VIM; a++) {
       for (b = 0; b < VIM; b++) {
-          Pi[a][b] += -evss_f * (mu - mus) * gamma_cont[a][b] + Heaviside * s[a][b];
+        Pi[a][b] += -evss_f * (mu - mus) * gamma_cont[a][b] + Heaviside * s[a][b];
       }
     }
   }
