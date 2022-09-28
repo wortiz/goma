@@ -3112,7 +3112,7 @@ struct BC_descriptions BC_Desc[] = {
      "EM_ABSORBING_IMAG",
      WEAK_INT_NEDELEC,
      EM_ABSORBING_IMAG_BC,
-     R_EM_E1_REAL,
+     R_EM_E1_IMAG,
      SCALAR,
      NO_ROT,
      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

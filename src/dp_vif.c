@@ -2574,6 +2574,7 @@ void noahs_ark(void) {
   ddd_add_member(n, &VISCOUS_VON_MISES_STRESS, 1, MPI_INT);
   ddd_add_member(n, &EM_CONTOURS, 1, MPI_INT);
   ddd_add_member(n, &TOTAL_EM_CONTOURS, 1, MPI_INT);
+  ddd_add_member(n, &SCATTERED_EM_CONTOURS, 1, MPI_INT);
   ddd_add_member(n, &len_u_post_proc, 1, MPI_INT);
   ddd_add_member(n, &PSPG_PP, 1, MPI_INT);
 

@@ -824,19 +824,36 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
       GOMA_EH(err, "bf_mp_init");
 
       int eqn = pd->ProjectionVar;
-      for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-        int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-        int ldof_i = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
-        for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-          int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
-          int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
-          if (ldof_i >= 0 && ldof_j >= 0 &&
-              ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+      if (bf[eqn]->interpolation == I_N1) {
+        for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
+          int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
+            int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
             if (gnn_i < num_rows) {
               if (gnn_j >= num_rows) {
                 o_nnz[gnn_i] += 1;
               } else {
                 d_nnz[gnn_i] += 1;
+              }
+            }
+          }
+        }
+
+      } else {
+        for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
+          int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+          int ldof_i = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
+          for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
+            int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+            int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
+            if (ldof_i >= 0 && ldof_j >= 0 &&
+                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+              if (gnn_i < num_rows) {
+                if (gnn_j >= num_rows) {
+                  o_nnz[gnn_i] += 1;
+                } else {
+                  d_nnz[gnn_i] += 1;
+                }
               }
             }
           }
@@ -918,20 +935,36 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
         GOMA_EH(err, "load_bf_grad");
 
         int eqn = pd->ProjectionVar;
-        for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
-          int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
-          int ldof_i = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
-          for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
-            int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
-            int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
-            if (ldof_i >= 0 && ldof_j >= 0 &&
-                ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
-              dbl mm_contrib = bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt * bf[eqn]->detJ;
+        if (bf[eqn]->interpolation == I_N1) {
+          for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
+            int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+            for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
+              int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+              dbl mm_contrib = bf[eqn]->phi[i] * bf[eqn]->phi[j] * fv->wt * bf[eqn]->detJ;
               PetscInt global_row = matrix_data->local_to_global[gnn_i];
               PetscInt global_col = matrix_data->local_to_global[gnn_j];
               PetscErrorCode err =
                   MatSetValue(matrix_data->mat, global_row, global_col, mm_contrib, ADD_VALUES);
               CHKERRQ(err);
+            }
+          }
+        } else {
+          for (int i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
+            int gnn_i = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];
+            int ldof_i = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][i];
+            for (int j = 0; j < ei[pg->imtrx]->num_local_nodes; j++) {
+              int gnn_j = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + j];
+              int ldof_j = ei[upd->matrix_index[pd->ProjectionVar]]->ln_to_dof[eqn][j];
+              if (ldof_i >= 0 && ldof_j >= 0 &&
+                  ((gnn_i < dpi->num_internal_nodes + dpi->num_boundary_nodes) || Num_Proc == 1)) {
+                dbl mm_contrib =
+                    bf[eqn]->phi[ldof_i] * bf[eqn]->phi[ldof_j] * fv->wt * bf[eqn]->detJ;
+                PetscInt global_row = matrix_data->local_to_global[gnn_i];
+                PetscInt global_col = matrix_data->local_to_global[gnn_j];
+                PetscErrorCode err =
+                    MatSetValue(matrix_data->mat, global_row, global_col, mm_contrib, ADD_VALUES);
+                CHKERRQ(err);
+              }
             }
           }
         }

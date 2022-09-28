@@ -325,6 +325,7 @@ int VISCOUS_STRESS_NORM = -1;
 int VISCOUS_VON_MISES_STRESS = -1;
 int EM_CONTOURS = -1;
 int TOTAL_EM_CONTOURS = -1;
+int SCATTERED_EM_CONTOURS = -1;
 
 int len_u_post_proc = 0; /* size of dynamically allocated u_post_proc
                           * actually is */
@@ -1328,7 +1329,7 @@ static int calc_standard_fields(double **post_proc_vect,
 
   if (TOTAL_EM_CONTOURS != -1 && pd->v[pg->imtrx][EM_E1_REAL]) {
     index = 0;
-    const double c0 = 3e14;
+    const double c0 = 3e17;
     dbl x = fv->x[0];
     dbl y = fv->x[1];
     dbl z = fv->x[2];
@@ -1355,6 +1356,40 @@ static int calc_standard_fields(double **post_proc_vect,
       if (pd->v[pg->imtrx][EM_E1_IMAG]) {
         local_post[TOTAL_EM_CONTOURS + index] = fv->em_ei[b] + cimag(wave[b]);
         local_lumped[TOTAL_EM_CONTOURS + index] = 1.;
+        index++;
+      }
+    }
+  }
+
+  if (SCATTERED_EM_CONTOURS != -1 && pd->v[pg->imtrx][EM_E1_REAL]) {
+    index = 0;
+    const double c0 = 3e17;
+    dbl x = fv->x[0];
+    dbl y = fv->x[1];
+    dbl z = fv->x[2];
+    dbl freq = upd->Acoustic_Frequency;
+    dbl lambda0 = c0 / freq;
+    dbl k0 = 2 * M_PI / lambda0;
+    complex double wave[3] = {0};
+    complex double curl_wave[3];
+    if (mp->PermittivityModel != RADIAL_PML) {
+      plane_wave(x, y, z, k0, wave, curl_wave);
+    }
+
+    for (b = 0; b < DIM; b++) {
+
+      if (pd->v[pg->imtrx][EM_E1_REAL]) {
+        local_post[SCATTERED_EM_CONTOURS + index] = fv->em_er[b] - creal(wave[b]);
+        local_lumped[SCATTERED_EM_CONTOURS + index] = 1.;
+        index++;
+      }
+    }
+
+    for (b = 0; b < DIM; b++) {
+
+      if (pd->v[pg->imtrx][EM_E1_IMAG]) {
+        local_post[SCATTERED_EM_CONTOURS + index] = fv->em_ei[b] - cimag(wave[b]);
+        local_lumped[SCATTERED_EM_CONTOURS + index] = 1.;
         index++;
       }
     }
@@ -7287,6 +7322,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   iread = look_for_post_proc(ifp, "Stress contours", &STRESS_CONT);
   iread = look_for_post_proc(ifp, "EM contours", &EM_CONTOURS);
   iread = look_for_post_proc(ifp, "Total EM", &TOTAL_EM_CONTOURS);
+  iread = look_for_post_proc(ifp, "Scattered EM", &SCATTERED_EM_CONTOURS);
   iread = look_for_post_proc(ifp, "First Invariant of Strain", &FIRST_INVAR_STRAIN);
   iread = look_for_post_proc(ifp, "Second Invariant of Strain", &SEC_INVAR_STRAIN);
   iread = look_for_post_proc(ifp, "Third Invariant of Strain", &THIRD_INVAR_STRAIN);
@@ -9355,6 +9391,56 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
       if (dim > 2) {
         sprintf(species_name, "EM_TOT_IMAGZ");
+        sprintf(species_desc, "EM Z Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+    }
+  }
+  if (SCATTERED_EM_CONTOURS != -1 && Num_Var_In_Type[pg->imtrx][EM_E1_REAL]) {
+    SCATTERED_EM_CONTOURS = index_post;
+    int dim = DIM;
+    if (pd->gv[EM_E1_REAL]) {
+      sprintf(species_name, "EM_SCA_REALX");
+      sprintf(species_desc, "EM X Vector");
+      set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+      index++;
+      index_post++;
+
+      if (dim > 1) {
+        sprintf(species_name, "EM_SCA_REALY");
+        sprintf(species_desc, "EM Y Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+
+      if (dim > 2) {
+        sprintf(species_name, "EM_SCA_REALZ");
+        sprintf(species_desc, "EM Z Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+    }
+    if (pd->gv[EM_E1_IMAG]) {
+      sprintf(species_name, "EM_SCA_IMAGX");
+      sprintf(species_desc, "EM X Vector");
+      set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+      index++;
+      index_post++;
+
+      if (dim > 1) {
+        sprintf(species_name, "EM_SCA_IMAGY");
+        sprintf(species_desc, "EM Y Vector");
+        set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
+        index++;
+        index_post++;
+      }
+
+      if (dim > 2) {
+        sprintf(species_name, "EM_SCA_IMAGZ");
         sprintf(species_desc, "EM Z Vector");
         set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
         index++;

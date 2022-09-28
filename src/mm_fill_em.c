@@ -3301,8 +3301,8 @@ int plane_wave(
 
   // wave[0] = cexp(_Complex_I*omega*(x *sin(0)*cos(0) + y*sin(0)*sin(0) + z*cos(0)));//E0 *
   // cexp(-_Complex_I * omega * z);
-  wave[0] = E0 * cexp(-_Complex_I * omega * y);
-  curl_wave[2] = E0 * _Complex_I * omega * cexp(-_Complex_I * omega * y);
+  wave[0] = E0 * cexp(-_Complex_I * omega * z);
+  curl_wave[1] = -E0 * _Complex_I * omega * cexp(-_Complex_I * omega * z);
 
   return 0;
 }
@@ -3315,7 +3315,7 @@ int assemble_ewave_nedelec(dbl time) {
   int eqn_real = EM_E1_REAL;
   int eqn_imag = EM_E1_IMAG;
 
-  const double c0 = 3e14;
+  const double c0 = 3e17;
   const double nu0 = 120 * M_PI;
   const double e0 = (1e-9) / (36 * M_PI);
   const double mu0 = 4 * M_PI * 1e-7;
@@ -3393,17 +3393,21 @@ int assemble_ewave_nedelec(dbl time) {
       }
 
       complex double source = 0;
+      dbl curl_curl_wave[DIM] = {0.0};
+      dbl E0 = 1.0;
+      curl_curl_wave[0] = -E0 * _Complex_I * k0 * cexp(-_Complex_I * k0 * fv->x[2]);
 
-      for (int q = 0; q < DIM; q++) {
-        if (!permittivity_is_matrix) {
-          if (DOUBLE_NONZERO(permittivity - 1)) {
+     for (int q = 0; q < DIM; q++) {
+     //   if (!permittivity_is_matrix) {
+     //     if (DOUBLE_NONZERO(permittivity - 10)) {
 
-            source += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (curl_wave[q]);
-            source -= k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-          }
-          //  //source += k0*k0*(permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-        }
-      }
+            //source += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (curl_wave[q]);
+            //source -= k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
+            source -= (curl_curl_wave[q]/permeability) + k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
+     //     }
+     //     //  //source += k0*k0*(permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
+     //   }
+     }
 
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
           creal(diffusion + advection + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;
