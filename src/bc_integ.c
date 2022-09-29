@@ -2817,12 +2817,12 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           for (int i = 0; i < DIM; i++) {
             Uinc[i] = nxCurlWave_r[i] + nxCurlWave_i[i] * j +
                       j * k0 * (nxnxWave_r[i] + nxnxWave_i[i] * j);
-            //Uinc[i] = curl_wave[i] + j*ke*(nxWave_r[i] * j * nxWave_i[i]);
+            // Uinc[i] = curl_wave[i] + j*ke*(nxWave_r[i] * j * nxWave_i[i]);
           }
           double ABC[DIM];
 
           for (int i = 0; i < DIM; i++) {
-            //ABC[i] = creal(j * ke * E[i] - Uinc[i]);
+            // ABC[i] = creal(j * ke * E[i] - Uinc[i]);
             ABC[i] = creal(j * ke * E[i]);
             // ABC[i] = j * ke * E[i] + Uinc[i];
             // ABC[i] = Uinc[i];
@@ -2836,10 +2836,11 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           }
 
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-            dbl Ei_imag[DIM] = {-ke * bf[EM_E1_IMAG]->phi_e[j][0], -ke * bf[EM_E1_IMAG]->phi_e[j][1],
+            dbl Ei_imag[DIM] = {-ke * bf[EM_E1_IMAG]->phi_e[j][0],
+                                -ke * bf[EM_E1_IMAG]->phi_e[j][1],
                                 -ke * bf[EM_E1_IMAG]->phi_e[j][2]};
             dbl deriv[DIM];
-            //cross_really_simple_vectors(fv->snormal, Ei_imag, deriv);
+            // cross_really_simple_vectors(fv->snormal, Ei_imag, deriv);
             d_func[0][EM_E1_IMAG][j] += Ei_imag[0];
             d_func[1][EM_E1_IMAG][j] += Ei_imag[1];
             d_func[2][EM_E1_IMAG][j] += Ei_imag[2];
@@ -2847,9 +2848,9 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         } break;
         case EM_ABSORBING_IMAG_BC: {
           const double c0 = 3e17;
-          //const double nu0 = 120 * M_PI;
-          //const double e0 = (1e-9) / (36 * M_PI);
-          //const double mu0 = 4 * M_PI * 1e-7;
+          // const double nu0 = 120 * M_PI;
+          // const double e0 = (1e-9) / (36 * M_PI);
+          // const double mu0 = 4 * M_PI * 1e-7;
 
           dbl x = fv->x[0];
           dbl y = fv->x[1];
@@ -2857,7 +2858,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           dbl freq = upd->Acoustic_Frequency;
           dbl lambda0 = c0 / freq;
           dbl k0 = 2 * M_PI / lambda0;
-          //dbl omg = 2 * M_PI * freq;
+          // dbl omg = 2 * M_PI * freq;
           complex double wave[DIM];
           complex double curl_wave[DIM];
           plane_wave(x, y, z, k0, wave, curl_wave);
@@ -2898,14 +2899,14 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           for (int i = 0; i < DIM; i++) {
             Uinc[i] = nxCurlWave_r[i] + nxCurlWave_i[i] * j +
                       j * k0 * (nxnxWave_r[i] + nxnxWave_i[i] * j);
-          //  Uinc[i] = curl_wave[i] + j*ke*(nxWave_r[i] * j * nxWave_i[i]);
+            //  Uinc[i] = curl_wave[i] + j*ke*(nxWave_r[i] * j * nxWave_i[i]);
           }
           dbl ABC[DIM];
 
           for (int i = 0; i < DIM; i++) {
             // ABC[i] = j * ke * E[i] + Uinc[i];
-            //ABC[i] = cimag(j * ke * E[i]);
-            //ABC[i] = cimag(j * ke * E[i] - Uinc[i]);
+            // ABC[i] = cimag(j * ke * E[i]);
+            // ABC[i] = cimag(j * ke * E[i] - Uinc[i]);
             ABC[i] = cimag(j * ke * E[i]);
             // ABC[i] = Uinc[i];
           }
@@ -2915,7 +2916,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           for (int i = 0; i < DIM; i++) {
             func[i] = +(ABC[i] + cimag(Uinc[i]));
           }
-
 
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
             dbl Ei_real[DIM] = {ke * bf[EM_E1_REAL]->phi_e[j][0], ke * bf[EM_E1_REAL]->phi_e[j][1],
@@ -2939,7 +2939,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           plane_wave(x, y, z, omega, wave, curl_wave);
           dbl exact_real[DIM];
           for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_real[i] = 0*creal(wave[i]);
+            exact_real[i] = 0 * creal(wave[i]);
           }
 
           for (int i = 0; i < pd->Num_Dim; i++) {
@@ -2969,7 +2969,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
           dbl exact_imag[DIM];
           for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_imag[i] = 0*cimag(wave[i]);
+            exact_imag[i] = 0 * cimag(wave[i]);
           }
 
           for (int i = 0; i < pd->Num_Dim; i++) {
@@ -2990,7 +2990,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         case EM_FARFIELD_REAL_NED_BC:
         case EM_FARFIELD_IMAG_NED_BC:
           apply_ewave_nedelec_farfield(func, d_func, xi, time_value, (int)bc->BC_Name,
-                                            bc->BC_Data_Float);
+                                       bc->BC_Data_Float);
           break;
         default:
           sprintf(Err_Msg, "Integrated BC %s not found", bc_desc->name1);

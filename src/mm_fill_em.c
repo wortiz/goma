@@ -3170,7 +3170,7 @@ bool relative_permittivity_model(complex double *permittivity_out,
       permittivity_matrix[2] = 1.0;
       return true;
     } else {
-      dbl L_c[DIM] = {d, d , d};
+      dbl L_c[DIM] = {d, d, d};
       dbl pml_x = x * L / d;
       dbl pml_y = y * L / d;
       dbl pml_z = z * L / d;
@@ -3250,7 +3250,7 @@ bool relative_permeability_model(complex double *permeability_out,
       permeability_matrix[2] = 1.0;
       return true;
     } else {
-      dbl L_c[DIM] = {d, d , d};
+      dbl L_c[DIM] = {d, d, d};
       dbl pml_x = x * L / d;
       dbl pml_y = y * L / d;
       dbl pml_z = z * L / d;
@@ -3395,19 +3395,20 @@ int assemble_ewave_nedelec(dbl time) {
       complex double source = 0;
       dbl curl_curl_wave[DIM] = {0.0};
       dbl E0 = 1.0;
-      curl_curl_wave[0] = E0 * k0* k0 * cexp(-_Complex_I * k0 * fv->x[2]);
+      curl_curl_wave[0] = E0 * k0 * k0 * cexp(-_Complex_I * k0 * fv->x[2]);
 
-     for (int q = 0; q < DIM; q++) {
-     //   if (!permittivity_is_matrix) {
-     //     if (DOUBLE_NONZERO(permittivity - 10)) {
+      for (int q = 0; q < DIM; q++) {
+        //   if (!permittivity_is_matrix) {
+        //     if (DOUBLE_NONZERO(permittivity - 10)) {
 
-            //source += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (curl_wave[q]);
-            //source -= k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-            //source -= (curl_curl_wave[q]/permeability) + k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-     //     }
-     //     //  //source += k0*k0*(permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-     //   }
-     }
+        // source += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (curl_wave[q]);
+        // source -= k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
+        // source -= (curl_curl_wave[q]/permeability) + k0 * k0 * (permittivity)*wave[q] *
+        // bf[reqn]->phi_e[i][q];
+        //     }
+        //     //  //source += k0*k0*(permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
+        //   }
+      }
 
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
           creal(diffusion + advection + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;

@@ -1903,16 +1903,18 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_q += (1 / S0) * creal(P[a]) * fv->snormal[a];
                 // local_q += creal(P[a]) * fv->snormal[a];
               }
-              //printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, lambda0 = %g, mu0 = %g, local_q = "
-              //       "%g\n",
-              //       S0, k0, Z0, lambda0, mu0, local_q);
-              // printf("E = [%g + i %g] [%g + i %g] [%g + i %g]\nH =  [%g + i %g] [%g + i %g] [%g +
-              // "
-              //        "i %g]\nS = [%g + i %g] [%g + i %g] [%g + i %g] \n",
-              //        creal(E_s[0]), cimag(E_s[0]), creal(E_s[1]), cimag(E_s[1]), creal(E_s[2]),
-              //        cimag(E_s[2]), creal(H_s[0]), cimag(H_s[0]), creal(H_s[1]), cimag(H_s[1]),
-              //        creal(H_s[2]), cimag(H_s[2]), creal(P[0]), cimag(P[0]), creal(P[1]),
-              //        cimag(P[1]), creal(P[2]), cimag(P[2]));
+              // printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, lambda0 = %g, mu0 = %g, local_q
+              // = "
+              //        "%g\n",
+              //        S0, k0, Z0, lambda0, mu0, local_q);
+              //  printf("E = [%g + i %g] [%g + i %g] [%g + i %g]\nH =  [%g + i %g] [%g + i %g] [%g
+              //  +
+              //  "
+              //         "i %g]\nS = [%g + i %g] [%g + i %g] [%g + i %g] \n",
+              //         creal(E_s[0]), cimag(E_s[0]), creal(E_s[1]), cimag(E_s[1]), creal(E_s[2]),
+              //         cimag(E_s[2]), creal(H_s[0]), cimag(H_s[0]), creal(H_s[1]), cimag(H_s[1]),
+              //         creal(H_s[2]), cimag(H_s[2]), creal(P[0]), cimag(P[0]), creal(P[1]),
+              //         cimag(P[1]), creal(P[2]), cimag(P[2]));
               //
               local_flux += weight * det * local_q;
             } break;
