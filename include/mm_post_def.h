@@ -435,6 +435,9 @@ enum AverageExtraTypes {
   AVG_EMINCI_X,
   AVG_EMINCI_Y,
   AVG_EMINCI_Z,
+  AVG_EM_MAG,
+  AVG_EM_INC_MAG,
+  AVG_EM_SCAT_MAG
 };
 
 /*

@@ -3806,6 +3806,61 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
       case AVG_EMI_Z: {
         avg_sum[i][global_node] += fv->em_ei[2];
       } break;
+      case AVG_EM_INC_MAG: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += sqrt(
+          creal(wave[0]) * creal(wave[0]) +
+          creal(wave[1]) * creal(wave[1]) +
+          creal(wave[2]) * creal(wave[2]) +
+          cimag(wave[0]) * cimag(wave[0]) +
+          cimag(wave[1]) * cimag(wave[1]) +
+          cimag(wave[2]) * cimag(wave[2])
+        );
+      } break;
+      case AVG_EM_SCAT_MAG: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += sqrt(
+          (fv->em_er[0] - creal(wave[0])) * (fv->em_er[0] - creal(wave[0])) +
+          (fv->em_er[1] - creal(wave[1])) * (fv->em_er[1] - creal(wave[1])) +
+          (fv->em_er[2] - creal(wave[2])) * (fv->em_er[2] - creal(wave[2])) +
+          (fv->em_ei[0] - cimag(wave[0])) * (fv->em_ei[0] - cimag(wave[0])) +
+          (fv->em_ei[1] - cimag(wave[1])) * (fv->em_ei[1] - cimag(wave[1])) +
+          (fv->em_ei[2] - cimag(wave[2])) * (fv->em_ei[2] - cimag(wave[2]))
+        );
+      }
+        break;
+      case AVG_EM_MAG: {
+        avg_sum[i][global_node] += sqrt(
+          fv->em_er[0] * fv->em_er[0] +
+          fv->em_er[1] * fv->em_er[1] +
+          fv->em_er[2] * fv->em_er[2] +
+          fv->em_ei[0] * fv->em_ei[0] +
+          fv->em_ei[1] * fv->em_ei[1] +
+          fv->em_ei[2] * fv->em_ei[2]
+        );
+      } break;
       case AVG_EMSCATR_X: {
         const double c0 = 3e17;
         dbl x = fv->x[0];
@@ -8864,6 +8919,18 @@ void rd_post_process_specs(FILE *ifp, char *input) {
           strcpy(pp_average[i]->type_name, "SHEARRATE_AVG");
           pp_average[i]->non_variable_type = 1;
           pp_average[i]->type = AVG_SHEAR;
+        } else if (!strncasecmp(variable_name, "EM_SCAT_MAG", strlen(variable_name))) {
+          strcpy(pp_average[i]->type_name, "EM_SCAT_MAG");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EM_SCAT_MAG;
+        } else if (!strncasecmp(variable_name, "EM_MAG", strlen(variable_name))) {
+          strcpy(pp_average[i]->type_name, "EM_MAG");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EM_MAG;
+        } else if (!strncasecmp(variable_name, "EM_INC_MAG", strlen(variable_name))) {
+          strcpy(pp_average[i]->type_name, "EM_INC_MAG");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EM_INC_MAG;
         } else if (!strncasecmp(variable_name, "EM", strlen(variable_name))) {
           int new_items = 6 - 1;
           pp_Average **pp_average_tmp = pp_average;
