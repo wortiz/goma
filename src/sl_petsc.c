@@ -1779,6 +1779,7 @@ void petsc_solve_post_proc(double **post_proc_vect, RESULTS_DESCRIPTION_STRUCT *
   double start = MPI_Wtime();
   for (int pp = 0; pp < rd->TotalNVPostOutput; pp++) {
     double pp_start = MPI_Wtime();
+    exchange_node(cx[0], dpi, post_proc_vect[pp]);
     for (PetscInt i = 0; i < dpi->num_internal_nodes + dpi->num_boundary_nodes; i++) {
       VecSetValue(matrix_data->residual, matrix_data->local_to_global[i], post_proc_vect[pp][i],
                   INSERT_VALUES);

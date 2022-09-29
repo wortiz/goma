@@ -1345,7 +1345,7 @@ static int calc_standard_fields(double **post_proc_vect,
     for (b = 0; b < DIM; b++) {
 
       if (pd->v[pg->imtrx][EM_E1_REAL]) {
-        local_post[TOTAL_EM_CONTOURS + index] = fv->em_er[b] + creal(wave[b]);
+        local_post[TOTAL_EM_CONTOURS + index] = creal(wave[b]);
         local_lumped[TOTAL_EM_CONTOURS + index] = 1.;
         index++;
       }
@@ -1354,7 +1354,7 @@ static int calc_standard_fields(double **post_proc_vect,
     for (b = 0; b < DIM; b++) {
 
       if (pd->v[pg->imtrx][EM_E1_IMAG]) {
-        local_post[TOTAL_EM_CONTOURS + index] = fv->em_ei[b] + cimag(wave[b]);
+        local_post[TOTAL_EM_CONTOURS + index] = cimag(wave[b]);
         local_lumped[TOTAL_EM_CONTOURS + index] = 1.;
         index++;
       }

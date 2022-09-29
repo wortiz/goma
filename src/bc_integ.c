@@ -2815,9 +2815,9 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 
           complex double Uinc[DIM];
           for (int i = 0; i < DIM; i++) {
-            //Uinc[i] = nxCurlWave_r[i] + nxCurlWave_i[i] * j +
-            //          j * k0 * (nxnxWave_r[i] + nxnxWave_i[i] * j);
-            Uinc[i] = curl_wave[i] + (nxWave_r[i] * j * nxWave_i[i]);
+            Uinc[i] = nxCurlWave_r[i] + nxCurlWave_i[i] * j +
+                      j * k0 * (nxnxWave_r[i] + nxnxWave_i[i] * j);
+            //Uinc[i] = curl_wave[i] + j*ke*(nxWave_r[i] * j * nxWave_i[i]);
           }
           double ABC[DIM];
 
@@ -2828,20 +2828,21 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
             // ABC[i] = Uinc[i];
           }
 
-          cross_really_simple_vectors(fv->snormal, ABC, func);
+          dbl nxABC[DIM] = {0.0};
+          cross_really_simple_vectors(fv->snormal, ABC, nxABC);
 
-          //for (int i = 0; i < DIM; i++) {
-          //  func[i] += creal(ABC[i]);
-          //}
+          for (int i = 0; i < DIM; i++) {
+            func[i] += +(ABC[i] + creal(Uinc[i]));
+          }
 
           for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
             dbl Ei_imag[DIM] = {-ke * bf[EM_E1_IMAG]->phi_e[j][0], -ke * bf[EM_E1_IMAG]->phi_e[j][1],
                                 -ke * bf[EM_E1_IMAG]->phi_e[j][2]};
             dbl deriv[DIM];
-            cross_really_simple_vectors(fv->snormal, Ei_imag, deriv);
-            d_func[0][EM_E1_IMAG][j] += deriv[0];
-            d_func[1][EM_E1_IMAG][j] += deriv[1];
-            d_func[2][EM_E1_IMAG][j] += deriv[2];
+            //cross_really_simple_vectors(fv->snormal, Ei_imag, deriv);
+            d_func[0][EM_E1_IMAG][j] += Ei_imag[0];
+            d_func[1][EM_E1_IMAG][j] += Ei_imag[1];
+            d_func[2][EM_E1_IMAG][j] += Ei_imag[2];
           }
         } break;
         case EM_ABSORBING_IMAG_BC: {
@@ -2868,8 +2869,8 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           double wave_r[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
           double wave_i[DIM] = {cimag(wave[0]), cimag(wave[1]), cimag(wave[2])};
 
-          //double curl_wave_r[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
-          //double curl_wave_i[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
+          double curl_wave_r[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
+          double curl_wave_i[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
 
           double Uinc_r[DIM];
           double Uinc_i[DIM];
@@ -2880,24 +2881,24 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           cross_really_simple_vectors(fv->snormal, wave_r, nxWave_r);
           cross_really_simple_vectors(fv->snormal, wave_i, nxWave_i);
 
-          //double nxnxWave_r[DIM];
-          //double nxnxWave_i[DIM];
+          double nxnxWave_r[DIM];
+          double nxnxWave_i[DIM];
 
-          //cross_really_simple_vectors(fv->snormal, nxWave_r, nxnxWave_r);
-          //cross_really_simple_vectors(fv->snormal, nxWave_i, nxnxWave_i);
+          cross_really_simple_vectors(fv->snormal, nxWave_r, nxnxWave_r);
+          cross_really_simple_vectors(fv->snormal, nxWave_i, nxnxWave_i);
 
           dbl ke = k0;
 
-          //double nxCurlWave_r[DIM];
-          //double nxCurlWave_i[DIM];
-          //cross_really_simple_vectors(fv->snormal, curl_wave_r, nxCurlWave_r);
-          //cross_really_simple_vectors(fv->snormal, curl_wave_i, nxCurlWave_i);
+          double nxCurlWave_r[DIM];
+          double nxCurlWave_i[DIM];
+          cross_really_simple_vectors(fv->snormal, curl_wave_r, nxCurlWave_r);
+          cross_really_simple_vectors(fv->snormal, curl_wave_i, nxCurlWave_i);
 
           complex double Uinc[DIM];
           for (int i = 0; i < DIM; i++) {
-          //  Uinc[i] = nxCurlWave_r[i] + nxCurlWave_i[i] * j +
-          //            j * k0 * (nxnxWave_r[i] + nxnxWave_i[i] * j);
-            Uinc[i] = curl_wave[i] + (nxWave_r[i] * j * nxWave_i[i]);
+            Uinc[i] = nxCurlWave_r[i] + nxCurlWave_i[i] * j +
+                      j * k0 * (nxnxWave_r[i] + nxnxWave_i[i] * j);
+          //  Uinc[i] = curl_wave[i] + j*ke*(nxWave_r[i] * j * nxWave_i[i]);
           }
           dbl ABC[DIM];
 
@@ -2912,7 +2913,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           cross_really_simple_vectors(fv->snormal, ABC, nxABC);
 
           for (int i = 0; i < DIM; i++) {
-            func[i] = nxABC[i];
+            func[i] = +(ABC[i] + cimag(Uinc[i]));
           }
 
 
@@ -2922,7 +2923,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
             dbl deriv[DIM] = {0.0};
             cross_really_simple_vectors(fv->snormal, Ei_real, deriv);
             for (int i = 0; i < pd->Num_Dim; i++) {
-              d_func[i][EM_E1_REAL][j] += deriv[i];
+              d_func[i][EM_E1_REAL][j] += Ei_real[i];
             }
           }
         } break;
@@ -2938,7 +2939,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           plane_wave(x, y, z, omega, wave, curl_wave);
           dbl exact_real[DIM];
           for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_real[i] = creal(wave[i]);
+            exact_real[i] = 0*creal(wave[i]);
           }
 
           for (int i = 0; i < pd->Num_Dim; i++) {
@@ -2968,7 +2969,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
           dbl exact_imag[DIM];
           for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_imag[i] = cimag(wave[i]);
+            exact_imag[i] = 0*cimag(wave[i]);
           }
 
           for (int i = 0; i < pd->Num_Dim; i++) {
@@ -3031,9 +3032,9 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           ldof_eqn = i;
 
           cross_really_simple_vectors(bf[eqn]->phi_e[i], fv->snormal, nxphi);
-          //nxphi[0] = bf[eqn]->phi_e[i][0];
-          //nxphi[1] = bf[eqn]->phi_e[i][1];
-          //nxphi[2] = bf[eqn]->phi_e[i][2];
+          nxphi[0] = bf[eqn]->phi_e[i][0];
+          nxphi[1] = bf[eqn]->phi_e[i][1];
+          nxphi[2] = bf[eqn]->phi_e[i][2];
 
           /*
            * For strong conditions weight the function by BIG_PENALTY
