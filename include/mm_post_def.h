@@ -412,7 +412,30 @@ typedef struct Post_Processing_Averages {
   int non_variable_type;
 } pp_Average;
 
-enum AverageExtraTypes { AVG_DENSITY, AVG_HEAVISIDE, AVG_VISCOSITY, AVG_SHEAR, AVG_EM };
+enum AverageExtraTypes {
+  AVG_DENSITY,
+  AVG_HEAVISIDE,
+  AVG_VISCOSITY,
+  AVG_SHEAR,
+  AVG_EMR_X,
+  AVG_EMR_Y,
+  AVG_EMR_Z,
+  AVG_EMI_X,
+  AVG_EMI_Y,
+  AVG_EMI_Z,
+  AVG_EMSCATR_X,
+  AVG_EMSCATR_Y,
+  AVG_EMSCATR_Z,
+  AVG_EMSCATI_X,
+  AVG_EMSCATI_Y,
+  AVG_EMSCATI_Z,
+  AVG_EMINCR_X,
+  AVG_EMINCR_Y,
+  AVG_EMINCR_Z,
+  AVG_EMINCI_X,
+  AVG_EMINCI_Y,
+  AVG_EMINCI_Z,
+};
 
 /*
  * All of these variables are actually defined in mm_post_proc.c

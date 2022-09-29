@@ -3788,6 +3788,204 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
 
         avg_sum[i][global_node] += gammadot;
       } break;
+      case AVG_EMR_X: {
+        avg_sum[i][global_node] += fv->em_er[0];
+      } break;
+      case AVG_EMR_Y: {
+        avg_sum[i][global_node] += fv->em_er[1];
+      } break;
+      case AVG_EMR_Z: {
+        avg_sum[i][global_node] += fv->em_er[2];
+      } break;
+      case AVG_EMI_X: {
+        avg_sum[i][global_node] += fv->em_ei[0];
+      } break;
+      case AVG_EMI_Y: {
+        avg_sum[i][global_node] += fv->em_ei[1];
+      } break;
+      case AVG_EMI_Z: {
+        avg_sum[i][global_node] += fv->em_ei[2];
+      } break;
+      case AVG_EMSCATR_X: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += fv->em_er[0] - creal(wave[0]);
+      } break;
+      case AVG_EMSCATR_Y: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += fv->em_er[1] - creal(wave[1]);
+      } break;
+      case AVG_EMSCATR_Z: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += fv->em_er[2] - creal(wave[2]);
+      } break;
+      case AVG_EMSCATI_X: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += fv->em_ei[0] - cimag(wave[0]);
+      } break;
+      case AVG_EMSCATI_Y: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += fv->em_ei[1] - creal(wave[1]);
+      } break;
+      case AVG_EMSCATI_Z: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += fv->em_ei[2] - cimag(wave[2]);
+      } break;
+      case AVG_EMINCR_X: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += creal(wave[0]);
+      } break;
+      case AVG_EMINCR_Y: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += creal(wave[1]);
+      } break;
+      case AVG_EMINCR_Z: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += creal(wave[2]);
+      } break;
+      case AVG_EMINCI_X: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += cimag(wave[0]);
+      } break;
+      case AVG_EMINCI_Y: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += creal(wave[1]);
+      } break;
+      case AVG_EMINCI_Z: {
+        const double c0 = 3e17;
+        dbl x = fv->x[0];
+        dbl y = fv->x[1];
+        dbl z = fv->x[2];
+        dbl freq = upd->Acoustic_Frequency;
+        dbl lambda0 = c0 / freq;
+        dbl k0 = 2 * M_PI / lambda0;
+        complex double wave[3] = {0};
+        complex double curl_wave[3];
+        if (mp->PermittivityModel != RADIAL_PML) {
+          plane_wave(x, y, z, k0, wave, curl_wave);
+        }
+        avg_sum[i][global_node] += cimag(wave[2]);
+      } break;
       default:
         GOMA_EH(GOMA_ERROR, "Unknown nodal average non-variable type");
         break;
@@ -4882,6 +5080,9 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   if (nn_average > 0) {
     post_process_average(x, x_old, xdot, xdot_old, resid_vector, exo, dpi, post_proc_vect,
                          *time_ptr);
+    for (int ii = 0; ii < nn_average; ii++) {
+      exchange_node(cx[0], dpi, post_proc_vect[pp_average[ii]->index_post]);
+    }
   }
 
   /*****************************************************************************/
@@ -8626,8 +8827,11 @@ void rd_post_process_specs(FILE *ifp, char *input) {
       }
 
       for (k = 0; k < Num_Var_Names; k++) {
-        if (!strncasecmp(variable_name, Var_Name[k].name1, strlen(variable_name)) ||
-            !strncasecmp(variable_name, Var_Name[k].name2, strlen(variable_name))) {
+        int st1 = strlen(variable_name);
+        int st2 = strlen(Var_Name[k].name1);
+        int st3 = strlen(Var_Name[k].name2);
+        if ((st1 == st2 && !strncasecmp(variable_name, Var_Name[k].name1, strlen(variable_name))) ||
+            (st1 == st3 && !strncasecmp(variable_name, Var_Name[k].name2, strlen(variable_name)))) {
           pp_average[i]->type = Var_Name[k].Index;
           if (pp_average[i]->type == MASS_FRACTION) {
             int err = snprintf(pp_average[i]->type_name, MAX_VAR_NAME_LNGTH, "%s%d%s",
@@ -8660,10 +8864,120 @@ void rd_post_process_specs(FILE *ifp, char *input) {
           strcpy(pp_average[i]->type_name, "SHEARRATE_AVG");
           pp_average[i]->non_variable_type = 1;
           pp_average[i]->type = AVG_SHEAR;
-        } else if (!strncasecmp(variable_name, "EM_AVG", strlen(variable_name))) {
-          strcpy(pp_average[i]->type_name, "EM_AVG");
+        } else if (!strncasecmp(variable_name, "EM", strlen(variable_name))) {
+          int new_items = 6 - 1;
+          pp_Average **pp_average_tmp = pp_average;
+          sz = sizeof(pp_Average *);
+          pp_average = (pp_Average **)array_alloc(1, nn_average + new_items, sz);
+          for (int k = 0; k < nn_average; k++) {
+            pp_average[k] = pp_average_tmp[k];
+          }
+          free(pp_average_tmp);
+          sz = sizeof(pp_Average);
+          for (int k = nn_average; k < (new_items + nn_average); k++) {
+            pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
+          }
+          nn_average += new_items;
+          strcpy(pp_average[i]->type_name, "PP_EMR_X");
           pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_SHEAR;
+          pp_average[i]->type = AVG_EMR_X;
+          pp_average[i]->species_index = 0;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMR_Y");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMR_Y;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMR_Z");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMR_Z;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMI_X");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMI_X;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMI_Y");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMI_Y;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMI_Z");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMI_Z;
+        } else if (!strncasecmp(variable_name, "EMSCAT", strlen(variable_name))) {
+          int new_items = 6 - 1;
+          pp_Average **pp_average_tmp = pp_average;
+          sz = sizeof(pp_Average *);
+          pp_average = (pp_Average **)array_alloc(1, nn_average + new_items, sz);
+          for (int k = 0; k < nn_average; k++) {
+            pp_average[k] = pp_average_tmp[k];
+          }
+          free(pp_average_tmp);
+          sz = sizeof(pp_Average);
+          for (int k = nn_average; k < (new_items + nn_average); k++) {
+            pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
+          }
+          nn_average += new_items;
+          strcpy(pp_average[i]->type_name, "PP_EMSCATR_X");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMSCATR_X;
+          pp_average[i]->species_index = 0;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMSCATR_Y");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMSCATR_Y;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMSCATR_Z");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMSCATR_Z;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMSCATI_X");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMSCATI_X;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMSCATI_Y");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMSCATI_Y;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMSCATI_Z");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMSCATI_Z;
+        } else if (!strncasecmp(variable_name, "EMINC", strlen(variable_name))) {
+          int new_items = 6 - 1;
+          pp_Average **pp_average_tmp = pp_average;
+          sz = sizeof(pp_Average *);
+          pp_average = (pp_Average **)array_alloc(1, nn_average + new_items, sz);
+          for (int k = 0; k < nn_average; k++) {
+            pp_average[k] = pp_average_tmp[k];
+          }
+          free(pp_average_tmp);
+          sz = sizeof(pp_Average);
+          for (int k = nn_average; k < (new_items + nn_average); k++) {
+            pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
+          }
+          nn_average += new_items;
+          strcpy(pp_average[i]->type_name, "PP_EMINCR_X");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMINCR_X;
+          pp_average[i]->species_index = 0;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMINCR_Y");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMINCR_Y;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMINCR_Z");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMINCR_Z;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMINCI_X");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMINCI_X;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMINCI_Y");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMINCI_Y;
+          i++;
+          strcpy(pp_average[i]->type_name, "PP_EMINCI_Z");
+          pp_average[i]->non_variable_type = 1;
+          pp_average[i]->type = AVG_EMINCI_Z;
         } else {
           fprintf(stderr, "Error reading unknown variable type: %s\n", variable_name);
           GOMA_EH(GOMA_ERROR, "Unknown variable type for post processing");
