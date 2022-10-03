@@ -1124,10 +1124,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                                  SCALAR_INPUT, &NO_SPECIES, es);
   ECHO(es, echo_file);
 
-  model_read = look_for_mat_prop(
+  model_read = look_for_mat_proptable(
       imp, "Solid Thermal Expansion", &(elc_glob[mn]->thermal_expansion_model),
       &(elc_glob[mn]->thermal_expansion), &(elc_glob[mn]->u_thermal_expansion),
-      &(elc_glob[mn]->len_u_thermal_expansion), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+      &(elc_glob[mn]->len_u_thermal_expansion), &(elc_glob[mn]->thermal_expansion_tableid),
+      model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
   if (model_read == -1) {
 
@@ -1772,11 +1773,18 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ECHO(es, echo_file);
   }
 
-  if (ConstitutiveEquation == BINGHAM_MIXED) {
+  if (ConstitutiveEquation == BINGHAM_MIXED || ConstitutiveEquation == BINGHAM ||
+      ConstitutiveEquation == BINGHAM_WLF) {
     model_read = look_for_mat_prop(imp, "Epsilon Regularization", &(gn_glob[mn]->epsilonModel),
                                    &(gn_glob[mn]->epsilon), NO_USER, NULL, model_name, SCALAR_INPUT,
                                    &NO_SPECIES, es);
-    GOMA_EH(model_read, "Epsilon Regularization");
+    if ((ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF) &&
+        model_read == -1) {
+      gn_glob[mn]->epsilon = 0.0;
+      gn_glob[mn]->epsilonModel = CONSTANT;
+    } else {
+      GOMA_EH(model_read, "Epsilon Regularization");
+    }
     ECHO(es, echo_file);
   }
   /*

@@ -1080,6 +1080,11 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         (Norm[2][0] < Epsilon[pg->imtrx][0])) {
       *converged = (Epsilon[pg->imtrx][2] > 1.0) ? TRUE : FALSE;
     }
+    if (!isfinite(Norm[0][0]) || !isfinite(Norm[0][1]) || !isfinite(Norm[0][2])) {
+      DPRINTF(stderr, "\nNaN found in residual norms\n");
+      return_value = -1;
+      goto free_and_clear;
+    }
 
 #ifdef DEBUG_NORM
     if (fabs(resid_vector[num_unk_r]) == fabs(Norm[0][0])) {
@@ -2101,8 +2106,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
             DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
                     augc[iAC].VOLID, augc[iAC].evol, x_AC[iAC]);
           } else if (augc[iAC].Type == AC_ANGLE) {
-            DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                    augc[iAC].VOLID, augc[iAC].evol, x_AC[iAC]);
+            DPRINTF(stdout, "\tMT[%4d] ANG[%4d]=%10.6e Param=%10.6e\n", augc[iAC].VOLID,
+                    augc[iAC].MTID, augc[iAC].evol, x_AC[iAC]);
           }
         }
       }
