@@ -3138,8 +3138,13 @@ bool relative_permittivity_model(complex double *permittivity_out,
     permittivity = mp->permittivity;
     break;
   case COMPLEX_CONSTANT:
-    permittivity = mp->permittivity + _Complex_I * mp->permittivity_imag;
+    permittivity = mp->permittivity - _Complex_I * mp->permittivity_imag;
     break;
+  case REFRACTIVE_INDEX: {
+    dbl n = refractive_index(NULL, 0.0);
+    dbl k = extinction_index(NULL, 0.0);
+    permittivity = cpow((n - _Complex_I * k), 2);
+  } break;
   case RADIAL_PML: {
     dbl amp = mp->u_permittivity[0];
     dbl power = mp->u_permittivity[1];
@@ -3220,6 +3225,7 @@ bool relative_permeability_model(complex double *permeability_out,
   case COMPLEX_CONSTANT:
     permeability = mp->permeability + _Complex_I * mp->permeability_imag;
     break;
+
   case RADIAL_PML: {
     dbl amp = mp->u_permeability[0];
     dbl power = mp->u_permeability[1];

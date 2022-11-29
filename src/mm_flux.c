@@ -1898,15 +1898,22 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               }
               break;
             case SCATTERING_CROSS_SECTION: {
-              const double c0 = 3e14;
+              const double c0 = 3e17;
               const double nu0 = 120 * M_PI;
               const double e0 = (1e-9) / (36 * M_PI);
-              const double mu0 = 4 * M_PI * 1e-13;
+              const double mu0 = 4 * M_PI * 1e-16;
 
               dbl freq = upd->Acoustic_Frequency;
               dbl lambda0 = c0 / freq;
               dbl k0 = 2 * M_PI / lambda0;
+              dbl omega0 = 2.0 * M_PI * freq;
               dbl Z0 = mu0 * c0;
+              complex double wave[3];
+              complex double curl_wave[3];
+              dbl x = fv->x[0];
+              dbl y = fv->x[1];
+              dbl z = fv->x[2];
+              plane_wave(x, y, z, k0, wave, curl_wave);
               complex double permittivity;
               complex double permittivity_matrix[DIM];
               bool permittivity_is_matrix =
@@ -1915,37 +1922,38 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 GOMA_EH(GOMA_ERROR, "Trying to compute scattered cross section when permittivity "
                                     "is a matrix, not supported");
               }
-              dbl Z1 = Z0 / sqrt(creal(12.25));
-              dbl S0 = 1 / (2 * Z1);
+              complex double Z1 = Z0 / 1.0;//csqrt(creal(permittivity));
+              complex double S0 = 1 / (2 * Z1);
 
               complex double j = _Complex_I;
-              complex double E_s[DIM] = {fv->em_er[0] + j * fv->em_ei[0],
-                                         fv->em_er[1] + j * fv->em_ei[1],
-                                         fv->em_er[2] + j * fv->em_ei[2]};
-              complex double curl_E_s[DIM] = {fv->curl_em_er[0] + j * fv->curl_em_ei[0],
-                                              fv->curl_em_er[1] + j * fv->curl_em_ei[1],
-                                              fv->curl_em_er[2] + j * fv->curl_em_ei[2]};
+              complex double E_s[DIM] = {fv->em_er[0] + j * fv->em_ei[0] - wave[0],
+                                         fv->em_er[1] + j * fv->em_ei[1] - wave[1],
+                                         fv->em_er[2] + j * fv->em_ei[2] - wave[2]};
+              complex double curl_E_s[DIM] = {
+                  fv->curl_em_er[0] + j * fv->curl_em_ei[0] - curl_wave[0],
+                  fv->curl_em_er[1] + j * fv->curl_em_ei[1] - curl_wave[1],
+                  fv->curl_em_er[2] + j * fv->curl_em_ei[2] - curl_wave[2]};
 
               complex double H_s[DIM] = {0.0, 0.0, 0.0};
 
               for (int i = 0; i < DIM; i++) {
-                H_s[i] = conj((c0 / (j * freq)) * curl_E_s[i]);
+                //H_s[i] = conj(-1.0 / (j*k0) * curl_E_s[i]);
+                H_s[i] = conj(-1.0 / (j*mu0*omega0) * curl_E_s[i]);
+                //H_s[i] = conj(j * k0*curl_E_s[i]);
               }
 
               complex double P[DIM] = {
-                  E_s[1] * H_s[2] - E_s[2] * H_s[1],
-                  E_s[2] * H_s[0] - E_s[0] * H_s[2],
-                  E_s[0] * H_s[1] - E_s[1] * H_s[0],
+                  0.5*(E_s[1] * H_s[2] - E_s[2] * H_s[1]),
+                  0.5*(E_s[2] * H_s[0] - E_s[0] * H_s[2]),
+                  0.5*(E_s[0] * H_s[1] - E_s[1] * H_s[0]),
               };
 
               for (a = 0; a < dim; a++) {
-                local_q += (1 / S0) * creal(P[a]) * fv->snormal[a];
+                local_q += creal((1/S0)*P[a]) * fv->snormal[a];
                 // local_q += creal(P[a]) * fv->snormal[a];
               }
-              // printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, lambda0 = %g, mu0 = %g, local_q
-              // = "
-              //        "%g\n",
-              //        S0, k0, Z0, lambda0, mu0, local_q);
+              // printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, perm = %g, lambda0 = %g, mu0 = %g, omega0 = %g, local_q= %g\n",
+                    //  S0, k0, Z0, creal(permittivity), lambda0, mu0, omega0, local_q);
               //  printf("E = [%g + i %g] [%g + i %g] [%g + i %g]\nH =  [%g + i %g] [%g + i %g] [%g
               //  +
               //  "
@@ -5552,6 +5560,48 @@ int compute_volume_integrand(const int quantity,
       safe_free((void *)n_dof);
     }
     break;
+
+  case I_EM_ABSORB_CROSS_SECTION: {
+    const double c0 = 3e17;
+    const double nu0 = 120 * M_PI;
+    const double e0 = (1e-9) / (36 * M_PI);
+    const double mu0 = 4 * M_PI * 1e-7;
+    dbl x = fv->x[0];
+    dbl y = fv->x[1];
+    dbl z = fv->x[2];
+    dbl freq = upd->Acoustic_Frequency;
+    dbl lambda0 = c0 / freq;
+    dbl k0 = 2 * M_PI / lambda0;
+    dbl omega0 = 2 * M_PI * freq;
+    complex double permittivity;
+    complex double permittivity_matrix[DIM];
+    bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
+    if (permittivity_is_matrix) {
+      GOMA_EH(GOMA_ERROR, "Trying to compute Absorbtion cross section when permittivity "
+                          "is a matrix, not supported");
+    }
+    dbl Z0 = mu0 * c0;
+    complex double Z1 = Z0 / 1.0;//csqrt(creal(permittivity));
+    complex double S0 = 1 / (2 * Z1);
+    complex double invS0 = 1 / S0;
+    complex double wave[3];
+    complex double curl_wave[3];
+    plane_wave(x, y, z, k0, wave, curl_wave);
+    dbl E_mag = 0;
+    for (int i = 0; i < DIM; i++) {
+      E_mag += fv->em_er[i] * fv->em_er[i] + fv->em_ei[i] * fv->em_ei[i];
+    }
+   // E_mag = sqrt(E_mag);
+    dbl omega = k0 / sqrt(e0*mu0);
+    // printf("omega = %g, S0=%g, cimag(perm) = %g, E_mag = %g, invS0 = %g\n",
+    // omega,
+    // S0,
+    // cimag(permittivity),
+    // E_mag,
+    // invS0
+    // );
+    *sum +=creal( weight * det * invS0 * 0.5 * omega * e0 * cimag(permittivity) * E_mag);
+  } break;
 
   default:
     break;

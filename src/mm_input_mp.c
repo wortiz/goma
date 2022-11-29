@@ -3335,6 +3335,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         GOMA_EH(GOMA_ERROR, "Expected 5 constants for %s = %s", search_string, model_name);
       }
       mat_ptr->len_u_permittivity = num_const;
+    } else if (strcmp(model_name, "REFRACTIVE_INDEX") == 0) {
+      mat_ptr->PermittivityModel = REFRACTIVE_INDEX;
+      mat_ptr->len_u_permittivity = 0;
     } else if (strncmp(model_name, " ", 1) != 0) {
 
       SPF(err_msg, "Syntax error or invalid model for %s\n", search_string);

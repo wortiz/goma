@@ -134,7 +134,7 @@
 #define I_Q_FCN               48
 #define I_POROUS_LIQUID_INV_2 49
 #define I_POROUS_LIQUID_INV_3 50
-
+#define I_EM_ABSORB_CROSS_SECTION 51
 #ifdef GOMA_MM_POST_PROC_C
 struct Post_Processing_Flux_Names {
   char *name; /* flux string */
@@ -260,7 +260,8 @@ VOL_NAME_STRUCT pp_vol_names[] = {{"VOLUME", I_VOLUME},
                                   {"GIESEKUS", I_GIESEKUS},
                                   {"LAMB_MAG", I_LAMB_MAG},
                                   {"HELICITY", I_HELICITY},
-                                  {"Q_FCN", I_Q_FCN}};
+                                  {"Q_FCN", I_Q_FCN},
+                                  {"ABSORPTION_CROSS_SECTION", I_EM_ABSORB_CROSS_SECTION}};
 
 int Num_Vol_Names = sizeof(pp_vol_names) / sizeof(VOL_NAME_STRUCT);
 

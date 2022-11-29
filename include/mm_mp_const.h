@@ -52,6 +52,7 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define BILINEAR     6  /* Denotes option for table interpolation */
 #define CAP_PRES     7
 #define FAUX_PLASTIC 16
+#define WAVELENGTH 17
 
 /* Moment Property Models */
 // growth rate
@@ -157,6 +158,7 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 // Electromagnetic
 #define COMPLEX_CONSTANT 2
 #define RADIAL_PML       3
+#define REFRACTIVE_INDEX 4
 
 /* Viscoelastic Constitutive equation parameters */
 

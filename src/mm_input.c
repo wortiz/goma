@@ -12594,6 +12594,13 @@ struct Data_Table *setup_table_MP(FILE *imp, struct Data_Table *table, char *sea
         sprintf(err_msg, "%s:\tError reading species number on TABLE MP \n", yo);
         GOMA_EH(GOMA_ERROR, err_msg);
       }
+          } else if (strcmp(line, "WAVELENGTH") == 0) {
+      strcpy(table->t_name[i], "WAVELENGTH");
+      table->t_index[i] = WAVELENGTH;
+      if (fscanf(imp, "%d", &table->species_eq) != 1) {
+        sprintf(err_msg, "%s:\tError reading species number on TABLE MP \n", yo);
+        GOMA_EH(GOMA_ERROR, err_msg);
+      }
     } else if (strcmp(line, "LOWER_DISTANCE") == 0) {
       strcpy(table->t_name[i], "LOWER_DISTANCE");
       table->t_index[i] = LOWER_DISTANCE;

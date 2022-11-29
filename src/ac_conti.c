@@ -16,6 +16,7 @@
  * irst order continuation
  */
 
+#include "sl_matrix_util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -590,6 +591,17 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
     a = ams[JAC]->val;
     if (!save_old_A)
       a_old = ams[JAC]->val_old = NULL;
+#ifdef GOMA_ENABLE_PETSC
+  } else if (strcmp(Matrix_Format, "petsc") == 0) {
+    err = check_compatible_solver();
+    GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
+    check_parallel_error("Matrix format / Solver incompatibility");
+    pg->imtrx = 0;
+    goma_error err = goma_setup_petsc_matrix(
+        ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[pg->imtrx],
+        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
+    GOMA_EH(err, "goma_setup_petsc_matrix");
+#endif
   } else
     GOMA_EH(GOMA_ERROR, "Attempted to allocate unknown sparse matrix format");
 

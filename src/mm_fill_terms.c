@@ -15878,6 +15878,11 @@ void apply_table_mp(double *func, struct Data_Table *table) {
       var1[i] = temp;
     } else if (strcmp(table->t_name[i], "MASS_FRACTION") == 0) {
       var1[i] = fv->c[table->species_eq];
+    } else if (strcmp(table->t_name[i], "WAVELENGTH") == 0) {
+      const double c0 = 3e17;
+      dbl freq = upd->Acoustic_Frequency;
+      dbl lambda0 = c0 / freq;
+      var1[i] = lambda0;
     } else if (strcmp(table->t_name[i], "FAUX_PLASTIC") == 0) {
       GOMA_EH(GOMA_ERROR, "Oops, I shouldn't be using this call for FAUX_PLASTIC.");
     } else {
