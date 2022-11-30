@@ -2363,11 +2363,8 @@ static int calc_standard_fields(double **post_proc_vect,
 
   /* calculate poynting vectors for EM calculations here !!  */
   if (POYNTING_VECTORS != -1 &&
-      ((Num_Var_In_Type[pg->imtrx][R_ACOUS_PREAL] || Num_Var_In_Type[pg->imtrx][R_ACOUS_PIMAG]) ||
-       (Num_Var_In_Type[pg->imtrx][R_EM_E1_REAL] || Num_Var_In_Type[pg->imtrx][R_EM_E2_REAL] ||
-        Num_Var_In_Type[pg->imtrx][R_EM_E3_REAL]))) {
+      ((Num_Var_In_Type[pg->imtrx][R_ACOUS_PREAL] || Num_Var_In_Type[pg->imtrx][R_ACOUS_PIMAG]))) {
     double poynt[DIM];
-    int c;
     memset(poynt, 0, sizeof(double) * DIM);
     /*  Acoustic analogy -- scalar version  */
     if (pd->e[pg->imtrx][R_ACOUS_PREAL] || pd->e[pg->imtrx][R_ACOUS_PIMAG]) {
@@ -2378,44 +2375,6 @@ static int calc_standard_fields(double **post_proc_vect,
 
       for (a = 0; a < DIM; a++) {
         poynt[a] += prefactor * (fv->api * fv->grad_apr[a] - fv->apr * fv->grad_api[a]);
-      }
-    }
-    /*  EM vector, E & H formulation   */
-    else if (pd->e[pg->imtrx][R_EM_E1_REAL] || pd->e[pg->imtrx][R_EM_E2_REAL] ||
-             pd->e[pg->imtrx][R_EM_E3_REAL]) {
-      const double c0 = 3e14;
-      const double nu0 = 120 * M_PI;
-      const double e0 = (1e-9) / (36 * M_PI);
-      const double mu0 = 4 * M_PI * 1e-13;
-
-      dbl freq = upd->Acoustic_Frequency;
-      dbl lambda0 = c0 / freq;
-      dbl k0 = 2 * M_PI / lambda0;
-      dbl Z0 = mu0 * c0;
-      complex double permittivity;
-      complex double permittivity_matrix[DIM];
-      bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
-      if (!permittivity_is_matrix) {
-
-        dbl Z1 = Z0 / sqrt(creal(permittivity));
-        dbl S0 = 1 / (2 * Z1);
-
-        complex double j = _Complex_I;
-        complex double E_s[DIM] = {fv->em_er[0] + j * fv->em_ei[0], fv->em_er[1] + j * fv->em_ei[1],
-                                   fv->em_er[2] + j * fv->em_ei[2]};
-        complex double curl_E_s[DIM] = {fv->curl_em_er[0] + j * fv->curl_em_ei[0],
-                                        fv->curl_em_er[1] + j * fv->curl_em_ei[1],
-                                        fv->curl_em_er[2] + j * fv->curl_em_ei[2]};
-
-        complex double H_s[DIM] = {0.0, 0.0, 0.0};
-
-        for (int i = 0; i < DIM; i++) {
-          H_s[i] = conj((1 / (j * k0 * mu0)) * curl_E_s[i]);
-        }
-
-        poynt[0] = creal(E_s[1] * H_s[2] - E_s[2] * H_s[1]);
-        poynt[1] = creal(E_s[2] * H_s[0] - E_s[0] * H_s[2]);
-        poynt[2] = creal(E_s[0] * H_s[1] - E_s[1] * H_s[0]);
       }
     }
     for (a = 0; a < dim; a++) {
@@ -3840,14 +3799,10 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         if (mp->PermittivityModel != RADIAL_PML) {
           plane_wave(x, y, z, k0, wave, curl_wave);
         }
-        avg_sum[i][global_node] += sqrt(
-          creal(wave[0]) * creal(wave[0]) +
-          creal(wave[1]) * creal(wave[1]) +
-          creal(wave[2]) * creal(wave[2]) +
-          cimag(wave[0]) * cimag(wave[0]) +
-          cimag(wave[1]) * cimag(wave[1]) +
-          cimag(wave[2]) * cimag(wave[2])
-        );
+        avg_sum[i][global_node] +=
+            sqrt(creal(wave[0]) * creal(wave[0]) + creal(wave[1]) * creal(wave[1]) +
+                 creal(wave[2]) * creal(wave[2]) + cimag(wave[0]) * cimag(wave[0]) +
+                 cimag(wave[1]) * cimag(wave[1]) + cimag(wave[2]) * cimag(wave[2]));
       } break;
       case AVG_EM_SCAT_MAG: {
         const double c0 = 3e17;
@@ -3862,25 +3817,18 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         if (mp->PermittivityModel != RADIAL_PML) {
           plane_wave(x, y, z, k0, wave, curl_wave);
         }
-        avg_sum[i][global_node] += sqrt(
-          (fv->em_er[0] - creal(wave[0])) * (fv->em_er[0] - creal(wave[0])) +
-          (fv->em_er[1] - creal(wave[1])) * (fv->em_er[1] - creal(wave[1])) +
-          (fv->em_er[2] - creal(wave[2])) * (fv->em_er[2] - creal(wave[2])) +
-          (fv->em_ei[0] - cimag(wave[0])) * (fv->em_ei[0] - cimag(wave[0])) +
-          (fv->em_ei[1] - cimag(wave[1])) * (fv->em_ei[1] - cimag(wave[1])) +
-          (fv->em_ei[2] - cimag(wave[2])) * (fv->em_ei[2] - cimag(wave[2]))
-        );
-      }
-        break;
+        avg_sum[i][global_node] +=
+            sqrt((fv->em_er[0] - creal(wave[0])) * (fv->em_er[0] - creal(wave[0])) +
+                 (fv->em_er[1] - creal(wave[1])) * (fv->em_er[1] - creal(wave[1])) +
+                 (fv->em_er[2] - creal(wave[2])) * (fv->em_er[2] - creal(wave[2])) +
+                 (fv->em_ei[0] - cimag(wave[0])) * (fv->em_ei[0] - cimag(wave[0])) +
+                 (fv->em_ei[1] - cimag(wave[1])) * (fv->em_ei[1] - cimag(wave[1])) +
+                 (fv->em_ei[2] - cimag(wave[2])) * (fv->em_ei[2] - cimag(wave[2])));
+      } break;
       case AVG_EM_MAG: {
-        avg_sum[i][global_node] += sqrt(
-          fv->em_er[0] * fv->em_er[0] +
-          fv->em_er[1] * fv->em_er[1] +
-          fv->em_er[2] * fv->em_er[2] +
-          fv->em_ei[0] * fv->em_ei[0] +
-          fv->em_ei[1] * fv->em_ei[1] +
-          fv->em_ei[2] * fv->em_ei[2]
-        );
+        avg_sum[i][global_node] += sqrt(fv->em_er[0] * fv->em_er[0] + fv->em_er[1] * fv->em_er[1] +
+                                        fv->em_er[2] * fv->em_er[2] + fv->em_ei[0] * fv->em_ei[0] +
+                                        fv->em_ei[1] * fv->em_ei[1] + fv->em_ei[2] * fv->em_ei[2]);
       } break;
       case AVG_EMSCATR_X: {
         const double c0 = 3e17;

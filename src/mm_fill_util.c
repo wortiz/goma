@@ -4936,35 +4936,6 @@ double calc_tensor_invariant(dbl T[DIM][DIM],       // Original tensor
 
 } // End of calc_tensor_invariants()
 
-// Determine consistent tangent directions on edges
-static bool node_greater_than(Exo_DB *exo, const int node1, const int node2) {
-
-  if (exo->num_dim > 0) {
-    if (exo->x_coord[node1] > exo->x_coord[node2]) {
-      return true;
-    } else if (exo->x_coord[node1] < exo->x_coord[node2]) {
-      return false;
-    }
-  }
-
-  if (exo->num_dim > 1) {
-    if (exo->y_coord[node1] > exo->y_coord[node2]) {
-      return true;
-    } else if (exo->y_coord[node1] < exo->y_coord[node2]) {
-      return false;
-    }
-  }
-
-  if (exo->num_dim > 2) {
-    if (exo->z_coord[node1] > exo->z_coord[node2]) {
-      return true;
-    } else if (exo->z_coord[node1] < exo->z_coord[node2]) {
-      return false;
-    }
-  }
-  return false;
-}
-
 void vector_shape_function(Dpi *dpi,
                            const struct Element_Indices *ei,
                            const double xi[],

@@ -2424,41 +2424,23 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
  *
  ****************************************************************************/
 {
-  int ip, w, i, I, ibc, k, j, id, icount, ss_index, is_ns, mn, lnn;
-  int iapply, matID_apply, id_side, i_basis = -1, skip_other_side;
-  int new_way = FALSE, ledof, mn_first;
-  int eqn, ieqn, var, pvar, p, q, index_eq, ldof_eqn, lvdesc, jlv;
+  int ip, w, i, ibc, j, ss_index, is_ns;
+  int new_way = FALSE;
+  int eqn, ieqn, var, pvar, q, ldof_eqn;
   int err, status = 0;
   int bc_input_id, ip_total;
-  int contact_flag = FALSE;
-  int imode;
-  int stress_bc = 0;
-  double v_attach;
-  double phi_i, tmp;
-  double *phi_ptr, *jac_ptr;
   double s, t, u; /* Gaussian quadrature point locations  */
   double xi[DIM]; /* Local element coordinates of Gauss point. */
-  double x_dot[MAX_PDIM];
-  double x_rs_dot[MAX_PDIM];
-  double wt, weight, pb[DIM];
-  double xsurf[MAX_PDIM];
-  double dsigma_dx[DIM][MDE];
+  double wt, weight;
   double func[DIM];
   double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
-  double func_stress[MAX_MODES][6];
-  double d_func_stress[MAX_MODES][6][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
-  double cfunc[MDE][DIM];
-  double d_cfunc[MDE][DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
   double time_intermediate = time_value - theta * delta_t; /* time at which bc's are
                                                               evaluated */
-  static INTERFACE_SOURCE_STRUCT *is = NULL;
-  static JACOBIAN_VAR_DESC_STRUCT jacCol;
+
   BOUNDARY_CONDITION_STRUCT *bc;
   MATRL_PROP_STRUCT *mp_2;
   struct BC_descriptions *bc_desc;
-  VARIABLE_DESCRIPTION_STRUCT *vd;
   double surface_centroid[DIM];
-  int interface_id = -1;
 
   tran->time_value = time_intermediate;
 
@@ -2627,38 +2609,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
       GOMA_EH(err, "load_porous_properties");
     }
 
-    if (mp->SurfaceTensionModel != CONSTANT) {
-      load_surface_tension(dsigma_dx);
-      if (neg_elem_volume)
-        return (status);
-    }
-
-    if (TimeIntegration != STEADY && pd->e[pg->imtrx][MESH_DISPLACEMENT1]) {
-      for (icount = 0; icount < ielem_dim; icount++) {
-        x_dot[icount] = fv_dot->x[icount];
-        /* calculate surface position for wall repulsion/no penetration condition */
-        xsurf[icount] = fv->x0[icount];
-      }
-
-      if (pd->e[pg->imtrx][SOLID_DISPLACEMENT1]) {
-        for (icount = 0; icount < VIM; icount++)
-          x_rs_dot[icount] = 0.;
-        for (icount = 0; icount < ielem_dim; icount++) {
-          /* Notice how I use here fv->d_rs instead of fv->x_rs
-           * (which doesn't exist) because
-           * x_rs_dot = d(X_rs)/dt = d(Coor[][] + d_rs)/dt = d(d_rs)/dt
-           */
-          x_rs_dot[icount] = fv_dot->d_rs[icount];
-        }
-      }
-    } else {
-      for (icount = 0; icount < ielem_dim; icount++) {
-        x_rs_dot[icount] = 0.;
-        x_dot[icount] = 0.;
-        xsurf[icount] = fv->x0[icount];
-      }
-    }
-
     /*
      *  Loop over all of the boundary conditions assigned to this side
      *  of the element
@@ -2681,24 +2631,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
       }
 
       new_way = FALSE;
-      iapply = 0;
-      skip_other_side = FALSE;
-      if (is_ns != 0) {
-        if (ei[pg->imtrx]->elem_blk_id == ss_to_blks[1][ss_index]) {
-          iapply = 1;
-        }
-      }
-
-      /*
-       *  However, override if the side set is an external one. In
-       *  other words, if the side set is an external side set, we will
-       *  apply the boundary condition no matter what.
-       */
-      if (SS_Internal_Boundary != NULL) {
-        if (SS_Internal_Boundary[ss_index] == -1) {
-          iapply = 1;
-        }
-      }
 
       /*  check to see if this bc is an integrated bc and thus to be handled
        *  by this routine and not others. Also, this routine is called
@@ -2721,10 +2653,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           func[2] = 0.0;
 
           memset(d_func, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
-
-          memset(func_stress, 0.0, MAX_MODES * 6 * sizeof(double));
-          memset(d_func_stress, 0.0,
-                 MAX_MODES * 6 * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
         }
         /*
          * Here's a RECIPE for adding new boundary conditions so you don't have any
@@ -2768,17 +2696,12 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         switch (bc->BC_Name) {
         case EM_ABSORBING_REAL_BC: {
           const double c0 = 3e17;
-          const double nu0 = 120 * M_PI;
-          const double e0 = (1e-9) / (36 * M_PI);
-          const double mu0 = 4 * M_PI * 1e-7;
-
           dbl x = fv->x[0];
           dbl y = fv->x[1];
           dbl z = fv->x[2];
           dbl freq = upd->Acoustic_Frequency;
           dbl lambda0 = c0 / freq;
           dbl k0 = 2 * M_PI / lambda0;
-          dbl omg = 2 * M_PI * freq;
           complex double wave[DIM];
           complex double curl_wave[DIM];
           plane_wave(x, y, z, k0, wave, curl_wave);
@@ -2792,9 +2715,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 
           double curl_wave_r[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
           double curl_wave_i[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
-
-          double Uinc_r[DIM];
-          double Uinc_i[DIM];
 
           double nxWave_r[DIM];
           double nxWave_i[DIM];
@@ -2841,8 +2761,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
             dbl Ei_imag[DIM] = {-ke * bf[EM_E1_IMAG]->phi_e[j][0],
                                 -ke * bf[EM_E1_IMAG]->phi_e[j][1],
                                 -ke * bf[EM_E1_IMAG]->phi_e[j][2]};
-            dbl deriv[DIM];
-            // cross_really_simple_vectors(fv->snormal, Ei_imag, deriv);
+
             d_func[0][EM_E1_IMAG][j] += Ei_imag[0];
             d_func[1][EM_E1_IMAG][j] += Ei_imag[1];
             d_func[2][EM_E1_IMAG][j] += Ei_imag[2];
@@ -2850,10 +2769,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
         } break;
         case EM_ABSORBING_IMAG_BC: {
           const double c0 = 3e17;
-          // const double nu0 = 120 * M_PI;
-          // const double e0 = (1e-9) / (36 * M_PI);
-          // const double mu0 = 4 * M_PI * 1e-7;
-
           dbl x = fv->x[0];
           dbl y = fv->x[1];
           dbl z = fv->x[2];
@@ -2874,9 +2789,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 
           double curl_wave_r[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
           double curl_wave_i[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
-
-          double Uinc_r[DIM];
-          double Uinc_i[DIM];
 
           double nxWave_r[DIM];
           double nxWave_i[DIM];
@@ -3000,17 +2912,6 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           break;
 
         } /* end of switch over bc type */
-
-        /*
-         *  If we have determined that the current boundary condition need
-         *  only be applied on one side of the interface and we are currently
-         *  on the other side of the interface, skip processing the rest
-         *  of this surface integral for this particular boundary condition.
-         *  Go directly to the next surface boundary condition on the current
-         *  side.
-         */
-        if (skip_other_side)
-          continue;
 
         /**********************************************************************/
         /*        LOOP OVER THE LOCAL ELEMENT NODE NUMBER                     */

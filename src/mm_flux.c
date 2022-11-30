@@ -1899,8 +1899,6 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
             case SCATTERING_CROSS_SECTION: {
               const double c0 = 3e17;
-              const double nu0 = 120 * M_PI;
-              const double e0 = (1e-9) / (36 * M_PI);
               const double mu0 = 4 * M_PI * 1e-16;
 
               dbl freq = upd->Acoustic_Frequency;
@@ -1922,7 +1920,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 GOMA_EH(GOMA_ERROR, "Trying to compute scattered cross section when permittivity "
                                     "is a matrix, not supported");
               }
-              complex double Z1 = Z0 / 1.0;//csqrt(creal(permittivity));
+              complex double Z1 = Z0 / 1.0; // csqrt(creal(permittivity));
               complex double S0 = 1 / (2 * Z1);
 
               complex double j = _Complex_I;
@@ -1937,23 +1935,24 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               complex double H_s[DIM] = {0.0, 0.0, 0.0};
 
               for (int i = 0; i < DIM; i++) {
-                //H_s[i] = conj(-1.0 / (j*k0) * curl_E_s[i]);
-                H_s[i] = conj(-1.0 / (j*mu0*omega0) * curl_E_s[i]);
-                //H_s[i] = conj(j * k0*curl_E_s[i]);
+                // H_s[i] = conj(-1.0 / (j*k0) * curl_E_s[i]);
+                H_s[i] = conj(-1.0 / (j * mu0 * omega0) * curl_E_s[i]);
+                // H_s[i] = conj(j * k0*curl_E_s[i]);
               }
 
               complex double P[DIM] = {
-                  0.5*(E_s[1] * H_s[2] - E_s[2] * H_s[1]),
-                  0.5*(E_s[2] * H_s[0] - E_s[0] * H_s[2]),
-                  0.5*(E_s[0] * H_s[1] - E_s[1] * H_s[0]),
+                  0.5 * (E_s[1] * H_s[2] - E_s[2] * H_s[1]),
+                  0.5 * (E_s[2] * H_s[0] - E_s[0] * H_s[2]),
+                  0.5 * (E_s[0] * H_s[1] - E_s[1] * H_s[0]),
               };
 
               for (a = 0; a < dim; a++) {
-                local_q += creal((1/S0)*P[a]) * fv->snormal[a];
+                local_q += creal((1 / S0) * P[a]) * fv->snormal[a];
                 // local_q += creal(P[a]) * fv->snormal[a];
               }
-              // printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, perm = %g, lambda0 = %g, mu0 = %g, omega0 = %g, local_q= %g\n",
-                    //  S0, k0, Z0, creal(permittivity), lambda0, mu0, omega0, local_q);
+              // printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, perm = %g, lambda0 = %g, mu0 =
+              // %g, omega0 = %g, local_q= %g\n",
+              //  S0, k0, Z0, creal(permittivity), lambda0, mu0, omega0, local_q);
               //  printf("E = [%g + i %g] [%g + i %g] [%g + i %g]\nH =  [%g + i %g] [%g + i %g] [%g
               //  +
               //  "
@@ -5563,7 +5562,6 @@ int compute_volume_integrand(const int quantity,
 
   case I_EM_ABSORB_CROSS_SECTION: {
     const double c0 = 3e17;
-    const double nu0 = 120 * M_PI;
     const double e0 = (1e-9) / (36 * M_PI);
     const double mu0 = 4 * M_PI * 1e-7;
     dbl x = fv->x[0];
@@ -5572,7 +5570,6 @@ int compute_volume_integrand(const int quantity,
     dbl freq = upd->Acoustic_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
-    dbl omega0 = 2 * M_PI * freq;
     complex double permittivity;
     complex double permittivity_matrix[DIM];
     bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
@@ -5581,7 +5578,7 @@ int compute_volume_integrand(const int quantity,
                           "is a matrix, not supported");
     }
     dbl Z0 = mu0 * c0;
-    complex double Z1 = Z0 / 1.0;//csqrt(creal(permittivity));
+    complex double Z1 = Z0 / 1.0; // csqrt(creal(permittivity));
     complex double S0 = 1 / (2 * Z1);
     complex double invS0 = 1 / S0;
     complex double wave[3];
@@ -5591,8 +5588,8 @@ int compute_volume_integrand(const int quantity,
     for (int i = 0; i < DIM; i++) {
       E_mag += fv->em_er[i] * fv->em_er[i] + fv->em_ei[i] * fv->em_ei[i];
     }
-   // E_mag = sqrt(E_mag);
-    dbl omega = k0 / sqrt(e0*mu0);
+    // E_mag = sqrt(E_mag);
+    dbl omega = k0 / sqrt(e0 * mu0);
     // printf("omega = %g, S0=%g, cimag(perm) = %g, E_mag = %g, invS0 = %g\n",
     // omega,
     // S0,
@@ -5600,7 +5597,7 @@ int compute_volume_integrand(const int quantity,
     // E_mag,
     // invS0
     // );
-    *sum +=creal( weight * det * invS0 * 0.5 * omega * e0 * cimag(permittivity) * E_mag);
+    *sum += creal(weight * det * invS0 * 0.5 * omega * e0 * cimag(permittivity) * E_mag);
   } break;
 
   default:

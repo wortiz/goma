@@ -3154,8 +3154,6 @@ bool relative_permittivity_model(complex double *permittivity_out,
 
     const double c0 = 3e14;
     const double nu0 = 120 * M_PI;
-    const double e0 = (1e-9) / (36 * M_PI);
-    const double mu0 = 4 * M_PI * 1e-13;
 
     dbl x = fv->x[0];
     dbl y = fv->x[1];
@@ -3163,7 +3161,6 @@ bool relative_permittivity_model(complex double *permittivity_out,
     dbl freq = upd->Acoustic_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
-    dbl omg = 2 * M_PI * freq;
     dbl d = pml_outer_radius - pml_inner_radius;
 
     dbl L_mag = sqrt(x * x + y * y + z * z);
@@ -3235,8 +3232,6 @@ bool relative_permeability_model(complex double *permeability_out,
 
     const double c0 = 3e14;
     const double nu0 = 120 * M_PI;
-    const double e0 = (1e-9) / (36 * M_PI);
-    const double mu0 = 4 * M_PI * 1e-7;
 
     dbl x = fv->x[0];
     dbl y = fv->x[1];
@@ -3244,7 +3239,6 @@ bool relative_permeability_model(complex double *permeability_out,
     dbl freq = upd->Acoustic_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
-    dbl omg = 2 * M_PI * freq;
 
     dbl d = pml_outer_radius - pml_inner_radius;
 
@@ -3322,9 +3316,6 @@ int assemble_ewave_nedelec(dbl time) {
   int eqn_imag = EM_E1_IMAG;
 
   const double c0 = 3e17;
-  const double nu0 = 120 * M_PI;
-  const double e0 = (1e-9) / (36 * M_PI);
-  const double mu0 = 4 * M_PI * 1e-7;
   /*
    * Bail out fast if there's nothing to do...
    * But we might have the wrong eqn
@@ -3339,24 +3330,11 @@ int assemble_ewave_nedelec(dbl time) {
   dbl freq = upd->Acoustic_Frequency;
   dbl lambda0 = c0 / freq;
   dbl k0 = 2 * M_PI / lambda0;
-  dbl omg = 2 * M_PI * freq;
 
   dbl sigma = mp->electrical_conductivity;
   complex double wave[3];
   complex double curl_wave[3];
   plane_wave(x, y, z, k0, wave, curl_wave);
-  // if (ProcID == 0) {
-  //   static int first = TRUE;
-  //   if (first) {
-  //     first = false;
-  //     FILE * f = fopen("coords.csv", "w");
-  //     fprintf(f, "x,y,z,wr,wi,k0\n");
-  //     fclose(f);
-  //   }
-  //     FILE * f = fopen("coords.csv", "a");
-  //   fprintf(f, "%g,%g,%g,%g,%g,%g\n",x,y,z,creal(wave[0]),cimag(wave[0]),k0);
-  //   fclose(f);
-  // }
 
   complex double permeability_matrix[DIM]; // diagonal matrix if exists
   complex double permittivity_matrix[DIM]; // diagonal matrix if exists
@@ -3364,8 +3342,6 @@ int assemble_ewave_nedelec(dbl time) {
   complex double permeability;
   bool permeability_is_matrix = relative_permeability_model(&permeability, permeability_matrix);
   bool permittivity_is_matrix = relative_permittivity_model(&permittivity, permittivity_matrix);
-  complex double force[DIM] = {0.0};
-  // em_mms_force(x, y, z, force);
 
   int reqn = R_EM_E1_REAL;
   int peqn_real = upd->ep[pg->imtrx][reqn];
@@ -3397,24 +3373,7 @@ int assemble_ewave_nedelec(dbl time) {
                          (fv->em_er[q] + fv->em_ei[q] * _Complex_I)));
         }
       }
-
-      complex double source = 0;
-      dbl curl_curl_wave[DIM] = {0.0};
-      dbl E0 = 1.0;
-      curl_curl_wave[0] = E0 * k0 * k0 * cexp(-_Complex_I * k0 * fv->x[2]);
-
-      for (int q = 0; q < DIM; q++) {
-        //   if (!permittivity_is_matrix) {
-        //     if (DOUBLE_NONZERO(permittivity - 10)) {
-
-        // source += bf[ieqn]->curl_phi[i][q] * (1.0 / permeability) * (curl_wave[q]);
-        // source -= k0 * k0 * (permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-        // source -= (curl_curl_wave[q]/permeability) + k0 * k0 * (permittivity)*wave[q] *
-        // bf[reqn]->phi_e[i][q];
-        //     }
-        //     //  //source += k0*k0*(permittivity)*wave[q] * bf[reqn]->phi_e[i][q];
-        //   }
-      }
+      dbl source = 0;
 
       lec->R[LEC_R_INDEX(peqn_real, i)] +=
           creal(diffusion + advection + source) * bf[eqn_real]->detJ * fv->wt * fv->h3;

@@ -8523,20 +8523,11 @@ int load_fv_vector(void)
  * Modified:
  ***************************************************************************/
 {
-  int v;    /* variable type indicator */
-  int i;    /* index */
-  int p, q; /* dimension indeces */
-  int dim;
+  int v; /* variable type indicator */
+  int i; /* index */
+  int p;
   int dofs; /* degrees of freedom for a var in the elem */
-  int w;    /* concentration species and porous media vars counter */
-  int node, index;
-  int N;
-  int mode;
   int status = 0;
-  int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
-  double rho, *stateVector = mp->StateVector;
-  BASIS_FUNCTIONS_STRUCT *bfv;
-  int transient_run = pd->TimeIntegration != STEADY;
   int *pdgv = pd->gv;
 
   status = 0;
