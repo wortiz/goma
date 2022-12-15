@@ -473,6 +473,7 @@ set(GOMA_INCLUDES
     include/mm_mp.h
     include/mm_mp_structs.h
     include/mm_names.h
+    include/mm_em_bc.h
     include/mm_ns_bc.h
     include/mm_numjac.h
     include/mm_post_def.h
@@ -618,6 +619,7 @@ set(GOMA_SOURCES
     src/mm_interface.c
     src/mm_matrl.c
     src/mm_more_utils.c
+    src/mm_em_bc.c
     src/mm_ns_bc.c
     src/mm_numjac.c
     src/mm_placid.c

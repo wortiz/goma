@@ -44,6 +44,7 @@
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_elem_block_structs.h"
+#include "mm_em_bc.h"
 #include "mm_fill_aux.h"
 #include "mm_fill_em.h"
 #include "mm_fill_fill.h"
@@ -2694,221 +2695,23 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
          */
 
         switch (bc->BC_Name) {
-        case EM_ABSORBING_REAL_BC: {
-          const double c0 = 3e17;
-          dbl x = fv->x[0];
-          dbl y = fv->x[1];
-          dbl z = fv->x[2];
-          dbl freq = upd->Acoustic_Frequency;
-          dbl lambda0 = c0 / freq;
-          dbl k0 = 2 * M_PI / lambda0;
-          complex double wave[DIM];
-          complex double curl_wave[DIM];
-          plane_wave(x, y, z, k0, wave, curl_wave);
+        case EM_ABSORBING_REAL_BC:
+        case EM_ABSORBING_IMAG_BC:
+          em_absorbing_bc_nedelec(bc->BC_Name, func, d_func);
+          break;
 
-          complex double j = _Complex_I;
-          complex double E[DIM] = {fv->em_er[0] + j * fv->em_ei[0], fv->em_er[1] + j * fv->em_ei[1],
-                                   fv->em_er[2] + j * fv->em_ei[2]};
+        case EM_MMS_SIDE_BC:
+        case EM_MMS_SIDE_IMAG_BC:
+          em_mms_nedelec_bc(bc->BC_Name, func, d_func);
 
-          double wave_r[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
-          double wave_i[DIM] = {cimag(wave[0]), cimag(wave[1]), cimag(wave[2])};
-
-          double curl_wave_r[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
-          double curl_wave_i[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
-
-          double nxWave_r[DIM];
-          double nxWave_i[DIM];
-
-          cross_really_simple_vectors(fv->snormal, wave_r, nxWave_r);
-          cross_really_simple_vectors(fv->snormal, wave_i, nxWave_i);
-
-          double nxnxWave_r[DIM];
-          double nxnxWave_i[DIM];
-
-          cross_really_simple_vectors(fv->snormal, nxWave_r, nxnxWave_r);
-          cross_really_simple_vectors(fv->snormal, nxWave_i, nxnxWave_i);
-
-          dbl ke = k0;
-
-          double nxCurlWave_r[DIM];
-          double nxCurlWave_i[DIM];
-          cross_really_simple_vectors(fv->snormal, curl_wave_r, nxCurlWave_r);
-          cross_really_simple_vectors(fv->snormal, curl_wave_i, nxCurlWave_i);
-
-          complex double Uinc[DIM];
-          for (int i = 0; i < DIM; i++) {
-            Uinc[i] = nxCurlWave_r[i] + nxCurlWave_i[i] * j +
-                      j * k0 * (nxnxWave_r[i] + nxnxWave_i[i] * j);
-            // Uinc[i] = curl_wave[i] + j*ke*(nxWave_r[i] * j * nxWave_i[i]);
-          }
-          double ABC[DIM];
-
-          for (int i = 0; i < DIM; i++) {
-            // ABC[i] = creal(j * ke * E[i] - Uinc[i]);
-            ABC[i] = creal(j * ke * E[i]);
-            // ABC[i] = j * ke * E[i] + Uinc[i];
-            // ABC[i] = Uinc[i];
-          }
-
-          dbl nxABC[DIM] = {0.0};
-          cross_really_simple_vectors(fv->snormal, ABC, nxABC);
-
-          for (int i = 0; i < DIM; i++) {
-            func[i] += +(ABC[i] + creal(Uinc[i]));
-          }
-
-          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-            dbl Ei_imag[DIM] = {-ke * bf[EM_E1_IMAG]->phi_e[j][0],
-                                -ke * bf[EM_E1_IMAG]->phi_e[j][1],
-                                -ke * bf[EM_E1_IMAG]->phi_e[j][2]};
-
-            d_func[0][EM_E1_IMAG][j] += Ei_imag[0];
-            d_func[1][EM_E1_IMAG][j] += Ei_imag[1];
-            d_func[2][EM_E1_IMAG][j] += Ei_imag[2];
-          }
-        } break;
-        case EM_ABSORBING_IMAG_BC: {
-          const double c0 = 3e17;
-          dbl x = fv->x[0];
-          dbl y = fv->x[1];
-          dbl z = fv->x[2];
-          dbl freq = upd->Acoustic_Frequency;
-          dbl lambda0 = c0 / freq;
-          dbl k0 = 2 * M_PI / lambda0;
-          // dbl omg = 2 * M_PI * freq;
-          complex double wave[DIM];
-          complex double curl_wave[DIM];
-          plane_wave(x, y, z, k0, wave, curl_wave);
-
-          complex double j = _Complex_I;
-          complex double E[DIM] = {fv->em_er[0] + j * fv->em_ei[0], fv->em_er[1] + j * fv->em_ei[1],
-                                   fv->em_er[2] + j * fv->em_ei[2]};
-
-          double wave_r[DIM] = {creal(wave[0]), creal(wave[1]), creal(wave[2])};
-          double wave_i[DIM] = {cimag(wave[0]), cimag(wave[1]), cimag(wave[2])};
-
-          double curl_wave_r[DIM] = {creal(curl_wave[0]), creal(curl_wave[1]), creal(curl_wave[2])};
-          double curl_wave_i[DIM] = {cimag(curl_wave[0]), cimag(curl_wave[1]), cimag(curl_wave[2])};
-
-          double nxWave_r[DIM];
-          double nxWave_i[DIM];
-
-          cross_really_simple_vectors(fv->snormal, wave_r, nxWave_r);
-          cross_really_simple_vectors(fv->snormal, wave_i, nxWave_i);
-
-          double nxnxWave_r[DIM];
-          double nxnxWave_i[DIM];
-
-          cross_really_simple_vectors(fv->snormal, nxWave_r, nxnxWave_r);
-          cross_really_simple_vectors(fv->snormal, nxWave_i, nxnxWave_i);
-
-          dbl ke = k0;
-
-          double nxCurlWave_r[DIM];
-          double nxCurlWave_i[DIM];
-          cross_really_simple_vectors(fv->snormal, curl_wave_r, nxCurlWave_r);
-          cross_really_simple_vectors(fv->snormal, curl_wave_i, nxCurlWave_i);
-
-          complex double Uinc[DIM];
-          for (int i = 0; i < DIM; i++) {
-            Uinc[i] = nxCurlWave_r[i] + nxCurlWave_i[i] * j +
-                      j * k0 * (nxnxWave_r[i] + nxnxWave_i[i] * j);
-            //  Uinc[i] = curl_wave[i] + j*ke*(nxWave_r[i] * j * nxWave_i[i]);
-          }
-          dbl ABC[DIM];
-
-          for (int i = 0; i < DIM; i++) {
-            // ABC[i] = j * ke * E[i] + Uinc[i];
-            // ABC[i] = cimag(j * ke * E[i]);
-            // ABC[i] = cimag(j * ke * E[i] - Uinc[i]);
-            ABC[i] = cimag(j * ke * E[i]);
-            // ABC[i] = Uinc[i];
-          }
-          dbl nxABC[DIM] = {0.0};
-          cross_really_simple_vectors(fv->snormal, ABC, nxABC);
-
-          for (int i = 0; i < DIM; i++) {
-            func[i] = +(ABC[i] + cimag(Uinc[i]));
-          }
-
-          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
-            dbl Ei_real[DIM] = {ke * bf[EM_E1_REAL]->phi_e[j][0], ke * bf[EM_E1_REAL]->phi_e[j][1],
-                                ke * bf[EM_E1_REAL]->phi_e[j][2]};
-            dbl deriv[DIM] = {0.0};
-            cross_really_simple_vectors(fv->snormal, Ei_real, deriv);
-            for (int i = 0; i < pd->Num_Dim; i++) {
-              d_func[i][EM_E1_REAL][j] += Ei_real[i];
-            }
-          }
-        } break;
-        case EM_MMS_SIDE_BC: {
-          complex double exact[DIM];
-          em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
-          dbl omega = upd->Acoustic_Frequency;
-          dbl x = fv->x[0];
-          dbl y = fv->x[1];
-          dbl z = fv->x[2];
-          complex double wave[DIM];
-          complex double curl_wave[DIM];
-          plane_wave(x, y, z, omega, wave, curl_wave);
-          dbl exact_real[DIM];
-          for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_real[i] = 0 * creal(wave[i]);
-          }
-
-          for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_real[i] += fv->em_er[i];
-          }
-          cross_really_simple_vectors(fv->snormal, exact_real, func);
-          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_REAL]; j++) {
-            for (int i = 0; i < pd->Num_Dim; i++) {
-              exact_real[i] = bf[EM_E1_REAL]->phi_e[j][i];
-            }
-            dbl d_exact[DIM];
-            cross_really_simple_vectors(fv->snormal, exact_real, d_exact);
-            for (int i = 0; i < pd->Num_Dim; i++) {
-              d_func[i][EM_E1_REAL][j] = d_exact[i];
-            }
-          }
-        } break;
-        case EM_MMS_SIDE_IMAG_BC: {
-          dbl omega = upd->Acoustic_Frequency;
-          dbl x = fv->x[0];
-          dbl y = fv->x[1];
-          dbl z = fv->x[2];
-          complex double wave[DIM];
-          complex double curl_wave[DIM];
-          plane_wave(x, y, z, omega, wave, curl_wave);
-          complex double exact[DIM];
-          em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
-          dbl exact_imag[DIM];
-          for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_imag[i] = 0 * cimag(wave[i]);
-          }
-
-          for (int i = 0; i < pd->Num_Dim; i++) {
-            exact_imag[i] += fv->em_ei[i];
-          }
-          cross_really_simple_vectors(fv->snormal, exact_imag, func);
-          for (int j = 0; j < ei[pg->imtrx]->dof[EM_E1_IMAG]; j++) {
-            for (int i = 0; i < pd->Num_Dim; i++) {
-              exact_imag[i] = bf[EM_E1_IMAG]->phi_e[j][i];
-            }
-            dbl d_exact[DIM] = {0.0};
-            cross_really_simple_vectors(fv->snormal, exact_imag, d_exact);
-            for (int i = 0; i < pd->Num_Dim; i++) {
-              d_func[i][EM_E1_IMAG][j] = d_exact[i];
-            }
-          }
-        } break;
+          break;
         case EM_FARFIELD_REAL_NED_BC:
         case EM_FARFIELD_IMAG_NED_BC:
           apply_ewave_nedelec_farfield(func, d_func, xi, time_value, (int)bc->BC_Name,
                                        bc->BC_Data_Float);
           break;
         default:
-          sprintf(Err_Msg, "Integrated BC %s not found", bc_desc->name1);
-          GOMA_EH(GOMA_ERROR, Err_Msg);
+          GOMA_EH(GOMA_ERROR, "Integrated BC %s not found", bc_desc->name1);
           break;
 
         } /* end of switch over bc type */
@@ -2930,14 +2733,13 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
            */
           weight = wt;
 
-          dbl nxphi[DIM] = {0};
+          dbl phi_e[DIM] = {0};
 
           ldof_eqn = i;
 
-          cross_really_simple_vectors(bf[eqn]->phi_e[i], fv->snormal, nxphi);
-          nxphi[0] = bf[eqn]->phi_e[i][0];
-          nxphi[1] = bf[eqn]->phi_e[i][1];
-          nxphi[2] = bf[eqn]->phi_e[i][2];
+          phi_e[0] = bf[eqn]->phi_e[i][0];
+          phi_e[1] = bf[eqn]->phi_e[i][1];
+          phi_e[2] = bf[eqn]->phi_e[i][2];
 
           /*
            * For strong conditions weight the function by BIG_PENALTY
@@ -2949,7 +2751,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
 
           for (int p = 0; p < pd->Num_Dim; p++) {
             if (ldof_eqn != -1) {
-              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->sdet * nxphi[p] * func[p];
+              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += weight * fv->sdet * phi_e[p] * func[p];
 
               if (af->Assemble_Jacobian && ldof_eqn != -1) {
 
@@ -2969,7 +2771,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
                     if (pvar != -1) {
                       for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                         lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                            weight * nxphi[p] * func[p] * fv->dsurfdet_dx[q][j];
+                            weight * phi_e[p] * func[p] * fv->dsurfdet_dx[q][j];
                       }
                     }
                   }
@@ -2984,14 +2786,14 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
                     if (var != MASS_FRACTION) {
                       for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                         lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
-                            weight * fv->sdet * nxphi[p] * d_func[p][var][j];
+                            weight * fv->sdet * phi_e[p] * d_func[p][var][j];
                       }
                     } else {
                       /* variable type is MASS_FRACTION */
                       for (w = 0; w < pd->Num_Species_Eqn; w++) {
                         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                           lec->J[LEC_J_INDEX(ieqn, MAX_PROB_VAR + w, ldof_eqn, j)] +=
-                              weight * fv->sdet * nxphi[p] * d_func[p][MAX_VARIABLE_TYPES + w][j];
+                              weight * fv->sdet * phi_e[p] * d_func[p][MAX_VARIABLE_TYPES + w][j];
                         }
                       } /* end of loop over species */
                     }   /* end of if MASS_FRACTION */
