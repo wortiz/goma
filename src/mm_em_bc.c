@@ -1373,7 +1373,7 @@ void em_absorbing_bc_nedelec(int bc_name,
   dbl k0 = 2 * M_PI / lambda0;
   complex double wave[DIM];
   complex double curl_wave[DIM];
-  plane_wave(x, y, z, k0, wave, curl_wave);
+  incident_wave(x, y, z, k0, wave, curl_wave);
   complex double j = _Complex_I;
   complex double E[DIM] = {fv->em_er[0] + j * fv->em_ei[0], fv->em_er[1] + j * fv->em_ei[1],
                            fv->em_er[2] + j * fv->em_ei[2]};
@@ -1505,7 +1505,7 @@ void em_mms_nedelec_bc(int bc_name,
     dbl z = fv->x[2];
     complex double wave[DIM];
     complex double curl_wave[DIM];
-    plane_wave(x, y, z, omega, wave, curl_wave);
+    incident_wave(x, y, z, omega, wave, curl_wave);
     dbl exact_real[DIM];
     for (int i = 0; i < pd->Num_Dim; i++) {
       exact_real[i] = 0 * creal(wave[i]);
@@ -1533,7 +1533,7 @@ void em_mms_nedelec_bc(int bc_name,
     dbl z = fv->x[2];
     complex double wave[DIM];
     complex double curl_wave[DIM];
-    plane_wave(x, y, z, omega, wave, curl_wave);
+    incident_wave(x, y, z, omega, wave, curl_wave);
     complex double exact[DIM];
     em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
     dbl exact_imag[DIM];

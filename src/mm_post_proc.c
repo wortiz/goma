@@ -1360,7 +1360,7 @@ static int calc_standard_fields(double **post_proc_vect,
     complex double wave[3] = {0};
     complex double curl_wave[3];
     if (mp->PermittivityModel != RADIAL_PML) {
-      plane_wave(x, y, z, k0, wave, curl_wave);
+      incident_wave(x, y, z, k0, wave, curl_wave);
     }
 
     for (b = 0; b < DIM; b++) {
@@ -1394,7 +1394,7 @@ static int calc_standard_fields(double **post_proc_vect,
     complex double wave[3] = {0};
     complex double curl_wave[3];
     if (mp->PermittivityModel != RADIAL_PML) {
-      plane_wave(x, y, z, k0, wave, curl_wave);
+      incident_wave(x, y, z, k0, wave, curl_wave);
     }
 
     for (b = 0; b < DIM; b++) {
@@ -3797,7 +3797,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] +=
             sqrt(creal(wave[0]) * creal(wave[0]) + creal(wave[1]) * creal(wave[1]) +
@@ -3815,7 +3815,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] +=
             sqrt((fv->em_er[0] - creal(wave[0])) * (fv->em_er[0] - creal(wave[0])) +
@@ -3841,7 +3841,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += fv->em_er[0] - creal(wave[0]);
       } break;
@@ -3856,7 +3856,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += fv->em_er[1] - creal(wave[1]);
       } break;
@@ -3871,7 +3871,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += fv->em_er[2] - creal(wave[2]);
       } break;
@@ -3886,7 +3886,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += fv->em_ei[0] - cimag(wave[0]);
       } break;
@@ -3901,7 +3901,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += fv->em_ei[1] - creal(wave[1]);
       } break;
@@ -3916,7 +3916,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += fv->em_ei[2] - cimag(wave[2]);
       } break;
@@ -3931,7 +3931,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += creal(wave[0]);
       } break;
@@ -3946,7 +3946,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += creal(wave[1]);
       } break;
@@ -3961,7 +3961,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += creal(wave[2]);
       } break;
@@ -3976,7 +3976,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += cimag(wave[0]);
       } break;
@@ -3991,7 +3991,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += creal(wave[1]);
       } break;
@@ -4006,7 +4006,7 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         complex double wave[3] = {0};
         complex double curl_wave[3];
         if (mp->PermittivityModel != RADIAL_PML) {
-          plane_wave(x, y, z, k0, wave, curl_wave);
+          incident_wave(x, y, z, k0, wave, curl_wave);
         }
         avg_sum[i][global_node] += cimag(wave[2]);
       } break;

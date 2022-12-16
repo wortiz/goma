@@ -1594,7 +1594,6 @@ int assemble_em_continuity() {
   return (0);
 } // end of assemble_em_continuity
 
-
 void calc_emwave_stabilization_term(struct emwave_stabilization *em_stab,
                                     double stabilization_coefficient) {
   double complex grad_stabilization_field[DIM][DIM] = {{0.0}};
@@ -2093,20 +2092,32 @@ bool relative_permeability_model(complex double *permeability_out,
   return false;
 }
 
-int plane_wave(
+int incident_wave(
     dbl x, dbl y, dbl z, dbl omega, complex double wave[DIM], complex double curl_wave[DIM]) {
-  for (int i = 0; i < DIM; i++) {
-    wave[i] = 0;
-    curl_wave[i] = 0;
+
+  switch (mp->IncidentWaveModel) {
+  case CONSTANT: {
+    GOMA_WH(GOMA_ERROR,
+            "Incident wave being called but was not set or is set to CONSTANT, will not be used");
+    for (int i = 0; i < DIM; i++) {
+      wave[i] = 0;
+      curl_wave[i] = 0;
+    }
+  } break;
+  case EM_INC_PLANE_Z_WAVE: {
+    for (int i = 0; i < DIM; i++) {
+      wave[i] = 0;
+      curl_wave[i] = 0;
+    }
+
+    dbl E0 = mp->u_incident_wave[0];
+
+    wave[0] = E0 * cexp(-_Complex_I * omega * z);
+    curl_wave[1] = -E0 * _Complex_I * omega * cexp(-_Complex_I * omega * z);
+  } break;
+  default:
+    GOMA_EH(GOMA_ERROR, "Unknown Incident wave model %d", mp->IncidentWaveModel);
   }
-
-  // start with z plane wave in x direction
-  dbl E0 = 1.0;
-
-  // wave[0] = cexp(_Complex_I*omega*(x *sin(0)*cos(0) + y*sin(0)*sin(0) + z*cos(0)));//E0 *
-  // cexp(-_Complex_I * omega * z);
-  wave[0] = E0 * cexp(-_Complex_I * omega * z);
-  curl_wave[1] = -E0 * _Complex_I * omega * cexp(-_Complex_I * omega * z);
 
   return 0;
 }
@@ -2138,7 +2149,7 @@ int assemble_ewave_nedelec(dbl time) {
   dbl sigma = mp->electrical_conductivity;
   complex double wave[3];
   complex double curl_wave[3];
-  plane_wave(x, y, z, k0, wave, curl_wave);
+  incident_wave(x, y, z, k0, wave, curl_wave);
 
   complex double permeability_matrix[DIM]; // diagonal matrix if exists
   complex double permittivity_matrix[DIM]; // diagonal matrix if exists

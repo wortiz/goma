@@ -904,6 +904,12 @@ struct Material_Properties {
   int por_shell_cap_pres_ext_field_index[MAX_POR_SHELL];
   int por_shell_cap_pres_hyst_num_switch_ext_field_index[MAX_POR_SHELL];
   int por_shell_cap_pres_hyst_curve_type_ext_field_index[MAX_POR_SHELL];
+  
+
+  // EM incident wave, mix between boundary condition / source / problem property
+  int IncidentWaveModel;
+  int len_u_incident_wave;
+  dbl *u_incident_wave;
 
   /*
    * Boundary conditions...(these quantities and the geometric surface

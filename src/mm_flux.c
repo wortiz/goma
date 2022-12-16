@@ -1911,7 +1911,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               dbl x = fv->x[0];
               dbl y = fv->x[1];
               dbl z = fv->x[2];
-              plane_wave(x, y, z, k0, wave, curl_wave);
+              incident_wave(x, y, z, k0, wave, curl_wave);
               complex double permittivity;
               complex double permittivity_matrix[DIM];
               bool permittivity_is_matrix =
@@ -5583,7 +5583,7 @@ int compute_volume_integrand(const int quantity,
     complex double invS0 = 1 / S0;
     complex double wave[3];
     complex double curl_wave[3];
-    plane_wave(x, y, z, k0, wave, curl_wave);
+    incident_wave(x, y, z, k0, wave, curl_wave);
     dbl E_mag = 0;
     for (int i = 0; i < DIM; i++) {
       E_mag += fv->em_er[i] * fv->em_er[i] + fv->em_ei[i] * fv->em_ei[i];

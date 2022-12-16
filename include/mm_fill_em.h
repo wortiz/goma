@@ -36,6 +36,13 @@
 #define EXTERN extern
 #endif
 
+enum em_incident_wave_type {
+  // NONE/CONSTANT in input deck
+  EM_INC_NONE=1,
+  // Start at 2 to avoid CONSTANT=1
+  EM_INC_PLANE_Z_WAVE=2,
+};
+
 enum stabilization_type {
   EM_STAB_NONE,
   EM_STAB_PHI_DIV,
@@ -84,7 +91,7 @@ int assemble_em_continuity(void);
 int assemble_ewave_nedelec(dbl time);
 int em_mms_force(dbl x, dbl y, dbl z, complex double force[DIM]);
 int em_mms_exact(dbl x, dbl y, dbl z, complex double exact[DIM]);
-int plane_wave(
+int incident_wave(
     dbl x, dbl y, dbl z, dbl omega, complex double wave[DIM], complex double curl_wave[DIM]);
 bool relative_permittivity_model(complex double *permittivity_out,
                                  complex double *permittivity_matrix);
