@@ -1074,4 +1074,6 @@ void elements_attached_to_NS(int *element_list, int NS_ID, Exo_DB *exo) {
   }
   return;
 }
+
 /* END of file mm_more_utils.c */
+
