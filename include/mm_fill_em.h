@@ -38,9 +38,9 @@
 
 enum em_incident_wave_type {
   // NONE/CONSTANT in input deck
-  EM_INC_NONE=1,
+  EM_INC_NONE = 1,
   // Start at 2 to avoid CONSTANT=1
-  EM_INC_PLANE_Z_WAVE=2,
+  EM_INC_PLANE_Z_WAVE = 2,
 };
 
 enum stabilization_type {
@@ -71,7 +71,6 @@ EXTERN int assemble_emwave /* mm_fill_em.c                           */
      const int,            /*  Light intensity eqn id and var id     */
      const int,            /*  Light intensity eqn id and var id     */
      const int);
-
 
 EXTERN void calc_emwave_stabilization_term(struct emwave_stabilization *, double);
 
