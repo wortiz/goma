@@ -19,6 +19,7 @@ PLANE_Z_WAVE
       Plane Z wave in the x direction:
         :math:`(E_inc)_z = E_0 exp(i\omega x)`
 
+
 ------------
 **Examples**
 ------------
