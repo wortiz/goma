@@ -84,7 +84,7 @@ int apply_em_farfield_direct_vec(double func[DIM],
 
   // use mp for inside (subscript 1) ..
 
-  double omega = upd->Acoustic_Frequency;
+  double omega = upd->EM_Frequency;
   n1 = refractive_index(d_n1, 0.0);
 
   k1 = extinction_index(d_k1, 0.0);
@@ -498,7 +498,7 @@ int apply_em_sommerfeld_vec(double func[DIM],
   dbl mag_permeability = 12.57e-07; // H/m
 
   double impedance = sqrt(mag_permeability / mp->permittivity);
-  double omega = upd->Acoustic_Frequency;
+  double omega = upd->EM_Frequency;
   double n[DIM]; // surface normal vector
 
   // double complex E1[DIM], H1[DIM]; // complex fields inside domain
@@ -700,7 +700,7 @@ int apply_ewave_planewave_vec(double func[DIM],
    ********************************************************************/
 
   // double impedance = sqrt(mp->magnetic_permeability/mp->permittivity);
-  double omega = upd->Acoustic_Frequency;
+  double omega = upd->EM_Frequency;
   double n[DIM]; // surface normal vector
 
   // double complex E1[DIM], H1[DIM]; // complex fields inside domain
@@ -849,7 +849,7 @@ int apply_ewave_curlcurl_farfield_vec(double func[DIM],
     }
   */
   // setup wave and material properties
-  double omega = upd->Acoustic_Frequency;
+  double omega = upd->EM_Frequency;
   dbl n_1; /* Refractive index. */
   CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct;
   CONDUCTIVITY_DEPENDENCE_STRUCT *d_n = &d_n_struct;
@@ -1038,7 +1038,7 @@ int apply_ewave_mms_vec(double func[DIM],
    *
    ********************************************************************/
 
-  double omega = upd->Acoustic_Frequency;
+  double omega = upd->EM_Frequency;
   double n[DIM]; // surface normal vector
 
   // double complex E1[DIM], H1[DIM]; // complex fields inside domain
@@ -1268,7 +1268,7 @@ int apply_ewave_nedelec_farfield(double func[DIM],
     }
   */
   // setup wave and material properties
-  double omega = upd->Acoustic_Frequency;
+  double omega = upd->EM_Frequency;
   dbl n_1; /* Refractive index. */
   CONDUCTIVITY_DEPENDENCE_STRUCT d_n_struct;
   CONDUCTIVITY_DEPENDENCE_STRUCT *d_n = &d_n_struct;
@@ -1364,11 +1364,11 @@ int apply_ewave_nedelec_farfield(double func[DIM],
 void em_absorbing_bc_nedelec(int bc_name,
                              dbl *func,
                              double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE]) {
-  const double c0 = 3e17;
+  const double c0 = upd->Speed_Of_Light;
   dbl x = fv->x[0];
   dbl y = fv->x[1];
   dbl z = fv->x[2];
-  dbl freq = upd->Acoustic_Frequency;
+  dbl freq = upd->EM_Frequency;
   dbl lambda0 = c0 / freq;
   dbl k0 = 2 * M_PI / lambda0;
   complex double wave[DIM];
@@ -1499,7 +1499,7 @@ void em_mms_nedelec_bc(int bc_name,
   case EM_MMS_SIDE_BC: {
     complex double exact[DIM];
     em_mms_exact(fv->x[0], fv->x[1], fv->x[2], exact);
-    dbl omega = upd->Acoustic_Frequency;
+    dbl omega = upd->EM_Frequency;
     dbl x = fv->x[0];
     dbl y = fv->x[1];
     dbl z = fv->x[2];
@@ -1527,7 +1527,7 @@ void em_mms_nedelec_bc(int bc_name,
     }
   } break;
   case EM_MMS_SIDE_IMAG_BC: {
-    dbl omega = upd->Acoustic_Frequency;
+    dbl omega = upd->EM_Frequency;
     dbl x = fv->x[0];
     dbl y = fv->x[1];
     dbl z = fv->x[2];

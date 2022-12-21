@@ -1350,11 +1350,11 @@ static int calc_standard_fields(double **post_proc_vect,
 
   if (TOTAL_EM_CONTOURS != -1 && pd->v[pg->imtrx][EM_E1_REAL]) {
     index = 0;
-    const double c0 = 3e17;
+    const double c0 = upd->Speed_Of_Light;
     dbl x = fv->x[0];
     dbl y = fv->x[1];
     dbl z = fv->x[2];
-    dbl freq = upd->Acoustic_Frequency;
+    dbl freq = upd->EM_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
     complex double wave[3] = {0};
@@ -1384,11 +1384,11 @@ static int calc_standard_fields(double **post_proc_vect,
 
   if (SCATTERED_EM_CONTOURS != -1 && pd->v[pg->imtrx][EM_E1_REAL]) {
     index = 0;
-    const double c0 = 3e17;
+    const double c0 = upd->Speed_Of_Light;
     dbl x = fv->x[0];
     dbl y = fv->x[1];
     dbl z = fv->x[2];
-    dbl freq = upd->Acoustic_Frequency;
+    dbl freq = upd->EM_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
     complex double wave[3] = {0};
@@ -3787,11 +3787,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += fv->em_ei[2];
       } break;
       case AVG_EM_INC_MAG: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3805,11 +3805,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
                  cimag(wave[1]) * cimag(wave[1]) + cimag(wave[2]) * cimag(wave[2]));
       } break;
       case AVG_EM_SCAT_MAG: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3831,11 +3831,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
                                         fv->em_ei[1] * fv->em_ei[1] + fv->em_ei[2] * fv->em_ei[2]);
       } break;
       case AVG_EMSCATR_X: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3846,11 +3846,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += fv->em_er[0] - creal(wave[0]);
       } break;
       case AVG_EMSCATR_Y: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3861,11 +3861,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += fv->em_er[1] - creal(wave[1]);
       } break;
       case AVG_EMSCATR_Z: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3876,11 +3876,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += fv->em_er[2] - creal(wave[2]);
       } break;
       case AVG_EMSCATI_X: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3891,11 +3891,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += fv->em_ei[0] - cimag(wave[0]);
       } break;
       case AVG_EMSCATI_Y: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3906,11 +3906,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += fv->em_ei[1] - creal(wave[1]);
       } break;
       case AVG_EMSCATI_Z: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3921,11 +3921,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += fv->em_ei[2] - cimag(wave[2]);
       } break;
       case AVG_EMINCR_X: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3936,11 +3936,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += creal(wave[0]);
       } break;
       case AVG_EMINCR_Y: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3951,11 +3951,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += creal(wave[1]);
       } break;
       case AVG_EMINCR_Z: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3966,11 +3966,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += creal(wave[2]);
       } break;
       case AVG_EMINCI_X: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3981,11 +3981,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += cimag(wave[0]);
       } break;
       case AVG_EMINCI_Y: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};
@@ -3996,11 +3996,11 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
         avg_sum[i][global_node] += creal(wave[1]);
       } break;
       case AVG_EMINCI_Z: {
-        const double c0 = 3e17;
+        const double c0 = upd->Speed_Of_Light;
         dbl x = fv->x[0];
         dbl y = fv->x[1];
         dbl z = fv->x[2];
-        dbl freq = upd->Acoustic_Frequency;
+        dbl freq = upd->EM_Frequency;
         dbl lambda0 = c0 / freq;
         dbl k0 = 2 * M_PI / lambda0;
         complex double wave[3] = {0};

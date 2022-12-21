@@ -855,6 +855,8 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define TAGC_ACOUSTIC_FREQ       8010
 #define TAGC_PROCESS_TEMP        8011
 #define TAGC_ACOUSTIC_WAVELENGTH 8012
+#define TAGC_EM_FREQ             8013
+#define TAGC_EM_WAVELENGTH       8014
 /*
  * Thin film multiphase constants
  * */

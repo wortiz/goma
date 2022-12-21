@@ -1898,10 +1898,10 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               }
               break;
             case SCATTERING_CROSS_SECTION: {
-              const double c0 = 3e17;
-              const double mu0 = 4 * M_PI * 1e-16;
+              const double c0 = upd->Speed_Of_Light;
+              const double mu0 = upd->Free_Space_Permeability;
 
-              dbl freq = upd->Acoustic_Frequency;
+              dbl freq = upd->EM_Frequency;
               dbl lambda0 = c0 / freq;
               dbl k0 = 2 * M_PI / lambda0;
               dbl omega0 = 2.0 * M_PI * freq;
@@ -5561,13 +5561,13 @@ int compute_volume_integrand(const int quantity,
     break;
 
   case I_EM_ABSORB_CROSS_SECTION: {
-    const double c0 = 3e17;
-    const double e0 = (1e-9) / (36 * M_PI);
-    const double mu0 = 4 * M_PI * 1e-7;
+    const double c0 = upd->Speed_Of_Light;
+    const double e0 = upd->Free_Space_Permittivity;
+    const double mu0 = upd->Free_Space_Permeability;
     dbl x = fv->x[0];
     dbl y = fv->x[1];
     dbl z = fv->x[2];
-    dbl freq = upd->Acoustic_Frequency;
+    dbl freq = upd->EM_Frequency;
     dbl lambda0 = c0 / freq;
     dbl k0 = 2 * M_PI / lambda0;
     complex double permittivity;

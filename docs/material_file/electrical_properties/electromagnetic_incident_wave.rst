@@ -15,8 +15,7 @@ This should probably be the same for all materials.
 
 
 PLANE_Z_WAVE
-      * <float1> magnitude :math:`E_0`
-      Plane Z wave in the x direction:
+      * <float1> magnitude :math:`E_0` Plane Z wave in the x direction:
         :math:`(E_inc)_z = E_0 exp(i\omega x)`
 
 

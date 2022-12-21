@@ -1358,13 +1358,53 @@ void rd_genl_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  iread = look_for_optional(ifp, "Magnetic Frequency", input, '=');
+  iread = look_for_optional(ifp, "EM Frequency", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%lf", &upd->Acoustic_Frequency) != 1) {
-      GOMA_EH(GOMA_ERROR, "error reading Magnetic Frequency");
+    if (fscanf(ifp, "%lf", &upd->EM_Frequency) != 1) {
+      GOMA_EH(GOMA_ERROR, "error reading EM Frequency");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Frequency",
+             upd->EM_Frequency);
+    ECHO(echo_string, echo_file);
+  }
+
+  iread = look_for_optional(ifp, "EM Free Space Impedance", input, '=');
+  if (iread == 1) {
+    if (fscanf(ifp, "%lf", &upd->Free_Space_Impedance) != 1) {
+      GOMA_EH(GOMA_ERROR, "error reading EM Free Space Impedance");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Magnetic Frequency",
-             upd->Acoustic_Frequency);
+             upd->Free_Space_Impedance);
+    ECHO(echo_string, echo_file);
+  }
+
+  iread = look_for_optional(ifp, "EM Free Space Permittivity", input, '=');
+  if (iread == 1) {
+    if (fscanf(ifp, "%lf", &upd->Free_Space_Permittivity) != 1) {
+      GOMA_EH(GOMA_ERROR, "error reading EM Free Space Permittivity");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Free Space Permittivity",
+             upd->Free_Space_Permittivity);
+    ECHO(echo_string, echo_file);
+  }
+
+  iread = look_for_optional(ifp, "EM Free Space Permeability", input, '=');
+  if (iread == 1) {
+    if (fscanf(ifp, "%lf", &upd->Free_Space_Permeability) != 1) {
+      GOMA_EH(GOMA_ERROR, "error reading EM Free Space Permeability");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Free Space Permeability",
+             upd->Free_Space_Permeability);
+    ECHO(echo_string, echo_file);
+  }
+
+  iread = look_for_optional(ifp, "EM Speed of Light", input, '=');
+  if (iread == 1) {
+    if (fscanf(ifp, "%lf", &upd->Speed_Of_Light) != 1) {
+      GOMA_EH(GOMA_ERROR, "error reading Speed of Light");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Speed of Light",
+             upd->Speed_Of_Light);
     ECHO(echo_string, echo_file);
   }
 

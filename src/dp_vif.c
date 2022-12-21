@@ -996,6 +996,11 @@ void noahs_ark(void) {
   ddd_add_member(n, &upd->XFEM, 1, MPI_INT);
   ddd_add_member(n, &upd->Process_Temperature, 1, MPI_DOUBLE);
   ddd_add_member(n, &upd->Acoustic_Frequency, 1, MPI_DOUBLE);
+  ddd_add_member(n, &upd->EM_Frequency, 1, MPI_DOUBLE);
+  ddd_add_member(n, &upd->Free_Space_Impedance, 1, MPI_DOUBLE);
+  ddd_add_member(n, &upd->Free_Space_Permittivity, 1, MPI_DOUBLE);
+  ddd_add_member(n, &upd->Free_Space_Permeability, 1, MPI_DOUBLE);
+  ddd_add_member(n, &upd->Speed_Of_Light, 1, MPI_DOUBLE);
   ddd_add_member(n, &upd->Light_Cosmu, 1, MPI_DOUBLE);
   ddd_add_member(n, &upd->SegregatedSolve, 1, MPI_INT);
   ddd_add_member(n, &upd->SegregatedSubcycles, 1, MPI_INT);

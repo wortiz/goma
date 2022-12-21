@@ -1955,8 +1955,8 @@ bool relative_permittivity_model(complex double *permittivity_out,
     dbl pml_inner_radius = mp->u_permittivity[3];
     dbl pml_outer_radius = mp->u_permittivity[4];
 
-    const double c0 = 3e14;
-    const double nu0 = 120 * M_PI;
+    const double c0 = upd->Speed_Of_Light;
+    const double nu0 = upd->Free_Space_Impedance;
 
     dbl x = fv->x[0];
     dbl y = fv->x[1];
@@ -2033,8 +2033,8 @@ bool relative_permeability_model(complex double *permeability_out,
     dbl pml_inner_radius = mp->u_permeability[3];
     dbl pml_outer_radius = mp->u_permeability[4];
 
-    const double c0 = 3e14;
-    const double nu0 = 120 * M_PI;
+    const double c0 = upd->Speed_Of_Light;
+    const double nu0 = upd->Free_Space_Impedance;
 
     dbl x = fv->x[0];
     dbl y = fv->x[1];
@@ -2130,7 +2130,7 @@ int assemble_ewave_nedelec(dbl time) {
   int eqn_real = EM_E1_REAL;
   int eqn_imag = EM_E1_IMAG;
 
-  const double c0 = 3e17;
+  const double c0 = upd->Speed_Of_Light;
   /*
    * Bail out fast if there's nothing to do...
    * But we might have the wrong eqn
