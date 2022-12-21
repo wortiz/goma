@@ -263,7 +263,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                                    (int)elem_side_bc->id_side, (int)elem_side_bc->num_nodes_on_side,
                                    (elem_side_bc->local_elem_node_id));
 
-    if (ielem_dim != 3) {
+    /*  Need to avoid calling this for shells*/
+    if (ielem_dim != 3 && ielem_dim == pd->Num_Dim) {
       calc_surf_tangent(ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
                         (int)elem_side_bc->num_nodes_on_side, (elem_side_bc->local_elem_node_id));
     }
@@ -508,10 +509,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
         break;
 
         case VELO_NORMAL_LUB_BC:
+        case LUB_KINEMATIC_BC:
 
           fvelo_normal_lub_bc(func, d_func, elem_side_bc->id_side, x_dot, theta, delta_t, xi, exo,
                               bc->BC_Data_Float);
-
+          surface_determinant_and_normal(
+              ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1, (int)elem_side_bc->id_side,
+              (int)elem_side_bc->num_nodes_on_side, (elem_side_bc->local_elem_node_id));
           break;
         case VELO_TANGENT_LS_BC:
 
@@ -989,6 +993,10 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           flow_n_dot_T_gradv(func, d_func, bc->BC_Data_Float[0], bc->BC_Data_Int[0]);
           break;
 
+        case FLOW_GRADV_T_BC:
+          flow_n_dot_T_gradv_t(func, d_func, bc->BC_Data_Float[0], bc->BC_Data_Int[0]);
+          break;
+
         case FLOW_GRADV_SIC_BC:
           flow_n_dot_T_gradv_sic(func, d_func, bc->BC_Data_Float[0], bc->BC_Data_Int[0]);
           break;
@@ -999,6 +1007,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           } else if (vn->evssModel == LOG_CONF_TRANSIENT ||
                      vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
             stress_no_v_dot_gradS_logc_transient(func_stress, d_func_stress, delta_t, theta);
+          } else if (vn->evssModel == SQRT_CONF) {
+            stress_no_v_dot_gradS_sqrt(func_stress, d_func_stress, delta_t, theta);
           } else {
             stress_no_v_dot_gradS(func_stress, d_func_stress, delta_t, theta);
           }
@@ -1925,8 +1935,13 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                *   And, find the global unknown number, index_eq, on which
                *   to applyi this additive boundary condition, eqn
                */
-              index_eq =
-                  bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, p, &eqn, &matID_apply, &vd);
+              if (bc->BC_Name == LUB_KINEMATIC_BC) {
+                index_eq = bc_eqn_index(id, I, bc_input_id, map_mat_index(bc->BC_Data_Int[0]), p,
+                                        &eqn, &matID_apply, &vd);
+              } else {
+                index_eq =
+                    bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, p, &eqn, &matID_apply, &vd);
+              }
 
               if (index_eq >= 0) {
                 /*

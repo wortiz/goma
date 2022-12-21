@@ -25,6 +25,7 @@
 #include <string.h>
 
 /* GOMA include files */
+#define GOMA_MM_FLUX_C
 
 #include "mm_flux.h"
 
@@ -78,8 +79,6 @@
 #include "std.h"
 #include "user_mp.h"
 #include "wr_side_data.h"
-
-#define GOMA_MM_FLUX_C
 
 static int load_fv_sens(void);
 
@@ -766,6 +765,30 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                   for (a = 0; a < WIM; a++) {
                     for (b = 0; b < WIM; b++) {
                       ves[a][b] += mup / lambda * (exp_s[a][b] - (double)delta(a, b));
+                    }
+                  }
+                }
+              } else if (vn->evssModel == SQRT_CONF) {
+                for (ve_mode = 0; ve_mode < vn->modes; ve_mode++) {
+                  dbl bdotb[DIM][DIM];
+                  dbl b_tensor[DIM][DIM];
+                  for (int ii = 0; ii < VIM; ii++) {
+                    for (int jj = 0; jj < VIM; jj++) {
+                      if (ii <= jj) {
+                        b_tensor[ii][jj] = fv->S[ve_mode][ii][jj];
+                        b_tensor[jj][ii] = b_tensor[ii][jj];
+                      }
+                    }
+                  }
+
+                  tensor_dot(b_tensor, b_tensor, bdotb, VIM);
+                  mup = viscosity(ve[ve_mode]->gn, gamma, NULL);
+                  if (ve[ve_mode]->time_constModel == CONSTANT) {
+                    lambda = ve[ve_mode]->time_const;
+                  }
+                  for (a = 0; a < WIM; a++) {
+                    for (b = 0; b < WIM; b++) {
+                      ves[a][b] += mup / lambda * (bdotb[a][b] - (double)delta(a, b));
                     }
                   }
                 }
@@ -8628,10 +8651,6 @@ int adaptive_weight(double w[],
   int side_diff, side_ct;
   int return_val = 1;
   double ecrd[12][MAX_PDIM];
-
-#ifndef NO_CHEBYSHEV_PLEASE
-  int chev_order = 3;
-#endif
   double gauss_wt1D[3] = {5 / 9., 8 / 9., 5 / 9.};
   double gauss_wt2D[9] = {25 / 81., 40 / 81., 25 / 81., 40 / 81., 64 / 81.,
                           40 / 81., 25 / 81., 40 / 81., 25 / 81.};
@@ -8693,15 +8712,21 @@ int adaptive_weight(double w[],
 
   int dupl_side = 0, dupl_id = 0, side1 = -1, side2 = -1;
   double int_angle[8], xloc;
+#ifdef NO_CHEBYSHEV_PLEASE
+  GOMA_EH(GOMA_ERROR, "Turn off NO_CHEBYSHEV_PLEASE please.\n");
+#else
+  int chev_order;
+  if (ls->AdaptIntegration) {
+    chev_order = ls->Adaptive_Order;
+  } else {
+    chev_order = 3;
+  }
+#endif
 
   if (elem_type != BIQUAD_QUAD && elem_type != BIQUAD_SHELL && elem_type != BILINEAR_QUAD &&
       elem_type != BILINEAR_SHELL) {
     GOMA_EH(GOMA_ERROR, "adaptive integration for 2D quads only!");
   }
-
-#ifndef NO_CHEBYSHEV_PLEASE
-  chev_order = ls->Adaptive_Order;
-#endif
 
   if (sharp_interface) {
 

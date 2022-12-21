@@ -1466,8 +1466,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     } else if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV) {
-      err = assemble_stress_log_conf(theta, delta_t, pg_data.hsquared, pg_data.hhv,
-                                     pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);
+      err = assemble_stress_log_conf(theta, delta_t, &pg_data);
 
       GOMA_EH(err, "assemble_stress_log_conf");
       if (err)
@@ -1476,6 +1475,32 @@ Revised:         Summer 1998, SY Tam (UNM)
       GOMA_EH(err, "assemble_stress_update");
 #ifdef CHECK_FINITE
       err = CHECKFINITE("assemble_stress_log_conf");
+      if (err)
+        return -1;
+#endif
+    } else if (vn->evssModel == SQRT_CONF) {
+      err = assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
+
+      GOMA_EH(err, "assemble_stress_sqrt_conf");
+      if (err)
+        return -1;
+      err = segregate_stress_update(x_update);
+      GOMA_EH(err, "assemble_stress_update");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_stress_sqrt_conf");
+      if (err)
+        return -1;
+#endif
+    } else if (vn->evssModel == CONF) {
+      err = assemble_stress_conf(theta, delta_t, &pg_data);
+
+      GOMA_EH(err, "assemble_stress_conf");
+      if (err)
+        return -1;
+      err = segregate_stress_update(x_update);
+      GOMA_EH(err, "assemble_stress_update");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_stress_conf");
       if (err)
         return -1;
 #endif
@@ -1746,10 +1771,10 @@ Revised:         Summer 1998, SY Tam (UNM)
       //        err = assemble_ewave_tensor_bf(time_value, theta, delta_t,
       //                                R_EM_E2_REAL, EM_E2_REAL);
       //        GOMA_EH( err, "assemble_ewave");
-      //#ifdef CHECK_FINITE
+      // #ifdef CHECK_FINITE
       //        err = CHECKFINITE("assemble_ewave");
       //        if (err) return -1;
-      //#endif
+      // #endif
     } else if (pde[R_EM_E2_REAL]) {
       err = assemble_emwave(time_value, theta, delta_t, &pg_data, R_EM_E2_REAL, EM_E2_REAL,
                             EM_E2_IMAG);
@@ -1765,10 +1790,10 @@ Revised:         Summer 1998, SY Tam (UNM)
       //        err = assemble_ewave_tensor_bf(time_value, theta, delta_t,
       //                                R_EM_E3_REAL, EM_E3_REAL);
       //        GOMA_EH( err, "assemble_ewave");
-      //#ifdef CHECK_FINITE
+      // #ifdef CHECK_FINITE
       //        err = CHECKFINITE("assemble_ewave");
       //        if (err) return -1;
-      //#endif
+      // #endif
     } else if (pde[R_EM_E3_REAL]) {
       err = assemble_emwave(time_value, theta, delta_t, &pg_data, R_EM_E3_REAL, EM_E3_REAL,
                             EM_E3_IMAG);
@@ -1784,10 +1809,10 @@ Revised:         Summer 1998, SY Tam (UNM)
       //        err = assemble_ewave_tensor_bf(time_value, theta, delta_t,
       //                                R_EM_E1_IMAG, EM_E1_IMAG);
       //        GOMA_EH( err, "assemble_ewave");
-      //#ifdef CHECK_FINITE
+      // #ifdef CHECK_FINITE
       //        err = CHECKFINITE("assemble_ewave");
       //        if (err) return -1;
-      //#endif
+      // #endif
     } else if (pde[R_EM_E1_IMAG]) {
       err = assemble_emwave(time_value, theta, delta_t, &pg_data, R_EM_E1_IMAG, EM_E1_IMAG,
                             EM_E1_REAL);
@@ -1803,10 +1828,10 @@ Revised:         Summer 1998, SY Tam (UNM)
       //        err = assemble_ewave_tensor_bf(time_value, theta, delta_t,
       //                                R_EM_E2_IMAG, EM_E2_IMAG);
       //        GOMA_EH( err, "assemble_ewave");
-      //#ifdef CHECK_FINITE
+      // #ifdef CHECK_FINITE
       //        err = CHECKFINITE("assemble_ewave");
       //        if (err) return -1;
-      //#endif
+      // #endif
     } else if (pde[R_EM_E2_IMAG]) {
       err = assemble_emwave(time_value, theta, delta_t, &pg_data, R_EM_E2_IMAG, EM_E2_IMAG,
                             EM_E2_REAL);
@@ -1822,10 +1847,10 @@ Revised:         Summer 1998, SY Tam (UNM)
       //        err = assemble_ewave_tensor_bf(time_value, theta, delta_t,
       //                                R_EM_E3_IMAG, EM_E3_IMAG);
       //        GOMA_EH( err, "assemble_ewave");
-      //#ifdef CHECK_FINITE
+      // #ifdef CHECK_FINITE
       //        err = CHECKFINITE("assemble_ewave");
       //        if (err) return -1;
-      //#endif
+      // #endif
     } else if (pde[R_EM_E3_IMAG]) {
       err = assemble_emwave(time_value, theta, delta_t, &pg_data, R_EM_E3_IMAG, EM_E3_IMAG,
                             EM_E3_REAL);
@@ -4025,13 +4050,89 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
      */
     do_LSA_mods(LSA_VOLUME);
 
+    if (pde[R_MOMENTUM1]) {
+      if (upd->SegregatedSolve) {
+        err = assemble_momentum_segregated(time_value, theta, delta_t, &pg_data);
+        GOMA_EH(err, "assemble_momentum");
+#ifdef CHECK_FINITE
+        CHECKFINITE("assemble_momentum");
+#endif
+      } else {
+        dbl h_elem_avg = pg_data.h_elem_avg;
+        err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+        GOMA_EH(err, "assemble_momentum");
+#ifdef CHECK_FINITE
+        CHECKFINITE("assemble_momentum");
+#endif
+      }
+    }
+
+    if (pde[R_PRESSURE]) {
+      if (upd->SegregatedSolve) {
+        err = assemble_continuity_segregated(time_value, theta, delta_t, &pg_data);
+        GOMA_EH(err, "assemble_continuity");
+#ifdef CHECK_FINITE
+        CHECKFINITE("assemble_continuity");
+#endif
+        if (neg_elem_volume)
+          return -1;
+      } else {
+        err = assemble_continuity(time_value, theta, delta_t, &pg_data);
+        GOMA_EH(err, "assemble_continuity");
+#ifdef CHECK_FINITE
+        CHECKFINITE("assemble_continuity");
+#endif
+        if (neg_elem_volume)
+          return -1;
+      }
+    }
+
+    if (pde[R_GRADIENT11]) {
+      if (gn->ConstitutiveEquation == BINGHAM_MIXED) {
+        err = assemble_rate_of_strain(theta, delta_t);
+      } else {
+        err = assemble_gradient(theta, delta_t);
+      }
+      GOMA_EH(err, "assemble_gradient");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_gradient");
+      if (err)
+        return -1;
+#endif
+    }
+
     if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV) {
-      err = assemble_stress_log_conf(theta, delta_t, pg_data.hsquared, pg_data.hhv,
-                                     pg_data.dhv_dxnode, pg_data.v_avg, pg_data.dv_dnode);
+      err = assemble_stress_log_conf(theta, delta_t, &pg_data);
       if (err)
         return -1;
       err = segregate_stress_update(x_update);
       GOMA_EH(err, "assemble_stress_log_conf");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_stress_log_conf");
+      if (err)
+        return -1;
+#endif
+    } else if (vn->evssModel == SQRT_CONF) {
+      err = assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
+
+      GOMA_EH(err, "assemble_stress_sqrt_conf");
+      if (err)
+        return -1;
+      err = segregate_stress_update(x_update);
+      GOMA_EH(err, "assemble_stress_update");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_stress_log_conf");
+      if (err)
+        return -1;
+#endif
+    } else if (vn->evssModel == CONF) {
+      err = assemble_stress_conf(theta, delta_t, &pg_data);
+
+      GOMA_EH(err, "assemble_stress_sqrt_conf");
+      if (err)
+        return -1;
+      err = segregate_stress_update(x_update);
+      GOMA_EH(err, "assemble_stress_update");
 #ifdef CHECK_FINITE
       err = CHECKFINITE("assemble_stress_log_conf");
       if (err)

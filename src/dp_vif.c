@@ -1138,6 +1138,9 @@ void noahs_ark(void) {
     ddd_add_member(n, &augc[i].lm_dim, 1, MPI_INT);
     ddd_add_member(n, &augc[i].lm_value, 1, MPI_DOUBLE);
     ddd_add_member(n, &augc[i].lm_resid, 1, MPI_DOUBLE);
+    ddd_add_member(n, &augc[i].Params_File, 128, MPI_CHAR);
+    ddd_add_member(n, &augc[i].AP_param, 64, MPI_CHAR);
+    ddd_add_member(n, &augc[i].Aprepro_lib_string_len, 1, MPI_INT);
   }
 
   /*
@@ -1552,6 +1555,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->DcaLFunctionModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->FSIModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->TurbulentLubricationModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->LubIntegrationModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedPorosityModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedRadiusModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedHeightModel, 1, MPI_INT);
@@ -1821,6 +1825,8 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->diffusivity_tableid, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->saturation_tableid, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->cap_pres_tableid, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->LubInt_NGP, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->LubInt_PL, 1, MPI_DOUBLE);
 
     /*
      * Material property constants that are vectors over the concentration
@@ -2263,6 +2269,8 @@ void noahs_ark(void) {
       ddd_add_member(n, &ve_glob[i][mode]->xiModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->eps, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->epsModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->muJeffreys, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->muJeffreysModel, 1, MPI_INT);
 
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.time_const, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.alpha, 1, MPI_DOUBLE);
@@ -2547,7 +2555,7 @@ void noahs_ark(void) {
   ddd_add_member(n, &VON_MISES_STRAIN, 1, MPI_INT);
   ddd_add_member(n, &VON_MISES_STRESS, 1, MPI_INT);
   ddd_add_member(n, &UNTRACKED_SPEC, 1, MPI_INT);
-  ddd_add_member(n, &LOG_CONF_MAP, 1, MPI_INT);
+  ddd_add_member(n, &CONF_MAP, 1, MPI_INT);
   ddd_add_member(n, &VELO_SPEED, 1, MPI_INT);
   ddd_add_member(n, &GIES_CRIT, 1, MPI_INT);
   ddd_add_member(n, &J_FLUX, 1, MPI_INT);
@@ -3092,6 +3100,9 @@ void ark_landing(void) {
 
   for (i = 0; i < nAC; i++) {
     dalloc(augc[i].len_AC, augc[i].DataFlt);
+    if (augc[i].Aprepro_lib_string_len > 0) {
+      augc[i].Aprepro_lib_string = calloc(augc[i].Aprepro_lib_string_len + 1, sizeof(char));
+    }
   }
 
   for (i = 0; i < nn_volume; i++) {
@@ -3235,6 +3246,9 @@ void noahs_dove(void) {
     crdv(m->len_tfmp_drop_lattice_const, m->tfmp_drop_lattice_const);
 
     crdv(m->len_shell_tangent_seed_vec_const, m->shell_tangent_seed_vec_const);
+
+    crdv(m->LubInt_NGP, m->Lub_gpts);
+    crdv(m->LubInt_NGP, m->Lub_wts);
 
     /*
      *  Add species names
@@ -3396,6 +3410,9 @@ void noahs_dove(void) {
 
   for (i = 0; i < nAC; i++) {
     crdv(augc[i].len_AC, augc[i].DataFlt);
+    if (augc[i].Aprepro_lib_string_len > 0) {
+      ddd_add_member(n, augc[i].Aprepro_lib_string, augc[i].Aprepro_lib_string_len, MPI_CHAR);
+    }
   }
   /*   Post-processing parameters    */
 

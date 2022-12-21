@@ -418,6 +418,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case CURRENT_BC:
     case CURRENT_SIC_BC:
     case KINEMATIC_BC:
+    case LUB_KINEMATIC_BC:
     case KIN_LEAK_HEAT_BC:
     case KINEMATIC_PETROV_BC:
     case KINEMATIC_COLLOC_BC:
@@ -439,6 +440,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case FLOW_PRESSURE_VAR_BC:
     case FLOW_STRESSNOBC_BC:
     case FLOW_GRADV_BC:
+    case FLOW_GRADV_T_BC:
     case FLOW_GRADV_SIC_BC:
     case FILL_INLET_BC:
     case FILL_CA_BC:
