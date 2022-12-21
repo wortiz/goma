@@ -1363,8 +1363,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%lf", &upd->EM_Frequency) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading EM Frequency");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Frequency",
-             upd->EM_Frequency);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Frequency", upd->EM_Frequency);
     ECHO(echo_string, echo_file);
   }
 
@@ -1403,8 +1402,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
     if (fscanf(ifp, "%lf", &upd->Speed_Of_Light) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Speed of Light");
     }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Speed of Light",
-             upd->Speed_Of_Light);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "EM Speed of Light", upd->Speed_Of_Light);
     ECHO(echo_string, echo_file);
   }
 

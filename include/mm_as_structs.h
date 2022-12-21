@@ -876,11 +876,11 @@ struct Uniform_Problem_Description {
                                   (conversion factor is to an exact standard atm) */
   int Max_Num_Porous_Eqn;      /* max number of porous media Equations */
   dbl Acoustic_Frequency;      /* Frequency for Acoustic Harmonic Eqns */
-  dbl EM_Frequency;      /* Frequency for Time-Harmonic Maxwell Eqns */
-  dbl Speed_Of_Light;      /* Speed of light for Time-Harmonic Maxwell Eqns */
-  dbl Free_Space_Impedance;      /* Free space impedance for Time-Harmonic Maxwell Eqns */
-  dbl Free_Space_Permittivity;      /* Free space permittivity for Time-Harmonic Maxwell Eqns */
-  dbl Free_Space_Permeability;      /* Free space permeability for Time-Harmonic Maxwell Eqns */
+  dbl EM_Frequency;            /* Frequency for Time-Harmonic Maxwell Eqns */
+  dbl Speed_Of_Light;          /* Speed of light for Time-Harmonic Maxwell Eqns */
+  dbl Free_Space_Impedance;    /* Free space impedance for Time-Harmonic Maxwell Eqns */
+  dbl Free_Space_Permittivity; /* Free space permittivity for Time-Harmonic Maxwell Eqns */
+  dbl Free_Space_Permeability; /* Free space permeability for Time-Harmonic Maxwell Eqns */
   dbl Light_Cosmu;             /* Inclination of Incident Light */
   dbl Process_Temperature;     /* Temperature for thermal property data */
                                /*   for isothermal problems */
