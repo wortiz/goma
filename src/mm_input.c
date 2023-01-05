@@ -877,6 +877,12 @@ void rd_genl_specs(FILE *ifp, char *input) {
   int iread;
   int ex_id = 0;
 
+  Num_Interpolations = 0; /* Initialize counter (cf rf_fem.h) */
+
+  for (int i = 0; i < MAX_INTERPOLATIONS; i++) {
+    Unique_Interpolations[i] = I_NOTHING;
+  }
+
   /* Read in General Specifications section */
 
   iread = look_for_optional(ifp, "General Specifications", input, '=');
@@ -1146,6 +1152,10 @@ void rd_genl_specs(FILE *ifp, char *input) {
 
     strcat(echo_string, input);
     strcat(echo_string, "  ");
+    if (in_list(efv->i[Num_Var_External], 0, Num_Interpolations, Unique_Interpolations) == -1) {
+      Unique_Interpolations[Num_Interpolations] = efv->i[Num_Var_External];
+      Num_Interpolations++;
+    }
 
     /*
      * read in exodus II file name
@@ -7252,12 +7262,6 @@ void rd_matl_blk_specs(FILE *ifp, char *input) {
   upd->Max_Num_Species_Eqn = -123456789; /* initialize */
   upd->Max_Num_Species = -123456789;     /* initialize */
   upd->Max_Num_Porous_Eqn = -123456789;  /* initialize */
-
-  Num_Interpolations = 0; /* Initialize counter (cf rf_fem.h) */
-
-  for (i = 0; i < MAX_INTERPOLATIONS; i++) {
-    Unique_Interpolations[i] = I_NOTHING;
-  }
 
   for (imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
     upd->Total_Num_EQ[imtrx] = 0;

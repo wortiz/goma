@@ -859,20 +859,25 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
   if (efv->ev) {
     for (v = 0; v < efv->Num_external_field; v++) {
       ei_ptr->dof_ext[v] = 0;
-      for (ln = 0; ln < nnodes; ln++) {
+      // special handling for P0
+      if (efv->i[v] == I_P0) {
+        ei_ptr->dof_ext[v] = 1;
+      } else {
+        for (ln = 0; ln < nnodes; ln++) {
 
-        /*
-         * For this variable at this local node, how many dofs are needed?
-         * (according to this element) Note this can be zero...
-         *
-         * WARNING..you will need to account for multiple species k here...
-         */
-        nunks = 1; /* assumes only one external field variable of
-                    * this type can be defined
-                    */
+          /*
+           * For this variable at this local node, how many dofs are needed?
+           * (according to this element) Note this can be zero...
+           *
+           * WARNING..you will need to account for multiple species k here...
+           */
+          nunks = 1; /* assumes only one external field variable of
+                      * this type can be defined
+                      */
 
-        GOMA_EH(nunks, "problem with nun  for this external  var.");
-        ei_ptr->dof_ext[v] += nunks;
+          GOMA_EH(nunks, "problem with nun  for this external  var.");
+          ei_ptr->dof_ext[v] += nunks;
+        }
       }
     }
   }
@@ -1985,7 +1990,9 @@ int load_elem_dofptr(const int ielem,
 
   if (efv->ev) {
     for (k = 0; k < efv->Num_external_field; k++) {
-      if (efv->i[k] != I_TABLE) {
+      if (efv->i[k] == I_P0) {
+        evp->external_field[k][i] = efv->ext_fld_elem_val[k] + ei[pg->imtrx]->ielem;
+      } else if (efv->i[k] != I_TABLE) {
         dofs = ei[pg->imtrx]->dof_ext[k];
         for (i = 0; i < dofs; i++) {
           ie = Proc_Elem_Connect[ei[pg->imtrx]->iconnect_ptr + i];

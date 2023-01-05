@@ -2685,40 +2685,81 @@ int rd_vectors_from_exoII(double u[],
 
   if (action_flag == 1) {
     if (efv->ev) {
-      /*
-       * Allocate memory for external field variable arrays
-       */
-      efv->ext_fld_ndl_val[variable_no] = alloc_dbl_1(exo->num_nodes, 0.0);
-      printf("rd_vectors_from_exoII: Allocated field %d for %s at %p\n", variable_no,
-             efv->name[variable_no], (void *)efv->ext_fld_ndl_val[variable_no]);
-      vdex = -1;
-#ifdef REACTION_PRODUCT_EFV
-      if (TimeIntegration != STEADY) {
-        efv->ext_fld_ndl_val_old[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
-        efv->ext_fld_ndl_val_older[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
-      }
-#endif
-      for (i = 0; i < num_vars; i++) {
-        if (strcmp(var_names[i], efv->name[variable_no]) == 0) {
-          vdex = i + 1;
-        }
-      }
-      if (vdex == -1) {
-        DPRINTF(stdout, "\n Cannot find external fields in exoII database, setting to null");
-      } else {
-        dbl *tmp_vector = alloc_dbl_1(num_nodes, 0.0);
-        error = ex_get_var(exoid, time_step, EX_NODAL, vdex, 1, num_nodes, tmp_vector);
-        for (int k = 0; k < exo->num_nodes; k++) {
-          int base_index = exo->ghost_node_to_base[k];
-          if (base_index != -1) {
-            efv->ext_fld_ndl_val[variable_no][k] = tmp_vector[base_index];
+      if (efv->i[variable_no] == I_P0) {
+        efv->ext_fld_elem_val[variable_no] = alloc_dbl_1(exo->num_elems, 0.0);
+        printf("rd_vectors_from_exoII: Allocated field %d for %s at %p\n", variable_no,
+               efv->name[variable_no], (void *)efv->ext_fld_elem_val[variable_no]);
+        vdex = -1;
+        for (i = 0; i < num_elem_vars; i++) {
+          if (strcmp(elem_var_names[i], efv->name[variable_no]) == 0) {
+            vdex = i + 1;
+            break;
           }
         }
+        if (vdex == -1) {
+          DPRINTF(stdout, "\n Cannot find external fields in exoII database, setting to null");
+        } else {
+          dbl *tmp_vector = alloc_dbl_1(num_elem, 0.0);
+          int offset = 0;
+          for (int block = 0; block < exo->num_elem_blocks; block++) {
+            int num_elems_block = exo->base_mesh->eb_num_elems[block];
+            if (num_elems_block > 0) {
+              error = ex_get_var(exoid, time_step, EX_ELEM_BLOCK, vdex, exo->eb_id[block],
+                                 num_elems_block, tmp_vector);
+              GOMA_EH(error, "ex_get_var elem_block");
+              for (int k = 0; k < exo->eb_num_elems[block]; k++) {
+                int base_index = exo->eb_ghost_elem_to_base[block][k];
+                if (base_index != -1) {
+                  efv->ext_fld_elem_val[variable_no][offset+k] = tmp_vector[base_index];
+                }
+              }
+            }
+            offset += exo->eb_num_elems[block];
+          }
 
-        exchange_node(cx[0], DPI_ptr, efv->ext_fld_ndl_val[variable_no]);
-        free(tmp_vector);
+          exchange_elem(DPI_ptr, efv->ext_fld_elem_val[variable_no]);
+          free(tmp_vector);
 
-        GOMA_EH(error, "ex_get_var nodal");
+        }
+      } else if (efv->i[variable_no] == I_P1) {
+        GOMA_EH(GOMA_ERROR, "P1 interpolation for external fields from files not supported: "
+                            "Contact Goma Developers");
+      } else {
+        /*
+         * Allocate memory for external field variable arrays
+         */
+        efv->ext_fld_ndl_val[variable_no] = alloc_dbl_1(exo->num_nodes, 0.0);
+        printf("rd_vectors_from_exoII: Allocated field %d for %s at %p\n", variable_no,
+               efv->name[variable_no], (void *)efv->ext_fld_ndl_val[variable_no]);
+        vdex = -1;
+#ifdef REACTION_PRODUCT_EFV
+        if (TimeIntegration != STEADY) {
+          efv->ext_fld_ndl_val_old[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
+          efv->ext_fld_ndl_val_older[variable_no] = alloc_dbl_1(exo->num_nodes, 0.);
+        }
+#endif
+        for (i = 0; i < num_vars; i++) {
+          if (strcmp(var_names[i], efv->name[variable_no]) == 0) {
+            vdex = i + 1;
+          }
+        }
+        if (vdex == -1) {
+          DPRINTF(stdout, "\n Cannot find external fields in exoII database, setting to null");
+        } else {
+          dbl *tmp_vector = alloc_dbl_1(num_nodes, 0.0);
+          error = ex_get_var(exoid, time_step, EX_NODAL, vdex, 1, num_nodes, tmp_vector);
+          for (int k = 0; k < exo->num_nodes; k++) {
+            int base_index = exo->ghost_node_to_base[k];
+            if (base_index != -1) {
+              efv->ext_fld_ndl_val[variable_no][k] = tmp_vector[base_index];
+            }
+          }
+
+          exchange_node(cx[0], DPI_ptr, efv->ext_fld_ndl_val[variable_no]);
+          free(tmp_vector);
+
+          GOMA_EH(error, "ex_get_var nodal");
+        }
       }
     }
   }

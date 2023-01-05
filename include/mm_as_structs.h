@@ -1050,6 +1050,7 @@ struct External_Field_Variables {
   /* Array holding actual field nodal values */
   dbl *ext_fld_ndl_val_old[MAX_EXTERNAL_FIELD];
   dbl *ext_fld_ndl_val_older[MAX_EXTERNAL_FIELD];
+  dbl *ext_fld_elem_val[MAX_EXTERNAL_FIELD];
   int TALE; /* boolean for whether TALE is active or not */
   dbl *init_displacement_ndl_val[2 * DIM];
   /* Array holding initial displacments for */

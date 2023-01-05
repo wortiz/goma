@@ -37,6 +37,9 @@
 #include "dp_types.h"
 #include "dpi.h"
 #include "exo_struct.h"
+#include <cstdlib>
+#include <mpi.h>
+#include <petsclog.h>
 */
 
 #define GOMA_DP_COMM_C
@@ -44,6 +47,94 @@
 /********************************************************************/
 /********************************************************************/
 /********************************************************************/
+void exchange_elem(Dpi *dpi, double *x) {
+
+  if (Num_Proc == 1) return;
+
+  // Just going to use a dumb exchange right now assuming this isn't performance
+  // critical and is only called a few times in the code.
+  //
+  // Given our current element decomposition we should only need to send to
+  // neighbors with a higher procid Just send the whole list for now, elem count
+  // should be much less than dof so this shouldn't be too bad
+
+  int *recv_from_neighbor_sz = calloc(dpi->num_neighbors, sizeof(int));
+  MPI_Request *requests = calloc(dpi->num_neighbors * 4, sizeof(MPI_Request));
+
+  // get element counts of neighbors
+  int n_req = 0;
+  for (int i = 0; i < dpi->num_neighbors; i++) {
+    if (dpi->neighbor[i] < ProcID) {
+      MPI_Irecv(&recv_from_neighbor_sz[i], 1, MPI_INT, dpi->neighbor[i], 801, MPI_COMM_WORLD,
+                &requests[n_req++]);
+    }
+    if (dpi->neighbor[i] > ProcID) {
+      MPI_Isend(&dpi->num_elems, 1, MPI_INT, dpi->neighbor[i], 801, MPI_COMM_WORLD,
+                &requests[n_req++]);
+    }
+  }
+
+  MPI_Waitall(n_req, requests, MPI_STATUSES_IGNORE);
+
+  int **recv_ids = calloc(dpi->num_neighbors, sizeof(int *));
+  double **recv_vals = calloc(dpi->num_neighbors, sizeof(double *));
+
+  n_req = 0;
+  for (int i = 0; i < dpi->num_neighbors; i++) {
+    if (dpi->neighbor[i] < ProcID) {
+      recv_ids[i] = calloc(recv_from_neighbor_sz[i], sizeof(int));
+      recv_vals[i] = calloc(recv_from_neighbor_sz[i], sizeof(double));
+
+      MPI_Irecv(recv_ids[i], recv_from_neighbor_sz[i], MPI_INT, dpi->neighbor[i], 802,
+                MPI_COMM_WORLD, &requests[n_req++]);
+      MPI_Irecv(recv_vals[i], recv_from_neighbor_sz[i], MPI_DOUBLE, dpi->neighbor[i], 803,
+                MPI_COMM_WORLD, &requests[n_req++]);
+    } else {
+      MPI_Isend(dpi->elem_index_global, dpi->num_elems, MPI_INT, dpi->neighbor[i], 802,
+                MPI_COMM_WORLD, &requests[n_req++]);
+      MPI_Isend(x, dpi->num_elems, MPI_DOUBLE, dpi->neighbor[i], 803, MPI_COMM_WORLD,
+                &requests[n_req++]);
+    }
+  }
+
+  MPI_Waitall(n_req, requests, MPI_STATUSES_IGNORE);
+
+  // We probably only have to do this a few times overall so complexity probably won't hurt,
+  // if it does switch to sorted ids or a better algorithm
+  for (int i = 0; i < dpi->num_elems; i++) {
+    if (dpi->elem_owner[i] < ProcID) {
+      int elem_id = dpi->elem_index_global[i];
+      // find the neighbor
+      int neighbor = -1;
+      for (int j = 0; j < dpi->num_neighbors; j++) {
+        if (dpi->neighbor[i] == dpi->elem_owner[i]) {
+          neighbor = j;
+          break;
+        }
+      }
+      GOMA_ASSERT_ALWAYS(neighbor != -1);
+
+      bool found = false;
+      for (int j = 0; j < recv_from_neighbor_sz[neighbor]; j++) {
+        if (elem_id == recv_ids[neighbor][j]) {
+          x[i] = recv_vals[neighbor][j];
+          found = true;
+          break;
+        }
+      }
+      GOMA_ASSERT_ALWAYS(found);
+    }
+  }
+
+  for (int i = 0; i < dpi->num_neighbors; i++) {
+    free(recv_ids[i]);
+    free(recv_vals[i]);
+  }
+
+  free(recv_ids);
+  free(recv_vals);
+  free(recv_from_neighbor_sz);
+}
 
 void exchange_dof(Comm_Ex *cx, Dpi *dpi, double *x, int imtrx)
 

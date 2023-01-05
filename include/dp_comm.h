@@ -30,6 +30,8 @@
 #define EXTERN extern
 #endif
 
+void exchange_elem(Dpi *dpi, double *x);
+
 EXTERN void exchange_dof(Comm_Ex *, /* cx - ptr to communications exchange info */
                          Dpi *,     /* dpi - distributed processing info */
                          double *,  /* x - local processor dof-based vector */
