@@ -60,6 +60,7 @@
 #define AZTECOO      9
 #define STRATIMIKOS  10
 #define PETSC_SOLVER 11
+#define PETSC_COMPLEX_SOLVER 12
 
 /*
  * FORTRAN BLAS functions. Inside C, use "DCOPY" and the preprocessor to

@@ -542,6 +542,7 @@ set(GOMA_INCLUDES
     include/sl_epetra_util.h
     include/sl_lu.h
     include/sl_petsc.h
+    include/sl_petsc_complex.h
     include/sl_matrix_util.h
     include/sl_stratimikos_interface.h
     include/sl_umf.h
@@ -691,6 +692,7 @@ set(GOMA_SOURCES
     src/sl_matrix_dump.c
     src/sl_petsc.c
     src/sl_petsc_pcd.c
+    src/sl_petsc_complex.c
     src/sl_matrix_util.c
     src/sl_squash.c
     src/sl_stratimikos_interface.cpp

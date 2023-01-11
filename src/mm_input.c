@@ -59,6 +59,12 @@
 #include "sl_util.h"
 #include "std.h"
 #include "util/aprepro_helper.h"
+#ifdef GOMA_ENABLE_PETSC
+#include <petscsystypes.h>
+#ifdef I
+#undef I
+#endif
+#endif
 
 #define GOMA_MM_INPUT_C
 #include "mm_input.h"
@@ -5833,6 +5839,16 @@ void rd_solver_specs(FILE *ifp, char *input) {
 #else
     GOMA_EH(GOMA_ERROR, "Goma not compiled with PETSc support");
 #endif
+  } else if (strcmp(Matrix_Solver, "petsc_complex") == 0) {
+#ifdef PETSC_USE_COMPLEX
+    Linear_Solver = PETSC_COMPLEX_SOLVER;
+    is_Solver_Serial = FALSE;
+#else
+    GOMA_EH(GOMA_ERROR, "Goma not compiled with a complex petsc");
+#endif
+#ifndef GOMA_ENABLE_PETSC
+    GOMA_EH(GOMA_ERROR, "Goma not compiled with PETSc support");
+#endif
   } else {
     Linear_Solver = AZTEC;
     is_Solver_Serial = FALSE;
@@ -5844,6 +5860,10 @@ void rd_solver_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
   } else if (strcmp(Matrix_Solver, "petsc") == 0) {
     strcpy(Matrix_Format, "petsc"); /* save string for aztec use */
+    strcpy(search_string, "Matrix storage format");
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
+  } else if (strcmp(Matrix_Solver, "petsc_complex") == 0) {
+    strcpy(Matrix_Format, "petsc_complex"); /* save string for aztec use */
     strcpy(search_string, "Matrix storage format");
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
   } else if (strcmp(Matrix_Solver, "front") != 0) {

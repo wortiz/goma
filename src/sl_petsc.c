@@ -1,6 +1,8 @@
 #include <mpi.h>
 #include <stddef.h>
 #ifdef GOMA_ENABLE_PETSC
+#include <petscsystypes.h>
+#if !(PETSC_USE_COMPLEX)
 #include <petscksp.h>
 #include <petscmat.h>
 #include <petscsys.h>
@@ -1694,22 +1696,6 @@ goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, doub
   return GOMA_SUCCESS;
 }
 
-goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams) {
-  PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;
-  PetscErrorCode err;
-
-  err = MatDestroy(&matrix_data->mat);
-  CHKERRQ(err);
-  err = VecDestroy(&matrix_data->residual);
-  CHKERRQ(err);
-  err = VecDestroy(&matrix_data->update);
-  CHKERRQ(err);
-  err = KSPDestroy(&matrix_data->ksp);
-  CHKERRQ(err);
-
-  return GOMA_SUCCESS;
-}
-
 // vim: expandtab sw=2 ts=8
 int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *its) {
   PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;
@@ -1803,4 +1789,5 @@ void petsc_solve_post_proc(double **post_proc_vect, RESULTS_DESCRIPTION_STRUCT *
   P0PRINTF("Post Proc Time = %4.4e s\n\n", end - start);
 }
 
+#endif
 #endif

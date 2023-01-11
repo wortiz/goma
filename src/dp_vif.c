@@ -1456,6 +1456,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->permittivity, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->permittivity_imag, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->magnetic_permeability, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->incident_wave, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->VoltageFormulation, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->heat_capacity, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->heat_source, 1, MPI_DOUBLE);
@@ -1617,6 +1618,8 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->Light_AbsorptionModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->Shell_User_ParModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PermittivityModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->MagneticPermeabilityModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->IncidentWaveModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PBE_BA_Type, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->SBM_Length_enabled, 1, MPI_INT);
 
@@ -1770,6 +1773,8 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->len_u_density, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_electrical_conductivity, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_permittivity, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->len_u_magnetic_permeability, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->len_u_incident_wave, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_heat_capacity, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_heat_source, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_mass_source, 1, MPI_INT);
@@ -2870,6 +2875,10 @@ void ark_landing(void) {
 
     dalloc(m->len_u_permittivity, m->u_permittivity);
 
+    dalloc(m->len_u_magnetic_permeability, m->u_magnetic_permeability);
+
+    dalloc(m->len_u_incident_wave, m->u_incident_wave);
+
     dalloc(m->len_u_elect_surf_diffusivity, m->u_elect_surf_diffusivity);
 
     dalloc(m->len_u_heat_capacity, m->u_heat_capacity);
@@ -3160,6 +3169,10 @@ void noahs_dove(void) {
     crdv(m->len_u_electrical_conductivity, m->u_electrical_conductivity);
 
     crdv(m->len_u_permittivity, m->u_permittivity);
+
+    crdv(m->len_u_magnetic_permeability, m->u_magnetic_permeability);
+
+    crdv(m->len_u_incident_wave, m->u_incident_wave);
 
     crdv(m->len_u_elect_surf_diffusivity, m->u_elect_surf_diffusivity);
 

@@ -4848,9 +4848,11 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   /******************************************************************************/
 
 #ifdef GOMA_ENABLE_PETSC
+#if !(PETSC_USE_COMPLEX)
   if (upd->petsc_solve_post_proc) {
     petsc_solve_post_proc(post_proc_vect, rd, dpi);
   } else {
+#endif
 #endif
     for (ii = 0; ii < rd->TotalNVPostOutput; ii++) {
       for (I = 0; I < num_universe_nodes; I++) {
@@ -4862,7 +4864,9 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       }
     }
 #ifdef GOMA_ENABLE_PETSC
+#if !(PETSC_USE_COMPLEX)
   }
+#endif
 #endif
 
   for (ii = 0; ii < rd->TotalNVPostOutput; ii++) {

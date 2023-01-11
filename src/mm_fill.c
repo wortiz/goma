@@ -97,6 +97,7 @@
 #include "sl_petsc.h"
 #endif
 #include "mm_fill_split.h"
+#include "sl_petsc_complex.h"
 #include "stdbool.h"
 #include "wr_side_data.h"
 
@@ -5008,9 +5009,15 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
     EpetraLoadLec(ielem, ams, resid_vector);
   }
 #ifdef GOMA_ENABLE_PETSC
+#if PETSC_USE_COMPLEX
+  else if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+    petsc_load_lec_complex(ielem, ams, resid_vector);
+  }
+#else
   else if (strcmp(Matrix_Format, "petsc") == 0) {
     petsc_load_lec(ielem, ams, resid_vector);
   }
+#endif
 #endif
   else {
     /* load up matrix in MSR format */

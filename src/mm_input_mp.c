@@ -3510,20 +3510,21 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   rewind(imp);
   strcpy(search_string, "Electromagnetic Incident Wave");
   model_read =
-      look_for_mat_prop(imp, search_string, &(mat_ptr->PermittivityModel), &(mat_ptr->permittivity),
-                        &(mat_ptr->u_permittivity), &(mat_ptr->len_u_permittivity), model_name,
-                        SCALAR_INPUT, &NO_SPECIES, es);
+      look_for_mat_prop(imp, search_string, &(mat_ptr->IncidentWaveModel),
+                        &(mat_ptr->incident_wave), &(mat_ptr->u_incident_wave),
+                        &(mat_ptr->len_u_incident_wave), model_name, SCALAR_INPUT, &NO_SPECIES, es);
   if (model_read == -1) {
     if (strcmp(model_name, "PLANE_Z_WAVE") == 0) {
-      mat_ptr->PermittivityModel = EM_INC_PLANE_Z_WAVE;
+      mat_ptr->IncidentWaveModel = EM_INC_PLANE_Z_WAVE;
       num_const = read_constants(imp, &mat_ptr->u_incident_wave, 0);
+      mat_ptr->len_u_incident_wave = num_const;
       if (num_const != 1) {
         GOMA_EH(GOMA_ERROR, "Expected 1 constants for %s = %s", search_string, model_name);
       }
     } else {
       mat_ptr->IncidentWaveModel = CONSTANT;
       mat_ptr->len_u_incident_wave = 0;
-      SPF(es, "\t(%s = %s %.4g)", search_string, "NONE", mat_ptr->permittivity);
+      SPF(es, "\t(%s = %s %.4g)", search_string, "NONE", mat_ptr->incident_wave);
     }
   }
 

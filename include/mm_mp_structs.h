@@ -912,6 +912,7 @@ struct Material_Properties {
 
   // EM incident wave, mix between boundary condition / source / problem property
   int IncidentWaveModel;
+  dbl incident_wave;
   int len_u_incident_wave;
   dbl *u_incident_wave;
 
