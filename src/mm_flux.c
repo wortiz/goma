@@ -1922,13 +1922,14 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
             case SCATTERING_CROSS_SECTION: {
               const double c0 = upd->Speed_Of_Light;
+              const double eps0 = upd->Free_Space_Permittivity;
               const double mu0 = upd->Free_Space_Permeability;
 
               dbl freq = upd->EM_Frequency;
               dbl lambda0 = c0 / freq;
               dbl k0 = 2 * M_PI / lambda0;
-              dbl omega0 = 2.0 * M_PI * freq;
-              dbl Z0 = mu0 * c0;
+              dbl omega = k0 / sqrt(eps0 * mu0);
+              dbl Z0 = sqrt(mu0/eps0);
               complex double wave[3];
               complex double curl_wave[3];
               dbl x = fv->x[0];
@@ -1943,7 +1944,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 GOMA_EH(GOMA_ERROR, "Trying to compute scattered cross section when permittivity "
                                     "is a matrix, not supported");
               }
-              complex double Z1 = Z0 / 1.0; // csqrt(creal(permittivity));
+              complex double Z1 = Z0 / 1.0; // see EM_ABSORB volint csqrt(creal(permittivity1));
               complex double S0 = 1 / (2 * Z1);
 
               complex double j = _Complex_I;
@@ -1958,8 +1959,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               complex double H_s[DIM] = {0.0, 0.0, 0.0};
 
               for (int i = 0; i < DIM; i++) {
-                // H_s[i] = conj(-1.0 / (j*k0) * curl_E_s[i]);
-                H_s[i] = conj(-1.0 / (j * mu0 * omega0) * curl_E_s[i]);
+                //H_s[i] = conj(-1.0 / (j*k0) * curl_E_s[i]);
+                H_s[i] = conj(-1.0 / (j * mu0 * omega) * curl_E_s[i]);
                 // H_s[i] = conj(j * k0*curl_E_s[i]);
               }
 
@@ -1973,9 +1974,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                 local_q += creal((1 / S0) * P[a]) * fv->snormal[a];
                 // local_q += creal(P[a]) * fv->snormal[a];
               }
-              // printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, perm = %g, lambda0 = %g, mu0 =
-              // %g, omega0 = %g, local_q= %g\n",
-              //  S0, k0, Z0, creal(permittivity), lambda0, mu0, omega0, local_q);
+              // printf("Scattering coef S0 = %g, k0 = %g, Z0 = %g, perm = %g, lambda0 = %g, mu0 = %g, omega0 = %g, omega = %g, local_q= %g\n",
+              //  creal(S0), k0, Z0, creal(permittivity), lambda0, mu0, omega0, omega, local_q);
               //  printf("E = [%g + i %g] [%g + i %g] [%g + i %g]\nH =  [%g + i %g] [%g + i %g] [%g
               //  +
               //  "
@@ -1984,7 +1984,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               //         cimag(E_s[2]), creal(H_s[0]), cimag(H_s[0]), creal(H_s[1]), cimag(H_s[1]),
               //         creal(H_s[2]), cimag(H_s[2]), creal(P[0]), cimag(P[0]), creal(P[1]),
               //         cimag(P[1]), creal(P[2]), cimag(P[2]));
-              //
+              
               local_flux += weight * det * local_q;
             } break;
 
@@ -5585,7 +5585,7 @@ int compute_volume_integrand(const int quantity,
 
   case I_EM_ABSORB_CROSS_SECTION: {
     const double c0 = upd->Speed_Of_Light;
-    const double e0 = upd->Free_Space_Permittivity;
+    const double eps0 = upd->Free_Space_Permittivity;
     const double mu0 = upd->Free_Space_Permeability;
     dbl x = fv->x[0];
     dbl y = fv->x[1];
@@ -5600,8 +5600,8 @@ int compute_volume_integrand(const int quantity,
       GOMA_EH(GOMA_ERROR, "Trying to compute Absorbtion cross section when permittivity "
                           "is a matrix, not supported");
     }
-    dbl Z0 = mu0 * c0;
-    complex double Z1 = Z0 / 1.0; // csqrt(creal(permittivity));
+    dbl Z0 = sqrt(mu0/eps0);
+    complex double Z1 = Z0 / 1.0; // this is of the surrounding phase set to 1 for now csqrt(creal(permittivity));
     complex double S0 = 1 / (2 * Z1);
     complex double invS0 = 1 / S0;
     complex double wave[3];
@@ -5611,16 +5611,8 @@ int compute_volume_integrand(const int quantity,
     for (int i = 0; i < DIM; i++) {
       E_mag += fv->em_er[i] * fv->em_er[i] + fv->em_ei[i] * fv->em_ei[i];
     }
-    // E_mag = sqrt(E_mag);
-    dbl omega = k0 / sqrt(e0 * mu0);
-    // printf("omega = %g, S0=%g, cimag(perm) = %g, E_mag = %g, invS0 = %g\n",
-    // omega,
-    // S0,
-    // cimag(permittivity),
-    // E_mag,
-    // invS0
-    // );
-    *sum += creal(weight * det * invS0 * 0.5 * omega * e0 * cimag(permittivity) * E_mag);
+    dbl omega = k0 / sqrt(eps0 * mu0);
+    *sum += creal(weight * det * invS0 * 0.5 * omega * eps0 * cimag(permittivity) * E_mag);
   } break;
 
   default:

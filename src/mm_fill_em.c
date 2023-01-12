@@ -1956,7 +1956,9 @@ bool relative_permittivity_model(complex double *permittivity_out,
     dbl pml_outer_radius = mp->u_permittivity[4];
 
     const double c0 = upd->Speed_Of_Light;
-    const double nu0 = upd->Free_Space_Impedance;
+    const double eps0 = upd->Free_Space_Permittivity;
+    const double mu0 = upd->Free_Space_Permeability;
+    const double nu0 = sqrt(mu0/eps0);
 
     dbl x = fv->x[0];
     dbl y = fv->x[1];
@@ -2034,7 +2036,9 @@ bool relative_permeability_model(complex double *permeability_out,
     dbl pml_outer_radius = mp->u_permeability[4];
 
     const double c0 = upd->Speed_Of_Light;
-    const double nu0 = upd->Free_Space_Impedance;
+    const double eps0 = upd->Free_Space_Permittivity;
+    const double mu0 = upd->Free_Space_Permeability;
+    const double nu0 = sqrt(mu0/eps0);
 
     dbl x = fv->x[0];
     dbl y = fv->x[1];
@@ -2142,7 +2146,7 @@ int assemble_ewave_nedelec(dbl time) {
   dbl x = fv->x[0];
   dbl y = fv->x[1];
   dbl z = fv->x[2];
-  dbl freq = upd->Acoustic_Frequency;
+  dbl freq = upd->EM_Frequency;
   dbl lambda0 = c0 / freq;
   dbl k0 = 2 * M_PI / lambda0;
 

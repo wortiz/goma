@@ -1374,16 +1374,6 @@ void rd_genl_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  iread = look_for_optional(ifp, "EM Free Space Impedance", input, '=');
-  if (iread == 1) {
-    if (fscanf(ifp, "%lf", &upd->Free_Space_Impedance) != 1) {
-      GOMA_EH(GOMA_ERROR, "error reading EM Free Space Impedance");
-    }
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %g", "Magnetic Frequency",
-             upd->Free_Space_Impedance);
-    ECHO(echo_string, echo_file);
-  }
-
   iread = look_for_optional(ifp, "EM Free Space Permittivity", input, '=');
   if (iread == 1) {
     if (fscanf(ifp, "%lf", &upd->Free_Space_Permittivity) != 1) {
@@ -1404,6 +1394,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
+  upd->Speed_Of_Light = 1.0 / (sqrt(upd->Free_Space_Permittivity * upd->Free_Space_Permeability));
   iread = look_for_optional(ifp, "EM Speed of Light", input, '=');
   if (iread == 1) {
     if (fscanf(ifp, "%lf", &upd->Speed_Of_Light) != 1) {
