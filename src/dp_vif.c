@@ -369,6 +369,7 @@ void raven_landing(void) {
           1, 1, sizeof(struct Post_Processing_Averages));
     }
   }
+
   /*
    * Zienkewicz-Zhu error measures.
    */
@@ -385,6 +386,18 @@ void raven_landing(void) {
 
       }
   */
+
+  /* Extra Element Data */
+
+  if (upd->num_extra_element_data > 0) {
+    upd->extra_element_data_file = malloc(sizeof(char *) * upd->num_extra_element_data);
+    upd->extra_element_data_name = malloc(sizeof(char *) * upd->num_extra_element_data);
+    upd->extra_element_data_timestep = malloc(sizeof(int) * upd->num_extra_element_data);
+    for (int i = 0; i < upd->num_extra_element_data; i++) {
+      upd->extra_element_data_file[i] = malloc(sizeof(char) * MAX_FNL);
+      upd->extra_element_data_name[i] = malloc(sizeof(char) * (MAX_VAR_NAME_LNGTH + 1));
+    }
+  }
 
   /*
    * Augmenting condition preliminaries...
@@ -2667,6 +2680,14 @@ void noahs_ark(void) {
       ddd_add_member(n, &(pp_average[i]->index_post), 1, MPI_INT);
       ddd_add_member(n, &(pp_average[i]->non_variable_type), 1, MPI_INT);
       ddd_add_member(n, pp_average[i]->type_name, MAX_VAR_NAME_LNGTH, MPI_CHAR);
+    }
+  }
+
+  if (upd->num_extra_element_data > 0) {
+    for (i = 0; i < upd->num_extra_element_data; i++) {
+      ddd_add_member(n, &upd->extra_element_data_timestep[i], 1, MPI_INT);
+      ddd_add_member(n, upd->extra_element_data_file[i], MAX_FNL, MPI_CHAR);
+      ddd_add_member(n, upd->extra_element_data_name[i], MAX_VAR_NAME_LNGTH, MPI_CHAR);
     }
   }
 

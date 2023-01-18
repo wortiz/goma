@@ -18,6 +18,7 @@
 #include "bc_surfacedomain.h"
 #include "dp_types.h"
 #include "dpi.h"
+#include "exo_struct.h"
 #ifdef EXTERN
 #undef EXTERN
 #endif
@@ -29,6 +30,8 @@
 #ifndef GOMA_DP_COMM_C
 #define EXTERN extern
 #endif
+
+EXTERN void exchange_elem(Exo_DB *exo, Dpi *dpi, double *x);
 
 EXTERN void exchange_dof(Comm_Ex *, /* cx - ptr to communications exchange info */
                          Dpi *,     /* dpi - distributed processing info */

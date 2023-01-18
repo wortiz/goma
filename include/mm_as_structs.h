@@ -887,6 +887,11 @@ struct Uniform_Problem_Description {
   int petsc_solve_post_proc;
   void *petsc_post_proc_data;
   int devss_traceless_gradient;
+  int num_extra_element_data;
+  int *extra_element_data_timestep;
+  char **extra_element_data_name;
+  char **extra_element_data_file;
+  dbl **extra_element_data;
 };
 typedef struct Uniform_Problem_Description UPD_STRUCT;
 /*____________________________________________________________________________*/

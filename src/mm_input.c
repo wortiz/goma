@@ -1398,6 +1398,43 @@ void rd_genl_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Anneal Mesh On Output", input);
     ECHO(echo_string, echo_file);
   }
+
+  upd->num_extra_element_data = 0;
+  iread = look_for_optional(ifp, "Extra Element Data", input, '=');
+  if (iread == 1) {
+    ECHO("\nExtra Element Data =\n", echo_file);
+    upd->num_extra_element_data = count_list(ifp, "ELEM_DATA", input, '=', "END OF ELEM_DATA");
+
+    upd->extra_element_data_file = malloc(sizeof(char *) * upd->num_extra_element_data);
+    upd->extra_element_data_name = malloc(sizeof(char *) * upd->num_extra_element_data);
+    upd->extra_element_data_timestep = malloc(sizeof(int) * upd->num_extra_element_data);
+    long save_position;
+    char data_line_buffer[MAX_CHAR_IN_INPUT];
+    for (int i = 0; i < upd->num_extra_element_data; i++) {
+      look_for(ifp, "ELEM_DATA", input, '=');
+      save_position = ftell(ifp);
+      char *fgetsret = fgets(data_line_buffer, MAX_CHAR_IN_INPUT, ifp);
+      if (fgetsret == NULL) {
+        GOMA_EH(GOMA_ERROR, "Error reading Extra Element Data");
+      }
+
+      upd->extra_element_data_file[i] = malloc(sizeof(char) * MAX_FNL);
+      upd->extra_element_data_name[i] = malloc(sizeof(char) * (MAX_VAR_NAME_LNGTH + 1));
+
+      fseek(ifp, save_position, SEEK_SET);
+
+      int read_element_data_items =
+          sscanf(data_line_buffer, "%s %s %d", upd->extra_element_data_file[i], upd->extra_element_data_name[i], &upd->extra_element_data_timestep[i]);
+
+      if (read_element_data_items != 3) {
+        GOMA_EH(GOMA_ERROR, "Error reading Extra Element Data item %d", i);
+      }
+      snprintf(echo_string, sizeof(echo_string), "ELEM_DATA = %s %s\n", upd->extra_element_data_file[i],
+               upd->extra_element_data_name[i]);
+      ECHO(echo_string, echo_file);
+    }
+    ECHO("\nEND OF ELEM_DATA =\n", echo_file);
+  }
 }
 /* rd_genl_specs -- read input file for general specifications */
 /*****************************************************************************/

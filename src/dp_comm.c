@@ -16,6 +16,7 @@
 #include "dp_map_comm_vec.h"
 #include "dp_types.h"
 #include "dpi.h"
+#include "el_elm_info.h"
 #include "rf_allo.h"
 #include "rf_fem.h"
 
@@ -37,6 +38,9 @@
 #include "dp_types.h"
 #include "dpi.h"
 #include "exo_struct.h"
+#include <cstdlib>
+#include <mpi.h>
+#include <petsclog.h>
 */
 
 #define GOMA_DP_COMM_C
@@ -44,6 +48,100 @@
 /********************************************************************/
 /********************************************************************/
 /********************************************************************/
+void exchange_elem(Exo_DB *exo, Dpi *dpi, dbl *x) {
+
+  if (Num_Proc == 1)
+    return;
+
+  // Just going to use a dumb exchange right now assuming this isn't performance
+  // critical and is only called a few times in the code.
+  //
+  // Given our current element decomposition we should only need to send to
+  // neighbors with a higher procid Just send the whole list for now, elem count
+  // should be much less than dof so this shouldn't be too bad
+
+  // Find elements and their ids in base mesh
+  int n_elems = exo->base_mesh->num_elems;
+  int *base_mesh_elem_ids = calloc(n_elems, sizeof(int));
+  dbl *base_mesh_elem_vals = calloc(n_elems, sizeof(dbl));
+
+  int proc_elem = 0;
+  int base_elem = 0;
+  for (int i = 0; i < exo->num_elem_blocks; i++) {
+    for (int j = 0; j < exo->eb_num_elems[i]; j++) {
+      int index = exo->eb_ghost_elem_to_base[i][j];
+      if (index != -1) {
+        base_mesh_elem_ids[base_elem] = dpi->elem_index_global[proc_elem];
+        base_mesh_elem_vals[base_elem] = x[proc_elem];
+        base_elem++;
+      }
+      proc_elem++;
+    }
+  }
+
+  GOMA_ASSERT(proc_elem == exo->num_elems);
+  GOMA_ASSERT(base_elem == exo->base_mesh->num_elems);
+
+
+  int *recv_from_neighbor_sz = calloc(dpi->num_neighbors, sizeof(int));
+  MPI_Request *requests = calloc(dpi->num_neighbors * 4, sizeof(MPI_Request));
+
+  // get element counts of neighbors
+  int n_req = 0;
+  for (int i = 0; i < dpi->num_neighbors; i++) {
+      MPI_Irecv(&recv_from_neighbor_sz[i], 1, MPI_INT, dpi->neighbor[i], 801, MPI_COMM_WORLD,
+                &requests[n_req++]);
+      MPI_Isend(&n_elems, 1, MPI_INT, dpi->neighbor[i], 801, MPI_COMM_WORLD,
+                &requests[n_req++]);
+  }
+
+  MPI_Waitall(n_req, requests, MPI_STATUSES_IGNORE);
+
+  int **recv_ids = calloc(dpi->num_neighbors, sizeof(int *));
+  double **recv_vals = calloc(dpi->num_neighbors, sizeof(double *));
+
+  n_req = 0;
+  for (int i = 0; i < dpi->num_neighbors; i++) {
+      recv_ids[i] = calloc(recv_from_neighbor_sz[i], sizeof(int));
+      recv_vals[i] = calloc(recv_from_neighbor_sz[i], sizeof(double));
+
+      MPI_Irecv(recv_ids[i], recv_from_neighbor_sz[i], MPI_INT, dpi->neighbor[i], 802,
+                MPI_COMM_WORLD, &requests[n_req++]);
+      MPI_Irecv(recv_vals[i], recv_from_neighbor_sz[i], MPI_DOUBLE, dpi->neighbor[i], 803,
+                MPI_COMM_WORLD, &requests[n_req++]);
+      MPI_Isend(base_mesh_elem_ids, n_elems, MPI_INT, dpi->neighbor[i], 802,
+                MPI_COMM_WORLD, &requests[n_req++]);
+      MPI_Isend(base_mesh_elem_vals, n_elems, MPI_DOUBLE, dpi->neighbor[i], 803, MPI_COMM_WORLD,
+                &requests[n_req++]);
+  }
+
+  MPI_Waitall(n_req, requests, MPI_STATUSES_IGNORE);
+
+  // We probably only have to do this a few times overall so complexity probably won't hurt,
+  // if it does switch to sorted ids or a better algorithm
+
+  for (int i = 0; i < dpi->num_neighbors; i++) {
+    for (int j = 0; j < recv_from_neighbor_sz[i]; j++) {
+      int id = recv_ids[i][j];
+      int index = in_list(id, 0, exo->num_elems, dpi->elem_index_global);
+      if (index != -1) {
+        x[index] = recv_vals[i][j];
+      }
+    }
+  }
+
+  for (int i = 0; i < dpi->num_neighbors; i++) {
+    free(recv_ids[i]);
+    free(recv_vals[i]);
+  }
+
+  free(base_mesh_elem_ids);
+  free(base_mesh_elem_vals);
+
+  free(recv_ids);
+  free(recv_vals);
+  free(recv_from_neighbor_sz);
+}
 
 void exchange_dof(Comm_Ex *cx, Dpi *dpi, double *x, int imtrx)
 

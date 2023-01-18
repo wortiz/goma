@@ -114,6 +114,7 @@ static void init_structural_shell_coord(double[]); /* u[] - solution vector */
 static void init_shell_normal_unknowns(double[],        /* u[] - solution vector */
                                        const Exo_DB *); /* Exodus database */
 
+static int read_elem_data(Dpi *dpi, Exo_DB *exo);
 /*****************************************************************************/
 /*****************************************************************************/
 
@@ -2150,6 +2151,11 @@ void init_vec(
   }         /* end for element blocks */
   safer_free((void **)&block_order);
 
+  // Check for extra element data
+  if (upd->num_extra_element_data > 0) {
+    read_elem_data(dpi, exo);
+  }
+
   /*
    *  Exchange the degrees of freedom with neighboring processors
    */
@@ -4125,6 +4131,141 @@ int evaluate_sat_hyst_criterion_nodal(const dbl *x_static,
   return (1);
 }
 
+static int read_elem_data(Dpi *dpi, Exo_DB *exo)
+
+{
+  int error, vdex, num_dim, num_nodes;
+  int num_elem, num_elem_blk, num_node_sets, num_side_sets, time_step;
+  float version;               /* version number of EXODUS II */
+  int exoid;                   /* ID of the open EXODUS II file */
+  char title[MAX_LINE_LENGTH]; /* title of the EXODUS II database */
+  float ret_float;             /* any returned float */
+  char ret_char[3];            /* any returned character */
+  int num_elem_vars = 0;
+  char **elem_var_names = NULL; /* array containing element variable names */
+  double ftimeValue;
+  char file_nm[MAX_FNL];
+#ifdef DEBUG
+  static const char yo[] = "rd_vectors_from_exoII";
+#endif
+
+  // allocate dbl arrays
+  upd->extra_element_data = malloc(sizeof(dbl *) * upd->num_extra_element_data);
+  for (int i = 0; i < upd->num_extra_element_data; i++) {
+    int desired_time_step = upd->extra_element_data_timestep[i];
+    strcpy(file_nm, upd->extra_element_data_file[i]);
+    multiname(file_nm, ProcID, Num_Proc);
+
+    CPU_word_size = sizeof(double);
+    IO_word_size = 0;
+
+    exoid = ex_open(file_nm, EX_READ, &CPU_word_size, &IO_word_size, &version);
+    GOMA_EH(exoid, "ex_open");
+
+    error = ex_get_init(exoid, title, &num_dim, &num_nodes, &num_elem, &num_elem_blk,
+                        &num_node_sets, &num_side_sets);
+    GOMA_EH(error, "ex_get_init for efv or init guess");
+
+    // add some checks to make sure we are probably reading the same mesh
+    GOMA_ASSERT_ALWAYS(num_dim == exo->base_mesh->num_dim);
+    GOMA_ASSERT_ALWAYS(num_nodes == exo->base_mesh->num_nodes);
+    GOMA_ASSERT_ALWAYS(num_elem == exo->base_mesh->num_elems);
+    GOMA_ASSERT_ALWAYS(num_elem_blk == exo->base_mesh->num_elem_blocks);
+
+    /*
+     * Obtain the number of time steps in the exodus file, time_step,
+     * We will read only from the last time step
+     */
+    error = ex_inquire(exoid, EX_INQ_TIME, &time_step, &ret_float, ret_char);
+    GOMA_EH(error, "ex_inquire");
+
+    if (time_step == 0) {
+      // early exit
+      GOMA_WH(GOMA_ERROR, "Warning no time steps found in %s", file_nm);
+      ex_close(exoid);
+      return 0;
+    }
+
+    /* Figure out what time step to select. Will select the last time
+     * step unless the input variable desired_time_step is set lower.
+     * The lower limit in exodus is 1.
+     */
+    if (desired_time_step > 0 && desired_time_step < time_step) {
+      time_step = MAX(1, desired_time_step);
+    }
+
+    // Return the value of the time
+    error = ex_get_time(exoid, time_step, &ftimeValue);
+    if (error == -1) {
+      ftimeValue = 0.0;
+    }
+
+    error = ex_get_variable_param(exoid, EX_ELEM_BLOCK, &num_elem_vars);
+    GOMA_EH(error, "ex_get_var_param elem");
+
+    /* First extract all element variable names in exoII database */
+    if (num_elem_vars > 0) {
+      elem_var_names = alloc_VecFixedStrings(num_elem_vars, (MAX_STR_LENGTH + 1));
+      error = ex_get_variable_names(exoid, EX_ELEM_BLOCK, num_elem_vars, elem_var_names);
+      GOMA_EH(error, "ex_get_variable_names element");
+      for (int j = 0; j < num_elem_vars; j++)
+        strip(elem_var_names[j]);
+    }
+
+    dbl **eb_variable = malloc(sizeof(dbl) * exo->num_elem_blocks);
+    for (int eb_index = 0; eb_index <exo->num_elem_blocks; eb_index++){
+      if (exo->base_mesh->eb_num_elems[eb_index] > 0) {
+        vdex = -1;
+        for (int j = 0; j < num_elem_vars; j++) {
+          if (strcmp(elem_var_names[j], upd->extra_element_data_name[i]) == 0) {
+            vdex = j + 1;
+            break;
+          }
+        }
+        int num_elems_block = exo->base_mesh->eb_num_elems[eb_index];
+        if (vdex != -1) {
+          eb_variable[eb_index] =
+              alloc_dbl_1(num_elems_block, 0.0); // This should be at for number of elements in a block.
+          DPRINTF(stdout, "ELEM_DATA: Element variable %s for material %d found in exoII database\n",
+                  upd->extra_element_data_name[i], eb_index + 1);
+          error = ex_get_var(exoid, time_step, EX_ELEM_BLOCK, vdex, exo->eb_id[eb_index], num_elems_block, eb_variable[eb_index]);
+          GOMA_EH(error, "ex_get_var element");
+        } else {
+          GOMA_EH(GOMA_ERROR, "Variable %s not found in %s", upd->extra_element_data_name[i], file_nm);
+        }
+      }
+    }
+
+    // convert to collapsed element array;
+    upd->extra_element_data[i] = malloc(sizeof(dbl) * exo->num_elems);
+
+    int ielem = 0;
+    for (int block = 0; block < exo->num_elem_blocks; block++) {
+      for (int j = 0; j < exo->eb_num_elems[block]; j++) {
+        int index = exo->eb_ghost_elem_to_base[block][j];
+        if (index != -1) {
+          upd->extra_element_data[i][ielem] = eb_variable[block][index];
+        } else {
+          upd->extra_element_data[i][ielem] = 0;
+        }
+        ielem++;
+      }
+    }
+
+    // exchange_elem
+    exchange_elem(exo, dpi, upd->extra_element_data[i]);
+
+    for (int i = 0; i < exo->num_elem_blocks; i++) {
+      free(eb_variable[i]);
+    }
+    free(eb_variable);
+
+    safer_free((void **)&elem_var_names);
+    error = ex_close(exoid);
+    GOMA_EH(error, "ex_close");
+  }
+  return 0;
+}
 /****************************************************************************/
 /****************************************************************************/
 /****************************************************************************/

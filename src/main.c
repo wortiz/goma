@@ -262,6 +262,15 @@ ELEM_BLK_STRUCT *Current_EB_ptr = NULL; /* Pointer to the current element block
                                            structure. This is calculated in the
                                            fill */
 
+static bool file_in_list(char **file_list, int n_files, char *filename) {
+  for (int i = 0; i < n_files; i++) {
+    if (strcmp(file_list[i], filename) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 int main(int argc, char **argv)
 
 /*
@@ -553,25 +562,39 @@ int main(int argc, char **argv)
 #ifdef GOMA_ENABLE_METIS
   /* Now break the exodus files */
   if (Decompose_Flag == 1 && Num_Proc > 1 && ProcID == 0) {
-    char **filenames = malloc(sizeof(char *) * (2 + MAX_EXTERNAL_FIELD));
+    char **filenames = malloc(sizeof(char *) * (2 + MAX_EXTERNAL_FIELD + upd->num_extra_element_data));
     int n_files = 1;
     filenames[0] = malloc(sizeof(char) * MAX_FNL);
     memcpy(filenames[0], ExoFile, MAX_FNL);
     if (strcmp(ExoAuxFile, "") != 0) {
-      filenames[n_files] = malloc(sizeof(char) * MAX_FNL);
-      memcpy(filenames[n_files], ExoAuxFile, MAX_FNL);
-      n_files++;
-    }
-
-    if (efv->Num_external_field != 0) {
-      for (i = 0; i < efv->Num_external_field; i++) {
+      if (!file_in_list(filenames, n_files, ExoAuxFile)) {
         filenames[n_files] = malloc(sizeof(char) * MAX_FNL);
-        memcpy(filenames[n_files], efv->file_nm[i], MAX_FNL);
+        memcpy(filenames[n_files], ExoAuxFile, MAX_FNL);
         n_files++;
       }
     }
 
-    goma_metis_decomposition(filenames, n_files);
+    if (efv->Num_external_field != 0) {
+      for (i = 0; i < efv->Num_external_field; i++) {
+        if (!file_in_list(filenames, n_files, efv->file_nm[i])) {
+          filenames[n_files] = malloc(sizeof(char) * MAX_FNL);
+          memcpy(filenames[n_files], efv->file_nm[i], MAX_FNL);
+          n_files++;
+        }
+      }
+    }
+
+    if (upd->num_extra_element_data > 0) {
+      for (i = 0; i < upd->num_extra_element_data; i++) {
+        if (!file_in_list(filenames, n_files, upd->extra_element_data_file[i])) {
+          filenames[n_files] = malloc(sizeof(char) * MAX_FNL);
+          memcpy(filenames[n_files], upd->extra_element_data_file[i], MAX_FNL);
+          n_files++;
+        }
+      }
+    }
+
+    GOMA_EH(goma_metis_decomposition(filenames, n_files), "Error in Metis decomposition");
 
     for (int i = 0; i < n_files; i++) {
       free(filenames[i]);

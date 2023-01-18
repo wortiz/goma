@@ -797,7 +797,8 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
     }
     if (set_skip)
       continue;
-    int exoid = ex_open(filenames[file], EX_READ, &monolith->comp_wordsize, &monolith->io_wordsize,
+    int io_wordsize = 0;
+    int exoid = ex_open(filenames[file], EX_READ, &monolith->comp_wordsize, &io_wordsize,
                         &monolith->version);
     CHECK_EX_ERROR(exoid, "ex_open");
 
