@@ -16,6 +16,7 @@
  * FLUX AND/OR DATA PARAMETER AND/OR CONTINUATION PARAMETER
  */
 
+#include "mm_eh.h"
 #include "sl_epetra_interface.h"
 #include "sl_util_structs.h"
 
@@ -108,6 +109,14 @@ static int first_linear_solver_call = TRUE;
 
 #include "az_aztec.h"
 #include "sl_petsc_complex.h"
+
+
+typedef enum detail_type {
+  RESIDUAL_DETAIL,
+  CORRECTION_DETAIL
+} detail_type;
+
+static void calculate_and_print_detailed_residual_norms(double *resid, int nt, detail_type type);
 
 static int soln_sens                /* mm_sol_nonlinear.c                        */
     (double,                        /* lambda - parameter                        */
@@ -627,7 +636,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   fflush(stdout);
   fflush(stderr);
 
-  if (TimeIntegration == STEADY) {
+  if (TimeIntegration == STEADY && !upd->detailed_solver_output) {
 
     DPRINTF(stdout, "\n\n");
     if (Solver_Output_Format & 1)
@@ -1074,6 +1083,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       DPRINTF(stdout, "%7.1e ", Norm[0][1]);
     if (Solver_Output_Format & 16)
       DPRINTF(stdout, "%7.1e ", Norm[0][2]);
+
+    if (upd->detailed_solver_output) {
+      calculate_and_print_detailed_residual_norms(resid_vector, inewton, RESIDUAL_DETAIL);
+    }
 
     fflush(stdout);
 
@@ -2277,6 +2290,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           DPRINTF(stdout, "%s ", stringer);
       }
     }
+    if (upd->detailed_solver_output && solve_skipped) {
+      P0PRINTF("Solve skipped\n");
+    } else
+    if (upd->detailed_solver_output) {
+      calculate_and_print_detailed_residual_norms(delta_x, inewton, CORRECTION_DETAIL);
+    }
 
     asmslv_time = (a_end - a_start);
     slv_time = (s_end - s_start);
@@ -3457,3 +3476,103 @@ static int soln_sens(double lambda,  /*  parameter */
   return (err);
 } /*   end of routine soln_sens()   */
 /* end of file mm_sol_nonlinear.c */
+
+static void calculate_and_print_detailed_residual_norms(double *resid, int nt, detail_type type) {
+  int sz = NumUnknowns[pg->imtrx];
+  int num_active_variables = upd->Total_Num_Var[pg->imtrx] + upd->Max_Num_Species_Eqn;
+
+  int *active_variables = malloc(sizeof(int) * num_active_variables);
+  int *active_variables_offset = malloc(sizeof(int) * V_LAST);
+  int *species_offset = calloc(num_active_variables, sizeof(int));
+  double *var_inf_norm = calloc(num_active_variables, sizeof(double));
+  double *var_l2_norm = calloc(num_active_variables, sizeof(double));
+  double *var_l1_norm = calloc(num_active_variables, sizeof(double));
+
+  // setup indices
+  int offset = 0;
+  for (int i = V_FIRST; i < V_LAST; i++) {
+    active_variables_offset[i] = offset;
+    if (i == MASS_FRACTION) {
+      for (int i = 0; i < upd->Max_Num_Species_Eqn; i++) {
+        active_variables[offset] = i;
+        species_offset[offset] = i;
+        offset++;
+      }
+    }
+    if (upd->ep[pg->imtrx][i] >= 0) {
+      active_variables[offset] = i;
+      offset++;
+    }
+  }
+
+  GOMA_ASSERT(offset = num_active_variables);
+
+  for (int i = 0; i < sz; i++) {
+    int dof_var = idv[pg->imtrx][i][0];
+    int ndof = idv[pg->imtrx][i][1];
+    int active_index = active_variables_offset[dof_var];
+    if (dof_var == MASS_FRACTION) {
+      active_index += ndof;
+    }
+
+    var_inf_norm[active_index] = fmax(var_inf_norm[active_index],fabs(resid[i]));
+    var_l1_norm[active_index] += fabs(resid[i]);
+    var_l2_norm[active_index] += resid[i] * resid[i];
+  }
+
+  double *var_inf_norm_global = calloc(num_active_variables, sizeof(double));
+  double *var_l2_norm_global = calloc(num_active_variables, sizeof(double));
+  double *var_l1_norm_global = calloc(num_active_variables, sizeof(double));
+  MPI_Reduce(var_inf_norm, var_inf_norm_global, num_active_variables, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(var_l1_norm, var_l1_norm_global, num_active_variables, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(var_l2_norm, var_l2_norm_global, num_active_variables, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if (type == RESIDUAL_DETAIL) {
+    P0PRINTF("Newton iteration: %4d\n", nt);
+    P0PRINTF("Residuals:\n");
+  } else if (type == CORRECTION_DETAIL) {
+    P0PRINTF("Corrections:\n");
+  }
+  
+
+  int p_offset = 0;
+  const int split_size = 5;
+
+  for (int split = 0; split < num_active_variables/split_size+1; split++) {
+    int remainder = MIN(split_size, num_active_variables - p_offset);
+    P0PRINTF("\n      ");
+    for (int i = p_offset; i < p_offset+remainder; i++) {
+      char *var_string = Var_Name[active_variables[i]].name2;
+      P0PRINTF(" %-9s ", var_string);
+    }
+    P0PRINTF("\n");
+    P0PRINTF("L_oo  ");
+    for (int i = p_offset; i < p_offset+remainder; i++) {
+      P0PRINTF(" %-4.3e ", var_inf_norm_global[i]);
+    }
+    P0PRINTF("\n");
+    P0PRINTF("L_1   ");
+    for (int i = p_offset; i < p_offset+remainder; i++) {
+      P0PRINTF(" %-4.3e ", sqrt(var_l1_norm_global[i]));
+    }
+    P0PRINTF("\n");
+    P0PRINTF("\n");
+    P0PRINTF("L_2   ");
+    for (int i = p_offset; i < p_offset+remainder; i++) {
+      P0PRINTF(" %-4.3e ", sqrt(var_l2_norm_global[i]));
+    }
+    P0PRINTF("\n");
+    p_offset += remainder;
+  }
+
+
+  free(var_inf_norm);
+  free(var_inf_norm_global);
+  free(var_l2_norm);
+  free(var_l2_norm_global);
+  free(var_l1_norm);
+  free(var_l1_norm_global);
+  free(active_variables);
+  free(active_variables_offset);
+  free(species_offset);
+}

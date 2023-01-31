@@ -6452,6 +6452,24 @@ void rd_solver_specs(FILE *ifp, char *input) {
       GOMA_WH(-1, "Solver Output greater than 80 characters...\n");
   }
 
+  /* Toggle for Detailed solver output */
+
+  upd->detailed_solver_output = FALSE;
+  iread = look_for_optional(ifp, "Detailed Solver Output", input, '=');
+  if (iread == 1) {
+    (void)read_string(ifp, input, '\n');
+    strip(input);
+    if (strcmp(input, "no") == 0) {
+      upd->detailed_solver_output = FALSE;
+    } else if (strcmp(input, "yes") == 0) {
+      upd->detailed_solver_output = TRUE;
+      Solver_Output_Format = 0;
+    } else {
+      GOMA_EH(GOMA_ERROR, "error reading Detailed Solver Output = %s", input);
+    }
+    SPF(echo_string, "%s = %s", "Detailed Solver Output", input);
+  }
+
   /*  Toggle for Outputting Variable Statistics, i.e. min, max, mean,...  */
 
   Output_Variable_Stats = 0;

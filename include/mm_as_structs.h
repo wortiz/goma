@@ -890,6 +890,7 @@ struct Uniform_Problem_Description {
   int petsc_solve_post_proc;
   void *petsc_post_proc_data;
   int devss_traceless_gradient;
+  int detailed_solver_output;
 };
 typedef struct Uniform_Problem_Description UPD_STRUCT;
 /*____________________________________________________________________________*/
