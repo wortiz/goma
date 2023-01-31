@@ -278,8 +278,14 @@ void supg_tau_shakib(SUPG_terms *supg_terms, int dim, dbl dt, dbl diffusivity, i
       d_v_d_gv[a][k] = 0.0;
       for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
-          d_v_d_gv[a][k] += delta(a, i) * bf[VELOCITY1 + a]->phi[k] * G[i][j] * fv->v[j] +
-                            delta(a, j) * fv->v[i] * G[i][j] * bf[VELOCITY1 + a]->phi[k];
+          dbl abs_exp = fv->v[i] * G[i][j] * fv->v[j];
+          dbl sign = 1.0;
+          if (fabs(abs_exp) > 1e-16) {
+            sign = abs_exp / fabs(abs_exp);
+          }
+
+          d_v_d_gv[a][k] += sign * (bf[VELOCITY1 + a]->phi[k] * delta(a, i) * G[i][j] * fv->v[j] +
+                                    bf[VELOCITY1 + a]->phi[k] * delta(a, j) * fv->v[i] * G[i][j]);
         }
       }
     }
@@ -307,7 +313,12 @@ void supg_tau_shakib(SUPG_terms *supg_terms, int dim, dbl dt, dbl diffusivity, i
         dbl v_d_gv_dx = 0;
         for (int i = 0; i < dim; i++) {
           for (int j = 0; j < dim; j++) {
-            v_d_gv_dx += fv->v[i] * dG[i][j][a][k] * fv->v[j];
+            dbl abs_exp = fv->v[i] * G[i][j] * fv->v[j];
+            dbl sign = 1.0;
+            if (fabs(abs_exp) > 1e-16) {
+              sign = abs_exp / fabs(abs_exp);
+            }
+            v_d_gv_dx += sign * (fv->v[i] * dG[i][j][a][k] * fv->v[j]);
           }
         }
 
