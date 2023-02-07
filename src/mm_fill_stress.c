@@ -68,6 +68,17 @@
 
 extern struct Boundary_Condition *inlet_BC[MAX_VARIABLE_TYPES + MAX_CONC];
 
+static bool shock_is_yzbeta(int type) {
+  switch (type) {
+  case YZBETA_ONE:
+  case YZBETA_TWO:
+  case YZBETA_MIXED:
+  case SC_YZBETA:
+    return true;
+  }
+  return false;
+}
+
 // direct call to a fortran LAPACK eigenvalue routine
 extern FSUB_TYPE dsyev_(char *JOBZ,
                         char *UPLO,
@@ -7647,8 +7658,7 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
   }
   /* end Petrov-Galerkin addition */
   dbl yzbeta_factor = 0.0;
-  dbl beta[2] = {1.0, 2.0};
-  if (vn->shockcaptureModel == SC_YZBETA) {
+  if (shock_is_yzbeta(vn->shockcaptureModel)) {
     yzbeta_factor = vn->shockcapture;
   } else if (vn->shockcaptureModel != SC_NONE) {
     GOMA_EH(GOMA_ERROR, "Unknown shock capture model, only YZBETA supported for SQRT_CONF");
@@ -7782,7 +7792,8 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
     dbl kdc[DIM][DIM];
     dbl he = 0.0;
     dbl Z[DIM][DIM];
-    if (vn->shockcaptureModel == SC_YZBETA) {
+    dbl scaling_grad_s[DIM][DIM];
+    if (shock_is_yzbeta(vn->shockcaptureModel)) {
       for (int m = 0; m < VIM; m++) {
         for (int n = 0; n < VIM; n++) {
           Z[m][n] = 0;
@@ -7792,6 +7803,10 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
           Z[m][n] -= a_dot_b[m][n];
           Z[m][n] *= at * lambda;
           Z[m][n] += source_term[m][n];
+          scaling_grad_s[m][n] = 1e-16;
+          for (int i = 0; i < dim; i++) {
+            scaling_grad_s[m][n] += grad_b[i][m][n] * grad_b[i][m][n];
+          }
         }
       }
 
@@ -7812,7 +7827,18 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
       }
       for (int m = 0; m < VIM; m++) {
         for (int n = 0; n < VIM; n++) {
-          kdc[m][n] = fabs(Z[m][n]) * Y_inv * he * he / mag_b;
+          kdc[m][n] = 0;
+          if (vn->shockcaptureModel == SC_YZBETA || vn->shockcaptureModel == YZBETA_ONE ||
+              vn->shockcaptureModel == YZBETA_MIXED) {
+            kdc[m][n] += fabs(Z[m][n]) * Y_inv * he * he / mag_b;
+          }
+          if (vn->shockcaptureModel == SC_YZBETA || vn->shockcaptureModel == YZBETA_TWO ||
+              vn->shockcaptureModel == YZBETA_MIXED) {
+            kdc[m][n] += fabs(Z[m][n]) * Y_inv * (1.0 / sqrt(scaling_grad_s[m][n])) * he / mag_b;
+          }
+          if (vn->shockcaptureModel == SC_YZBETA || vn->shockcaptureModel == YZBETA_MIXED) {
+            kdc[m][n] *= 0.5;
+          }
         }
       }
     }
@@ -7870,7 +7896,7 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
 
               diffusion = 0.;
               if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                if (vn->shockcaptureModel == SC_YZBETA) {
+                if (shock_is_yzbeta(vn->shockcaptureModel)) {
                   for (int r = 0; r < VIM; r++) {
                     diffusion += kdc[ii][jj] * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
                   }
@@ -8044,12 +8070,26 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
 
                     diffusion = 0.;
                     if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                      if (vn->shockcaptureModel == SC_YZBETA) {
+                      if (shock_is_yzbeta(vn->shockcaptureModel)) {
                         dbl dZi = phi_j * (grad_b[p][ii][jj]);
                         dZi *= at * lambda;
                         dbl sign = SGN(Z[ii][jj]);
                         dbl dZ = dZi * sign;
-                        dbl dkdc = Y_inv * dZ * he * he / mag_b;
+                        dbl dkdc = 0;
+                        if (vn->shockcaptureModel == SC_YZBETA ||
+                            vn->shockcaptureModel == YZBETA_ONE ||
+                            vn->shockcaptureModel == YZBETA_MIXED) {
+                          dkdc += Y_inv * dZ * he * he / mag_b;
+                        }
+                        if (vn->shockcaptureModel == SC_YZBETA ||
+                            vn->shockcaptureModel == YZBETA_TWO ||
+                            vn->shockcaptureModel == YZBETA_MIXED) {
+                          dkdc += Y_inv * dZ * (1.0 / sqrt(scaling_grad_s[ii][jj])) * he / mag_b;
+                        }
+                        if (vn->shockcaptureModel == SC_YZBETA ||
+                            vn->shockcaptureModel == YZBETA_MIXED) {
+                          dkdc *= 0.5;
+                        }
                         for (int r = 0; r < VIM; r++) {
                           diffusion += dkdc * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
                         }
@@ -8240,7 +8280,7 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
 
                     diffusion = 0.;
                     if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                      if (vn->shockcaptureModel == SC_YZBETA) {
+                      if (shock_is_yzbeta(vn->shockcaptureModel)) {
                         dbl dZi = 0;
                         for (int q = 0; q < WIM; q++) {
                           dZi += (v[q] - x_dot[q]) * d_grad_b_dmesh[q][ii][jj][p][j];
@@ -8254,6 +8294,12 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                         dbl sign = SGN(Z[ii][jj]);
                         dbl dZ = dZi * sign;
 
+                        dbl d_scaling_grad_s = 0;
+                        for (int w = 0; w < dim; w++) {
+                          d_scaling_grad_s +=
+                              2.0 * grad_b[w][ii][jj] * d_grad_b_dmesh[w][ii][jj][p][j];
+                        }
+
                         dbl d_he = 0;
                         for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
                           dbl tmp = 0;
@@ -8266,8 +8312,27 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                           d_he += -0.5 * dtmp / pow(tmp, 3.0 / 2.0);
                         }
 
-                        dbl dkdc = 2.0 * d_he * he * Y_inv * fabs(Z[ii][jj]) / mag_b +
-                                   Y_inv * dZ * he * he / mag_b;
+                        dbl dkdc = 0;
+                        if (vn->shockcaptureModel == SC_YZBETA ||
+                            vn->shockcaptureModel == YZBETA_ONE ||
+                            vn->shockcaptureModel == YZBETA_MIXED) {
+                          dkdc += 2.0 * d_he * he * Y_inv * fabs(Z[ii][jj]) / mag_b +
+                                  Y_inv * dZ * he * he / mag_b;
+                        }
+                        if (vn->shockcaptureModel == SC_YZBETA ||
+                            vn->shockcaptureModel == YZBETA_TWO ||
+                            vn->shockcaptureModel == YZBETA_MIXED) {
+                          dkdc += Y_inv * dZ * (1.0 / sqrt(scaling_grad_s[ii][jj])) * he / mag_b;
+                          dkdc += Y_inv * fabs(Z[ii][jj]) * (1.0 / sqrt(scaling_grad_s[ii][jj])) * d_he / mag_b;
+                          dkdc +=
+                              Y_inv * fabs(Z[ii][jj]) *
+                              (-0.5 * d_scaling_grad_s / pow(scaling_grad_s[ii][jj], 3.0 / 2.0)) *
+                              he / mag_b;
+                        }
+                        if (vn->shockcaptureModel == SC_YZBETA ||
+                            vn->shockcaptureModel == YZBETA_MIXED) {
+                          dkdc *= 0.5;
+                        }
                         dbl diffusion_a = 0;
                         dbl diffusion_b = 0;
                         for (int r = 0; r < VIM; r++) {
@@ -8352,7 +8417,7 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                         diffusion = 0.;
 
                         if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                          if (vn->shockcaptureModel == SC_YZBETA) {
+                          if (shock_is_yzbeta(vn->shockcaptureModel)) {
                             dbl dZi = 0;
                             for (int k = 0; k < VIM; k++) {
                               dZi += -b[ii][k] * delta(p, k) * delta(jj, q) * phi_j;
@@ -8361,7 +8426,21 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                             dZi *= at * lambda;
                             dbl sign = SGN(Z[ii][jj]);
                             dbl dZ = dZi * sign;
-                            dbl dkdc = Y_inv * dZ * he * he / mag_b;
+                            dbl dkdc = 0;
+                            if (vn->shockcaptureModel == SC_YZBETA ||
+                                vn->shockcaptureModel == YZBETA_ONE ||
+                                vn->shockcaptureModel == YZBETA_MIXED) {
+                              dkdc += Y_inv * dZ * he * he / mag_b;
+                            }
+                            if (vn->shockcaptureModel == SC_YZBETA ||
+                                vn->shockcaptureModel == YZBETA_TWO ||
+                                vn->shockcaptureModel == YZBETA_MIXED) {
+                              dkdc += Y_inv * dZ * (1 / sqrt(scaling_grad_s[ii][jj])) * he / mag_b;
+                            }
+                            if (vn->shockcaptureModel == SC_YZBETA ||
+                                vn->shockcaptureModel == YZBETA_MIXED) {
+                              dkdc *= 0.5;
+                            }
                             for (int r = 0; r < VIM; r++) {
                               diffusion += dkdc * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
                             }
@@ -8504,7 +8583,7 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                         diffusion = 0.;
 
                         if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                          if (vn->shockcaptureModel == SC_YZBETA) {
+                          if (shock_is_yzbeta(vn->shockcaptureModel)) {
                             dbl dZi = 0;
                             if (pd->TimeIntegration != STEADY) {
                               if (pd->e[pg->imtrx][eqn] & T_MASS) {
@@ -8529,6 +8608,13 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                             dbl sign = SGN(Z[ii][jj]);
                             dbl dZ = dZi * sign;
 
+                            dbl d_scaling_grad_s = 0;
+                            for (int w = 0; w < dim; w++) {
+                              d_scaling_grad_s += 2.0 * grad_b[w][ii][jj] *
+                                                  bf[var]->grad_phi[j][w] * delta(ii, p) *
+                                                  delta(jj, q);
+                            }
+
                             dbl tmp = 0;
                             dbl d_mag_b = 0;
                             tmp += b[p][q] * bf[var]->phi[j];
@@ -8537,9 +8623,27 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                             }
                             d_mag_b = tmp / mag_b;
 
-                            dbl dkdc =
+dbl dkdc = 0;
+                        if (vn->shockcaptureModel == SC_YZBETA ||
+                            vn->shockcaptureModel == YZBETA_ONE ||
+                            vn->shockcaptureModel == YZBETA_MIXED) {
+                            dkdc +=
                                 -Y_inv * fabs(Z[ii][jj]) * d_mag_b * he * he / (mag_b * mag_b) +
                                 Y_inv * dZ * he * he / mag_b;
+                            }
+                        if (vn->shockcaptureModel == SC_YZBETA ||
+                            vn->shockcaptureModel == YZBETA_TWO ||
+                            vn->shockcaptureModel == YZBETA_MIXED) {
+                            dkdc += Y_inv * dZ * (1.0 / sqrt(scaling_grad_s[ii][jj])) * he / mag_b;
+                            dkdc += -Y_inv * fabs(Z[ii][jj]) *
+                                    (1.0 / sqrt(scaling_grad_s[ii][jj])) * d_mag_b * he /
+                                    (mag_b * mag_b);
+                            dkdc +=
+                                Y_inv * fabs(Z[ii][jj]) *
+                                (-0.5 * d_scaling_grad_s / pow(scaling_grad_s[ii][jj], 3.0 / 2.0)) *
+                                he / mag_b;
+                            }
+                            dkdc *= 0.5;
                             for (int r = 0; r < VIM; r++) {
                               diffusion += dkdc * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
                               diffusion += kdc[ii][jj] * delta(p, ii) * delta(q, jj) *

@@ -2286,6 +2286,30 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
           GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = YZBETA");
         }
         SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
+      } else if (!strcmp(model_name, "YZBETA_MIXED")) {
+        int err;
+        vn_glob[mn]->shockcaptureModel = YZBETA_MIXED;
+        err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
+        if (err != 1) {
+          GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = YZBETA_MIXED");
+        }
+        SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
+      } else if (!strcmp(model_name, "YZBETA_ONE")) {
+        int err;
+        vn_glob[mn]->shockcaptureModel = YZBETA_ONE;
+        err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
+        if (err != 1) {
+          GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = YZBETA_ONE");
+        }
+        SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
+      } else if (!strcmp(model_name, "YZBETA_TWO")) {
+        int err;
+        vn_glob[mn]->shockcaptureModel = YZBETA_TWO;
+        err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
+        if (err != 1) {
+          GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = YZBETA_TWO");
+        }
+        SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
       } else {
         GOMA_EH(GOMA_ERROR, "Syntax error or invalid model for %s\n", search_string);
       }
