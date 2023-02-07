@@ -2291,7 +2291,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         vn_glob[mn]->shockcaptureModel = YZBETA_MIXED;
         err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
         if (err != 1) {
-          GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = YZBETA_MIXED");
+          GOMA_EH(GOMA_ERROR,
+                  "Expected to read one double for Polymer Shock Capturing = YZBETA_MIXED");
         }
         SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
       } else if (!strcmp(model_name, "YZBETA_ONE")) {
@@ -2299,7 +2300,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         vn_glob[mn]->shockcaptureModel = YZBETA_ONE;
         err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
         if (err != 1) {
-          GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = YZBETA_ONE");
+          GOMA_EH(GOMA_ERROR,
+                  "Expected to read one double for Polymer Shock Capturing = YZBETA_ONE");
         }
         SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
       } else if (!strcmp(model_name, "YZBETA_TWO")) {
@@ -2307,7 +2309,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         vn_glob[mn]->shockcaptureModel = YZBETA_TWO;
         err = fscanf(imp, "%lg", &(vn_glob[mn]->shockcapture));
         if (err != 1) {
-          GOMA_EH(GOMA_ERROR, "Expected to read one double for Polymer Shock Capturing = YZBETA_TWO");
+          GOMA_EH(GOMA_ERROR,
+                  "Expected to read one double for Polymer Shock Capturing = YZBETA_TWO");
         }
         SPF(endofstring(es), " %.4g", vn_glob[mn]->shockcapture);
       } else {

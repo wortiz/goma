@@ -8323,7 +8323,8 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                             vn->shockcaptureModel == YZBETA_TWO ||
                             vn->shockcaptureModel == YZBETA_MIXED) {
                           dkdc += Y_inv * dZ * (1.0 / sqrt(scaling_grad_s[ii][jj])) * he / mag_b;
-                          dkdc += Y_inv * fabs(Z[ii][jj]) * (1.0 / sqrt(scaling_grad_s[ii][jj])) * d_he / mag_b;
+                          dkdc += Y_inv * fabs(Z[ii][jj]) * (1.0 / sqrt(scaling_grad_s[ii][jj])) *
+                                  d_he / mag_b;
                           dkdc +=
                               Y_inv * fabs(Z[ii][jj]) *
                               (-0.5 * d_scaling_grad_s / pow(scaling_grad_s[ii][jj], 3.0 / 2.0)) *
@@ -8623,25 +8624,26 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                             }
                             d_mag_b = tmp / mag_b;
 
-dbl dkdc = 0;
-                        if (vn->shockcaptureModel == SC_YZBETA ||
-                            vn->shockcaptureModel == YZBETA_ONE ||
-                            vn->shockcaptureModel == YZBETA_MIXED) {
-                            dkdc +=
-                                -Y_inv * fabs(Z[ii][jj]) * d_mag_b * he * he / (mag_b * mag_b) +
-                                Y_inv * dZ * he * he / mag_b;
+                            dbl dkdc = 0;
+                            if (vn->shockcaptureModel == SC_YZBETA ||
+                                vn->shockcaptureModel == YZBETA_ONE ||
+                                vn->shockcaptureModel == YZBETA_MIXED) {
+                              dkdc +=
+                                  -Y_inv * fabs(Z[ii][jj]) * d_mag_b * he * he / (mag_b * mag_b) +
+                                  Y_inv * dZ * he * he / mag_b;
                             }
-                        if (vn->shockcaptureModel == SC_YZBETA ||
-                            vn->shockcaptureModel == YZBETA_TWO ||
-                            vn->shockcaptureModel == YZBETA_MIXED) {
-                            dkdc += Y_inv * dZ * (1.0 / sqrt(scaling_grad_s[ii][jj])) * he / mag_b;
-                            dkdc += -Y_inv * fabs(Z[ii][jj]) *
-                                    (1.0 / sqrt(scaling_grad_s[ii][jj])) * d_mag_b * he /
-                                    (mag_b * mag_b);
-                            dkdc +=
-                                Y_inv * fabs(Z[ii][jj]) *
-                                (-0.5 * d_scaling_grad_s / pow(scaling_grad_s[ii][jj], 3.0 / 2.0)) *
-                                he / mag_b;
+                            if (vn->shockcaptureModel == SC_YZBETA ||
+                                vn->shockcaptureModel == YZBETA_TWO ||
+                                vn->shockcaptureModel == YZBETA_MIXED) {
+                              dkdc +=
+                                  Y_inv * dZ * (1.0 / sqrt(scaling_grad_s[ii][jj])) * he / mag_b;
+                              dkdc += -Y_inv * fabs(Z[ii][jj]) *
+                                      (1.0 / sqrt(scaling_grad_s[ii][jj])) * d_mag_b * he /
+                                      (mag_b * mag_b);
+                              dkdc += Y_inv * fabs(Z[ii][jj]) *
+                                      (-0.5 * d_scaling_grad_s /
+                                       pow(scaling_grad_s[ii][jj], 3.0 / 2.0)) *
+                                      he / mag_b;
                             }
                             dkdc *= 0.5;
                             for (int r = 0; r < VIM; r++) {
