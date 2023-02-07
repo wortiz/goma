@@ -7897,8 +7897,15 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
               diffusion = 0.;
               if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
                 if (shock_is_yzbeta(vn->shockcaptureModel)) {
+                  dbl scale = kdc[ii][jj];
+                  // if supg choose max kdc/supg_tau
+                  if (supg > 0) {
+                    dbl tmp = kdc[ii][jj];
+                    dbl tau = supg_terms.supg_tau;
+                    scale = 1.0 / (sqrt(1.0 / (tmp * tmp) + 1.0 / (tau * tau)) + 1e-16);
+                  }
                   for (int r = 0; r < VIM; r++) {
-                    diffusion += kdc[ii][jj] * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
+                    diffusion += scale * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
                   }
                   diffusion *= yzbeta_factor * det_J * wt * h3;
                   diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -8090,8 +8097,17 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                             vn->shockcaptureModel == YZBETA_MIXED) {
                           dkdc *= 0.5;
                         }
+                        dbl dscale = dkdc;
+                        if (supg > 0) {
+                          dbl tmp = kdc[ii][jj];
+                          dbl tau = supg_terms.supg_tau;
+                          dbl dtau = supg_terms.d_supg_tau_dv[p][j];
+                          dbl scale = 1.0 / (sqrt(1.0 / (tmp * tmp) + 1.0 / (tau * tau)) + 1e-16);
+                          dscale = scale * (dkdc / pow(kdc[ii][jj], 3) + dtau / pow(dtau, 3)) *
+                                   scale * scale;
+                        }
                         for (int r = 0; r < VIM; r++) {
-                          diffusion += dkdc * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
+                          diffusion += dscale * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
                         }
                         diffusion *= yzbeta_factor * det_J * wt * h3;
                         diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -8334,15 +8350,25 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                             vn->shockcaptureModel == YZBETA_MIXED) {
                           dkdc *= 0.5;
                         }
+                        dbl scale = kdc[ii][jj];
+                        dbl dscale = dkdc;
+                        if (supg > 0) {
+                          dbl tmp = kdc[ii][jj];
+                          dbl tau = supg_terms.supg_tau;
+                          dbl dtau = supg_terms.d_supg_tau_dX[p][j];
+                          scale = 1.0 / (sqrt(1.0 / (tmp * tmp) + 1.0 / (tau * tau)) + 1e-16);
+                          dscale = 0.5 * scale * scale * scale * 2 *
+                                   (dkdc / pow(kdc[ii][jj], 3) + dtau / pow(dtau, 3));
+                        }
                         dbl diffusion_a = 0;
                         dbl diffusion_b = 0;
                         for (int r = 0; r < VIM; r++) {
-                          diffusion_a += dkdc * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
-                          diffusion_a += kdc[ii][jj] * d_grad_b_dmesh[r][ii][jj][p][j] *
-                                         bf[eqn]->grad_phi[i][r];
-                          diffusion_a += kdc[ii][jj] * grad_b[r][ii][jj] *
-                                         bf[eqn]->d_grad_phi_dmesh[i][r][p][j];
-                          diffusion_b += kdc[ii][jj] * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
+                          diffusion_a += dscale * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
+                          diffusion_a +=
+                              scale * d_grad_b_dmesh[r][ii][jj][p][j] * bf[eqn]->grad_phi[i][r];
+                          diffusion_a +=
+                              scale * grad_b[r][ii][jj] * bf[eqn]->d_grad_phi_dmesh[i][r][p][j];
+                          diffusion_b += scale * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
                         }
                         diffusion_a *= yzbeta_factor * det_J * wt * h3;
                         diffusion_b *=
@@ -8442,8 +8468,17 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                                 vn->shockcaptureModel == YZBETA_MIXED) {
                               dkdc *= 0.5;
                             }
+                            dbl dscale = dkdc;
+                            if (supg > 0) {
+                              dbl tmp = kdc[ii][jj];
+                              dbl tau = supg_terms.supg_tau;
+                              dbl scale =
+                                  1.0 / (sqrt(1.0 / (tmp * tmp) + 1.0 / (tau * tau)) + 1e-16);
+                              dscale =
+                                  0.5 * scale * scale * scale * 2 * (dkdc / pow(kdc[ii][jj], 3));
+                            }
                             for (int r = 0; r < VIM; r++) {
-                              diffusion += dkdc * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
+                              diffusion += dscale * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
                             }
 
                             diffusion *= yzbeta_factor * det_J * wt * h3;
@@ -8646,9 +8681,18 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                                       he / mag_b;
                             }
                             dkdc *= 0.5;
+                            dbl scale = kdc[ii][jj];
+                            dbl dscale = dkdc;
+                            if (supg > 0) {
+                              dbl tmp = kdc[ii][jj];
+                              dbl tau = supg_terms.supg_tau;
+                              scale = 1.0 / (sqrt(1.0 / (tmp * tmp) + 1.0 / (tau * tau)) + 1e-16);
+                              dscale =
+                                  0.5 * scale * scale * scale * 2 * (dkdc / pow(kdc[ii][jj], 3));
+                            }
                             for (int r = 0; r < VIM; r++) {
-                              diffusion += dkdc * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
-                              diffusion += kdc[ii][jj] * delta(p, ii) * delta(q, jj) *
+                              diffusion += dscale * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
+                              diffusion += scale * delta(p, ii) * delta(q, jj) *
                                            bf[var]->grad_phi[j][r] * bf[eqn]->grad_phi[i][r];
                             }
                           }
