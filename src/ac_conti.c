@@ -848,11 +848,6 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         converged = 0;
       inewton = err;
       if (converged) {
-        if (Write_Intermediate_Solutions == 0) {
-          write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
-                         tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_s, theta, path1, NULL,
-                         exo, dpi);
-        }
 #ifdef PARALLEL
         check_parallel_error("Error writing exodusII file");
 #endif
