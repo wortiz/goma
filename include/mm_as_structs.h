@@ -1355,8 +1355,6 @@ struct AC_Information {
    */
   double CONSTV;
 
-  double LewisNum;
-
   double *d_evol_dx; /*pointer to the derivative array */
   /* Level Set Velocity variables */
   double lsvel;

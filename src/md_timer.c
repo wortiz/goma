@@ -61,6 +61,10 @@
 #include <time.h>
 #endif
 
+#ifdef __MACH__
+#include <time.h>
+#endif
+
 #ifdef tflop
 #include <sys/param.h>
 #include <sys/times.h>

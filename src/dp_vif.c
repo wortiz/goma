@@ -1124,7 +1124,6 @@ void noahs_ark(void) {
     ddd_add_member(n, &augc[i].tmp3, 1, MPI_DOUBLE);
     ddd_add_member(n, &augc[i].evol, 1, MPI_DOUBLE);
     ddd_add_member(n, &augc[i].CONSTV, 1, MPI_DOUBLE);
-    ddd_add_member(n, &augc[i].LewisNum, 1, MPI_DOUBLE);
     /*   derivative block d_evol_dx is later allocated in rf_solve */
     ddd_add_member(n, &augc[i].LSPHASE, 1, MPI_INT);
     ddd_add_member(n, &augc[i].DIR, 1, MPI_INT);

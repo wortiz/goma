@@ -248,8 +248,8 @@ void EpetraCreateGomaProblemGraph(struct GomaLinearSolverData *ams, Exo_DB *exo,
   MPI_Allreduce(&my_unknowns, &num_unknowns, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce(&my_nnz, &num_nzz_global, 1, MPI_INT64_T, MPI_SUM, MPI_COMM_WORLD);
 
-  DPRINTF(stdout, "\n%-30s= %ld\n", "Number of unknowns", num_unknowns);
-  DPRINTF(stdout, "\n%-30s= %ld\n", "Number of matrix nonzeroes", num_nzz_global);
+  DPRINTF(stdout, "\n%-30s= %lld\n", "Number of unknowns", num_unknowns);
+  DPRINTF(stdout, "\n%-30s= %lld\n", "Number of matrix nonzeroes", num_nzz_global);
 }
 
 /**

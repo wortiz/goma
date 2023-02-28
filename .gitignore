@@ -38,3 +38,5 @@ cmake-debug
 /docs/docs/
 /cmake-variants.yaml
 /cmake-variants.json
+/.vscode
+/compile_commands.json

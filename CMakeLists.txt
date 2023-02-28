@@ -875,6 +875,14 @@ if(goma_git_version)
   message(STATUS "Git found setting version: ${goma_git_version}")
 endif()
 
+if(APPLE AND ENABLE_PETSC)
+  list(APPEND GOMA_COMPILE_DEFINITIONS PETSC_SKIP_ATTRIBUTE_MPI_TYPE_TAG)
+  message(
+    STATUS
+      "Apple device, adding PETSC_SKIP_ATTRIBUTE_MPI_TYPE_TAG to avoid clang issues"
+  )
+endif()
+
 message(STATUS "CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
 message(STATUS "CMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}")
@@ -955,6 +963,13 @@ if(ENABLE_PETSC AND PETSC_FOUND)
   set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} ${PETSC_STATIC_LIBRARIES})
 endif()
 
+if(MPI_Fortran_FOUND)
+  set(CMAKE_Fortran_FLAGS "${MPI_Fortran_COMPILE_FLAGS} ${CMAKE_Fortran_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS
+      "${CMAKE_EXE_LINKER_FLAGS} ${MPI_Fortran_LINK_FLAGS}")
+  include_directories(${MPI_Fortran_INCLUDE_PATH})
+endif()
+
 # remove some C++ files from unity build as MACROS conflict with Trilinos
 # headers
 set_source_files_properties(
@@ -977,6 +992,10 @@ if(ENABLE_WARNINGS)
       -Wno-unused-parameter
       -Wimplicit-fallthrough>)
 endif()
+if(APPLE)
+  set_target_properties(
+    goma_user PROPERTIES LINK_FLAGS "-undefined dynamic_lookup -flat_namespace")
+endif(APPLE)
 
 add_library(goma ${GOMA_SOURCES} ${GOMA_INCLUDES})
 target_include_directories(goma PUBLIC include)
@@ -996,6 +1015,10 @@ if(ENABLE_WARNINGS)
       -Wno-unused-parameter
       -Wimplicit-fallthrough>)
 endif()
+if(APPLE)
+  set_target_properties(
+    goma PROPERTIES LINK_FLAGS "-undefined dynamic_lookup -flat_namespace")
+endif(APPLE)
 
 add_library(gds ${GDS_SOURCES} ${GDS_INCLUDES})
 target_include_directories(gds PUBLIC include)
@@ -1030,6 +1053,10 @@ if(ENABLE_WARNINGS)
       -Wno-unused-parameter
       -Wimplicit-fallthrough>)
 endif()
+if(APPLE)
+  set_target_properties(
+    goma_util PROPERTIES LINK_FLAGS "-undefined dynamic_lookup -flat_namespace")
+endif(APPLE)
 
 add_executable(goma_exe src/main.c)
 set_target_properties(goma_exe PROPERTIES OUTPUT_NAME "goma")
@@ -1050,7 +1077,12 @@ if(ENABLE_WARNINGS)
       -Wno-unused-parameter
       -Wimplicit-fallthrough>)
 endif()
+if(APPLE)
+  set_target_properties(
+    goma_exe PROPERTIES LINK_FLAGS "-undefined dynamic_lookup -flat_namespace")
+endif(APPLE)
 
+set_source_files_properties(src/fix_main.c PROPERTIES LANGUAGE C)
 add_executable(fix_exe src/fix_main.c)
 set_target_properties(fix_exe PROPERTIES OUTPUT_NAME "fix")
 target_include_directories(fix_exe PUBLIC include)
@@ -1070,6 +1102,10 @@ if(ENABLE_WARNINGS)
       -Wno-unused-parameter
       -Wimplicit-fallthrough>)
 endif()
+if(APPLE)
+  set_target_properties(
+    fix_exe PROPERTIES LINK_FLAGS "-undefined dynamic_lookup -flat_namespace")
+endif(APPLE)
 
 install(
   TARGETS goma_exe fix_exe

@@ -198,7 +198,7 @@
 
 #define delta(m, n) ((m) == (n) ? 1 : 0) /* Kroenecker delta */
 #define permute(i, j, k) \
-  (((i) - (j)) * ((j) - (k)) * ((k) - (i)) / 2) /* Permutation symbol (epsilon) */
+  ((int) (((i) - (j)) * ((j) - (k)) * ((k) - (i)) / 2)) /* Permutation symbol (epsilon) */
 #define stringup(a)                                      \
   do {                                                   \
     char *p;                                             \

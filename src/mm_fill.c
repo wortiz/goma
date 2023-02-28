@@ -103,6 +103,10 @@
 
 #define GOMA_MM_FILL_C
 
+#if __MACH__
+#define finite(x) isfinite(x)
+#endif
+
 /*
  * Global variables defined here. Declared frequently via rf_bc.h
  */

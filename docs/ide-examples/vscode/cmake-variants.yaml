@@ -1,0 +1,63 @@
+buildType:
+  default: debug
+  choices:
+    debug:
+      short: debug
+      long: "Debug"
+      buildType: Debug
+      settings:
+        CMAKE_C_FLAGS_DEBUG: "-ggdb3 -O0"
+        CMAKE_CXX_FLAGS_DEBUG: "-ggdb3 -O0"
+        CMAKE_Fortran_FLAGS_DEBUG: "-ggdb3 -O0"
+    asan:
+      short: asan
+      long: "Asan"
+      buildType: Asan
+    release:
+      short: release
+      long: "Release"
+      buildType: Release
+    relwithdebinfo:
+      short: relwithdebinfo
+      long: "RelWithDebInfo"
+      buildType: RelWithDebInfo
+      settings:
+        CMAKE_EXPORT_COMPILE_COMMANDS: "ON"
+
+problem_config:
+  default: 'big-opt'
+  choices:
+    big-fpe:
+      short: "big-fpe"
+      long: "MDE=27 CHECK_FINITE=OFF MAX_PROB_VAR=24 FP_EXCEPT=ON"
+      settings:
+        MDE: 27
+        CHECK_FINITE: OFF
+        MAX_PROB_VAR: 24
+        FP_EXCEPT: ON
+    big-opt:
+      short: "big-opt"
+      long: "MDE=27 CHECK_FINITE=OFF MAX_PROB_VAR=24"
+      settings:
+        MDE: 27
+        CHECK_FINITE: OFF
+        MAX_PROB_VAR: 24
+    big:
+      short: "big"
+      long: "MDE=27 MAX_PROB_VAR=24"
+      settings:
+        MDE: 27
+        MAX_PROB_VAR: 24
+    small-opt:
+      short: "small-opt"
+      long: "MDE=10 CHECK_FINITE=OFF MAX_PROB_VAR=24"
+      settings:
+        MDE: 10
+        MAX_PROB_VAR: 24
+        CHECK_FINITE: OFF
+    small:
+      short: "small"
+      long: "MDE=10 MAX_PROB_VAR=24"
+      settings:
+        MDE: 10
+        MAX_PROB_VAR: 24

@@ -823,13 +823,13 @@ int assemble_pore_sink_mass(double time, /* present time valuel; KSC           *
 
         mass = 0.0;
         if (pd->TimeIntegration != STEADY) {
-          if (pd->e[pg->imtrx][eqn] && T_MASS) {
+          if (pd->e[pg->imtrx][eqn] & T_MASS) {
             mass += (sink_dot[i] * phi_i * wt_total * pd->etm[pg->imtrx][eqn][LOG2_MASS]);
           }
         }
 
         source = 0.0;
-        if (pd->e[pg->imtrx][eqn] && T_SOURCE) {
+        if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
           source += phi_i * mp->density * MassSource;
           source *= wt_total * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
         }
@@ -869,14 +869,14 @@ int assemble_pore_sink_mass(double time, /* present time valuel; KSC           *
           mass = 0.0;
 
           if (pd->TimeIntegration != STEADY) {
-            if (pd->e[pg->imtrx][eqn] && T_MASS) {
+            if (pd->e[pg->imtrx][eqn] & T_MASS) {
               mass += delta(i, j) * (1 + 2. * tt) / dt;
               mass *= phi_i * wt_total * pd->etm[pg->imtrx][eqn][LOG2_MASS];
             }
           }
 
           source = 0.0;
-          if (pd->e[pg->imtrx][eqn] && T_SOURCE) {
+          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
             source += phi_i * mp->density * d_MassSource[var][j];
             source *= wt_total * pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
           }
@@ -896,7 +896,7 @@ int assemble_pore_sink_mass(double time, /* present time valuel; KSC           *
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
           source = 0.0;
-          if (pd->e[pg->imtrx][eqn] && T_SOURCE) {
+          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
             source += phi_i * mp->density * d_MassSource[var][j];
             source *= wt_total * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
           }
@@ -916,7 +916,7 @@ int assemble_pore_sink_mass(double time, /* present time valuel; KSC           *
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
           source = 0.0;
-          if (pd->e[pg->imtrx][eqn] && T_SOURCE) {
+          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
             source += phi_i * mp->density * d_MassSource[var][j];
             source *= wt_total * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
           }
@@ -931,7 +931,7 @@ int assemble_pore_sink_mass(double time, /* present time valuel; KSC           *
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
           source = 0.0;
-          if (pd->e[pg->imtrx][eqn] && T_SOURCE) {
+          if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
             source += phi_i * mp->density * d_MassSource[var][j];
             source *= wt_total * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
           }
@@ -960,14 +960,14 @@ int assemble_pore_sink_mass(double time, /* present time valuel; KSC           *
 
             mass = 0.0;
             if (pd->TimeIntegration != STEADY) {
-              if (pd->e[pg->imtrx][eqn] && T_MASS) {
+              if (pd->e[pg->imtrx][eqn] & T_MASS) {
                 mass += sink_dot[i] * phi_i * pd->etm[pg->imtrx][eqn][LOG2_MASS] *
                         (h3 * d_det_J_dmesh + dh3dmesh * det_J) * wt;
               }
             }
 
             source = 0.0;
-            if (pd->e[pg->imtrx][eqn] && T_SOURCE) {
+            if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
               source += phi_i * MassSource * (h3 * d_det_J_dmesh + dh3dmesh * det_J);
               source += phi_i * d_MassSource[var][j] * h3 * det_J;
               source *= wt * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
