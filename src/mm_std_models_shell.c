@@ -22,40 +22,25 @@ static char rcsid[] = "$Id: mm_std_models_shell.c,v 5.31 2010-07-30 20:48:38 prs
 
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 /* GOMA include files */
 
 #define GOMA_MM_STD_MODELS_SHELL_C
+#include "bc_colloc.h"
 #include "el_elm.h"
-#include "el_geom.h"
 #include "mm_as.h"
-#include "mm_as_const.h"
 #include "mm_as_structs.h"
-#include "mm_mp_const.h"
-#include "rf_bc_const.h"
-#include "rf_fem.h"
-#include "rf_fem_const.h"
-#include "rf_fill_const.h"
-#include "rf_io.h"
-#include "rf_io_const.h"
-#include "rf_io_structs.h"
-#include "rf_masks.h"
-#include "rf_mp.h"
-#include "rf_solver_const.h"
-#include "rf_vars_const.h"
-#include "std.h"
-
-#include "mm_mp.h"
-#include "mm_mp_structs.h"
-
 #include "mm_eh.h"
-
 #include "mm_fill_porous.h"
+#include "mm_mp.h"
+#include "mm_mp_const.h"
+#include "mm_mp_structs.h"
 #include "mm_shell_util.h"
 #include "mm_std_models_shell.h"
+#include "rf_bc_const.h"
+#include "rf_fem_const.h"
+#include "std.h"
 
 /*********** R O U T I N E S   I N   T H I S   F I L E ************************
  *

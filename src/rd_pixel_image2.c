@@ -55,6 +55,8 @@
 #include "rd_pixel_image.h"
 #include "rf_allo.h"
 #include "rf_fem.h"
+#include "rf_fem_const.h"
+#include "rf_io_const.h"
 #include "rf_mp.h"
 #include "std.h"
 #include "wr_exo.h"

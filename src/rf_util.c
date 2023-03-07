@@ -13,7 +13,11 @@
 \************************************************************************/
 
 /* Needed to declare POSIX function drand48 */
+#include "mm_fill_porous.h"
+#include "mm_qtensor_model.h"
 #include "rf_solve.h"
+#include "user_pre.h"
+
 #define _XOPEN_SOURCE
 
 #include <limits.h>
@@ -47,7 +51,6 @@
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_species.h"
-#include "mm_std_models.h"
 #include "mm_unknown_map.h"
 #include "rd_mesh.h"
 #include "rd_pixel_image.h"

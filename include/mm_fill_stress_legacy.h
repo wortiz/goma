@@ -15,6 +15,8 @@
 #ifndef GOMA_MM_FILL_STRESS_LEGACY_H
 #define GOMA_MM_FILL_STRESS_LEGACY_H
 
+#include <stdbool.h>
+
 #include "el_elm.h"
 #include "exo_struct.h"
 #include "mm_as_structs.h"
@@ -51,7 +53,6 @@ EXTERN int assemble_stress /* mm_fill_stress.c                          */
                             * the vertices for Q1. It comes from the
                             * routine "element_velocity."               */
      dbl[DIM][MDE]);       /* dvc_dnode                                 */
-
 
 EXTERN int assemble_stress_level_set(dbl,            /* tt - parm to vary time integration from
                                                       * explicit (tt = 1) to implicit (tt = 0)    */
@@ -94,7 +95,6 @@ EXTERN void load_modal_pointers     /* mm_fill_stress.c                         
      dbl[DIM][DIM][DIM],            /* grad_s - grad stress tensor mode ve_mode  */
      dbl[DIM][DIM][DIM][DIM][MDE]); /* d_grad_s_dm - mesh deriv of grad of
                                      *  stress tensor for mode ve_mode   */
-
 
 EXTERN int assemble_surface_stress(Exo_DB *, /* exo - ptr to basic exodus ii mesh info    */
                                    double[], /* x                                         */

@@ -16,6 +16,7 @@
 #define GOMA_MM_EM_BC_H
 
 #include "el_elm.h"
+#include "rf_fem_const.h"
 #include "std.h"
 
 int apply_em_farfield_direct_vec                      /* mm_fill_em.c                           */

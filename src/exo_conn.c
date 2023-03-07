@@ -76,8 +76,6 @@
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "rf_mp.h"
-#include "rf_solver.h"
-#include "rf_solver_const.h"
 #include "std.h"
 
 #define GOMA_EXO_CONN_C

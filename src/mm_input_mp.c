@@ -26,6 +26,7 @@
  ******************************************************************************/
 
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +42,6 @@
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
-#include "mm_post_def.h"
 #include "rf_allo.h"
 #include "rf_bc.h"
 #include "rf_bc_const.h"

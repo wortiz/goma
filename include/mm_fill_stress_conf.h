@@ -23,4 +23,4 @@ int assemble_stress_conf(dbl tt, /* parameter to vary time integration from
                          dbl dt, /* current time step size */
                          PG_DATA *pg_data);
 
-#endif                                 /* GOMA_MM_FILL_STRESS_CONF_H */
+#endif /* GOMA_MM_FILL_STRESS_CONF_H */

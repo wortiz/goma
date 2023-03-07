@@ -16,12 +16,18 @@
  *$Id: user_pre.c,v 5.1 2007-09-18 18:53:49 prschun Exp $
  */
 
+#include <math.h>
 #include <stdio.h>
 
 /* GOMA include files */
 
+#include "dpi.h"
+#include "el_elm.h"
 #include "mm_as.h"
+#include "mm_as_structs.h"
 #include "mm_eh.h"
+#include "mm_unknown_map.h"
+#include "rf_fem_const.h"
 #include "std.h"
 #include "user_pre.h"
 

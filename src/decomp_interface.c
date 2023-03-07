@@ -1,11 +1,9 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "decomp_interface.h"
 #include "mm_as.h"
 #include "mm_as_structs.h"
-#include "mm_eh.h"
 #include "rf_io.h"
 #include "std.h"
 

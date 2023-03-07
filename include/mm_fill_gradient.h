@@ -19,8 +19,8 @@
 #include "mm_fill_stress_legacy.h"
 #include "std.h"
 
-int assemble_gradient(dbl tt, /* parameter to vary time integration from
-                               * explicit (tt = 1) to implicit (tt = 0) */
+int assemble_gradient(dbl tt,  /* parameter to vary time integration from
+                                * explicit (tt = 1) to implicit (tt = 0) */
                       dbl dt); /* current time step size */
 
 #endif /* GOMA_MM_FILL_GRADIENT_H */

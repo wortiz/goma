@@ -34,6 +34,7 @@
 #define GOMA_WR_DPI_C
 
 #include <exodusII.h>
+#include <stddef.h>
 
 #include "rd_dpi.h"
 #include "rf_mp.h"

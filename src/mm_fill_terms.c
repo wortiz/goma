@@ -19,8 +19,6 @@
 
 /* GOMA include files */
 #define GOMA_MM_FILL_TERMS_C
-#include "mm_fill_terms.h"
-
 #include "ac_particles.h"
 #include "az_aztec.h"
 #include "bc_colloc.h"
@@ -46,6 +44,7 @@
 #include "mm_fill_species.h"
 #include "mm_fill_stabilization.h"
 #include "mm_fill_stress_legacy.h"
+#include "mm_fill_terms.h"
 #include "mm_fill_util.h"
 #include "mm_flux.h"
 #include "mm_mp.h"
@@ -53,9 +52,9 @@
 #include "mm_mp_structs.h"
 #include "mm_ns_bc.h"
 #include "mm_post_def.h"
-#include "mm_qtensor_model.h"
 #include "mm_shell_util.h"
 #include "mm_species.h"
+#include "mm_std_models.h"
 #include "mm_unknown_map.h"
 #include "mm_viscosity.h"
 #include "rf_allo.h"

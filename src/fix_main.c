@@ -17,8 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
+#include <sys/errno.h>
 
 #ifdef HAVE_SUNMATH
 #include <sunmath.h>
@@ -28,57 +27,20 @@
 #define __USE_GNU
 #include <fenv.h>
 #endif
-
-#ifdef PARALLEL
-#include "az_aztec.h"
-#endif
 extern void handle_ieee(void);
 
 #ifdef USE_CHEMKIN
 #include "ck_chemkin_const.h"
 #endif
-#include "ac_conti.h"
-#include "ac_hunt.h"
-#include "ac_stability_util.h"
-#include "decomp_interface.h"
+#include "brkfix/fix.h"
 #include "dp_types.h"
-#include "dp_utils.h"
-#include "dp_vif.h"
 #include "dpi.h"
 #include "exo_struct.h"
-#ifdef GOMA_ENABLE_METIS
-#include "metis_decomp.h"
-#endif
-#include "brkfix/fix.h"
-#include "mm_as.h"
-#include "mm_as_alloc.h"
-#include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_elem_block_structs.h"
-#include "mm_input.h"
-#include "mm_prob_def.h"
-#include "rd_dpi.h"
-#include "rd_exo.h"
-#include "rd_mesh.h"
-#include "rf_allo.h"
-#include "rf_element_storage_const.h"
-#include "rf_fem.h"
-#include "rf_fem_const.h"
 #include "rf_io_const.h"
-#include "rf_io_structs.h"
-#include "rf_node_const.h"
-#include "rf_pre_proc.h"
 #include "rf_solve.h"
-#include "rf_solve_segregated.h"
-#include "rf_solver.h"
-#include "rf_solver_const.h"
 #include "std.h"
-#include "wr_dpi.h"
-#include "wr_exo.h"
-
-#ifdef GOMA_ENABLE_PETSC
-#include <petscsys.h>
-#endif
 
 /*
  * Global variables defined here.

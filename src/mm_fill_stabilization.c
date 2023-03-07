@@ -12,7 +12,7 @@
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
-#include "mm_qtensor_model.h"
+#include "mm_std_models.h"
 #include "mm_viscosity.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"

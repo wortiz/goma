@@ -27,11 +27,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* GOMA include files */
-#include "ac_stability.h"
+#include "ac_stability_util.h"
 #include "az_aztec.h"
 #include "bc_colloc.h"
 #include "el_elm.h"
+#include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_struct.h"
 #include "mm_as.h"
@@ -52,9 +52,9 @@
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_qp_storage.h"
-#include "mm_qtensor_model.h"
 #include "mm_shell_util.h"
 #include "mm_species.h"
+#include "mm_std_models.h"
 #include "mm_unknown_map.h"
 #include "mm_viscosity.h"
 #include "mpi.h"

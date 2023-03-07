@@ -28,6 +28,8 @@
 #include "mm_eh.h"
 #include "mm_fill_util.h"
 #include "mm_mp.h"
+#include "mm_mp_const.h"
+#include "mm_mp_structs.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "std.h"

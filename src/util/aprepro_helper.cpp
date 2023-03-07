@@ -23,6 +23,8 @@ extern "C" {
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "rf_bc.h"
+#include "rf_bc_const.h"
+#include "std.h"
 #undef DISABLE_CPP
 }
 #include "util/aprepro_helper.h"

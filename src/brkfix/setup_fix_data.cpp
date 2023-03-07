@@ -14,36 +14,29 @@
 
 #include "brkfix/setup_fix_data.h"
 
-// include mpi before since it might get pulled in from Exodus
-// an error might occur because of mpicxx headers being included as C
-#include <mpi.h>
+#include <__utility/pair.h>
+#include <exodusII.h>
+#include <stdlib.h>
 
 extern "C" {
 #define DISABLE_CPP
 #include "base_mesh.h"
-#include "brkfix/bbb.h"
 #include "brkfix/fix.h"
 #include "dpi.h"
 #include "exo_struct.h"
 #include "mm_eh.h"
-#include "mm_elem_block_structs.h"
-#include "mm_mp_structs.h"
 #include "rd_dpi.h"
 #include "rd_exo.h"
 #include "rd_mesh.h"
 #include "rf_allo.h"
 #include "rf_element_storage_const.h"
-#include "rf_io.h"
-#include "rf_mp.h"
-#include "shell_tfmp_struct.h"
-#include "shell_tfmp_util.h"
 #include "std.h"
-#include "wr_exo.h"
+
 #undef DISABLE_CPP
 }
 
+#include <__hash_table>
 #include <cstring>
-#include <string>
 #include <unordered_set>
 #include <vector>
 

@@ -31,6 +31,12 @@
 #endif
 
 #include "brkfix/fix.h"
+#include "dpi.h"
+#include "exo_struct.h"
+#include "mm_eh.h"
+
+struct fix_data;
+
 EXTERN void build_big_bones /* bbb.c */
     (Exo_DB *,              /* EXODUS info from representative polylith */
      Dpi *,                 /* distributed processing info from polylith */

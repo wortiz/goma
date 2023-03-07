@@ -18,6 +18,8 @@
 
 /* Standard include files */
 #include <complex.h>
+#include <stdbool.h>
+
 #undef I
 #include <math.h>
 #include <stdio.h>
@@ -27,9 +29,6 @@
 /* GOMA include files */
 #define GOMA_MM_FLUX_C
 
-#include "mm_flux.h"
-
-#include "ac_stability.h"
 #include "ac_stability_util.h"
 #include "bc_colloc.h"
 #include "dpi.h"
@@ -57,13 +56,14 @@
 #include "mm_fill_stress_legacy.h"
 #include "mm_fill_terms.h"
 #include "mm_fill_util.h"
+#include "mm_flux.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_ns_bc.h"
 #include "mm_post_def.h"
-#include "mm_qtensor_model.h"
 #include "mm_shell_util.h"
+#include "mm_std_models.h"
 #include "mm_std_models_shell.h"
 #include "mm_unknown_map.h"
 #include "mm_viscosity.h"

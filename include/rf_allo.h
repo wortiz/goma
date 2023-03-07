@@ -24,6 +24,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "mm_eh.h"
 

@@ -14,6 +14,7 @@
 
 #ifndef GOMA_MM_FILL_STRESS_SQRT_CONF_H
 #define GOMA_MM_FILL_STRESS_SQRT_CONF_H
+#include "el_elm.h"
 #include "mm_as_structs.h"
 #include "std.h"
 

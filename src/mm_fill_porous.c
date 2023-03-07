@@ -34,6 +34,7 @@
 #include "mm_elem_block_structs.h"
 #include "mm_fill_aux.h"
 #include "mm_fill_ls.h"
+#include "mm_fill_porous.h"
 #include "mm_fill_solid.h"
 #include "mm_fill_species.h"
 #include "mm_fill_terms.h"
@@ -42,8 +43,8 @@
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_numjac.h"
-#include "mm_qtensor_model.h"
 #include "mm_shell_util.h"
+#include "mm_std_models.h"
 #include "mm_std_models_shell.h"
 #include "rf_allo.h"
 #include "rf_bc_const.h"
@@ -53,8 +54,6 @@
 #include "rf_mp.h"
 #include "std.h"
 #include "user_mp.h"
-
-#include "mm_fill_porous.h"
 
 /*
  * Global variables defined here. Declared frequently via rf_bc.h

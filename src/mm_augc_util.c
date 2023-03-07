@@ -15,6 +15,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "ac_update_parameter.h"
 #include "az_aztec.h"
@@ -22,6 +23,7 @@
 #include "dp_types.h"
 #include "dpi.h"
 #include "el_elm.h"
+#include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_struct.h"
 #include "loca_const.h"
@@ -30,6 +32,8 @@
 #include "mm_augc_util.h"
 #include "mm_eh.h"
 #include "mm_fill.h"
+#include "mm_fill_aux.h"
+#include "mm_fill_fill.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_ptrs.h"
 #include "mm_fill_terms.h"

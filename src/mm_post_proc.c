@@ -18,13 +18,22 @@
 
 /* Standard include files */
 
-#include "mm_fill_em.h"
-#include "rf_solve.h"
+#include <complex.h>
+#ifdef I
+#undef I
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h> /* strcasecmp and strncasecmp moved here for POSIX.1 */
+
+#include "dp_comm.h"
+#include "dp_types.h"
+#include "mm_eh.h"
+#include "mm_fill_em.h"
+#include "mm_std_models.h"
+#include "rf_solve.h"
 
 #define GOMA_MM_POST_PROC_C
 #include "mm_post_def.h"
@@ -63,7 +72,6 @@
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
-#include "mm_qtensor_model.h"
 #include "mm_shell_util.h"
 #include "mm_std_models_shell.h"
 #include "mm_unknown_map.h"

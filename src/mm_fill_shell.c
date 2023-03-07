@@ -22,13 +22,16 @@
 static char rcsid[] = "$Id: mm_fill_shell.c,v 5.62 2010-07-30 21:14:52 prschun Exp $";
 #endif
 
-/* Standard include files */
-#include "az_aztec.h"
-#include "std.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "bc_contact.h"
+#include "mm_fill_ls.h"
+#include "mm_fill_porous.h"
+#include "std.h"
+
 #define _MM_FILL_SHELL_C
 #include "el_elm.h"
 #include "el_geom.h"
@@ -52,22 +55,14 @@ static char rcsid[] = "$Id: mm_fill_shell.c,v 5.62 2010-07-30 21:14:52 prschun E
 #include "mm_std_models_shell.h"
 #include "mm_viscosity.h"
 #include "rf_allo.h"
-#include "rf_bc.h"
 #include "rf_bc_const.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
-#include "rf_fill_const.h"
-#include "rf_io.h"
-#include "rf_io_const.h"
-#include "rf_masks.h"
 #include "rf_mp.h"
 #include "rf_node_const.h"
-#include "rf_solver.h"
-#include "rf_solver_const.h"
 #include "rf_vars_const.h"
 #include "shell_tfmp_struct.h"
 #include "shell_tfmp_util.h"
-#include "sl_util.h"
 #include "user_mp.h"
 
 /*
@@ -748,8 +743,6 @@ int assemble_surface_charge(double time_value, /* Time */
     }
     break;
   case R_SHELL_USER:
-
-#include "user_shell.h"
 
     break;
   }

@@ -28,7 +28,6 @@
 /* GOMA include files */
 #include "ac_stability.h"
 #include "ac_stability_util.h"
-#include "az_aztec.h"
 #include "bc_colloc.h"
 #include "el_elm.h"
 #include "el_elm_info.h"
@@ -42,13 +41,11 @@
 #include "mm_fill_aux.h"
 #include "mm_fill_fill.h"
 #include "mm_fill_ls.h"
-#include "mm_fill_stabilization.h"
 #include "mm_fill_terms.h"
 #include "mm_fill_util.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
-#include "mm_post_def.h"
 #include "mm_unknown_map.h"
 #include "mm_viscosity.h"
 #include "rf_allo.h"
@@ -78,7 +75,6 @@ bool shock_is_yzbeta(int type) {
   }
   return false;
 }
-
 
 /*  _______________________________________________________________________  */
 
@@ -1199,7 +1195,6 @@ int assemble_stress(dbl tt, /* parameter to vary time integration from
   return (status);
 }
 
-
 /* this stress routine uses the viscoelastic equations to do a solid-fluid
  * interaction problem in an Eulerian context with the level set denote the
  * solid-fluid interface.
@@ -2312,7 +2307,6 @@ int assemble_rate_of_strain(dbl tt, /* parameter to vary time integration from
   }
   return (status);
 }
-
 
 int tensor_dot(dbl t1[DIM][DIM], dbl t2[DIM][DIM], dbl t1_dot_t2[DIM][DIM], const int dim) {
   int i, j, k;
@@ -3794,7 +3788,6 @@ void compute_saramito_model_terms(dbl *sCoeff,
     printf("\n-------------------------------------------------------------");
   */
 }
-
 
 /*****************************************************************************/
 /* END OF FILE mm_fill_stress_legacy.c */

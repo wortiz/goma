@@ -21,7 +21,6 @@
 
 /* Standard include files */
 
-#include <complex.h>
 #undef I
 #include <math.h>
 #include <stdio.h>
@@ -63,7 +62,6 @@
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_ns_bc.h"
-#include "mm_qtensor_model.h"
 #include "mm_shell_bc.h"
 #include "rd_mesh.h"
 #include "rf_bc.h"

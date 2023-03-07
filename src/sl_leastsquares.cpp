@@ -12,7 +12,6 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 #include <stdlib.h>
-#include <string>
 
 #include "Epetra_ConfigDefs.h"
 #include "Epetra_DataAccess.h"

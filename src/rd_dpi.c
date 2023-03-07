@@ -19,7 +19,7 @@
 #define GOMA_RD_DPI_C
 
 #include <mpi.h>
-#include <stdio.h>
+#include <netcdf.h>
 #include <stdlib.h>
 
 #ifdef STDC_HEADERS

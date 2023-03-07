@@ -13,14 +13,20 @@
 \************************************************************************/
 
 #include <complex.h>
+#include <math.h>
+
 #undef I
 
 #include "mm_as.h"
+#include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_em_bc.h"
 #include "mm_fill_em.h"
+#include "mm_fill_terms.h"
 #include "mm_mp.h"
-#include "mm_qtensor_model.h"
+#include "mm_mp_structs.h"
+#include "mm_std_models.h"
+#include "rf_bc_const.h"
 #include "std.h"
 
 int apply_em_farfield_direct_vec(double func[DIM],

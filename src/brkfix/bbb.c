@@ -34,7 +34,9 @@
 
 #define GOMA_BBB_C
 
+#include <exodusII.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -45,13 +47,10 @@
 #include "base_mesh.h"
 #include "brkfix/bbb.h"
 #include "brkfix/fix.h"
-#include "dp_types.h"
 #include "dpi.h"
 #include "exo_struct.h"
 #include "mm_eh.h"
 #include "rf_allo.h"
-#include "shell_tfmp_struct.h"
-#include "shell_tfmp_util.h"
 #include "std.h"
 
 static const int sc = sizeof(char);

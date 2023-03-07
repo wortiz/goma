@@ -22,8 +22,6 @@
 
 /* GOMA include files */
 
-#include "mm_fill_rs.h"
-
 #include "el_elm.h"
 #include "exo_struct.h"
 #include "mm_as.h"
@@ -31,13 +29,14 @@
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_elem_block_structs.h"
+#include "mm_fill_rs.h"
 #include "mm_fill_solid.h"
 #include "mm_fill_terms.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
-#include "mm_qtensor_model.h"
 #include "mm_shell_util.h"
+#include "mm_std_models.h"
 #include "rd_mesh.h"
 #include "rf_allo.h"
 #include "rf_fem.h"

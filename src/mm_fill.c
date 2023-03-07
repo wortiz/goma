@@ -59,15 +59,10 @@
 #include "mm_fill_ptrs.h"
 #include "mm_fill_rs.h"
 #include "mm_fill_shell.h"
-#include "mm_shell_util.h"
-
-#include "dpi.h"
-#include "exo_struct.h"
-
 #include "mm_fill_species.h"
-#include "mm_fill_stress_legacy.h"
 #include "mm_fill_stress.h"
 #include "mm_fill_stress_conf.h"
+#include "mm_fill_stress_legacy.h"
 #include "mm_fill_stress_log_conf.h"
 #include "mm_fill_stress_sqrt_conf.h"
 #include "mm_fill_terms.h"
@@ -77,8 +72,8 @@
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_qp_storage.h"
-#include "mm_qtensor_model.h"
 #include "mm_shell_util.h"
+#include "mm_std_models.h"
 #include "mm_unknown_map.h"
 #include "mpi.h"
 #include "rd_mesh.h"
@@ -99,9 +94,9 @@
 #include "std.h"
 #ifdef GOMA_ENABLE_PETSC
 #include "sl_petsc.h"
+#include "sl_petsc_complex.h"
 #endif
 #include "mm_fill_split.h"
-#include "sl_petsc_complex.h"
 #include "stdbool.h"
 #include "wr_side_data.h"
 

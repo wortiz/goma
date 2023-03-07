@@ -13,6 +13,7 @@
 
 #include "exo_struct.h"
 #include "mm_as_structs.h"
+#include "mm_fill_ls.h"
 #include "std.h"
 
 EXTERN int assemble_ustar(dbl time_value, /* current time */

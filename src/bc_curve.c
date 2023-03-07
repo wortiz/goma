@@ -18,7 +18,6 @@
 
 /* Standard include files */
 
-#include <stdio.h>
 #include <string.h>
 
 /* GOMA include files */

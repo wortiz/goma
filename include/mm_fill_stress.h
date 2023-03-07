@@ -23,4 +23,4 @@ int assemble_stress_fortin(dbl,        /* tt - parm to vary time integration fro
                            dbl,        /* dt - current time step size               */
                            PG_DATA *); /* Petrov-Galerkin Data (SUPG) */
 
-#endif                                 /* GOMA_MM_FILL_STRESS_H */
+#endif /* GOMA_MM_FILL_STRESS_H */

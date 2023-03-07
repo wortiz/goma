@@ -1,19 +1,33 @@
 #ifndef GOMA_SL_PETSC_H
 #define GOMA_SL_PETSC_H
+#ifdef GOMA_ENABLE_PETSC
 
+#include <complex.h>
+#ifdef I
+#undef I
+#endif
+#include <petscmat.h>
+#include <petscoptions.h>
+#include <petscpctypes.h>
+#include <petscvec.h>
+
+#include "std.h"
+
+struct GomaLinearSolverData;
 #ifdef GOMA_ENABLE_PETSC
 #include <petscsystypes.h>
 #ifdef I
 #undef I
 #endif
 #if !(PETSC_USE_COMPLEX)
+#include <petscksp.h>
+#include <petscsys.h>
+
 #include "dpi.h"
 #include "exo_struct.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "rf_io_structs.h"
-#include <petscksp.h>
-#include <petscsys.h>
 #ifdef I
 #undef I
 #endif
@@ -93,6 +107,7 @@ int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *i
 goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, double *scale);
 
 goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams);
+#endif
 #endif
 #endif
 #endif // GOMA_SL_PETSC_H

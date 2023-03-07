@@ -2,24 +2,34 @@
 #include <exodusII.h>
 #include <metis.h>
 #include <netcdf.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "base_mesh.h"
+#include "dpi.h"
 #include "el_elm.h"
+#include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_conn.h"
 #include "exo_struct.h"
+#include "md_timer.h"
 #include "mm_as.h"
+#include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_elem_block_structs.h"
 #include "mm_fill_fill.h"
-#include "mm_mp_const.h"
 #include "rd_dpi.h"
 #include "rd_exo.h"
 #include "rd_mesh.h"
 #include "rf_allo.h"
+#include "rf_bc_const.h"
 #include "rf_fem.h"
+#include "rf_fem_const.h"
 #include "rf_io.h"
+#include "rf_io_const.h"
+#include "rf_mp.h"
 #include "std.h"
 
 #define CHECK_EX_ERROR(err, format, ...)                              \

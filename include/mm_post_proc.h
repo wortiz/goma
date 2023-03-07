@@ -27,6 +27,7 @@
 #include <stdio.h>
 
 #include "dpi.h"
+#include "el_elm.h"
 #include "exo_struct.h"
 #include "mm_more_utils.h"
 #include "rf_io_structs.h"

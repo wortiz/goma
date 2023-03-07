@@ -1,5 +1,10 @@
 #include "base_mesh.h"
-#include "stdlib.h"
+
+#include <exodusII.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include "std.h"
 #include "string.h"
 
 #define EXO_TO_BASE(member) base->member = exo->member;

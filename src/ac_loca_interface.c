@@ -89,7 +89,6 @@
  *     application code. Each has its own comments.
  */
 
-#include <az_aztec.h>
 #include <limits.h>
 #include <math.h>
 #include <mpi.h>
@@ -100,6 +99,7 @@
 /* Put include statements for your code here. */
 
 #include "ac_stability_util.h"
+#include "ac_update_parameter.h"
 #include "az_aztec.h"
 #include "dp_comm.h"
 #include "dp_types.h"

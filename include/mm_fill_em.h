@@ -21,12 +21,16 @@
 #include "mm_as_structs.h"
 #include "mm_fill_terms.h"
 #include "rf_fem_const.h"
+#include "std.h"
 #ifdef EXTERN
 #undef EXTERN
 #endif
 
 #include <complex.h>
+#ifdef I
 #undef I
+#endif
+#include <stdbool.h>
 
 #ifdef GOMA_MM_FILL_EM_C
 #define EXTERN /* do nothing */

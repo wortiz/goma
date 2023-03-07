@@ -20,21 +20,20 @@
 
 /* GOMA include files */
 
-#include "mm_fill_potential.h"
-
 #include "el_elm.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_fill_ls.h"
+#include "mm_fill_potential.h"
 #include "mm_fill_solid.h"
 #include "mm_fill_species.h"
 #include "mm_fill_terms.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
-#include "mm_qtensor_model.h"
+#include "mm_std_models.h"
 #include "rf_bc_const.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"

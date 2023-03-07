@@ -1,7 +1,12 @@
 #include "mm_fill_gradient.h"
+
+#include "el_elm.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
+#include "mm_as_structs.h"
+#include "mm_fill_stress_legacy.h"
 #include "rf_fem.h"
+#include "rf_fem_const.h"
 
 int assemble_gradient(dbl tt, /* parameter to vary time integration from
                                * explicit (tt = 1) to implicit (tt = 0) */

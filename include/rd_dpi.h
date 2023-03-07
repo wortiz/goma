@@ -15,6 +15,8 @@
 #ifndef GOMA_RD_DPI_H
 #define GOMA_RD_DPI_H
 
+#include <stdbool.h>
+
 #include "dpi.h"
 #include "el_elm_info.h"
 #include "exo_struct.h"

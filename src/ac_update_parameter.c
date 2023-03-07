@@ -12,6 +12,7 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -28,6 +29,7 @@
 #include "rf_bc.h"
 #include "rf_bc_const.h"
 #include "rf_fem.h"
+#include "rf_fem_const.h"
 #include "std.h"
 
 #define GOMA_AC_UPDATE_PARAMETER_C

@@ -13,6 +13,8 @@
 \************************************************************************/
 /* File containing the many of Goma's global variables, moved for -fno-common */
 
+#include <stddef.h>
+
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "rf_node_const.h"

@@ -43,7 +43,6 @@
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_mp.h"
-#include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_species.h"
 #include "rf_fem_const.h"

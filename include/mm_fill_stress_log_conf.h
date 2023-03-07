@@ -15,6 +15,7 @@
 
 #ifndef GOMA_MM_FILL_STRESS_LOG_CONF_H
 #define GOMA_MM_FILL_STRESS_LOG_CONF_H
+#include "el_elm.h"
 #include "mm_as_structs.h"
 #include "std.h"
 
@@ -40,4 +41,4 @@ void compute_d_exp_s_ds(dbl s[DIM][DIM], // s - stress
                         dbl exp_s[DIM][DIM],
                         dbl d_exp_s_ds[DIM][DIM][DIM][DIM]);
 
-#endif                                 /* GOMA_MM_FILL_STRESS_LOG_CONF_H */
+#endif /* GOMA_MM_FILL_STRESS_LOG_CONF_H */

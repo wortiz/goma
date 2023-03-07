@@ -15,7 +15,6 @@
  *
  */
 
-#include "mm_qtensor_model.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -36,8 +35,8 @@
 #include "mm_fill_ls.h"
 #include "mm_fill_terms.h"
 #include "mm_mp.h"
+#include "mm_mp_const.h"
 #include "mm_mp_structs.h"
-#include "rf_bc_const.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "std.h"

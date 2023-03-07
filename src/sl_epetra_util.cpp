@@ -6,7 +6,8 @@
 #define EPETRA_MPI
 #endif
 
-#include <algorithm>
+#include <mpi.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -46,9 +47,8 @@ extern "C" {
 #include "std.h"
 }
 
-#include "sl_epetra_util.h"
-
 #include "sl_epetra_interface.h"
+#include "sl_epetra_util.h"
 
 extern "C" {
 

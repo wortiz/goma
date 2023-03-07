@@ -23,6 +23,7 @@
 #include "exo_struct.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
+#include "mm_fill_rs.h"
 #include "rf_fem_const.h"
 #include "std.h"
 

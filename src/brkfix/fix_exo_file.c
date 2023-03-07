@@ -25,12 +25,16 @@
  * Revised:  1998/08/29 07:22 MDT pasacki@sandia.gov
  */
 
+#include <exodusII.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+
+#include <string.h>
 
 #include "base_mesh.h"
 #include "brkfix/bbb.h"
@@ -40,7 +44,6 @@
 #include "exo_struct.h"
 #include "mm_eh.h"
 #include "mm_elem_block_structs.h"
-#include "mm_mp_structs.h"
 #include "rd_dpi.h"
 #include "rd_exo.h"
 #include "rd_mesh.h"
@@ -48,11 +51,8 @@
 #include "rf_element_storage_const.h"
 #include "rf_io.h"
 #include "rf_mp.h"
-#include "shell_tfmp_struct.h"
-#include "shell_tfmp_util.h"
 #include "std.h"
 #include "wr_exo.h"
-#include <string.h>
 
 extern int *ep; /* element pointers into node list */
 extern int *np; /* node pointers into element list */
