@@ -54,6 +54,7 @@
 #include "mm_fill_solid.h"
 #include "mm_fill_species.h"
 #include "mm_fill_stress_legacy.h"
+#include "mm_fill_stress_log_conf.h"
 #include "mm_fill_terms.h"
 #include "mm_fill_util.h"
 #include "mm_flux.h"
@@ -754,7 +755,7 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
                     }
                   }
 #ifdef ANALEIG_PLEASE
-                  analytical_exp_s(log_c, exp_s, eig_values, R1, NULL);
+                  analytical_exp_s(log_c, exp_s, eig_values, R1, NULL, NULL, NULL);
 #else
                   compute_exp_s(log_c, exp_s, eig_values, R1);
 #endif

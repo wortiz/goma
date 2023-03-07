@@ -31,11 +31,13 @@ void compute_exp_s(double s[DIM][DIM],
                    double eig_values[DIM],
                    double R[DIM][DIM]);
 
-void analytical_exp_s(double s[DIM][DIM],
-                      double exp_s[DIM][DIM],
-                      double eig_values[DIM],
-                      double R[DIM][DIM],
-                      double d_exp_s_ds[DIM][DIM][DIM][DIM]);
+void analytical_exp_s(dbl s[DIM][DIM],
+                      dbl exp_s[DIM][DIM],
+                      dbl eig_values[DIM],
+                      dbl R[DIM][DIM],
+                      dbl d_exp_s_ds[DIM][DIM][DIM][DIM],
+                      dbl d_eig_values_ds[DIM][DIM][DIM],
+                      dbl dR_ds[DIM][DIM][DIM][DIM]);
 
 void compute_d_exp_s_ds(dbl s[DIM][DIM], // s - stress
                         dbl exp_s[DIM][DIM],

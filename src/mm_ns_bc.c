@@ -45,6 +45,8 @@
 #include "mm_fill_solid.h"
 #include "mm_fill_species.h"
 #include "mm_fill_stress_legacy.h"
+#include "mm_fill_stress_log_conf.h"
+#include "mm_fill_stress_sqrt_conf.h"
 #include "mm_fill_terms.h"
 #include "mm_input.h"
 #include "mm_interface.h"
@@ -7763,7 +7765,7 @@ void stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
     }
 
 #ifdef ANALEIG_PLEASE
-    analytical_exp_s(s, exp_s, eig_values, R1, NULL);
+    analytical_exp_s(s, exp_s, eig_values, R1, NULL, NULL, NULL);
 #else
     compute_exp_s(s, exp_s, eig_values, R1);
 #endif
@@ -8937,7 +8939,7 @@ void stress_no_v_dot_gradS_logc_transient(
     dbl saramitoCoeff = 1.;
 
 #ifdef ANALEIG_PLEASE
-    analytical_exp_s(fv_old->S[mode], exp_s, eig_values, R1, NULL);
+    analytical_exp_s(fv_old->S[mode], exp_s, eig_values, R1, NULL, NULL, NULL);
 #else
     compute_exp_s(fv_old->S[mode], exp_s, eig_values, R1);
 #endif

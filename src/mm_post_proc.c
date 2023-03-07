@@ -65,6 +65,7 @@
 #include "mm_fill_species.h"
 #include "mm_fill_stabilization.h"
 #include "mm_fill_stress_legacy.h"
+#include "mm_fill_stress_log_conf.h"
 #include "mm_fill_terms.h"
 #include "mm_fill_util.h"
 #include "mm_input.h"
@@ -713,7 +714,7 @@ static int calc_standard_fields(double **post_proc_vect,
             }
           }
 #ifdef ANALEIG_PLEASE
-          analytical_exp_s(log_c, exp_s, eig_values, R1, NULL);
+          analytical_exp_s(log_c, exp_s, eig_values, R1, NULL, NULL, NULL);
 #else
           compute_exp_s(log_c, exp_s, eig_values, R1);
 #endif
@@ -790,7 +791,7 @@ static int calc_standard_fields(double **post_proc_vect,
             }
           }
 #ifdef ANALEIG_PLEASE
-          analytical_exp_s(log_c, exp_s, eig_values, R1, NULL);
+          analytical_exp_s(log_c, exp_s, eig_values, R1, NULL, NULL, NULL);
 #else
           compute_exp_s(log_c, exp_s, eig_values, R1);
 #endif
@@ -881,7 +882,7 @@ static int calc_standard_fields(double **post_proc_vect,
             }
           }
 #ifdef ANALEIG_PLEASE
-          analytical_exp_s(log_c, exp_s, eig_values, R1, NULL);
+          analytical_exp_s(log_c, exp_s, eig_values, R1, NULL, NULL, NULL);
 #else
           compute_exp_s(log_c, exp_s, eig_values, R1);
 #endif
@@ -3323,7 +3324,7 @@ static int calc_standard_fields(double **post_proc_vect,
         }
       } else {
 #ifdef ANALEIG_PLEASE
-        analytical_exp_s(fv->S[mode], exp_s, eig_values, R1, NULL);
+        analytical_exp_s(fv->S[mode], exp_s, eig_values, R1, NULL, NULL, NULL);
 #else
         compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
 #endif

@@ -170,38 +170,12 @@ dbl numerical_viscosity(dbl[DIM][DIM],                 /* s - total stress */
 
 void compute_exp_s(double[DIM][DIM], double[DIM][DIM], double[DIM], double[DIM][DIM]);
 
-void analytical_exp_s(double[DIM][DIM],
-                      double[DIM][DIM],
-                      double[DIM],
-                      double[DIM][DIM],
-                      double[DIM][DIM][DIM][DIM]); // d_exp_s_ds
-
-void compute_d_exp_s_ds(dbl[DIM][DIM],            // s - stress
-                        dbl[DIM][DIM],            // exp_s
-                        dbl[DIM][DIM][DIM][DIM]); // d_exp_s_ds
-
 void compute_saramito_model_terms(
     dbl *,                        // Saramito coefficient (S)
     SARAMITO_DEPENDENCE_STRUCT *, // struct for sCoeff sensitvities
     const dbl[DIM][DIM],          // stress
     const struct Generalized_Newtonian *,
     const int); // bounds S to [0,1] if TRUE. Only use this for postprocessing!
-
-int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
-                                       * explicit (tt = 1) to implicit (tt = 0) */
-                              dbl dt, /* current time step size */
-                              PG_DATA *pg_data);
-
-int sqrt_conf_source(int mode,
-                     dbl b[DIM][DIM],
-                     dbl source_term[DIM][DIM],
-                     dbl d_source_term_db[DIM][DIM][DIM][DIM]);
-
-void compute_a_dot_b(dbl b[DIM][DIM],
-                     dbl G[DIM][DIM],
-                     dbl a_dot_b[DIM][DIM],
-                     dbl d_a_dot_b_db[DIM][DIM][DIM][DIM],
-                     dbl d_a_dot_b_dG[DIM][DIM][DIM][DIM]);
 
 bool shock_is_yzbeta(int type);
 #endif /* GOMA_MM_FILL_STRESS_LEGACY_H */

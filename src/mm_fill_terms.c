@@ -44,6 +44,7 @@
 #include "mm_fill_species.h"
 #include "mm_fill_stabilization.h"
 #include "mm_fill_stress_legacy.h"
+#include "mm_fill_stress_log_conf.h"
 #include "mm_fill_terms.h"
 #include "mm_fill_util.h"
 #include "mm_flux.h"
@@ -28489,7 +28490,7 @@ void fluid_stress_conf(double Pi[DIM][DIM],
   for (mode = 0; mode < vn->modes; mode++) {
     if (vn->evssModel == LOG_CONF_TRANSIENT || vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
 #ifdef ANALEIG_PLEASE
-      analytical_exp_s(fv->S[mode], exp_s[mode], eig_values, R1, d_exp_s_ds[mode]);
+      analytical_exp_s(fv->S[mode], exp_s[mode], eig_values, R1, NULL, NULL, NULL);
 #else
       if (pg->imtrx == upd->matrix_index[POLYMER_STRESS11]) {
         compute_exp_s(fv_old->S[mode], exp_s[mode], eig_values, R1);
@@ -28508,7 +28509,7 @@ void fluid_stress_conf(double Pi[DIM][DIM],
 
     } else {
 #ifdef ANALEIG_PLEASE
-      analytical_exp_s(fv_old->S[mode], exp_s[mode], eig_values, R1, d_exp_s_ds[mode]);
+      analytical_exp_s(fv_old->S[mode], exp_s[mode], eig_values, R1, NULL,NULL,NULL);
 #else
       compute_exp_s(fv->S[mode], exp_s[mode], eig_values, R1);
 #endif
@@ -28803,12 +28804,12 @@ void fluid_stress_conf(double Pi[DIM][DIM],
     }
   }
 
-#ifndef ANALEIG_PLEASE
-  // Calculate d_exp_s_ds for LOG_CONF case
-  for (mode = 0; mode < vn->modes; mode++) {
-    compute_d_exp_s_ds(fv->S[mode], exp_s[mode], d_exp_s_ds[mode]);
-  }
-#endif
+//#ifndef ANALEIG_PLEASE
+//  // Calculate d_exp_s_ds for LOG_CONF case
+//  for (mode = 0; mode < vn->modes; mode++) {
+//    compute_d_exp_s_ds(fv->S[mode], exp_s[mode], d_exp_s_ds[mode]);
+//  }
+//#endif
 
   if (d_Pi != NULL && pd->v[pg->imtrx][POLYMER_STRESS11]) {
     for (mode = 0; mode < vn->modes; mode++) {
