@@ -1,4 +1,3 @@
-
 /************************************************************************ *
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
