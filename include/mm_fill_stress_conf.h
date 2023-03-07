@@ -13,14 +13,14 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
-#ifndef GOMA_MM_FILL_STRESS_H
-#define GOMA_MM_FILL_STRESS_H
+#ifndef GOMA_MM_FILL_STRESS_CONF_H
+#define GOMA_MM_FILL_STRESS_CONF_H
 #include "mm_as_structs.h"
 #include "std.h"
 
-int assemble_stress_fortin(dbl,        /* tt - parm to vary time integration from
-                                        * explicit (tt = 1) to implicit (tt = 0)    */
-                           dbl,        /* dt - current time step size               */
-                           PG_DATA *); /* Petrov-Galerkin Data (SUPG) */
+int assemble_stress_conf(dbl tt, /* parameter to vary time integration from
+                                  * explicit (tt = 1) to implicit (tt = 0) */
+                         dbl dt, /* current time step size */
+                         PG_DATA *pg_data);
 
-#endif                                 /* GOMA_MM_FILL_STRESS_H */
+#endif                                 /* GOMA_MM_FILL_STRESS_CONF_H */

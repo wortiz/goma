@@ -55,7 +55,7 @@
 #include "mm_fill_solid.h"
 #include "mm_fill_species.h"
 #include "mm_fill_stabilization.h"
-#include "mm_fill_stress.h"
+#include "mm_fill_stress_legacy.h"
 #include "mm_fill_terms.h"
 #include "mm_fill_util.h"
 #include "mm_input.h"

@@ -13,14 +13,31 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
-#ifndef GOMA_MM_FILL_STRESS_H
-#define GOMA_MM_FILL_STRESS_H
+#ifndef GOMA_MM_FILL_STRESS_LOG_CONF_H
+#define GOMA_MM_FILL_STRESS_LOG_CONF_H
 #include "mm_as_structs.h"
 #include "std.h"
 
-int assemble_stress_fortin(dbl,        /* tt - parm to vary time integration from
-                                        * explicit (tt = 1) to implicit (tt = 0)    */
-                           dbl,        /* dt - current time step size               */
-                           PG_DATA *); /* Petrov-Galerkin Data (SUPG) */
+/*
+ * This routine assembles the stress with a log-conformation tensor formulation.
+ */
+int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data);
 
-#endif                                 /* GOMA_MM_FILL_STRESS_H */
+int assemble_stress_log_conf_transient(dbl tt, dbl dt, PG_DATA *pg_data);
+
+void compute_exp_s(double s[DIM][DIM],
+                   double exp_s[DIM][DIM],
+                   double eig_values[DIM],
+                   double R[DIM][DIM]);
+
+void analytical_exp_s(double s[DIM][DIM],
+                      double exp_s[DIM][DIM],
+                      double eig_values[DIM],
+                      double R[DIM][DIM],
+                      double d_exp_s_ds[DIM][DIM][DIM][DIM]);
+
+void compute_d_exp_s_ds(dbl s[DIM][DIM], // s - stress
+                        dbl exp_s[DIM][DIM],
+                        dbl d_exp_s_ds[DIM][DIM][DIM][DIM]);
+
+#endif                                 /* GOMA_MM_FILL_STRESS_LOG_CONF_H */

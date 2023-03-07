@@ -35,7 +35,7 @@
 #include "mm_as_structs.h"
 #include "mm_elem_block_structs.h"
 #include "mm_fill_ls.h"
-#include "mm_fill_stress.h"
+#include "mm_fill_stress_legacy.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"

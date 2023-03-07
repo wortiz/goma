@@ -3,7 +3,7 @@
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
 *                                                                         *
-* Copyright (c) 2022 Goma Developers, National Technology & Engineering   *
+* Copyright (c) 2023 Goma Developers, National Technology & Engineering   *
 *               Solutions of Sandia, LLC (NTESS)                          *
 *                                                                         *
 * Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
@@ -13,14 +13,14 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
-#ifndef GOMA_MM_FILL_STRESS_H
-#define GOMA_MM_FILL_STRESS_H
+#ifndef GOMA_MM_FILL_GRADIENT_H
+#define GOMA_MM_FILL_GRADIENT_H
 #include "mm_as_structs.h"
+#include "mm_fill_stress_legacy.h"
 #include "std.h"
 
-int assemble_stress_fortin(dbl,        /* tt - parm to vary time integration from
-                                        * explicit (tt = 1) to implicit (tt = 0)    */
-                           dbl,        /* dt - current time step size               */
-                           PG_DATA *); /* Petrov-Galerkin Data (SUPG) */
+int assemble_gradient(dbl tt, /* parameter to vary time integration from
+                               * explicit (tt = 1) to implicit (tt = 0) */
+                      dbl dt); /* current time step size */
 
-#endif                                 /* GOMA_MM_FILL_STRESS_H */
+#endif /* GOMA_MM_FILL_GRADIENT_H */

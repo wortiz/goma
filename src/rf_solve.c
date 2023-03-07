@@ -47,7 +47,7 @@
 #include "mm_eh.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_ptrs.h"
-#include "mm_fill_stress.h"
+#include "mm_fill_stress_legacy.h"
 #include "mm_fill_util.h"
 #include "mm_flux.h"
 #include "mm_more_utils.h"

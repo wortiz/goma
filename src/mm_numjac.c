@@ -35,7 +35,7 @@
 #include "mm_fill_aux.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_ptrs.h"
-#include "mm_fill_stress.h"
+#include "mm_fill_stress_legacy.h"
 #include "mm_input.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"

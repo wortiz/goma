@@ -480,6 +480,11 @@ set(GOMA_INCLUDES
     include/mm_fill_species.h
     include/mm_fill_split.h
     include/mm_fill_stress.h
+    include/mm_fill_stress_legacy.h
+    include/mm_fill_stress_log_conf.h
+    include/mm_fill_stress_sqrt_conf.h
+    include/mm_fill_stress_conf.h
+    include/mm_fill_gradient.h
     include/mm_fill_terms.h
     include/mm_fill_util.h
     include/mm_fill_stabilization.h
@@ -625,6 +630,11 @@ set(GOMA_SOURCES
     src/mm_fill_solid.c
     src/mm_fill_species.c
     src/mm_fill_stress.c
+    src/mm_fill_stress_legacy.c
+    src/mm_fill_stress_log_conf.c
+    src/mm_fill_stress_sqrt_conf.c
+    src/mm_fill_stress_conf.c
+    src/mm_fill_gradient.c
     src/mm_fill_terms.c
     src/mm_fill_split.c
     src/mm_fill_util.c

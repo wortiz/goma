@@ -31,7 +31,7 @@
 #include "mm_eh.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_species.h"
-#include "mm_fill_stress.h"
+#include "mm_fill_stress_legacy.h"
 #include "mm_fill_terms.h"
 #include "mm_fill_util.h"
 #include "mm_mp.h"

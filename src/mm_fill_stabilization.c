@@ -7,7 +7,7 @@
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_fill_stabilization.h"
-#include "mm_fill_stress.h"
+#include "mm_fill_stress_legacy.h"
 #include "mm_fill_terms.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
