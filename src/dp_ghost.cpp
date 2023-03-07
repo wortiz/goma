@@ -11,36 +11,36 @@
 * This software is distributed under the GNU General Public License.      *
 * See LICENSE file.                                                       *
 \************************************************************************/
-#include <Epetra_ConfigDefs.h>
-#include <__algorithm/fill.h>
-#include <__algorithm/set_difference.h>
-#include <__algorithm/sort.h>
-#include <__hash_table>
-#include <__iterator/insert_iterator.h>
-#include <__memory/shared_ptr.h>
-#include <__utility/pair.h>
+#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <cstring>
 #include <exodusII.h>
+#include <ext/alloc_traits.h>
+#include <iterator>
+#include <memory>
 #include <mpi.h>
 #include <stdlib.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
+
+// not needed except to avoid including as a C file
+#include "sl_epetra_interface.h"
 
 #include "dp_ghost.h"
 
 extern "C" {
 #include "el_elm.h"
 #include "el_elm_info.h"
+#include "exo_conn.h"
 #include "mm_elem_block_structs.h"
 #include "mm_fill_fill.h"
 #include "mm_mp.h"
 #include "rd_mesh.h"
 #include "rf_mp.h"
 #include "std.h"
-
 struct Material_Properties;
 }
 
