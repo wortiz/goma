@@ -612,12 +612,12 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
             }
           }
 
-          for (mode = 0; mode < vn->modes; mode++) {
-            /* Only for stress terms */
-            //        if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
-            //            idv[pg->imtrx][i][0] <= v_s[mode][2][2]) ||
-            if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
-                 idv[pg->imtrx][i][0] <= v_s[mode][2][2])) {
+          //for (mode = 0; mode < vn->modes; mode++) {
+          //  /* Only for stress terms */
+          //  //        if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
+          //  //            idv[pg->imtrx][i][0] <= v_s[mode][2][2]) ||
+          //  if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
+          //       idv[pg->imtrx][i][0] <= v_s[mode][2][2])) {
               //
               if (Inter_Mask[pg->imtrx][var_i][var_j]) {
 
@@ -637,8 +637,8 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
                   nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx_col[j]);
                 }
               }
-            }
-          } // Loop over modes
+         //   }
+         // } // Loop over modes
         }
       }
     }
