@@ -282,7 +282,7 @@ void ve_stress_term(dbl mu,
 
                 dbl exp_s_p[DIM][DIM];
                 dbl eig_values_p[DIM];
-                dbl s_p = (1e-8) * s[r][c];
+                dbl s_p = MAX((1e-8), (1e-8) * fabs(s[p][q]));
                 s[r][c] += s_p;
 
                 compute_exp_s(s, exp_s_p, eig_values_p, R1);

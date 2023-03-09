@@ -416,7 +416,7 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                     dbl R_p[DIM][DIM];
                     dbl R_T_p[DIM][DIM];
                     dbl eig_values_p[DIM];
-                    dbl d_s_p = (1e-8) * s[p][q];
+                    dbl d_s_p = MAX((1e-8), (1e-8) * fabs(s[p][q]));
                     s_p[p][q] += d_s_p;
 
                     compute_exp_s(s_p, exp_s_p, eig_values_p, R_p);
