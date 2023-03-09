@@ -26,6 +26,7 @@
 #include "mm_fill_ls.h"
 #include "mm_fill_stabilization.h"
 #include "mm_fill_stress_legacy.h"
+#include "mm_fill_stress_log_conf.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
@@ -265,9 +266,88 @@ void ve_stress_term(dbl mu,
         /* get polymer viscosity */
         dbl mup = mu - mus;
         dbl lambda = ve[mode]->time_const;
-        for (int ii = 0; ii < VIM; ii++) {
-          for (int jj = 0; jj < VIM; jj++) {
-            stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+        // stress
+        int var;
+        for (int p = 0; p < VIM; p++) {
+          for (int q = 0; q < VIM; q++) {
+            for (int r = 0; r < VIM; r++) {
+              for (int c = 0; c < VIM; c++) {
+                var = v_s[mode][r][c];
+                dbl s[DIM][DIM];
+                for (int ii = 0; ii < VIM; ii++) {
+                  for (int jj = 0; jj < VIM; jj++) {
+                    s[ii][jj] = fv->S[mode][ii][jj];
+                  }
+                }
+
+                dbl exp_s_p[DIM][DIM];
+                dbl eig_values_p[DIM];
+                dbl s_p = (1e-8) * s[r][c];
+                s[r][c] += s_p;
+
+                compute_exp_s(s, exp_s_p, eig_values_p, R1);
+
+                for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  d_stress->S[p][q][mode][r][c][j] += -(mup/lambda) * ((exp_s[p][q] - exp_s_p[p][q]) / s_p) * bf[var]->phi[j];
+                }
+              }
+            }
+          }
+        }
+
+        // mesh
+        var = MESH_DISPLACEMENT1;
+        if (pd->v[pg->imtrx][var]) {
+          for (int a = 0; a < pd->Num_Dim; a++) {
+            for (int k = 0; k < ei[pg->imtrx]->dof[var + a]; k++) {
+              for (int ii = 0; ii < VIM; ii++) {
+                for (int jj = 0; jj < VIM; jj++) {
+                  stress[ii][jj] += -((d_mu->X[a][k] - d_mus->X[a][k]) / lambda) *
+                                    (delta(ii, jj) - exp_s[ii][jj]);
+                }
+              }
+            }
+          }
+        }
+
+        // velocity
+        var = VELOCITY1;
+        if (pd->v[pg->imtrx][var]) {
+          for (int a = 0; a < WIM; a++) {
+            for (int k = 0; k < ei[pg->imtrx]->dof[var + a]; k++) {
+              for (int ii = 0; ii < VIM; ii++) {
+                for (int jj = 0; jj < VIM; jj++) {
+                  stress[ii][jj] += -((d_mu->v[a][k] - d_mus->v[a][k]) / lambda) *
+                                    (delta(ii, jj) - exp_s[ii][jj]);
+                }
+              }
+            }
+          }
+        }
+
+        // temperature
+        var = TEMPERATURE;
+        if (pd->v[pg->imtrx][var]) {
+          for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+            for (int ii = 0; ii < VIM; ii++) {
+              for (int jj = 0; jj < VIM; jj++) {
+                stress[ii][jj] +=
+                    -((d_mu->T[k] - d_mus->T[k]) / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+              }
+            }
+          }
+        }
+
+        // fill
+        var = FILL;
+        if (pd->v[pg->imtrx][var]) {
+          for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+            for (int ii = 0; ii < VIM; ii++) {
+              for (int jj = 0; jj < VIM; jj++) {
+                stress[ii][jj] +=
+                    -((d_mu->F[k] - d_mus->F[k]) / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+              }
+            }
           }
         }
       }
@@ -283,14 +363,6 @@ void ve_stress_term(dbl mu,
           compute_exp_s(fv_old->S[mode], exp_s, eig_values, R1);
         } else {
           compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
-        }
-        /* get polymer viscosity */
-        dbl mup = mu - mus;
-        dbl lambda = ve[mode]->time_const;
-        for (int ii = 0; ii < VIM; ii++) {
-          for (int jj = 0; jj < VIM; jj++) {
-            stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
-          }
         }
       }
     } break;

@@ -234,11 +234,12 @@ static void source_term_logc(int mode,
     dbl alpha = ve[mode]->alpha;
 
     dbl tmp[DIM][DIM];
-    memset(source_term, 0, sizeof(dbl)*DIM*DIM);
+    memset(source_term, 0, sizeof(dbl) * DIM * DIM);
 
     for (int i = 0; i < VIM; i++) {
-      dbl inv_eig = (1.0/(eig_values[i] + 1e-16));
-      source_term[i][i] += -(1.0/lambda) * ((inv_eig - 1) - alpha * (-2.0 + eig_values[i] + inv_eig));
+      dbl inv_eig = (1.0 / (eig_values[i] + 1e-16));
+      source_term[i][i] +=
+          -(1.0 / lambda) * ((inv_eig - 1) - alpha * (-2.0 + eig_values[i] + inv_eig));
     }
 
     tensor_dot(R, source_term, tmp, VIM);
@@ -311,7 +312,7 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
     dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
     load_modal_pointers(mode, tt, dt, s, s_dot, grad_s, d_grad_s_dmesh);
     compute_exp_s(s, exp_s, eig_values, R);
-    //analytical_exp_s(s, exp_s, eig_values, R, NULL, NULL, NULL);
+    // analytical_exp_s(s, exp_s, eig_values, R, NULL, NULL, NULL);
     for (int i = 0; i < VIM; i++) {
       for (int j = 0; j < VIM; j++) {
         R_T[i][j] = R[j][i];
@@ -373,6 +374,244 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
               }
               lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][eqn], i)] +=
                   mass + advection + diffusion + source;
+            } // i loop
+          }   // if a<=b
+        }     // b loop
+      }       // a loop
+    }         // if Residual
+
+    if (af->Assemble_Jacobian) {
+      for (int a = 0; a < VIM; a++) {
+        for (int b = 0; b < VIM; b++) {
+          if (a <= b) {
+            eqn = R_s[mode][a][b];
+            int peqn = upd->ep[pg->imtrx][eqn];
+
+            for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+              dbl wt_func = bf[eqn]->phi[i];
+
+              // SUPG weighting, this is SUPG with s, not e^s
+              if (DOUBLE_NONZERO(supg)) {
+                for (int w = 0; w < dim; w++) {
+                  wt_func += supg * supg_terms.supg_tau * fv->v[w] * bf[eqn]->grad_phi[i][w];
+                }
+              }
+
+              /*
+               * J_S_S
+               */
+              for (int p = 0; p < VIM; p++) {
+                for (int q = 0; q < VIM; q++) {
+                  int var = v_s[mode][p][q];
+                  if (pd->v[pg->imtrx][var]) {
+                    dbl s_p[DIM][DIM];
+
+                    for (int ii = 0; ii < VIM; ii++) {
+                      for (int jj = 0; jj < VIM; jj++) {
+                        s_p[ii][jj] = fv->S[mode][ii][jj];
+                      }
+                    }
+
+                    dbl exp_s_p[DIM][DIM];
+                    dbl R_p[DIM][DIM];
+                    dbl R_T_p[DIM][DIM];
+                    dbl eig_values_p[DIM];
+                    dbl d_s_p = (1e-8) * s[p][q];
+                    s_p[p][q] += d_s_p;
+
+                    compute_exp_s(s_p, exp_s_p, eig_values_p, R_p);
+                    for (int ii = 0; ii < VIM; ii++) {
+                      for (int jj = 0; jj < VIM; jj++) {
+                        R_T_p[ii][jj] = R_p[jj][ii];
+                      }
+                    }
+                    dbl advective_term_p[DIM][DIM];
+                    advective_decomposition(g, xi, s_p, R_p, R_T_p, eig_values_p, NULL, NULL, NULL,
+                                            false, advective_term_p, NULL);
+
+                    dbl source_term_p[DIM][DIM];
+                    source_term_logc(mode, eig_values_p, R_p, R_T_p, NULL, NULL, NULL,
+                                     source_term_p, NULL);
+
+                    int pvar = upd->vp[pg->imtrx][var];
+                    for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                      double phi_j = bf[var]->phi[j];
+                      dbl mass = 0.;
+                      if (pd->TimeIntegration != STEADY) {
+                        if (pd->e[pg->imtrx][eqn] & T_MASS) {
+                          mass = (1. + 2. * tt) * phi_j / dt * (double)delta(a, p) *
+                                 (double)delta(b, q);
+                          mass *= h3 * det_J;
+                          mass *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+                        }
+                      }
+
+                      dbl advection = 0.;
+
+                      if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+                        if ((a == p) && (b == q)) {
+                          for (int r = 0; r < dim; r++) {
+                            advection += fv->v[r] * bf[var]->grad_phi[j][r];
+                            if (pd->gv[R_MESH1] && pd->TimeIntegration != STEADY) {
+                              advection += -fv_dot->x[r] * bf[var]->grad_phi[j][r];
+                            }
+                          }
+                        }
+
+                        // finite difference approximation
+                        advection += ((advective_term_p[a][b] - advective_term[a][b]) / d_s_p) *
+                                     bf[var]->phi[j];
+
+                        advection *= h3 * det_J;
+
+                        advection *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                      }
+
+                      dbl source = 0;
+                      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+                        source +=
+                            ((source_term_p[a][b] - source_term[a][b]) / d_s_p) * bf[var]->phi[j];
+                        source *= wt_func * det_J * h3 * wt;
+                        source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                      }
+                      lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + source;
+                    }
+                  }
+                }
+              }
+              /*
+               * J_S_G
+               */
+              for (int p = 0; p < VIM; p++) {
+                for (int q = 0; q < VIM; q++) {
+                  int v_g[DIM][DIM];
+                  v_g[0][0] = VELOCITY_GRADIENT11;
+                  v_g[0][1] = VELOCITY_GRADIENT12;
+                  v_g[1][0] = VELOCITY_GRADIENT21;
+                  v_g[1][1] = VELOCITY_GRADIENT22;
+                  v_g[0][2] = VELOCITY_GRADIENT13;
+                  v_g[1][2] = VELOCITY_GRADIENT23;
+                  v_g[2][0] = VELOCITY_GRADIENT31;
+                  v_g[2][1] = VELOCITY_GRADIENT32;
+                  v_g[2][2] = VELOCITY_GRADIENT33;
+                  int var = v_g[p][q];
+
+                  if (pd->v[pg->imtrx][var]) {
+                    dbl d_g[DIM][DIM] = {{0.}};
+                    d_g[p][q] = 1.0;
+                    dbl d_advective_term[DIM][DIM];
+                    advective_decomposition(d_g, xi, s, R, R_T, eig_values, NULL, NULL, NULL, false,
+                                            d_advective_term, NULL);
+
+                    int pvar = upd->vp[pg->imtrx][var];
+                    for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                      double phi_j = bf[var]->phi[j];
+                      dbl mass = 0.;
+                      dbl advection = 0.;
+
+                      if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+                        // finite difference approximation
+                        advection += d_advective_term[a][b] * phi_j;
+                        advection *= h3 * det_J;
+                        advection *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                      }
+
+                      dbl source = 0;
+                      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+                      }
+                      lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + source;
+                    }
+                  }
+                }
+              }
+              /*
+               * J_S_v
+               */
+              for (int p = 0; p < WIM; p++) {
+                int var = VELOCITY1 + p;
+                if (pd->v[pg->imtrx][var]) {
+                  int pvar = upd->vp[pg->imtrx][var];
+                  for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                    dbl phi_j = bf[var]->phi[j];
+
+                    dbl mass = 0.;
+
+                    if (pd->TimeIntegration != STEADY) {
+                      if (pd->e[pg->imtrx][eqn] & T_MASS) {
+                        if (supg != 0.) {
+                          mass = supg * supg_terms.supg_tau * phi_j * bf[eqn]->grad_phi[i][p];
+
+                          for (int w = 0; w < dim; w++) {
+                            mass += supg * supg_terms.d_supg_tau_dv[p][j] * fv->v[w] *
+                                    bf[eqn]->grad_phi[i][w];
+                          }
+
+                          mass *= s_dot[a][b];
+                        }
+
+                        mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)] * det_J * wt * h3;
+                      }
+                    }
+
+                    dbl advection = 0.;
+
+                    if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+                      dbl advection_a = phi_j * (grad_s[p][a][b]);
+                      advection_a *= wt_func;
+
+                      dbl advection_b = 0.;
+                      /* Petrov-Galerkin term */
+                      if (supg != 0.) {
+
+                        advection_b = supg * supg_terms.supg_tau * phi_j * bf[eqn]->grad_phi[i][p];
+                        for (int w = 0; w < dim; w++) {
+                          advection_b += supg * supg_terms.d_supg_tau_dv[p][j] * fv->v[w] *
+                                         bf[eqn]->grad_phi[i][w];
+                        }
+                        dbl R_advection = 0;
+                        for (int k = 0; k < VIM; k++) {
+                          R_advection += fv->v[k] * grad_s[k][a][b];
+                          if (pd->gv[R_MESH1] && pd->TimeIntegration != STEADY)
+                            R_advection -= fv_dot->x[k] * grad_s[k][a][b];
+                        }
+                        R_advection += advective_term[a][b];
+
+                        advection_b *= R_advection;
+                      }
+
+                      advection = advection_a + advection_b;
+                      advection *= det_J * wt * h3;
+                      advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                    }
+
+                    dbl diffusion = 0.;
+                    if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+                    }
+
+                    dbl source = 0.;
+
+                    if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+                      dbl source_b = 0.;
+                      if (supg != 0.) {
+                        source_b = supg * supg_terms.supg_tau * phi_j * bf[eqn]->grad_phi[i][p];
+
+                        for (int w = 0; w < dim; w++) {
+                          source_b += supg * supg_terms.d_supg_tau_dv[p][j] * fv->v[w] *
+                                      bf[eqn]->grad_phi[i][w];
+                        }
+
+                        source_b *= source_term[a][b];
+                      }
+
+                      source = source_b;
+                      source *= det_J * wt * h3;
+                      source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                    }
+
+                    lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + diffusion + source;
+                  }
+                }
+              }
             } // i loop
           }   // if a<=b
         }     // b loop
@@ -748,98 +987,6 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
 
               dbl diffusion = 0.;
               if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                if (DOUBLE_NONZERO(dcdd_factor)) {
-                  dbl tmp = 0.0;
-                  dbl s[DIM] = {0.0};
-                  dbl r[DIM] = {0.0};
-                  for (int w = 0; w < dim; w++) {
-                    tmp += (v[w] - x_dot[w]) * (v[w] - x_dot[w]);
-                  }
-                  tmp = 1.0 / (sqrt(tmp) + 1e-16);
-                  for (int w = 0; w < dim; w++) {
-                    s[w] = (v[w] - x_dot[w]) * tmp;
-                  }
-                  dbl mags = 0;
-                  for (int w = 0; w < dim; w++) {
-                    mags += (grad_s[w][a][b] * grad_s[w][a][b]);
-                  }
-                  mags = 1.0 / (sqrt(mags) + 1e-14);
-                  for (int w = 0; w < dim; w++) {
-                    r[w] = grad_s[w][a][b] * mags;
-                  }
-
-                  dbl he = 0.0;
-                  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
-                    dbl tmp = 0;
-                    for (int w = 0; w < dim; w++) {
-                      tmp += bf[eqn]->grad_phi[q][w] * bf[eqn]->grad_phi[q][w];
-                    }
-                    he += 1.0 / sqrt(tmp);
-                  }
-
-                  dbl G[DIM][DIM];
-                  get_metric_tensor(bf[eqn]->B, dim, ei[pg->imtrx]->ielem_type, G);
-
-                  dbl hrgn = 0.0;
-                  // for (int w = 0; w < dim; w++) {
-                  //   for (int z = 0; z < dim; z++) {
-                  //     //tmp += fabs(r[w] * G[w][z] * r[z]);
-                  //   }
-                  // }
-                  tmp = 0;
-                  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
-                    for (int w = 0; w < dim; w++) {
-                      tmp += fabs(r[w] * bf[eqn]->grad_phi[q][w]);
-                    }
-                  }
-                  hrgn = 1.0 / (tmp + 1e-14);
-
-                  dbl magv = 0.0;
-                  for (int q = 0; q < VIM; q++) {
-                    magv += v[q] * v[q];
-                  }
-                  magv = sqrt(magv);
-
-                  dbl tau_dcdd = 0.5 * he * magv * magv * pow((1.0 / (mags + 1e-16)) * hrgn, 1.0);
-                  // dbl tau_dcdd = (1.0 / mags) * hrgn * hrgn;
-                  tau_dcdd = 1 / sqrt(1.0 / (supg_terms.supg_tau * supg_terms.supg_tau + 1e-32) +
-                                      (supg_terms.supg_tau * supg_terms.supg_tau *
-                                           supg_terms.supg_tau * supg_terms.supg_tau +
-                                       1e-32) +
-                                      1.0 / (tau_dcdd * tau_dcdd + 1e-32));
-                  dbl ss[DIM][DIM] = {{0.0}};
-                  dbl rr[DIM][DIM] = {{0.0}};
-                  dbl rdots = 0.0;
-                  for (int w = 0; w < dim; w++) {
-                    for (int z = 0; z < dim; z++) {
-                      ss[w][z] = s[w] * s[z];
-                      rr[w][z] = r[w] * r[z];
-                    }
-                    rdots += r[w] * s[w];
-                  }
-
-                  dbl inner_tensor[DIM][DIM] = {{0.0}};
-                  for (int w = 0; w < dim; w++) {
-                    for (int z = 0; z < dim; z++) {
-                      inner_tensor[w][z] = rr[w][z] - rdots * rdots * ss[w][z];
-                    }
-                  }
-
-                  dbl gs_inner_dot[DIM] = {0.0};
-                  for (int w = 0; w < dim; w++) {
-                    dbl tmp = 0.;
-                    for (int z = 0; z < dim; z++) {
-                      tmp += grad_s[w][a][b] * inner_tensor[w][z];
-                    }
-                    gs_inner_dot[w] = tmp;
-                    // gs_inner_dot[w] = grad_s[w][a][b];
-                  }
-
-                  for (int w = 0; w < dim; w++) {
-                    diffusion += tau_dcdd * gs_inner_dot[w] * bf[eqn]->grad_phi[i][w];
-                  }
-                  diffusion *= dcdd_factor * det_J * wt * h3;
-                }
                 diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
               }
 

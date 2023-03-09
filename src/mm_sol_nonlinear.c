@@ -885,15 +885,15 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
       bool enable_numerical_jacobian = false;
-      for (int mn = 0; mn < upd->Num_Mat; mn++) {
-        if (((vn_glob[mn]->evssModel == LOG_CONF || vn_glob[mn]->evssModel == LOG_CONF_GRADV ||
-              vn_glob[mn]->evssModel == CONF) &&
-             pd_glob[mn]->v[pg->imtrx][POLYMER_STRESS11]) ||
-            ((pd_glob[mn]->v[pg->imtrx][EM_E1_REAL] && pd_glob[mn]->v[pg->imtrx][EM_H1_REAL]))) {
-          enable_numerical_jacobian = true;
-          break;
-        }
-      }
+      //for (int mn = 0; mn < upd->Num_Mat; mn++) {
+      //  if (((vn_glob[mn]->evssModel == LOG_CONF || vn_glob[mn]->evssModel == LOG_CONF_GRADV ||
+      //        vn_glob[mn]->evssModel == CONF) &&
+      //       pd_glob[mn]->v[pg->imtrx][POLYMER_STRESS11]) ||
+      //      ((pd_glob[mn]->v[pg->imtrx][EM_E1_REAL] && pd_glob[mn]->v[pg->imtrx][EM_H1_REAL]))) {
+      //    enable_numerical_jacobian = true;
+      //    break;
+      //  }
+      //}
 
       if (enable_numerical_jacobian && af->Assemble_Jacobian == TRUE) {
         err = numerical_jacobian_compute_stress(ams, x, resid_vector, delta_t, theta, x_old,
