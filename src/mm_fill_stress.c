@@ -16,6 +16,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "el_elm.h"
 #include "mm_as.h"
@@ -32,6 +33,586 @@
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "std.h"
+
+bool is_evss_f_model(int model) {
+  switch (model) {
+  case EVSS_F:
+  case EVSS_GRADV:
+  case CONF:
+  case LOG_CONF_GRADV:
+  case LOG_CONF:
+  case SQRT_CONF:
+  case LOG_CONF_TRANSIENT:
+  case LOG_CONF_TRANSIENT_GRADV:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void ve_stress_term(dbl mu,
+                    dbl mus,
+                    VISCOSITY_DEPENDENCE_STRUCT *d_mu,
+                    VISCOSITY_DEPENDENCE_STRUCT *d_mus,
+                    dbl stress[DIM][DIM],
+                    STRESS_DEPENDENCE_STRUCT *d_stress) {
+  bool compute_derivatives = (d_stress != NULL);
+  memset(stress, 0, sizeof(dbl) * DIM * DIM);
+  switch (vn->evssModel) {
+  case EVSS_F:
+  case EVSS_GRADV: {
+    for (int mode = 0; mode < vn->modes; mode++) {
+      for (int i = 0; i < VIM; i++) {
+        for (int j = 0; j < VIM; j++) {
+          stress[i][j] += fv->S[mode][i][j];
+        }
+      }
+    }
+  } break;
+  case CONF: {
+    // conformation tensor
+    for (int mode = 0; mode < vn->modes; mode++) {
+      /* get polymer viscosity */
+      dbl mup = mu - mus;
+      dbl lambda = ve[mode]->time_const;
+      for (int ii = 0; ii < VIM; ii++) {
+        for (int jj = 0; jj < VIM; jj++) {
+          stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - fv->S[mode][ii][jj]);
+        }
+      }
+    }
+  } break;
+  case LOG_CONF_GRADV:
+  case LOG_CONF: {
+    // conformation tensor
+    dbl exp_s[DIM][DIM];
+    dbl eig_values[DIM];
+    dbl R1[DIM][DIM];
+    for (int mode = 0; mode < vn->modes; mode++) {
+      compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
+      /* get polymer viscosity */
+      dbl mup = mu - mus;
+      dbl lambda = ve[mode]->time_const;
+      for (int ii = 0; ii < VIM; ii++) {
+        for (int jj = 0; jj < VIM; jj++) {
+          stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+        }
+      }
+    }
+  } break;
+  case LOG_CONF_TRANSIENT:
+  case LOG_CONF_TRANSIENT_GRADV: {
+    // conformation tensor
+    dbl exp_s[DIM][DIM];
+    dbl eig_values[DIM];
+    dbl R1[DIM][DIM];
+    for (int mode = 0; mode < vn->modes; mode++) {
+      if (pg->imtrx == upd->matrix_index[POLYMER_STRESS11]) {
+        compute_exp_s(fv_old->S[mode], exp_s, eig_values, R1);
+      } else {
+        compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
+      }
+      /* get polymer viscosity */
+      dbl mup = mu - mus;
+      dbl lambda = ve[mode]->time_const;
+      for (int ii = 0; ii < VIM; ii++) {
+        for (int jj = 0; jj < VIM; jj++) {
+          stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+        }
+      }
+    }
+  } break;
+  case SQRT_CONF: {
+    for (int mode = 0; mode < vn->modes; mode++) {
+      /* get polymer viscosity */
+      dbl mup = mu - mus;
+      dbl lambda = ve[mode]->time_const;
+
+      dbl bdotb[DIM][DIM];
+      dbl b[DIM][DIM];
+      for (int ii = 0; ii < VIM; ii++) {
+        for (int jj = 0; jj < VIM; jj++) {
+          if (ii <= jj) {
+            b[ii][jj] = fv->S[mode][ii][jj];
+            b[jj][ii] = b[ii][jj];
+          }
+        }
+      }
+
+      tensor_dot(b, b, bdotb, VIM);
+
+      for (int ii = 0; ii < VIM; ii++) {
+        for (int jj = 0; jj < VIM; jj++) {
+          stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - bdotb[ii][jj]);
+        }
+      }
+    }
+  } break;
+  default:
+    GOMA_EH(GOMA_ERROR, "Unkown viscoelastic model %d", vn->evssModel);
+  }
+
+  // Jacobian portion
+  if (compute_derivatives) {
+    int v_s[MAX_MODES][DIM][DIM];
+    (void)stress_eqn_pointer(v_s);
+    switch (vn->evssModel) {
+    case EVSS_F:
+    case EVSS_GRADV: {
+      for (int mode = 0; mode < vn->modes; mode++) {
+        for (int i = 0; i < VIM; i++) {
+          for (int j = 0; j < VIM; j++) {
+            for (int p = 0; p < VIM; p++) {
+              for (int q = 0; q < VIM; q++) {
+                int var = v_s[mode][p][q];
+                for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+                  d_stress->S[i][j][mode][p][q][k] +=
+                      ((double)delta(i, p) * (double)delta(j, q)) * bf[var]->phi[k];
+                }
+              }
+            }
+          }
+        }
+      }
+    } break;
+    case CONF: {
+      // conformation tensor
+      for (int mode = 0; mode < vn->modes; mode++) {
+        /* get polymer viscosity */
+        dbl mup = mu - mus;
+        dbl lambda = ve[mode]->time_const;
+        // stress
+        for (int i = 0; i < VIM; i++) {
+          for (int j = 0; j < VIM; j++) {
+            for (int p = 0; p < VIM; p++) {
+              for (int q = 0; q < VIM; q++) {
+                int var = v_s[mode][p][q];
+                for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+                  d_stress->S[i][j][mode][p][q][k] += -(mup / lambda) *
+                                                      -((double)delta(i, p) * (double)delta(j, q)) *
+                                                      bf[var]->phi[k];
+                }
+              }
+            }
+          }
+        }
+
+        // mesh
+        int var = MESH_DISPLACEMENT1;
+        if (pd->v[pg->imtrx][var]) {
+          for (int a = 0; a < pd->Num_Dim; a++) {
+            for (int k = 0; k < ei[pg->imtrx]->dof[var + a]; k++) {
+              for (int ii = 0; ii < VIM; ii++) {
+                for (int jj = 0; jj < VIM; jj++) {
+                  stress[ii][jj] += -((d_mu->X[a][k] - d_mus->X[a][k]) / lambda) *
+                                    (delta(ii, jj) - fv->S[mode][ii][jj]);
+                }
+              }
+            }
+          }
+        }
+
+        // velocity
+        var = VELOCITY1;
+        if (pd->v[pg->imtrx][var]) {
+          for (int a = 0; a < WIM; a++) {
+            for (int k = 0; k < ei[pg->imtrx]->dof[var + a]; k++) {
+              for (int ii = 0; ii < VIM; ii++) {
+                for (int jj = 0; jj < VIM; jj++) {
+                  stress[ii][jj] += -((d_mu->v[a][k] - d_mus->v[a][k]) / lambda) *
+                                    (delta(ii, jj) - fv->S[mode][ii][jj]);
+                }
+              }
+            }
+          }
+        }
+
+        // temperature
+        var = TEMPERATURE;
+        if (pd->v[pg->imtrx][var]) {
+          for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+            for (int ii = 0; ii < VIM; ii++) {
+              for (int jj = 0; jj < VIM; jj++) {
+                stress[ii][jj] +=
+                    -((d_mu->T[k] - d_mus->T[k]) / lambda) * (delta(ii, jj) - fv->S[mode][ii][jj]);
+              }
+            }
+          }
+        }
+
+        // fill
+        var = FILL;
+        if (pd->v[pg->imtrx][var]) {
+          for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+            for (int ii = 0; ii < VIM; ii++) {
+              for (int jj = 0; jj < VIM; jj++) {
+                stress[ii][jj] +=
+                    -((d_mu->F[k] - d_mus->F[k]) / lambda) * (delta(ii, jj) - fv->S[mode][ii][jj]);
+              }
+            }
+          }
+        }
+      } // mode loop
+    } break;
+    case LOG_CONF_GRADV:
+    case LOG_CONF: {
+      // conformation tensor
+      dbl exp_s[DIM][DIM];
+      dbl eig_values[DIM];
+      dbl R1[DIM][DIM];
+      for (int mode = 0; mode < vn->modes; mode++) {
+        compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
+        /* get polymer viscosity */
+        dbl mup = mu - mus;
+        dbl lambda = ve[mode]->time_const;
+        for (int ii = 0; ii < VIM; ii++) {
+          for (int jj = 0; jj < VIM; jj++) {
+            stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+          }
+        }
+      }
+    } break;
+    case LOG_CONF_TRANSIENT:
+    case LOG_CONF_TRANSIENT_GRADV: {
+      // conformation tensor
+      dbl exp_s[DIM][DIM];
+      dbl eig_values[DIM];
+      dbl R1[DIM][DIM];
+      for (int mode = 0; mode < vn->modes; mode++) {
+        if (pg->imtrx == upd->matrix_index[POLYMER_STRESS11]) {
+          compute_exp_s(fv_old->S[mode], exp_s, eig_values, R1);
+        } else {
+          compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
+        }
+        /* get polymer viscosity */
+        dbl mup = mu - mus;
+        dbl lambda = ve[mode]->time_const;
+        for (int ii = 0; ii < VIM; ii++) {
+          for (int jj = 0; jj < VIM; jj++) {
+            stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+          }
+        }
+      }
+    } break;
+    case SQRT_CONF: {
+      for (int mode = 0; mode < vn->modes; mode++) {
+        /* get polymer viscosity */
+        dbl mup = mu - mus;
+        dbl lambda = ve[mode]->time_const;
+
+        dbl bdotb[DIM][DIM];
+        dbl b[DIM][DIM];
+        for (int ii = 0; ii < VIM; ii++) {
+          for (int jj = 0; jj < VIM; jj++) {
+            if (ii <= jj) {
+              b[ii][jj] = fv->S[mode][ii][jj];
+              b[jj][ii] = b[ii][jj];
+            }
+          }
+        }
+
+        tensor_dot(b, b, bdotb, VIM);
+
+        // stress
+        int var;
+        for (int p = 0; p < VIM; p++) {
+          for (int q = 0; q < VIM; q++) {
+            for (int r = 0; r < VIM; r++) {
+              for (int c = 0; c < VIM; c++) {
+                var = v_s[mode][r][c];
+                dbl conf[DIM][DIM];
+                for (int ii = 0; ii < VIM; ii++) {
+                  for (int jj = 0; jj < VIM; jj++) {
+                    conf[ii][jj] = (mup / lambda) * (b[c][jj] * (double)delta(ii, r) +
+                                                     b[ii][r] * (double)delta(jj, c));
+                  }
+                }
+                for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  d_stress->S[p][q][mode][r][c][j] += conf[p][q] * bf[var]->phi[j];
+                }
+              }
+            }
+          }
+        }
+
+        // mesh
+        var = MESH_DISPLACEMENT1;
+        if (pd->v[pg->imtrx][var]) {
+          for (int a = 0; a < pd->Num_Dim; a++) {
+            for (int k = 0; k < ei[pg->imtrx]->dof[var + a]; k++) {
+              for (int ii = 0; ii < VIM; ii++) {
+                for (int jj = 0; jj < VIM; jj++) {
+                  stress[ii][jj] += -((d_mu->X[a][k] - d_mus->X[a][k]) / lambda) *
+                                    (delta(ii, jj) - bdotb[ii][jj]);
+                }
+              }
+            }
+          }
+        }
+
+        // velocity
+        var = VELOCITY1;
+        if (pd->v[pg->imtrx][var]) {
+          for (int a = 0; a < WIM; a++) {
+            for (int k = 0; k < ei[pg->imtrx]->dof[var + a]; k++) {
+              for (int ii = 0; ii < VIM; ii++) {
+                for (int jj = 0; jj < VIM; jj++) {
+                  stress[ii][jj] += -((d_mu->v[a][k] - d_mus->v[a][k]) / lambda) *
+                                    (delta(ii, jj) - bdotb[ii][jj]);
+                }
+              }
+            }
+          }
+        }
+
+        // temperature
+        var = TEMPERATURE;
+        if (pd->v[pg->imtrx][var]) {
+          for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+            for (int ii = 0; ii < VIM; ii++) {
+              for (int jj = 0; jj < VIM; jj++) {
+                stress[ii][jj] +=
+                    -((d_mu->T[k] - d_mus->T[k]) / lambda) * (delta(ii, jj) - bdotb[ii][jj]);
+              }
+            }
+          }
+        }
+
+        // fill
+        var = FILL;
+        if (pd->v[pg->imtrx][var]) {
+          for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+            for (int ii = 0; ii < VIM; ii++) {
+              for (int jj = 0; jj < VIM; jj++) {
+                stress[ii][jj] +=
+                    -((d_mu->F[k] - d_mus->F[k]) / lambda) * (delta(ii, jj) - bdotb[ii][jj]);
+              }
+            }
+          }
+        }
+      }
+    } break;
+    default:
+      GOMA_EH(GOMA_ERROR, "Unkown viscoelastic model %d", vn->evssModel);
+    }
+  }
+}
+
+void momentum_ve_stress_term(dbl mu,
+                             dbl mus,
+                             dbl mu_over_mu_num,
+                             VISCOSITY_DEPENDENCE_STRUCT *d_mu,
+                             VISCOSITY_DEPENDENCE_STRUCT *d_mus,
+                             dbl d_mun_dS[MAX_MODES][DIM][DIM][MDE],
+                             dbl d_mun_dG[DIM][DIM][MDE],
+                             dbl stress[DIM][DIM],
+                             STRESS_DEPENDENCE_STRUCT *d_stress) {
+  bool compute_derivatives = (d_stress != NULL);
+  dbl gamma_cont[DIM][DIM] = {{0.}};
+  dbl s[DIM][DIM];
+  STRESS_DEPENDENCE_STRUCT d_s_s;
+  STRESS_DEPENDENCE_STRUCT *d_s = NULL;
+  if (compute_derivatives) {
+    d_s = &d_s_s;
+    memset(d_s, 0, sizeof(STRESS_DEPENDENCE_STRUCT));
+  }
+
+  bool evss_f = is_evss_f_model(vn->evssModel);
+  if (evss_f) {
+    for (int a = 0; a < VIM; a++) {
+      for (int b = 0; b < VIM; b++) {
+        gamma_cont[a][b] = fv->G[a][b] + fv->G[b][a];
+      }
+    }
+  }
+
+  ve_stress_term(mu, mus, d_mu, d_mus, s, d_s);
+
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      if (evss_f) {
+        stress[a][b] += -(mu - mus) * gamma_cont[a][b];
+      }
+      stress[a][b] += s[a][b];
+    }
+  }
+
+  if (compute_derivatives) {
+    int v_s[MAX_MODES][DIM][DIM];
+    (void)stress_eqn_pointer(v_s);
+    int var = VELOCITY1;
+    if (pd->v[pg->imtrx][var]) {
+      for (int a = 0; a < WIM; a++) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (int ii = 0; ii < VIM; ii++) {
+            for (int jj = 0; jj < VIM; jj++) {
+              if (evss_f) {
+                d_stress->v[ii][jj][a][j] += -(d_mu->v[a][j] - d_mus->v[a][j]) * gamma_cont[ii][jj];
+              }
+              d_stress->v[ii][jj][a][j] += d_s->v[ii][jj][a][j];
+            }
+          }
+        }
+      }
+    }
+
+    var = MESH_DISPLACEMENT1;
+    if (pd->v[pg->imtrx][var]) {
+      for (int a = 0; a < pd->Num_Dim; a++) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (int ii = 0; ii < VIM; ii++) {
+            for (int jj = 0; jj < VIM; jj++) {
+              if (evss_f) {
+                d_stress->X[ii][jj][a][j] += -(d_mu->X[a][j] - d_mus->X[a][j]) * gamma_cont[ii][jj];
+              }
+              d_stress->X[ii][jj][a][j] += d_s->X[ii][jj][a][j];
+            }
+          }
+        }
+      }
+    }
+
+    var = TEMPERATURE;
+    if (pd->v[pg->imtrx][var]) {
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (int ii = 0; ii < VIM; ii++) {
+          for (int jj = 0; jj < VIM; jj++) {
+            if (evss_f) {
+              d_stress->T[ii][jj][j] += -(d_mu->T[j] - d_mus->T[j]) * gamma_cont[ii][jj];
+            }
+            d_stress->T[ii][jj][j] += d_s->T[ii][jj][j];
+          }
+        }
+      }
+    }
+
+    var = BOND_EVOLUTION;
+    if (pd->v[pg->imtrx][var]) {
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (int ii = 0; ii < VIM; ii++) {
+          for (int jj = 0; jj < VIM; jj++) {
+            if (evss_f) {
+              d_stress->nn[ii][jj][j] += -(d_mu->nn[j] - d_mus->nn[j]) * gamma_cont[ii][jj];
+            }
+            d_stress->nn[ii][jj][j] += d_s->nn[ii][jj][j];
+          }
+        }
+      }
+    }
+
+    var = RESTIME;
+    if (pd->v[pg->imtrx][var]) {
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (int ii = 0; ii < VIM; ii++) {
+          for (int jj = 0; jj < VIM; jj++) {
+            if (evss_f) {
+              d_stress->degrade[ii][jj][j] += -(d_mu->nn[j] - d_mus->nn[j]) * gamma_cont[ii][jj];
+            }
+            d_stress->degrade[ii][jj][j] += d_s->nn[ii][jj][j];
+          }
+        }
+      }
+    }
+
+    var = FILL;
+    if (pd->v[pg->imtrx][var]) {
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (int ii = 0; ii < VIM; ii++) {
+          for (int jj = 0; jj < VIM; jj++) {
+            if (evss_f) {
+              d_stress->F[ii][jj][j] += -(d_mu->nn[j] - d_mus->nn[j]) * gamma_cont[ii][jj];
+            }
+            d_stress->F[ii][jj][j] += d_s->nn[ii][jj][j];
+          }
+        }
+      }
+    }
+
+    var = PRESSURE;
+    if (pd->v[pg->imtrx][var]) {
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (int ii = 0; ii < VIM; ii++) {
+          for (int jj = 0; jj < VIM; jj++) {
+            if (evss_f) {
+              d_stress->P[ii][jj][j] += -(d_mu->nn[j] - d_mus->nn[j]) * gamma_cont[ii][jj];
+            }
+            d_stress->P[ii][jj][j] += d_s->nn[ii][jj][j];
+          }
+        }
+      }
+    }
+
+    var = MASS_FRACTION;
+    if (pd->v[pg->imtrx][var]) {
+      for (int w = 0; w < pd->Num_Species_Eqn; w++) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (int ii = 0; ii < VIM; ii++) {
+            for (int jj = 0; jj < VIM; jj++) {
+              if (evss_f) {
+                d_stress->C[ii][jj][w][j] += -(d_mu->C[w][j] - d_mus->C[w][j]) * gamma_cont[ii][jj];
+              }
+              d_stress->C[ii][jj][w][j] += d_s->C[ii][jj][w][j];
+            }
+          }
+        }
+      }
+    }
+
+    var = POLYMER_STRESS11;
+    if (pd->v[pg->imtrx][var]) {
+      for (int mode = 0; mode < vn->modes; mode++) {
+        for (int p = 0; p < VIM; p++) {
+          for (int q = 0; q < VIM; q++) {
+            var = v_s[mode][p][q];
+            for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              for (int ii = 0; ii < VIM; ii++) {
+                for (int jj = 0; jj < VIM; jj++) {
+                  if (evss_f) {
+                    d_stress->S[ii][jj][mode][p][q][j] +=
+                        mu_over_mu_num * d_mun_dS[mode][p][q][j] * (-gamma_cont[ii][jj]);
+                  }
+                  d_stress->S[ii][jj][mode][p][q][j] += d_s->S[ii][jj][mode][p][q][j];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    var = VELOCITY_GRADIENT11;
+    if (pd->v[pg->imtrx][var] && pd->gv[POLYMER_STRESS11]) {
+      int v_g[DIM][DIM];
+      v_g[0][0] = VELOCITY_GRADIENT11;
+      v_g[0][1] = VELOCITY_GRADIENT12;
+      v_g[1][0] = VELOCITY_GRADIENT21;
+      v_g[1][1] = VELOCITY_GRADIENT22;
+      v_g[0][2] = VELOCITY_GRADIENT13;
+      v_g[1][2] = VELOCITY_GRADIENT23;
+      v_g[2][0] = VELOCITY_GRADIENT31;
+      v_g[2][1] = VELOCITY_GRADIENT32;
+      v_g[2][2] = VELOCITY_GRADIENT33;
+      for (int ii = 0; ii < VIM; ii++) {
+        for (int jj = 0; jj < VIM; jj++) {
+          for (int p = 0; p < VIM; p++) {
+            for (int q = 0; q < VIM; q++) {
+              var = v_g[p][q];
+              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (evss_f) {
+                  d_stress->g[ii][jj][p][q][j] +=
+                      mu_over_mu_num * d_mun_dG[p][q][j] * (-gamma_cont[ii][jj]) +
+                      ((mu - mus) * bf[var]->phi[j] *
+                       ((double)delta(q, ii) * (double)delta(p, jj) +
+                        (double)delta(p, ii) * (double)delta(q, jj)));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 /* This stress routine does the EVSS formulation according to Fortin, 1995
  * who uses the regular stress equation and converts stress in the momentum
@@ -73,8 +654,8 @@ int assemble_stress_fortin(dbl tt, /* parameter to vary time integration from
   dbl lambda1 = 0;    /* polymer relaxation constant */
   dbl lambda2 = 0;    /* 2nd polymer relaxation constant -- for modified Jeffreys model */
   dbl elasticMod = 0; /* elastic modulus -- needed for the modified Jeffreys model */
-  dbl lambda =
-      0; /* lambda1 + lambda2 -- this is just lambda1 unless using the modified Jeffreys model */
+  dbl lambda = 0;     /* lambda1 + lambda2 -- this is just lambda1 unless using the modified
+                         Jeffreys model */
   dbl d_lambda_dF[MDE];
   double xi;
   double d_xi_dF[MDE];
@@ -1079,7 +1660,6 @@ int assemble_stress_fortin(dbl tt, /* parameter to vary time integration from
                         dbl source_ja = 0;
                         dbl source_jb = 0;
                         dbl source_jc = 0;
-                        dbl source_jd = 0;
 
                         source_ja -= mup * lambda2 * at *
                                      (g_dot[a][b] + gt_dot[a][b] + v_dot_del_g[a][b] -
@@ -1118,15 +1698,17 @@ int assemble_stress_fortin(dbl tt, /* parameter to vary time integration from
 
                         if (supg != 0.) {
                           for (w = 0; w < dim; w++) {
-                            source_jd += supg * (supg_terms.supg_tau * v[w] *
-                                                     bf[eqn]->d_grad_phi_dmesh[i][w][p][j] +
-                                                 supg_terms.d_supg_tau_dX[p][j] * v[w] *
-                                                     bf[eqn]->grad_phi[i][w]);
+                            // source_jd += supg * (supg_terms.supg_tau * v[w] *
+                            //                          bf[eqn]->d_grad_phi_dmesh[i][w][p][j]
+                            //                          +
+                            //                      supg_terms.d_supg_tau_dX[p][j] * v[w] *
+                            //                          bf[eqn]->grad_phi[i][w]);
                           }
 
                           // advection_d *=
                           //     -lambda2 * at * det_J * h3 *
-                          //     (g_dot[a][b] + gt_dot[a][b] + v_dot_del_g[a][b] - x_dot_del_g[a][b]
+                          //     (g_dot[a][b] + gt_dot[a][b] + v_dot_del_g[a][b] -
+                          //     x_dot_del_g[a][b]
                           //     +
                           //      v_dot_del_gt[a][b] - v_dot_del_gt[b][a] -
                           //      (g_dot_g[a][b] + 2 * gt_dot_g[a][b] + gt_dot_gt[a][b]));
@@ -1232,8 +1814,8 @@ int assemble_stress_fortin(dbl tt, /* parameter to vary time integration from
                             tensor_dot(dGt, g, dGt_dot_g, VIM);
                             tensor_dot(gt, dG, gt_dot_dG, VIM);
                             source_jeffrey -= 2. * (dGt_dot_g[a][b] + gt_dot_dG[a][b]);
-                            // source_jeffrey -= 2.*(gt[a][p] * (double)delta(b, q) + g[q][b] *
-                            // (double)delta(a, p)) * bf[var]->phi[j];
+                            // source_jeffrey -= 2.*(gt[a][p] * (double)delta(b, q) + g[q][b]
+                            // * (double)delta(a, p)) * bf[var]->phi[j];
                             //// gt_dot_gt
                             source_jeffrey -= g_dot_dG[b][a] + dG_dot_g[b][a];
                             // source_jeffrey -=  (gt[a][p] * (double)delta(b, q) + g[q][b] *

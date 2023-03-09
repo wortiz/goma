@@ -17,6 +17,24 @@
 #define GOMA_MM_FILL_STRESS_H
 #include "mm_as_structs.h"
 #include "std.h"
+bool is_evss_f_model(int model);
+
+void ve_stress_term(dbl mu,
+                    dbl mus,
+                    VISCOSITY_DEPENDENCE_STRUCT *d_mu,
+                    VISCOSITY_DEPENDENCE_STRUCT *d_mus,
+                    dbl stress[DIM][DIM],
+                    STRESS_DEPENDENCE_STRUCT *d_stress);
+
+void momentum_ve_stress_term(dbl mu,
+                             dbl mus,
+                             dbl mu_over_mu_num,
+                             VISCOSITY_DEPENDENCE_STRUCT *d_mu,
+                             VISCOSITY_DEPENDENCE_STRUCT *d_mus,
+                             dbl d_mun_dS[MAX_MODES][DIM][DIM][MDE],
+                             dbl d_mun_dG[DIM][DIM][MDE],
+                             dbl stress[DIM][DIM],
+                             STRESS_DEPENDENCE_STRUCT *d_stress);
 
 int assemble_stress_fortin(dbl,        /* tt - parm to vary time integration from
                                         * explicit (tt = 1) to implicit (tt = 0)    */

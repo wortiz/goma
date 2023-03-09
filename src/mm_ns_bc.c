@@ -40,10 +40,12 @@
 #include "mm_elem_block_structs.h"
 #include "mm_fill_jac.h"
 #include "mm_fill_ls.h"
+#include "mm_fill_momentum.h"
 #include "mm_fill_ptrs.h"
 #include "mm_fill_rs.h"
 #include "mm_fill_solid.h"
 #include "mm_fill_species.h"
+#include "mm_fill_stress.h"
 #include "mm_fill_stress_legacy.h"
 #include "mm_fill_stress_log_conf.h"
 #include "mm_fill_stress_sqrt_conf.h"
@@ -4083,11 +4085,7 @@ void fvelo_slip_level(double func[MAX_PDIM],
 
   /* compute stress tensor and its derivatives */
   if (type == VELO_SLIP_LEVEL_SIC_BC) {
-    if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV) {
-      fluid_stress_conf(Pi, d_Pi);
-    } else {
-      fluid_stress(Pi, d_Pi);
-    }
+    fluid_stress(Pi, d_Pi);
   }
 
   if (af->Assemble_Jacobian) {
@@ -4714,11 +4712,7 @@ void sheet_tension(double cfunc[MDE][DIM],
     }
   }
 
-  if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV) {
-    fluid_stress_conf(Pi, &d_Pi);
-  } else {
-    fluid_stress(Pi, &d_Pi);
-  }
+  fluid_stress(Pi, &d_Pi);
 
   HL = 0.0;
   memset(dHL_dv, 0, sizeof(double) * DIM * MDE);
@@ -6237,13 +6231,7 @@ void flow_n_dot_T_nobc(double func[DIM],
   }
 
   /* compute stress tensor and its derivatives */
-  if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV || vn->evssModel == CONF) {
-    fluid_stress_conf(Pi, d_Pi);
-  } else if (vn->evssModel == SQRT_CONF) {
-    fluid_stress_sqrt_conf(Pi, d_Pi);
-  } else {
-    fluid_stress(Pi, d_Pi);
-  }
+  fluid_stress(Pi, d_Pi);
 
   /* now is the time to clean up, so, if using the datum for pressure, fix fv->P
    */
@@ -6384,10 +6372,7 @@ void flow_n_dot_T_nobc(double func[DIM],
     }
 
     if (gn->ConstitutiveEquation == BINGHAM_MIXED ||
-        (pd->v[pg->imtrx][POLYMER_STRESS11] &&
-         (vn->evssModel == EVSS_F || vn->evssModel == SQRT_CONF || vn->evssModel == LOG_CONF ||
-          vn->evssModel == EVSS_GRADV || vn->evssModel == CONF ||
-          vn->evssModel == LOG_CONF_GRADV))) {
+        (pd->v[pg->imtrx][POLYMER_STRESS11] && is_evss_f_model(vn->evssModel))) {
       for (p = 0; p < pd->Num_Dim; p++) {
         for (q = 0; q < pd->Num_Dim; q++) {
           for (b = 0; b < VIM; b++) {
@@ -6599,18 +6584,10 @@ void flow_n_dot_T_gradv_t(double func[DIM],
   bool evss_f = false;
 
   if (pd->gv[POLYMER_STRESS11]) {
-    evss_f = vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV ||
-             vn->evssModel == CONF || vn->evssModel == SQRT_CONF || vn->evssModel == EVSS_F ||
-             vn->evssModel == EVSS_GRADV;
+    evss_f = is_evss_f_model(vn->evssModel);
   }
   /* compute stress tensor and its derivatives */
-  if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV || vn->evssModel == CONF) {
-    fluid_stress_conf(Pi, d_Pi);
-  } else if (vn->evssModel == SQRT_CONF) {
-    fluid_stress_sqrt_conf(Pi, d_Pi);
-  } else {
-    fluid_stress(Pi, d_Pi);
-  }
+  fluid_stress(Pi, d_Pi);
 
   VISCOSITY_DEPENDENCE_STRUCT d_mus_struct; /* viscosity dependence */
   VISCOSITY_DEPENDENCE_STRUCT *d_mus = &d_mus_struct;
@@ -6884,10 +6861,7 @@ void flow_n_dot_T_gradv_t(double func[DIM],
     }
 
     if (gn->ConstitutiveEquation == BINGHAM_MIXED ||
-        (pd->v[pg->imtrx][POLYMER_STRESS11] &&
-         (vn->evssModel == EVSS_F || vn->evssModel == SQRT_CONF || vn->evssModel == LOG_CONF ||
-          vn->evssModel == EVSS_GRADV || vn->evssModel == CONF ||
-          vn->evssModel == LOG_CONF_GRADV))) {
+        (pd->v[pg->imtrx][POLYMER_STRESS11] && (is_evss_f_model(vn->evssModel)))) {
       for (p = 0; p < pd->Num_Dim; p++) {
         for (q = 0; q < pd->Num_Dim; q++) {
           for (b = 0; b < VIM; b++) {
@@ -7929,7 +7903,7 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
   dbl mass; /* For terms and their derivatives */
   dbl mass_a, mass_b;
   dbl advection;
-  dbl advection_a, advection_b, advection_c, advection_d;
+  dbl advection_a;
   dbl diffusion;
   dbl source;
   dbl source1;
@@ -8001,7 +7975,6 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
   dbl saramitoCoeff = 1.;
 
   dbl d_mup_dv_pj;
-  dbl d_mup_dmesh_pj;
 
   /*  shift function */
   dbl at = 0.0;
@@ -8012,9 +7985,6 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
   dbl v_dot_del_b[DIM][DIM];
   dbl x_dot_del_b[DIM][DIM];
 
-  dbl d_xdotdels_dm;
-
-  dbl d_vdotdels_dm;
   int inv_v_s[DIM][DIM];
 
   if (vn->evssModel == EVSS_GRADV) {
@@ -8509,7 +8479,6 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
                     phi_j = bf[var]->phi[j];
                     d_det_J_dmesh_pj = bf[eqn]->d_det_J_dm[p][j];
                     dh3dmesh_pj = fv->dh3dq[p] * bf[var]->phi[j];
-                    d_mup_dmesh_pj = d_mup->X[p][j];
 
                     mass = 0.;
                     mass_a = 0.;
@@ -12297,11 +12266,7 @@ void apply_sharp_wetting_velocity(double func[MAX_PDIM],
   }
   /* compute stress tensor and its derivatives */
   if (include_stress) {
-    if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV) {
-      fluid_stress_conf(Pi, d_Pi);
-    } else {
-      fluid_stress(Pi, d_Pi);
-    }
+    fluid_stress(Pi, d_Pi);
   }
 
   for (a = 0; a < dim; a++) {
@@ -15473,11 +15438,7 @@ void shear_to_shell(double cfunc[MDE][DIM],
 
   detJ = 1.0;
 
-  if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV) {
-    fluid_stress_conf(Pi, &d_Pi);
-  } else {
-    fluid_stress(Pi, &d_Pi);
-  }
+  fluid_stress(Pi, &d_Pi);
 
   TL = 0.0;
   memset(dTL_dv, 0, sizeof(double) * DIM * MDE);

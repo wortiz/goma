@@ -772,12 +772,10 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
   dbl d_grad_b_dmesh[DIM][DIM][DIM][DIM]
                     [MDE]; /* derivative of grad of stress tensor for mode ve_mode */
 
-  dbl g[DIM][DIM];  /* velocity gradient tensor */
-  dbl gt[DIM][DIM]; /* transpose of velocity gradient tensor */
+  dbl g[DIM][DIM]; /* velocity gradient tensor */
 
   /* dot product tensors */
 
-  dbl s_dot_s[DIM][DIM];
   dbl b_dot_g[DIM][DIM];
 
   /* polymer viscosity and derivatives */
@@ -788,8 +786,6 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
   const bool saramitoEnabled =
       (vn->ConstitutiveEquation == SARAMITO_OLDROYDB || vn->ConstitutiveEquation == SARAMITO_PTT ||
        vn->ConstitutiveEquation == SARAMITO_GIESEKUS);
-
-  dbl saramitoCoeff = 1.;
 
   if (saramitoEnabled) {
     GOMA_EH(GOMA_ERROR, "Saramito not available for SQRT_CONF");
@@ -892,10 +888,8 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
     for (int b = 0; b < VIM; b++) {
       if (evss_gradv) {
         g[a][b] = fv->grad_v[a][b];
-        gt[a][b] = fv->grad_v[b][a];
       } else {
         g[a][b] = fv->G[a][b];
-        gt[b][a] = g[a][b];
       }
     }
   }
@@ -1410,14 +1404,6 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                     source = 0.;
 
                     if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                      source_a = -at * d_mup->C[w][j] * (g[ii][jj] + gt[ii][jj]);
-
-                      source_b = 0.;
-                      if (DOUBLE_NONZERO(alpha)) {
-                        source_b -= s_dot_s[ii][jj] / (mup * mup);
-                        source_b *= alpha * lambda * saramitoCoeff * d_mup->C[w][j];
-                      }
-                      source = source_a + source_b;
                       source *= wt_func * det_J * wt * h3;
                       source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
                     }
@@ -1798,16 +1784,6 @@ int assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration from
                   source = 0.;
 
                   if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-
-                    double invmup = 1 / mup;
-                    // PTT
-
-                    // Giesekus
-                    if (alpha != 0.) {
-                      source += s_dot_s[ii][jj] *
-                                (-alpha * lambda * d_mup->F[j] * invmup * invmup +
-                                 d_alpha_dF[j] * lambda * invmup + alpha * d_lambda_dF[j] * invmup);
-                    }
 
                     source *= wt_func * det_J * h3 * wt;
 

@@ -1510,7 +1510,7 @@ void compute_log_c_with_derivs(dbl s[DIM][DIM], // s - stress
 
         // approximate derivatives
         for (p = 0; p < VIM; p++) {
-          d_eig_values_ds[i][j][p] = ds_den * (exp_s_p[p][q] - exp_s_n[p][q]);
+          d_eig_values_ds[i][j][p] = ds_den * (eig_values_n[p] - eig_values_p[p]);
           if (i != j)
             d_eig_values_ds[j][i][p] = d_eig_values_ds[i][j][p];
           for (q = 0; q < VIM; q++) {

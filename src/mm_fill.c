@@ -52,6 +52,7 @@
 #include "mm_fill_em.h"
 #include "mm_fill_fill.h"
 #include "mm_fill_ls.h"
+#include "mm_fill_momentum.h"
 #include "mm_fill_population.h"
 #include "mm_fill_porous.h"
 #include "mm_fill_potential.h"
