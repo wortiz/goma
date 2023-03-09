@@ -185,7 +185,7 @@ static void source_term_logc(int mode,
     dbl tmp[DIM][DIM];
     dbl inner[DIM][DIM] = {{0.}};
     for (int i = 0; i < VIM; i++) {
-      inner[i][i] = (1.0 / lambda) * (1.0 / (eig_values[i] + 1e-16) - 1.0);
+      inner[i][i] = (1.0 / lambda) * (1.0 - 1.0 / (eig_values[i] + 1e-16));
     }
 
     tensor_dot(R, inner, tmp, VIM);
@@ -228,6 +228,21 @@ static void source_term_logc(int mode,
         }
       }
     }
+  } break;
+  case GIESEKUS: {
+    // Giesekus mobility parameter
+    dbl alpha = ve[mode]->alpha;
+
+    dbl tmp[DIM][DIM];
+    memset(source_term, 0, sizeof(dbl)*DIM*DIM);
+
+    for (int i = 0; i < VIM; i++) {
+      dbl inv_eig = (1.0/(eig_values[i] + 1e-16));
+      source_term[i][i] += -(1.0/lambda) * ((inv_eig - 1) - alpha * (-2.0 + eig_values[i] + inv_eig));
+    }
+
+    tensor_dot(R, source_term, tmp, VIM);
+    tensor_dot(tmp, R_T, source_term, VIM);
   } break;
   default:
     GOMA_EH(GOMA_ERROR, "Unknown constitutive equation for log conformation");
@@ -295,8 +310,8 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
     dbl grad_s[DIM][DIM][DIM];
     dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
     load_modal_pointers(mode, tt, dt, s, s_dot, grad_s, d_grad_s_dmesh);
-    // compute_exp_s(s, exp_s, eig_values, R);
-    analytical_exp_s(s, exp_s, eig_values, R, NULL, NULL, NULL);
+    compute_exp_s(s, exp_s, eig_values, R);
+    //analytical_exp_s(s, exp_s, eig_values, R, NULL, NULL, NULL);
     for (int i = 0; i < VIM; i++) {
       for (int j = 0; j < VIM; j++) {
         R_T[i][j] = R[j][i];
@@ -352,7 +367,7 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
 
               dbl source = 0.0;
               if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                source -= source_term[a][b];
+                source += source_term[a][b];
                 source *= wt_func * det_J * h3 * wt;
                 source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
               }
@@ -535,9 +550,6 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
 
     // Polymer viscosity
     mup = viscosity(ve[mode]->gn, gamma, d_mup);
-
-    // Giesekus mobility parameter
-    alpha = ve[mode]->alpha;
 
     // Polymer time constant
     if (ve[mode]->time_constModel == CONSTANT) {
