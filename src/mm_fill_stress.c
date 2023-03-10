@@ -295,7 +295,8 @@ void ve_stress_term(dbl mu,
 
                 for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                   d_stress->S[p][q][mode][r][c][j] +=
-                      (mup / lambda) * ((exp_s_n[p][q] - exp_s_p[p][q]) / (2.0*s_p)) * bf[var]->phi[j];
+                      (mup / lambda) * ((exp_s_n[p][q] - exp_s_p[p][q]) / (2.0 * s_p)) *
+                      bf[var]->phi[j];
                 }
               }
             }

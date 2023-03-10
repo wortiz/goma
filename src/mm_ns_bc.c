@@ -7851,7 +7851,6 @@ void stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                         advection += ((advective_term_p[a][b] - advective_term[a][b]) / d_s_p) *
                                      bf[var]->phi[j];
 
-
                         advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
                       }
 

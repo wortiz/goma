@@ -57,17 +57,17 @@ extern FSUB_TYPE dsyev_(char *JOBZ,
 #ifdef ASSEMBLE_STRESS_LOG_CONF_NEW
 
 void advective_decomposition(dbl grad_v[DIM][DIM],
-                                    dbl xi,
-                                    dbl s[DIM][DIM],
-                                    dbl R[DIM][DIM],
-                                    dbl R_T[DIM][DIM],
-                                    dbl eig_values[DIM],
-                                    dbl d_R[DIM][DIM][DIM][DIM],
-                                    dbl d_R_T[DIM][DIM][DIM][DIM],
-                                    dbl d_eig_values[DIM][DIM][DIM],
-                                    bool compute_jacobian_entries,
-                                    dbl advective_term[DIM][DIM],
-                                    dbl d_advective_term_ds[DIM][DIM][DIM][DIM]) {
+                             dbl xi,
+                             dbl s[DIM][DIM],
+                             dbl R[DIM][DIM],
+                             dbl R_T[DIM][DIM],
+                             dbl eig_values[DIM],
+                             dbl d_R[DIM][DIM][DIM][DIM],
+                             dbl d_R_T[DIM][DIM][DIM][DIM],
+                             dbl d_eig_values[DIM][DIM][DIM],
+                             bool compute_jacobian_entries,
+                             dbl advective_term[DIM][DIM],
+                             dbl d_advective_term_ds[DIM][DIM][DIM][DIM]) {
   dbl inner[DIM][DIM] = {{0.}};
   dbl M[DIM][DIM] = {{0.}};
   dbl w[DIM][DIM] = {{0.}};
@@ -166,14 +166,14 @@ void advective_decomposition(dbl grad_v[DIM][DIM],
 }
 
 void source_term_logc(int mode,
-                             dbl eig_values[DIM],
-                             dbl R[DIM][DIM],
-                             dbl R_T[DIM][DIM],
-                             dbl d_eig_values[DIM][DIM][DIM],
-                             dbl d_R[DIM][DIM][DIM][DIM],
-                             dbl d_R_T[DIM][DIM][DIM][DIM],
-                             dbl source_term[DIM][DIM],
-                             dbl d_source_term[DIM][DIM][DIM][DIM]) {
+                      dbl eig_values[DIM],
+                      dbl R[DIM][DIM],
+                      dbl R_T[DIM][DIM],
+                      dbl d_eig_values[DIM][DIM][DIM],
+                      dbl d_R[DIM][DIM][DIM][DIM],
+                      dbl d_R_T[DIM][DIM][DIM][DIM],
+                      dbl source_term[DIM][DIM],
+                      dbl d_source_term[DIM][DIM][DIM][DIM]) {
   dbl lambda = 0;
   if (ve[mode]->time_constModel == CONSTANT) {
     lambda = ve[mode]->time_const;
@@ -474,8 +474,9 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                         }
 
                         // finite difference approximation
-                        advection += ((advective_term_n[a][b] - advective_term_p[a][b]) / (2.0*d_s_p)) *
-                                     bf[var]->phi[j];
+                        advection +=
+                            ((advective_term_n[a][b] - advective_term_p[a][b]) / (2.0 * d_s_p)) *
+                            bf[var]->phi[j];
 
                         advection *= h3 * det_J;
 
@@ -484,8 +485,8 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
 
                       dbl source = 0;
                       if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                        source +=
-                            ((source_term_n[a][b] - source_term_p[a][b]) / (2.0*d_s_p)) * bf[var]->phi[j];
+                        source += ((source_term_n[a][b] - source_term_p[a][b]) / (2.0 * d_s_p)) *
+                                  bf[var]->phi[j];
                         source *= wt_func * det_J * h3 * wt;
                         source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
                       }
