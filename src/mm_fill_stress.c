@@ -274,22 +274,28 @@ void ve_stress_term(dbl mu,
               for (int c = 0; c < VIM; c++) {
                 var = v_s[mode][r][c];
                 dbl s[DIM][DIM];
+                dbl s_n[DIM][DIM];
                 for (int ii = 0; ii < VIM; ii++) {
                   for (int jj = 0; jj < VIM; jj++) {
                     s[ii][jj] = fv->S[mode][ii][jj];
+                    s_n[ii][jj] = fv->S[mode][ii][jj];
                   }
                 }
 
                 dbl exp_s_p[DIM][DIM];
                 dbl eig_values_p[DIM];
-                dbl s_p = MAX((1e-8), (1e-8) * fabs(s[p][q]));
-                s[r][c] += s_p;
+                dbl exp_s_n[DIM][DIM];
+                dbl eig_values_n[DIM];
+                dbl s_p = MAX((1e-10), (1e-10) * fabs(s[p][q]));
+                s[r][c] -= s_p;
+                s_n[r][c] += s_p;
 
+                compute_exp_s(s_n, exp_s_n, eig_values_n, R1);
                 compute_exp_s(s, exp_s_p, eig_values_p, R1);
 
                 for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                   d_stress->S[p][q][mode][r][c][j] +=
-                      -(mup / lambda) * ((exp_s[p][q] - exp_s_p[p][q]) / s_p) * bf[var]->phi[j];
+                      (mup / lambda) * ((exp_s_n[p][q] - exp_s_p[p][q]) / (2.0*s_p)) * bf[var]->phi[j];
                 }
               }
             }

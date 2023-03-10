@@ -56,7 +56,7 @@ extern FSUB_TYPE dsyev_(char *JOBZ,
 #define ASSEMBLE_STRESS_LOG_CONF_NEW
 #ifdef ASSEMBLE_STRESS_LOG_CONF_NEW
 
-static void advective_decomposition(dbl grad_v[DIM][DIM],
+void advective_decomposition(dbl grad_v[DIM][DIM],
                                     dbl xi,
                                     dbl s[DIM][DIM],
                                     dbl R[DIM][DIM],
@@ -165,7 +165,7 @@ static void advective_decomposition(dbl grad_v[DIM][DIM],
   }
 }
 
-static void source_term_logc(int mode,
+void source_term_logc(int mode,
                              dbl eig_values[DIM],
                              dbl R[DIM][DIM],
                              dbl R_T[DIM][DIM],
@@ -405,10 +405,12 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                   int var = v_s[mode][p][q];
                   if (pd->v[pg->imtrx][var]) {
                     dbl s_p[DIM][DIM];
+                    dbl s_n[DIM][DIM];
 
                     for (int ii = 0; ii < VIM; ii++) {
                       for (int jj = 0; jj < VIM; jj++) {
                         s_p[ii][jj] = fv->S[mode][ii][jj];
+                        s_n[ii][jj] = fv->S[mode][ii][jj];
                       }
                     }
 
@@ -416,20 +418,33 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                     dbl R_p[DIM][DIM];
                     dbl R_T_p[DIM][DIM];
                     dbl eig_values_p[DIM];
-                    dbl d_s_p = MAX((1e-8), (1e-8) * fabs(s[p][q]));
-                    s_p[p][q] += d_s_p;
+                    dbl d_s_p = MAX((1e-10), (1e-10) * fabs(s[p][q]));
+                    dbl exp_s_n[DIM][DIM];
+                    dbl R_n[DIM][DIM];
+                    dbl R_T_n[DIM][DIM];
+                    dbl eig_values_n[DIM];
+                    s_p[p][q] -= d_s_p;
+                    s_n[p][q] += d_s_p;
 
+                    compute_exp_s(s_n, exp_s_n, eig_values_n, R_n);
                     compute_exp_s(s_p, exp_s_p, eig_values_p, R_p);
                     for (int ii = 0; ii < VIM; ii++) {
                       for (int jj = 0; jj < VIM; jj++) {
                         R_T_p[ii][jj] = R_p[jj][ii];
+                        R_T_n[ii][jj] = R_n[jj][ii];
                       }
                     }
                     dbl advective_term_p[DIM][DIM];
+                    dbl advective_term_n[DIM][DIM];
+                    advective_decomposition(g, xi, s_n, R_n, R_T_n, eig_values_n, NULL, NULL, NULL,
+                                            false, advective_term_n, NULL);
                     advective_decomposition(g, xi, s_p, R_p, R_T_p, eig_values_p, NULL, NULL, NULL,
                                             false, advective_term_p, NULL);
 
                     dbl source_term_p[DIM][DIM];
+                    dbl source_term_n[DIM][DIM];
+                    source_term_logc(mode, eig_values_n, R_n, R_T_n, NULL, NULL, NULL,
+                                     source_term_n, NULL);
                     source_term_logc(mode, eig_values_p, R_p, R_T_p, NULL, NULL, NULL,
                                      source_term_p, NULL);
 
@@ -459,7 +474,7 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                         }
 
                         // finite difference approximation
-                        advection += ((advective_term_p[a][b] - advective_term[a][b]) / d_s_p) *
+                        advection += ((advective_term_n[a][b] - advective_term_p[a][b]) / (2.0*d_s_p)) *
                                      bf[var]->phi[j];
 
                         advection *= h3 * det_J;
@@ -470,7 +485,7 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                       dbl source = 0;
                       if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
                         source +=
-                            ((source_term_p[a][b] - source_term[a][b]) / d_s_p) * bf[var]->phi[j];
+                            ((source_term_n[a][b] - source_term_p[a][b]) / (2.0*d_s_p)) * bf[var]->phi[j];
                         source *= wt_func * det_J * h3 * wt;
                         source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
                       }
