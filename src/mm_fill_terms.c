@@ -12,6 +12,7 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
+#include "mm_fill_stress.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8342,6 +8343,11 @@ int load_fv_grads(void)
         }
       }
     }
+  }
+
+  if (is_log_c_model(vn->evssModel)) {
+    load_fv_log_c(fv, esp, true);
+    //load_fv_log_c(fv_old, esp_old, false);
   }
 
   zero_unused_grads = FALSE;

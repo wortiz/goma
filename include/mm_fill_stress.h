@@ -18,6 +18,13 @@
 #include "mm_as_structs.h"
 #include "std.h"
 bool is_evss_f_model(int model);
+bool is_log_c_model(int model);
+
+void alloc_fv_log_c(struct Field_Variables *fv);
+
+void free_fv_log_c(struct Field_Variables *fv);
+
+void load_fv_log_c(struct Field_Variables *fv, struct Element_Stiffness_Pointers *esp, bool compute_jacobian);
 
 void ve_stress_term(dbl mu,
                     dbl mus,

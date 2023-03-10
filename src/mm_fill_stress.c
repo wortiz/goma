@@ -50,6 +50,131 @@ bool is_evss_f_model(int model) {
     return false;
   }
 }
+bool is_log_c_model(int model) {
+  switch (model) {
+  case LOG_CONF_GRADV:
+  case LOG_CONF:
+  case LOG_CONF_TRANSIENT:
+  case LOG_CONF_TRANSIENT_GRADV:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void alloc_fv_log_c(struct Field_Variables *fv) {
+  fv->log_c = calloc(1, sizeof(struct Log_C_Field_Variables));
+}
+
+void free_fv_log_c(struct Field_Variables *fv) { free(fv->log_c); }
+
+void load_fv_log_c(struct Field_Variables *fv,
+                   struct Element_Stiffness_Pointers *esp,
+                   bool compute_jacobian) {
+  for (int mode = 0; mode < vn->modes; mode++) {
+    compute_exp_s(fv->S[mode], fv->log_c->exp_s[mode], fv->log_c->eig_values[mode],
+                  fv->log_c->R[mode]);
+    for (int i = 0; i < VIM; i++) {
+      for (int j = 0; j < VIM; j++) {
+        fv->log_c->R_T[mode][i][j] = fv->log_c->R[mode][j][i];
+      }
+    }
+
+    // Compute numerical Jacobian's
+    if (pd->e[pg->imtrx][POLYMER_STRESS11] && compute_jacobian) {
+      int v_s[MAX_MODES][DIM][DIM];
+      stress_eqn_pointer(v_s);
+
+      dbl S_i[DIM][DIM][MDE] = {{{0.}}};
+      dbl S_i_n[DIM][DIM][MDE] = {{{0.}}};
+      dbl S_i_p[DIM][DIM][MDE]= {{{0.}}};
+      dbl delta_S[DIM][DIM] = {{0.}};
+      // load nodal values
+      for (int i = 0; i < VIM; i++) {
+        for (int j = 0; j < VIM; j++) {
+          if (i <= j) {
+            int var = v_s[mode][i][j];
+            delta_S[i][j] = 0;
+            for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+              S_i[i][j][k] = S_i_n[i][j][k] = S_i_p[i][j][k] = *esp->S[mode][i][j][k];
+              if (i != j) {
+                S_i[j][i][k] = S_i_n[j][i][k] = S_i_p[j][i][k] = *esp->S[mode][i][j][k];
+              }
+              delta_S[i][j] += S_i[i][j][k] * S_i[i][j][k];
+            }
+            delta_S[i][j] = MAX(1e-8, 1e-8 * sqrt(delta_S[i][j]));
+          }
+        }
+      }
+
+      // p q k are derivative indices
+      for (int p = 0; p < VIM; p++) {
+        for (int q = 0; q < VIM; q++) {
+          if (p <= q) {
+            int var = v_s[mode][p][q];
+            for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+
+              // perturb
+              S_i_n[p][q][k] += delta_S[p][q];
+              S_i_p[p][q][k] -= delta_S[p][q];
+
+              // compute field values
+              dbl S_n[DIM][DIM];
+              dbl S_p[DIM][DIM];
+              for (int i = 0; i < VIM; i++) {
+                for (int j = 0; j < VIM; j++) {
+                  S_n[i][j] = 0;
+                  S_p[i][j] = 0;
+                  for (int m = 0; m < ei[pg->imtrx]->dof[var]; m++) {
+                    S_n[i][j] += S_i_n[i][j][m] * bf[var]->phi[m];
+                    S_p[i][j] += S_i_p[i][j][m] * bf[var]->phi[m];
+                  }
+                }
+              }
+              dbl exp_s_n[DIM][DIM];
+              dbl exp_s_p[DIM][DIM];
+              dbl eig_values_n[DIM];
+              dbl eig_values_p[DIM];
+              dbl R_n[DIM][DIM];
+              dbl R_p[DIM][DIM];
+
+              compute_exp_s(S_n, exp_s_n, eig_values_n, R_n);
+              compute_exp_s(S_p, exp_s_p, eig_values_p, R_p);
+
+              // Jacobian entries, central difference
+              for (int i = 0; i < VIM; i++) {
+                fv->log_c->d_eig_values_ds[mode][p][q][k][i] =
+                    (eig_values_n[i] - eig_values_p[i]) / (2.0 * delta_S[p][q]);
+                for (int j = 0; j < VIM; j++) {
+                  fv->log_c->d_exp_s_ds[mode][p][q][k][i][j] =
+                      (exp_s_n[i][j] - exp_s_p[i][j]) / (2.0 * delta_S[p][q]);
+                  fv->log_c->d_R_ds[mode][p][q][k][i][j] =
+                      (R_n[i][j] - R_p[i][j]) / (2.0 * delta_S[p][q]);
+                  fv->log_c->d_R_T_ds[mode][p][q][k][i][j] = fv->log_c->d_R_ds[mode][p][q][k][j][i];
+                }
+                if (p != q) {
+                  fv->log_c->d_eig_values_ds[mode][q][p][k][i] =
+                      fv->log_c->d_eig_values_ds[mode][p][q][k][i];
+                  for (int j = 0; j < VIM; j++) {
+                    fv->log_c->d_exp_s_ds[mode][q][p][k][i][j] =
+                        fv->log_c->d_exp_s_ds[mode][p][q][k][i][j];
+                    fv->log_c->d_R_ds[mode][q][p][k][i][j] = fv->log_c->d_R_ds[mode][p][q][k][i][j];
+                    fv->log_c->d_R_T_ds[mode][q][p][k][i][j] =
+                        fv->log_c->d_R_T_ds[mode][p][q][k][i][j];
+                  }
+                }
+              }
+
+              // restore
+              S_i_n[p][q][k] = S_i[p][q][k];
+              S_i_p[p][q][k] = S_i[p][q][k];
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 void ve_stress_term(dbl mu,
                     dbl mus,
@@ -86,17 +211,13 @@ void ve_stress_term(dbl mu,
   case LOG_CONF_GRADV:
   case LOG_CONF: {
     // conformation tensor
-    dbl exp_s[DIM][DIM];
-    dbl eig_values[DIM];
-    dbl R1[DIM][DIM];
     for (int mode = 0; mode < vn->modes; mode++) {
-      compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
       /* get polymer viscosity */
       dbl mup = mu - mus;
       dbl lambda = ve[mode]->time_const;
       for (int ii = 0; ii < VIM; ii++) {
         for (int jj = 0; jj < VIM; jj++) {
-          stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+          stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - fv->log_c->exp_s[mode][ii][jj]);
         }
       }
     }
@@ -258,11 +379,7 @@ void ve_stress_term(dbl mu,
     case LOG_CONF_GRADV:
     case LOG_CONF: {
       // conformation tensor
-      dbl exp_s[DIM][DIM];
-      dbl eig_values[DIM];
-      dbl R1[DIM][DIM];
       for (int mode = 0; mode < vn->modes; mode++) {
-        compute_exp_s(fv->S[mode], exp_s, eig_values, R1);
         /* get polymer viscosity */
         dbl mup = mu - mus;
         dbl lambda = ve[mode]->time_const;
@@ -273,30 +390,9 @@ void ve_stress_term(dbl mu,
             for (int r = 0; r < VIM; r++) {
               for (int c = 0; c < VIM; c++) {
                 var = v_s[mode][r][c];
-                dbl s[DIM][DIM];
-                dbl s_n[DIM][DIM];
-                for (int ii = 0; ii < VIM; ii++) {
-                  for (int jj = 0; jj < VIM; jj++) {
-                    s[ii][jj] = fv->S[mode][ii][jj];
-                    s_n[ii][jj] = fv->S[mode][ii][jj];
-                  }
-                }
-
-                dbl exp_s_p[DIM][DIM];
-                dbl eig_values_p[DIM];
-                dbl exp_s_n[DIM][DIM];
-                dbl eig_values_n[DIM];
-                dbl s_p = MAX((1e-10), (1e-10) * fabs(s[p][q]));
-                s[r][c] -= s_p;
-                s_n[r][c] += s_p;
-
-                compute_exp_s(s_n, exp_s_n, eig_values_n, R1);
-                compute_exp_s(s, exp_s_p, eig_values_p, R1);
-
                 for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                   d_stress->S[p][q][mode][r][c][j] +=
-                      (mup / lambda) * ((exp_s_n[p][q] - exp_s_p[p][q]) / (2.0 * s_p)) *
-                      bf[var]->phi[j];
+                      (mup / lambda) * (fv->log_c->d_exp_s_ds[mode][r][c][j][p][q]);
                 }
               }
             }
@@ -311,7 +407,7 @@ void ve_stress_term(dbl mu,
               for (int ii = 0; ii < VIM; ii++) {
                 for (int jj = 0; jj < VIM; jj++) {
                   stress[ii][jj] += -((d_mu->X[a][k] - d_mus->X[a][k]) / lambda) *
-                                    (delta(ii, jj) - exp_s[ii][jj]);
+                                    (delta(ii, jj) - fv->log_c->exp_s[mode][ii][jj]);
                 }
               }
             }
@@ -326,7 +422,7 @@ void ve_stress_term(dbl mu,
               for (int ii = 0; ii < VIM; ii++) {
                 for (int jj = 0; jj < VIM; jj++) {
                   stress[ii][jj] += -((d_mu->v[a][k] - d_mus->v[a][k]) / lambda) *
-                                    (delta(ii, jj) - exp_s[ii][jj]);
+                                    (delta(ii, jj) - fv->log_c->exp_s[mode][ii][jj]);
                 }
               }
             }
@@ -340,7 +436,7 @@ void ve_stress_term(dbl mu,
             for (int ii = 0; ii < VIM; ii++) {
               for (int jj = 0; jj < VIM; jj++) {
                 stress[ii][jj] +=
-                    -((d_mu->T[k] - d_mus->T[k]) / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+                    -((d_mu->T[k] - d_mus->T[k]) / lambda) * (delta(ii, jj) - fv->log_c->exp_s[mode][ii][jj]);
               }
             }
           }
@@ -353,7 +449,7 @@ void ve_stress_term(dbl mu,
             for (int ii = 0; ii < VIM; ii++) {
               for (int jj = 0; jj < VIM; jj++) {
                 stress[ii][jj] +=
-                    -((d_mu->F[k] - d_mus->F[k]) / lambda) * (delta(ii, jj) - exp_s[ii][jj]);
+                    -((d_mu->F[k] - d_mus->F[k]) / lambda) * (delta(ii, jj) - fv->log_c->exp_s[mode][ii][jj]);
               }
             }
           }

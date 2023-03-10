@@ -1856,6 +1856,8 @@ int assemble_momentum(dbl time,       /* current time */
                 for (c = 0; c < VIM; c++) {
                   var = v_s[mode][b][c];
 
+                  if (c >= b) {
+
                   if (pdv[var]) {
 
                     pvar = upd->vp[pg->imtrx][var];
@@ -1879,6 +1881,7 @@ int assemble_momentum(dbl time,       /* current time */
 
                       lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
                     }
+                  }
                   }
                 }
               }

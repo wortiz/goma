@@ -1589,6 +1589,18 @@ typedef struct Basis_Functions BASIS_FUNCTIONS_STRUCT;
  *
  */
 
+// numerical jacobian field variables;
+struct Log_C_Field_Variables {
+  dbl exp_s[MAX_MODES][DIM][DIM];
+  dbl eig_values[MAX_MODES][DIM];
+  dbl R[MAX_MODES][DIM][DIM];
+  dbl R_T[MAX_MODES][DIM][DIM];
+  dbl d_exp_s_ds[MAX_MODES][DIM][DIM][MDE][DIM][DIM];
+  dbl d_eig_values_ds[MAX_MODES][DIM][DIM][MDE][DIM];
+  dbl d_R_ds[MAX_MODES][DIM][DIM][MDE][DIM][DIM];
+  dbl d_R_T_ds[MAX_MODES][DIM][DIM][MDE][DIM][DIM];
+};
+
 struct Field_Variables {
   dbl wt; /* Gauss weight. */
 
@@ -2000,7 +2012,9 @@ struct Field_Variables {
   dbl giant_C_matrix[MAX_CONC][MDE][DIM * MAX_CONC][DIM * MAX_CONC]; /* matrix
           used to compute Jacobians in mm_fill_potential.c -- RSL 3/31/00 */
   dbl d_grad_tfmp_sat_dmesh[DIM][DIM][MDE];
+  struct Log_C_Field_Variables *log_c;
 };
+
 
 /*
  * These are old and dot field variables at the Gauss points of interest.
