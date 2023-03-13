@@ -18,28 +18,16 @@
 #include "el_elm.h"
 #include "mm_as_structs.h"
 #include "std.h"
-void advective_decomposition(dbl grad_v[DIM][DIM],
+void advective_decomposition(int mode,
+dbl grad_v[DIM][DIM],
                              dbl xi,
-                             dbl s[DIM][DIM],
-                             dbl R[DIM][DIM],
-                             dbl R_T[DIM][DIM],
-                             dbl eig_values[DIM],
-                             dbl d_R[DIM][DIM][DIM][DIM],
-                             dbl d_R_T[DIM][DIM][DIM][DIM],
-                             dbl d_eig_values[DIM][DIM][DIM],
                              bool compute_jacobian_entries,
                              dbl advective_term[DIM][DIM],
-                             dbl d_advective_term_ds[DIM][DIM][DIM][DIM]);
+                             dbl d_advective_term_ds[DIM][DIM][DIM][DIM][MDE]);
 
 void source_term_logc(int mode,
-                      dbl eig_values[DIM],
-                      dbl R[DIM][DIM],
-                      dbl R_T[DIM][DIM],
-                      dbl d_eig_values[DIM][DIM][DIM],
-                      dbl d_R[DIM][DIM][DIM][DIM],
-                      dbl d_R_T[DIM][DIM][DIM][DIM],
                       dbl source_term[DIM][DIM],
-                      dbl d_source_term[DIM][DIM][DIM][DIM]);
+                      dbl d_source_term[DIM][DIM][DIM][DIM][MDE]);
 
 /*
  * This routine assembles the stress with a log-conformation tensor formulation.

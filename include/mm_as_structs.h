@@ -35,6 +35,7 @@
 #include "mm_elem_block_structs.h"
 #include "mm_mp_const.h"
 #include "rf_bc_const.h"
+#include "rf_fem_const.h"
 #include "rf_io_const.h"
 #include "rf_vars_const.h"
 #include "sl_util_structs.h"
@@ -915,6 +916,8 @@ struct Problem_Graph {
   double sub_delta_t[MAX_NUM_MATRICES];
   double sub_delta_t_old[MAX_NUM_MATRICES];
   double sub_delta_t_older[MAX_NUM_MATRICES];
+  dbl x_scale[MAX_VARIABLE_TYPES];
+  int x_count[MAX_VARIABLE_TYPES];
 };
 typedef struct Problem_Graph PROBLEM_GRAPH_STRUCT;
 /*____________________________________________________________________________*/

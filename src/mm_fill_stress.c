@@ -94,15 +94,16 @@ void load_fv_log_c(struct Field_Variables *fv,
         for (int j = 0; j < VIM; j++) {
           if (i <= j) {
             int var = v_s[mode][i][j];
-            delta_S[i][j] = 0;
             for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
               S_i[i][j][k] = S_i_n[i][j][k] = S_i_p[i][j][k] = *esp->S[mode][i][j][k];
               if (i != j) {
                 S_i[j][i][k] = S_i_n[j][i][k] = S_i_p[j][i][k] = *esp->S[mode][i][j][k];
               }
-              delta_S[i][j] += S_i[i][j][k] * S_i[i][j][k];
             }
-            delta_S[i][j] = MAX(1e-8, 1e-8 * sqrt(delta_S[i][j]));
+            delta_S[i][j] = pg->x_scale[upd->ep[pg->imtrx][var]] * 1e-6;
+            if (delta_S[i][j] < 1e-15) {
+              delta_S[i][j] = 1e-7;
+            }
           }
         }
       }
@@ -115,7 +116,7 @@ void load_fv_log_c(struct Field_Variables *fv,
             for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
 
               // perturb
-              S_i_n[p][q][k] += delta_S[p][q];
+              //S_i_n[p][q][k] += delta_S[p][q];
               S_i_p[p][q][k] -= delta_S[p][q];
 
               // compute field values
@@ -144,25 +145,26 @@ void load_fv_log_c(struct Field_Variables *fv,
               // Jacobian entries, central difference
               for (int i = 0; i < VIM; i++) {
                 fv->log_c->d_eig_values_ds[mode][p][q][k][i] =
-                    (eig_values_n[i] - eig_values_p[i]) / (2.0 * delta_S[p][q]);
+                    (eig_values_n[i] - eig_values_p[i]) / (1.0 * delta_S[p][q]);
                 for (int j = 0; j < VIM; j++) {
                   fv->log_c->d_exp_s_ds[mode][p][q][k][i][j] =
-                      (exp_s_n[i][j] - exp_s_p[i][j]) / (2.0 * delta_S[p][q]);
+                      (exp_s_n[i][j] - exp_s_p[i][j]) / (1.0 * delta_S[p][q]);
                   fv->log_c->d_R_ds[mode][p][q][k][i][j] =
-                      (R_n[i][j] - R_p[i][j]) / (2.0 * delta_S[p][q]);
-                  fv->log_c->d_R_T_ds[mode][p][q][k][i][j] = fv->log_c->d_R_ds[mode][p][q][k][j][i];
+                      (R_n[i][j] - R_p[i][j]) / (1.0 * delta_S[p][q]);
+                  fv->log_c->d_R_T_ds[mode][p][q][k][i][j] =
+                      (R_n[j][i] - R_p[j][i]) / (1.0 * delta_S[p][q]);
                 }
-                if (p != q) {
-                  fv->log_c->d_eig_values_ds[mode][q][p][k][i] =
-                      fv->log_c->d_eig_values_ds[mode][p][q][k][i];
-                  for (int j = 0; j < VIM; j++) {
-                    fv->log_c->d_exp_s_ds[mode][q][p][k][i][j] =
-                        fv->log_c->d_exp_s_ds[mode][p][q][k][i][j];
-                    fv->log_c->d_R_ds[mode][q][p][k][i][j] = fv->log_c->d_R_ds[mode][p][q][k][i][j];
-                    fv->log_c->d_R_T_ds[mode][q][p][k][i][j] =
-                        fv->log_c->d_R_T_ds[mode][p][q][k][i][j];
-                  }
-                }
+                //if (p != q) {
+                //  fv->log_c->d_eig_values_ds[mode][q][p][k][i] =
+                //      fv->log_c->d_eig_values_ds[mode][p][q][k][i];
+                //  for (int j = 0; j < VIM; j++) {
+                //    fv->log_c->d_exp_s_ds[mode][q][p][k][i][j] =
+                //        fv->log_c->d_exp_s_ds[mode][p][q][k][i][j];
+                //    fv->log_c->d_R_ds[mode][q][p][k][i][j] = fv->log_c->d_R_ds[mode][p][q][k][i][j];
+                //    fv->log_c->d_R_T_ds[mode][q][p][k][i][j] =
+                //        fv->log_c->d_R_T_ds[mode][p][q][k][i][j];
+                //  }
+                //}
               }
 
               // restore

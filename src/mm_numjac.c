@@ -130,6 +130,7 @@ static void free_int_linked_list(IntLinkedList *list) {
   free(list);
 }
 
+#define DEBUG_FD_COLORING
 /* Find the matrix coloring for finite difference
 
    Coloring is determined in a greedy fashion,
@@ -205,9 +206,18 @@ static Coloring *find_coloring(struct GomaLinearSolverData *ams,
 #endif
 
   column_color = malloc(sizeof(int) * num_unknowns);
+  int v_s[MAX_MODES][DIM][DIM];
+  stress_eqn_pointer(v_s);
 
+  int num_stress_unknowns = 0;
   for (j = 0; j < num_unknowns; j++) {
     column_color[j] = -1;
+        for (int mode = 0; mode < vn->modes; mode++) {
+          if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] &&
+               idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
+                num_stress_unknowns++;
+               }
+        }
   }
 
   /* greedy coloring
@@ -220,9 +230,12 @@ static Coloring *find_coloring(struct GomaLinearSolverData *ams,
   int num_colors = 0;
   has_row = calloc(num_unknowns, sizeof(int));
   // until all columns have a color
-  while (num_colored < num_unknowns) {
+  while (num_colored < num_stress_unknowns) {
     // Color ever column we can with the current color
     for (j = 0; j < num_unknowns; j++) {
+        for (int mode = 0; mode < vn->modes; mode++) {
+          if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] &&
+               idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
       if (column_color[j] == -1) {
         // Only valid if all rows are not in this color
         int valid = TRUE;
@@ -242,6 +255,8 @@ static Coloring *find_coloring(struct GomaLinearSolverData *ams,
           num_colored++;
         }
       }
+    }
+        }
     }
     memset(has_row, 0, sizeof(int) * num_unknowns);
     num_colors++;
@@ -467,65 +482,72 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
     /*
      * Perturb many variables
      */
-#ifdef DEBUG_FD_COLORING
     int count = 0;
+#ifdef DEBUG_FD_COLORING
     int elem_count = 0;
 #endif
     for (j = 0; j < numProcUnknowns; j++) {
       if (coloring->column_color[j] == color) {
-        dx = x_scale[idv[pg->imtrx][j][0]] * FD_DELTA_UNKNOWN;
-        if (dx < 1.0E-15)
-          dx = 1.0E-7;
-        x_1[j] = x[j] + dx;
+        for (mode = 0; mode < vn->modes; mode++) {
+          if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] &&
+               idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
+            dx = x_scale[idv[pg->imtrx][j][0]] * FD_DELTA_UNKNOWN;
+            if (dx < 1.0E-15)
+              dx = 1.0E-7;
+            x_1[j] = x[j] + dx;
 
-        if (pd_glob[0]->TimeIntegration != STEADY) {
-          xdot[j] += (x_1[j] - x[j]) * (1.0 + 2 * theta) / delta_t;
-        }
+            if (pd_glob[0]->TimeIntegration != STEADY) {
+              xdot[j] += (x_1[j] - x[j]) * (1.0 + 2 * theta) / delta_t;
+            }
 
-        dx_col[j] = dx;
+            dx_col[j] = dx;
+            count++;
 #ifdef DEBUG_FD_COLORING
-        count++;
 #endif
-        my_node_num = idv[pg->imtrx][j][2];
+            my_node_num = idv[pg->imtrx][j][2];
 
-        for (i = exo->node_elem_pntr[my_node_num]; i < exo->node_elem_pntr[my_node_num + 1]; i++) {
-          my_elem_num = exo->node_elem_list[i];
-          if (elem_list == NULL) {
-            elem_list = malloc(sizeof(IntLinkedList));
-            elem_list->val = my_elem_num;
-            elem_list->next = NULL;
-#ifdef DEBUG_FD_COLORING
-            elem_count++;
-#endif
-          } else if (item_in_int_linked_list(elem_list, my_elem_num)) {
-            GOMA_EH(
-                GOMA_ERROR,
-                "Jacobian elem coloring error, trying to assemble already accounted for element");
-          } else {
-            int_linked_list_prepend(elem_list, my_elem_num);
-#ifdef DEBUG_FD_COLORING
-            elem_count++;
-#endif
-          }
-        }
-
-        for (i = exo->node_elem_pntr[my_node_num]; i < exo->node_elem_pntr[my_node_num + 1]; i++) {
-          my_elem_num = exo->node_elem_list[i];
-          int k;
-          for (k = exo->elem_node_pntr[my_elem_num]; k < exo->elem_node_pntr[my_elem_num + 1];
-               k++) {
-            int node_num = exo->elem_node_list[k];
-            int l;
-            for (l = exo->node_elem_pntr[node_num]; l < exo->node_elem_pntr[node_num + 1]; l++) {
-              int elem_num = exo->node_elem_list[l];
-              if (elem_num == -1) {
-                continue;
-              }
-              if (!item_in_int_linked_list(elem_list, elem_num)) {
-                int_linked_list_prepend(elem_list, elem_num);
+            for (i = exo->node_elem_pntr[my_node_num]; i < exo->node_elem_pntr[my_node_num + 1];
+                 i++) {
+              my_elem_num = exo->node_elem_list[i];
+              if (elem_list == NULL) {
+                elem_list = malloc(sizeof(IntLinkedList));
+                elem_list->val = my_elem_num;
+                elem_list->next = NULL;
 #ifdef DEBUG_FD_COLORING
                 elem_count++;
 #endif
+              } else if (item_in_int_linked_list(elem_list, my_elem_num)) {
+                GOMA_EH(GOMA_ERROR, "Jacobian elem coloring error, trying to assemble already "
+                                    "accounted for element");
+              } else {
+                int_linked_list_prepend(elem_list, my_elem_num);
+#ifdef DEBUG_FD_COLORING
+                elem_count++;
+#endif
+              }
+            }
+
+            for (i = exo->node_elem_pntr[my_node_num]; i < exo->node_elem_pntr[my_node_num + 1];
+                 i++) {
+              my_elem_num = exo->node_elem_list[i];
+              int k;
+              for (k = exo->elem_node_pntr[my_elem_num]; k < exo->elem_node_pntr[my_elem_num + 1];
+                   k++) {
+                int node_num = exo->elem_node_list[k];
+                int l;
+                for (l = exo->node_elem_pntr[node_num]; l < exo->node_elem_pntr[node_num + 1];
+                     l++) {
+                  int elem_num = exo->node_elem_list[l];
+                  if (elem_num == -1) {
+                    continue;
+                  }
+                  if (!item_in_int_linked_list(elem_list, elem_num)) {
+                    int_linked_list_prepend(elem_list, elem_num);
+#ifdef DEBUG_FD_COLORING
+                    elem_count++;
+#endif
+                  }
+                }
               }
             }
           }
@@ -548,6 +570,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
     zero_detJ = FALSE;
 
     IntLinkedList *elptr;
+    if (count > 0) {
     for (elptr = elem_list; elptr != NULL; elptr = elptr->next) {
       int ielem = elptr->val;
       int ebn;
@@ -569,6 +592,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
       if (err)
         retval = -1;
       zeroCA = -1;
+    }
     }
 
 #ifdef DEBUG_FD_COLORING
@@ -612,12 +636,12 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
             }
           }
 
-          // for (mode = 0; mode < vn->modes; mode++) {
-          //   /* Only for stress terms */
-          //   //        if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
-          //   //            idv[pg->imtrx][i][0] <= v_s[mode][2][2]) ||
-          //   if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
-          //        idv[pg->imtrx][i][0] <= v_s[mode][2][2])) {
+          for (mode = 0; mode < vn->modes; mode++) {
+            /* Only for stress terms */
+            //        if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
+            //            idv[pg->imtrx][i][0] <= v_s[mode][2][2]) ||
+            if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] &&
+                 idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
           //
           if (Inter_Mask[pg->imtrx][var_i][var_j]) {
 
@@ -637,8 +661,8 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
               nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx_col[j]);
             }
           }
-          //   }
-          // } // Loop over modes
+             }
+           } // Loop over modes
         }
       }
     }

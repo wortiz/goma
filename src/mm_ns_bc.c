@@ -7575,6 +7575,7 @@ void stress_no_v_dot_gradS(double func[MAX_MODES][6],
 } /* END of routine stress_no_v_dot_gradS                                    */
 /*****************************************************************************/
 
+
 void stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                                 double d_func[MAX_MODES][6][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
                                 const double dt,
@@ -7596,7 +7597,7 @@ void stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
  *  This routine is adjusted for the log-conformation tensor
  *****************************************************************************/
 {
-
+#if 0
   int i, j, eqn, a, b, mode, w, k;
   int siz;
   int R_s[MAX_MODES][DIM][DIM];
@@ -7957,6 +7958,7 @@ void stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
       }       // a loop
     }
   } /* End of loop over modes */
+#endif
 } /* END of routine stress_no_v_dot_gradS_logc                                 */
 
 void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],

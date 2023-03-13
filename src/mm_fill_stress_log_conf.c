@@ -56,18 +56,12 @@ extern FSUB_TYPE dsyev_(char *JOBZ,
 #define ASSEMBLE_STRESS_LOG_CONF_NEW
 #ifdef ASSEMBLE_STRESS_LOG_CONF_NEW
 
-void advective_decomposition(dbl grad_v[DIM][DIM],
+void advective_decomposition(int mode,
+                             dbl grad_v[DIM][DIM],
                              dbl xi,
-                             dbl s[DIM][DIM],
-                             dbl R[DIM][DIM],
-                             dbl R_T[DIM][DIM],
-                             dbl eig_values[DIM],
-                             dbl d_R[DIM][DIM][DIM][DIM],
-                             dbl d_R_T[DIM][DIM][DIM][DIM],
-                             dbl d_eig_values[DIM][DIM][DIM],
                              bool compute_jacobian_entries,
                              dbl advective_term[DIM][DIM],
-                             dbl d_advective_term_ds[DIM][DIM][DIM][DIM]) {
+                             dbl d_advective_term_ds[DIM][DIM][DIM][DIM][MDE]) {
   dbl inner[DIM][DIM] = {{0.}};
   dbl M[DIM][DIM] = {{0.}};
   dbl w[DIM][DIM] = {{0.}};
@@ -90,90 +84,187 @@ void advective_decomposition(dbl grad_v[DIM][DIM],
     }
   }
 
-  tensor_dot(R_T, inner, tmp, VIM);
-  tensor_dot(tmp, R, M, VIM);
+  tensor_dot(fv->log_c->R_T[mode], inner, tmp, VIM);
+  tensor_dot(tmp, fv->log_c->R[mode], M, VIM);
 
   for (int i = 0; i < VIM; i++) {
     M_eye[i][i] = M[i][i];
     for (int j = 0; j < VIM; j++) {
       if (j > i) {
-        w[i][j] = (eig_values[j] * M[i][j] + eig_values[i] * M[j][i]) /
-                  (eig_values[j] - eig_values[i] + 1e-16);
+        w[i][j] =
+            (fv->log_c->eig_values[mode][j] * M[i][j] + fv->log_c->eig_values[mode][i] * M[j][i]) /
+            (fv->log_c->eig_values[mode][j] - fv->log_c->eig_values[mode][i] + 1e-16);
         w[j][i] = -w[i][j];
       }
     }
   }
 
-  tensor_dot(R, w, tmp, VIM);
-  tensor_dot(tmp, R_T, omega, VIM);
+  tensor_dot(fv->log_c->R[mode], w, tmp, VIM);
+  tensor_dot(tmp, fv->log_c->R_T[mode], omega, VIM);
 
-  tensor_dot(R, M_eye, tmp, VIM);
-  tensor_dot(tmp, R_T, B, VIM);
+  tensor_dot(fv->log_c->R[mode], M_eye, tmp, VIM);
+  tensor_dot(tmp, fv->log_c->R_T[mode], B, VIM);
 
   dbl omega_s[DIM][DIM];
   dbl s_omega[DIM][DIM];
-  tensor_dot(omega, s, omega_s, VIM);
-  tensor_dot(s, omega, s_omega, VIM);
+  tensor_dot(omega, fv->S[mode], omega_s, VIM);
+  tensor_dot(fv->S[mode], omega, s_omega, VIM);
   for (int i = 0; i < VIM; i++) {
     for (int j = 0; j < VIM; j++) {
       advective_term[i][j] = -(omega_s[i][j] - s_omega[i][j]) - 2 * B[i][j];
+      //advective_term[i][j] = w[i][j] - 2 * B[i][j];
     }
   }
+
   if (compute_jacobian_entries) {
+    int v_s[MAX_MODES][DIM][DIM];
+    (void)stress_eqn_pointer(v_s);
     dbl d_tmp[DIM][DIM];
     for (int p = 0; p < VIM; p++) {
       for (int q = 0; q < VIM; q++) {
-        dbl d_M[DIM][DIM] = {{0.}};
-        tensor_dot(d_R_T[p][q], inner, tmp, VIM);
-        tensor_dot(tmp, R, d_tmp, VIM);
+        int var = v_s[mode][p][q];
+        for (int k = 0; k < ei[pg->imtrx]->dof[var]; k++) {
+          dbl d_M[DIM][DIM] = {{0.}};
+          tensor_dot(fv->log_c->d_R_T_ds[mode][p][q][k], inner, tmp, VIM);
+          tensor_dot(tmp, fv->log_c->R[mode], d_tmp, VIM);
 
-        for (int i = 0; i < VIM; i++) {
-          for (int j = 0; j < VIM; j++) {
-            d_M[i][j] += d_tmp[i][j];
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_M[i][j] += d_tmp[i][j];
+            }
           }
-        }
 
-        tensor_dot(R_T, inner, tmp, VIM);
-        tensor_dot(tmp, d_R[p][q], d_tmp, VIM);
+          tensor_dot(fv->log_c->R_T[mode], inner, tmp, VIM);
+          tensor_dot(tmp, fv->log_c->d_R_ds[mode][p][q][k], d_tmp, VIM);
 
-        for (int i = 0; i < VIM; i++) {
-          for (int j = 0; j < VIM; j++) {
-            d_M[i][j] += d_tmp[i][j];
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_M[i][j] += d_tmp[i][j];
+            }
           }
-        }
 
-        for (int i = 0; i < VIM; i++) {
-          M_eye[i][i] = M[i][i];
-          for (int j = 0; j < VIM; j++) {
-            if (i != j) {
-              w[i][j] = (eig_values[j] * M[i][j] - eig_values[i] * M[j][i]) /
-                        (eig_values[j] - eig_values[i] + 1e-16);
-              if (j < i) {
-                w[i][j] *= -1.;
+          dbl d_w[DIM][DIM] = {{0.}};
+          dbl d_M_eye[DIM][DIM] = {{0.}};
+
+          for (int i = 0; i < VIM; i++) {
+            d_M_eye[i][i] = d_M[i][i];
+            M_eye[i][i] = M[i][i];
+            for (int j = 0; j < VIM; j++) {
+              if (j > i) {
+                d_w[i][j] =
+                    (fv->log_c->eig_values[mode][j] * d_M[i][j] +
+                     fv->log_c->d_eig_values_ds[mode][p][q][k][j] * M[i][j] +
+                     fv->log_c->eig_values[mode][i] * d_M[j][i] +
+                     fv->log_c->d_eig_values_ds[mode][p][q][k][i] * M[j][i]) /
+                    (fv->log_c->eig_values[mode][j] - fv->log_c->eig_values[mode][i] + 1e-16);
+                d_w[i][j] +=
+                    -((fv->log_c->d_eig_values_ds[mode][p][q][k][j] -
+                       fv->log_c->d_eig_values_ds[mode][p][q][k][i]) *
+                      (fv->log_c->eig_values[mode][j] * M[i][j] +
+                       fv->log_c->eig_values[mode][i] * M[j][i]) /
+                      (pow(fv->log_c->eig_values[mode][j] - fv->log_c->eig_values[mode][i] + 1e-16,
+                           2.0)));
+                d_w[j][i] = -d_w[i][j];
               }
             }
           }
+
+          dbl d_omega[DIM][DIM] = {{0.}};
+          dbl d_B[DIM][DIM] = {{0.}};
+          tensor_dot(fv->log_c->d_R_T_ds[mode][p][q][k], w, tmp, VIM);
+          tensor_dot(tmp, fv->log_c->R[mode], d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_omega[i][j] += d_tmp[i][j];
+            }
+          }
+
+          tensor_dot(fv->log_c->R_T[mode], d_w, tmp, VIM);
+          tensor_dot(tmp, fv->log_c->R[mode], d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_omega[i][j] += d_tmp[i][j];
+            }
+          }
+
+          tensor_dot(fv->log_c->R_T[mode], w, tmp, VIM);
+          tensor_dot(tmp, fv->log_c->d_R_ds[mode][p][q][k], d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_omega[i][j] += d_tmp[i][j];
+            }
+          }
+
+          tensor_dot(fv->log_c->d_R_T_ds[mode][p][q][k], M_eye, tmp, VIM);
+          tensor_dot(tmp, fv->log_c->R[mode], d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_B[i][j] += d_tmp[i][j];
+            }
+          }
+
+          tensor_dot(fv->log_c->R_T[mode], d_M_eye, tmp, VIM);
+          tensor_dot(tmp, fv->log_c->R[mode], d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_B[i][j] += d_tmp[i][j];
+            }
+          }
+
+          tensor_dot(fv->log_c->R_T[mode], M_eye, tmp, VIM);
+          tensor_dot(tmp, fv->log_c->d_R_ds[mode][p][q][k], d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_B[i][j] += d_tmp[i][j];
+            }
+          }
+
+          dbl d_omega_s[DIM][DIM] = {{0.}};
+          dbl d_s_omega[DIM][DIM] = {{0.}};
+          dbl d_s[DIM][DIM] = {{0.}};
+          d_s[p][q] = bf[var]->phi[k];
+          tensor_dot(omega, d_s, d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_omega_s[i][j] += d_tmp[i][j];
+            }
+          }
+          tensor_dot(d_omega, fv->S[mode], d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_omega_s[i][j] += d_tmp[i][j];
+            }
+          }
+
+          tensor_dot(fv->S[mode], d_omega, d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_s_omega[i][j] += d_tmp[i][j];
+            }
+          }
+          tensor_dot(d_s, omega, d_tmp, VIM);
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_s_omega[i][j] += d_tmp[i][j];
+            }
+          }
+
+          for (int i = 0; i < VIM; i++) {
+            for (int j = 0; j < VIM; j++) {
+              d_advective_term_ds[i][j][p][q][k] =
+                  -(d_omega_s[i][j] - d_s_omega[i][j]) - 2 * d_B[i][j];
+                  // d_w[i][j] - 2 * d_B[i][j];
+            }
+          }
         }
-
-        tensor_dot(R_T, w, tmp, VIM);
-        tensor_dot(tmp, R, omega, VIM);
-
-        tensor_dot(R_T, M_eye, tmp, VIM);
-        tensor_dot(tmp, R, B, VIM);
       }
     }
   }
 }
 
 void source_term_logc(int mode,
-                      dbl eig_values[DIM],
-                      dbl R[DIM][DIM],
-                      dbl R_T[DIM][DIM],
-                      dbl d_eig_values[DIM][DIM][DIM],
-                      dbl d_R[DIM][DIM][DIM][DIM],
-                      dbl d_R_T[DIM][DIM][DIM][DIM],
                       dbl source_term[DIM][DIM],
-                      dbl d_source_term[DIM][DIM][DIM][DIM]) {
+                      dbl d_source_term[DIM][DIM][DIM][DIM][MDE]) {
   dbl lambda = 0;
   if (ve[mode]->time_constModel == CONSTANT) {
     lambda = ve[mode]->time_const;
@@ -185,50 +276,68 @@ void source_term_logc(int mode,
     dbl tmp[DIM][DIM];
     dbl inner[DIM][DIM] = {{0.}};
     for (int i = 0; i < VIM; i++) {
-      inner[i][i] = (1.0 / lambda) * (1.0 - 1.0 / (eig_values[i] + 1e-16));
+      inner[i][i] = (1.0 / lambda) * (1.0 - 1.0 / (fv->log_c->eig_values[mode][i] + 1e-16));
+      inner[i][i] = (1.0/lambda) + (1.0/lambda) * (-(1.0 / (fv->log_c->eig_values[mode][i] + 1e-16)));
     }
 
-    tensor_dot(R, inner, tmp, VIM);
-    tensor_dot(tmp, R_T, source_term, VIM);
+    tensor_dot(fv->log_c->R[mode], inner, tmp, VIM);
+    tensor_dot(tmp, fv->log_c->R_T[mode], source_term, VIM);
+              for (int i = 0; i < VIM; i++) {
+                for (int j = 0; j < VIM; j++) {
+                  source_term[i][j] = fv->log_c->eig_values[mode][i];
+                }
+              }
 
     if (af->Assemble_Jacobian && d_source_term != NULL) {
-      memset(d_source_term, 0, sizeof(dbl) * DIM * DIM * DIM * DIM);
-
+      memset(d_source_term, 0, sizeof(dbl)*DIM*DIM*DIM*DIM*MDE);
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
           if (q >= p) {
-            dbl d_inner[DIM][DIM] = {{0.}};
-            dbl d_tmp[DIM][DIM] = {{0.}};
-            for (int i = 0; i < VIM; i++) {
-              d_inner[i][i] = (1.0 / lambda) * (1.0 / (d_eig_values[p][q][i] + 1e-16) - 1.0);
-            }
+            for (int k = 0; k < ei[pg->imtrx]->dof[POLYMER_STRESS11]; k++) {
 
-            tensor_dot(R, d_inner, tmp, VIM);
-            tensor_dot(tmp, R_T, d_tmp, VIM);
-            for (int i = 0; i < VIM; i++) {
-              for (int j = 0; j < VIM; j++) {
-                d_source_term[p][q][i][j] += d_tmp[i][j];
+              dbl d_inner[DIM][DIM] = {{0.}};
+              dbl d_tmp[DIM][DIM] = {{0.}};
+              for (int i = 0; i < VIM; i++) {
+                d_inner[i][i] =
+                    (1.0 / lambda) *
+                    (fv->log_c->d_eig_values_ds[mode][p][q][k][i]/(pow(fv->log_c->eig_values[mode][i] + 1e-16,2.0)));
               }
-            }
-            tensor_dot(d_R[p][q], inner, tmp, VIM);
-            tensor_dot(tmp, R_T, d_tmp, VIM);
-            for (int i = 0; i < VIM; i++) {
-              for (int j = 0; j < VIM; j++) {
-                d_source_term[p][q][i][j] += d_tmp[i][j];
+
+
+              for (int i = 0; i < VIM; i++) {
+                for (int j = 0; j < VIM; j++) {
+                  d_source_term[i][j][p][q][k] += fv->log_c->d_eig_values_ds[mode][p][q][k][i];
+                }
               }
-            }
-            tensor_dot(R, inner, tmp, VIM);
-            tensor_dot(tmp, d_R_T[p][q], d_tmp, VIM);
-            for (int i = 0; i < VIM; i++) {
-              for (int j = 0; j < VIM; j++) {
-                d_source_term[p][q][i][j] += d_tmp[i][j];
-              }
+
+              //tensor_dot(fv->log_c->R[mode], d_inner, tmp, VIM);
+              //tensor_dot(tmp, fv->log_c->R_T[mode], d_tmp, VIM);
+              //for (int i = 0; i < VIM; i++) {
+              //  for (int j = 0; j < VIM; j++) {
+              //    d_source_term[i][j][p][q][k] += d_tmp[i][j];
+              //  }
+              //}
+              //tensor_dot(fv->log_c->d_R_ds[mode][p][q][k], inner, tmp, VIM);
+              //tensor_dot(tmp, fv->log_c->R_T[mode], d_tmp, VIM);
+              //for (int i = 0; i < VIM; i++) {
+              //  for (int j = 0; j < VIM; j++) {
+              //    d_source_term[i][j][p][q][k] += d_tmp[i][j];
+              //  }
+              //}
+              //tensor_dot(fv->log_c->R[mode], inner, tmp, VIM);
+              //tensor_dot(tmp, fv->log_c->d_R_T_ds[mode][p][q][k], d_tmp, VIM);
+              //for (int i = 0; i < VIM; i++) {
+              //  for (int j = 0; j < VIM; j++) {
+              //    d_source_term[i][j][p][q][k] += d_tmp[i][j];
+              //  }
+              //}
             }
           }
         }
       }
     }
   } break;
+#if 0
   case GIESEKUS: {
     // Giesekus mobility parameter
     dbl alpha = ve[mode]->alpha;
@@ -245,6 +354,7 @@ void source_term_logc(int mode,
     tensor_dot(R, source_term, tmp, VIM);
     tensor_dot(tmp, R_T, source_term, VIM);
   } break;
+#endif
   default:
     GOMA_EH(GOMA_ERROR, "Unknown constitutive equation for log conformation");
   }
@@ -304,26 +414,18 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
   // Loop over modes
   for (int mode = 0; mode < vn->modes; mode++) {
     // Load up constants and some pointers
-    dbl s[DIM][DIM], exp_s[DIM][DIM];
-    dbl R[DIM][DIM], R_T[DIM][DIM];
-    dbl eig_values[DIM];
+    dbl s[DIM][DIM];
     dbl s_dot[DIM][DIM];
     dbl grad_s[DIM][DIM][DIM];
     dbl d_grad_s_dmesh[DIM][DIM][DIM][DIM][MDE];
     load_modal_pointers(mode, tt, dt, s, s_dot, grad_s, d_grad_s_dmesh);
-    compute_exp_s(s, exp_s, eig_values, R);
-    // analytical_exp_s(s, exp_s, eig_values, R, NULL, NULL, NULL);
-    for (int i = 0; i < VIM; i++) {
-      for (int j = 0; j < VIM; j++) {
-        R_T[i][j] = R[j][i];
-      }
-    }
 
     dbl source_term[DIM][DIM];
+    dbl d_source_term_ds[DIM][DIM][DIM][DIM][MDE];
     dbl advective_term[DIM][DIM];
-    advective_decomposition(g, xi, s, R, R_T, eig_values, NULL, NULL, NULL, false, advective_term,
-                            NULL);
-    source_term_logc(mode, eig_values, R, R_T, NULL, NULL, NULL, source_term, NULL);
+    dbl d_advective_term_ds[DIM][DIM][DIM][DIM][MDE];
+    advective_decomposition(mode, g, xi, true, advective_term, d_advective_term_ds);
+    source_term_logc(mode, source_term, d_source_term_ds);
     if (af->Assemble_Residual) {
       for (int a = 0; a < VIM; a++) {
         for (int b = 0; b < VIM; b++) {
@@ -368,7 +470,7 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
 
               dbl source = 0.0;
               if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                source += source_term[a][b];
+                source += source_term[b][b];
                 source *= wt_func * det_J * h3 * wt;
                 source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
               }
@@ -402,51 +504,9 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                */
               for (int p = 0; p < VIM; p++) {
                 for (int q = 0; q < VIM; q++) {
+                  if (p <= q) {
                   int var = v_s[mode][p][q];
                   if (pd->v[pg->imtrx][var]) {
-                    dbl s_p[DIM][DIM];
-                    dbl s_n[DIM][DIM];
-
-                    for (int ii = 0; ii < VIM; ii++) {
-                      for (int jj = 0; jj < VIM; jj++) {
-                        s_p[ii][jj] = fv->S[mode][ii][jj];
-                        s_n[ii][jj] = fv->S[mode][ii][jj];
-                      }
-                    }
-
-                    dbl exp_s_p[DIM][DIM];
-                    dbl R_p[DIM][DIM];
-                    dbl R_T_p[DIM][DIM];
-                    dbl eig_values_p[DIM];
-                    dbl d_s_p = MAX((1e-10), (1e-10) * fabs(s[p][q]));
-                    dbl exp_s_n[DIM][DIM];
-                    dbl R_n[DIM][DIM];
-                    dbl R_T_n[DIM][DIM];
-                    dbl eig_values_n[DIM];
-                    s_p[p][q] -= d_s_p;
-                    s_n[p][q] += d_s_p;
-
-                    compute_exp_s(s_n, exp_s_n, eig_values_n, R_n);
-                    compute_exp_s(s_p, exp_s_p, eig_values_p, R_p);
-                    for (int ii = 0; ii < VIM; ii++) {
-                      for (int jj = 0; jj < VIM; jj++) {
-                        R_T_p[ii][jj] = R_p[jj][ii];
-                        R_T_n[ii][jj] = R_n[jj][ii];
-                      }
-                    }
-                    dbl advective_term_p[DIM][DIM];
-                    dbl advective_term_n[DIM][DIM];
-                    advective_decomposition(g, xi, s_n, R_n, R_T_n, eig_values_n, NULL, NULL, NULL,
-                                            false, advective_term_n, NULL);
-                    advective_decomposition(g, xi, s_p, R_p, R_T_p, eig_values_p, NULL, NULL, NULL,
-                                            false, advective_term_p, NULL);
-
-                    dbl source_term_p[DIM][DIM];
-                    dbl source_term_n[DIM][DIM];
-                    source_term_logc(mode, eig_values_n, R_n, R_T_n, NULL, NULL, NULL,
-                                     source_term_n, NULL);
-                    source_term_logc(mode, eig_values_p, R_p, R_T_p, NULL, NULL, NULL,
-                                     source_term_p, NULL);
 
                     int pvar = upd->vp[pg->imtrx][var];
                     for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
@@ -473,10 +533,7 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                           }
                         }
 
-                        // finite difference approximation
-                        advection +=
-                            ((advective_term_n[a][b] - advective_term_p[a][b]) / (2.0 * d_s_p)) *
-                            bf[var]->phi[j];
+                        advection += d_advective_term_ds[a][b][p][q][j];
 
                         advection *= h3 * det_J;
 
@@ -485,13 +542,13 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
 
                       dbl source = 0;
                       if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                        source += ((source_term_n[a][b] - source_term_p[a][b]) / (2.0 * d_s_p)) *
-                                  bf[var]->phi[j];
+                        source += d_source_term_ds[b][b][p][q][j];
                         source *= wt_func * det_J * h3 * wt;
                         source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
                       }
                       lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + source;
                     }
+                  }
                   }
                 }
               }
@@ -516,8 +573,7 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
                     dbl d_g[DIM][DIM] = {{0.}};
                     d_g[p][q] = 1.0;
                     dbl d_advective_term[DIM][DIM];
-                    advective_decomposition(d_g, xi, s, R, R_T, eig_values, NULL, NULL, NULL, false,
-                                            d_advective_term, NULL);
+                    advective_decomposition(mode, d_g, xi, false, d_advective_term, NULL);
 
                     int pvar = upd->vp[pg->imtrx][var];
                     for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {

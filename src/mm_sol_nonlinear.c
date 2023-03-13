@@ -874,6 +874,28 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
          is properly communicated */
       exchange_dof(cx, dpi, x, pg->imtrx);
 
+      
+      dbl *x_scale = pg->x_scale;
+      int *x_count = pg->x_count;
+      memset(x_scale, 0, (MAX_VARIABLE_TYPES) * sizeof(dbl));
+      memset(x_count, 0, (MAX_VARIABLE_TYPES) * sizeof(int));
+      for (int i = 0; i < numProcUnknowns; i++) {
+        int var_i = idv[pg->imtrx][i][0];
+        x_count[var_i]++;
+        x_scale[var_i] += x[i] * x[i];
+      }
+      dbl x_scale_glob[MAX_VARIABLE_TYPES];
+      int x_count_glob[MAX_VARIABLE_TYPES];
+
+      MPI_Allreduce(x_scale, x_scale_glob, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(x_count, x_count_glob, MAX_VARIABLE_TYPES, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      for (int i = 0; i < MAX_VARIABLE_TYPES; i++) {
+        if (x_count[i] > 0) {
+          x_scale[i] = sqrt(x_scale_glob[i] / x_count_glob[i]);
+        }
+      }
+
+
       err = matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update,
                              &delta_t, &theta, First_Elem_Side_BC_Array[pg->imtrx], &time_value,
                              exo, dpi, &num_total_nodes, &h_elem_avg, &U_norm, NULL);
@@ -885,15 +907,16 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
       bool enable_numerical_jacobian = false;
-      // for (int mn = 0; mn < upd->Num_Mat; mn++) {
-      //   if (((vn_glob[mn]->evssModel == LOG_CONF || vn_glob[mn]->evssModel == LOG_CONF_GRADV ||
-      //         vn_glob[mn]->evssModel == CONF) &&
-      //        pd_glob[mn]->v[pg->imtrx][POLYMER_STRESS11]) ||
-      //       ((pd_glob[mn]->v[pg->imtrx][EM_E1_REAL] && pd_glob[mn]->v[pg->imtrx][EM_H1_REAL]))) {
-      //     enable_numerical_jacobian = true;
-      //     break;
-      //   }
-      // }
+      for (int mn = 0; mn < upd->Num_Mat; mn++) {
+        if (((vn_glob[mn]->evssModel == LOG_CONF || vn_glob[mn]->evssModel == LOG_CONF_GRADV ||
+              vn_glob[mn]->evssModel == CONF) &&
+             pd_glob[mn]->v[pg->imtrx][POLYMER_STRESS11]) ||
+            ((pd_glob[mn]->v[pg->imtrx][EM_E1_REAL] && pd_glob[mn]->v[pg->imtrx][EM_H1_REAL]))) {
+          enable_numerical_jacobian = true;
+          break;
+        }
+      }
+      enable_numerical_jacobian = false;
 
       if (enable_numerical_jacobian && af->Assemble_Jacobian == TRUE) {
         err = numerical_jacobian_compute_stress(ams, x, resid_vector, delta_t, theta, x_old,
