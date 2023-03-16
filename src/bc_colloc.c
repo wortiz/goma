@@ -178,8 +178,11 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
       err = load_bf_grad();
       GOMA_EH(err, "load_bf_grad");
 
-      err = load_bf_mesh_derivs();
-      GOMA_EH(err, "load_bf_mesh_derivs");
+      if (pd->gv[R_MESH1]) {
+        err = load_bf_mesh_derivs();
+        GOMA_EH(err, "load_bf_mesh_derivs");
+      }
+
 
       /* calculate the shape functions and their gradients */
 
@@ -192,6 +195,14 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
       if (ielem_dim != 3 && ielem_dim == pd->Num_Dim) {
         calc_surf_tangent(ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
                           (int)elem_side_bc->num_nodes_on_side, (elem_side_bc->local_elem_node_id));
+      }
+
+      err = load_fv_grads();
+      GOMA_EH(err, "load_fv_grads");
+
+      if (pd->gv[R_MESH1]) {
+        err = load_fv_mesh_derivs(1);
+        GOMA_EH(err, "load_fv_mesh_derivs");
       }
 
       /*
@@ -588,17 +599,19 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                * one entry for vector conditions like capillary */
               memset(kfunc, 0, DIM * sizeof(double));
               memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
-              //              if (goma_automatic_rotations.rotation_nodes == NULL) {
               fvelo_normal_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0],
                               contact_flag = FALSE, x_dot, theta, delta_t,
                               (int)BC_Types[bc_input_id].BC_Name, 0, 0, 135.0);
-              //              } else {
-              //              fvelo_normal_auto_bc(kfunc, d_kfunc,
-              //                              BC_Types[bc_input_id].BC_Data_Float[0], contact_flag =
-              //                              FALSE, x_dot, theta, delta_t, (int)
-              //                              BC_Types[bc_input_id].BC_Name,0,0, 135.0,
-              //                              elem_side_bc->id_side, I);
-              //              }
+              doFullJac = 1;
+              func = kfunc[0];
+              break;
+            case SPRING_ROLL_COLLOC_BC:
+            case SPRING_ROLL_Y_COLLOC_BC:
+              /* initialize the general function to zero may have more than
+               * one entry for vector conditions like capillary */
+              memset(kfunc, 0, DIM * sizeof(double));
+              memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
+              fspring_roll_bc(&kfunc[0], d_kfunc[0], BC_Types[bc_input_id].BC_Data_Float);
               doFullJac = 1;
               func = kfunc[0];
               break;
@@ -759,7 +772,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                        * pointer to this entry *
                        * if it exists, add sens into matrix
                        */
-                      if (Dolphin[pg->imtrx][I][var] > 0) {
+                      if (1 || Dolphin[pg->imtrx][I][var] > 0) {
                         if (!doFullJac) {
                           ldof_var = ei[pg->imtrx]->ln_to_first_dof[var][id];
                           if (ldof_var != -1) {

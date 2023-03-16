@@ -346,6 +346,99 @@ void ls_attach_bc(double func[DIM],
   return;
 }
 
+void fspring_roll_bc(double *func,
+                     double d_func[MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                     dbl *BC_Data_Float) {
+  dbl Pi[DIM][DIM];
+  STRESS_DEPENDENCE_STRUCT d_Pi_struct;
+  STRESS_DEPENDENCE_STRUCT *d_Pi = &d_Pi_struct;
+  memset(d_Pi, 0, sizeof(STRESS_DEPENDENCE_STRUCT));
+
+  dbl K = BC_Data_Float[0];
+  dbl roll_center[DIM] = {BC_Data_Float[1], BC_Data_Float[2], 0.};
+
+  // Assume undeformed coordinates are consistent with the roll
+  dbl X0[DIM] = {fv->x0[0] + roll_center[0], fv->x0[1]+roll_center[1], fv->x0[2] + roll_center[2]};
+
+  dbl N0[DIM] = {
+      X0[0] - roll_center[0],
+      X0[1] - roll_center[1],
+      X0[2] - roll_center[2],
+  };
+
+  dbl inv_N0_norm = 0;
+  for (int p = 0; p < pd->Num_Dim; p++) {
+    inv_N0_norm += N0[p] * N0[p];
+  }
+  inv_N0_norm = 1.0 / sqrt(inv_N0_norm);
+
+  for (int p = 0; p < pd->Num_Dim; p++) {
+    N0[p] *= inv_N0_norm;
+  }
+
+  if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV || vn->evssModel == CONF) {
+    fluid_stress_conf(Pi, d_Pi);
+  } else if (vn->evssModel == SQRT_CONF) {
+    fluid_stress_sqrt_conf(Pi, d_Pi);
+  } else {
+    fluid_stress(Pi, d_Pi);
+  }
+
+  func[0] = 0;
+  for (int kdir = 0; kdir < pd->Num_Dim; kdir++) {
+    *func += (fv->x[kdir] - X0[kdir]) * N0[kdir];
+  }
+
+  for (int p = 0; p < pd->Num_Dim; p++) {
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      *func += (1.0 / K) * N0[p] * fv->snormal[q] * Pi[p][q];
+    }
+  }
+
+  if (af->Assemble_Jacobian) {
+
+    for (int b = 0; b < pd->Num_Dim; b++) {
+      int var = MESH_DISPLACEMENT1 + b;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          dbl phi_j = bf[var]->phi[j];
+          d_func[var][j] += phi_j * N0[b];
+
+          for (int p = 0; p < pd->Num_Dim; p++) {
+            for (int q = 0; q < pd->Num_Dim; q++) {
+              d_func[var][j] += (1.0 / K) * N0[p] * fv->dsnormal_dx[q][b][j] * Pi[p][q];
+              d_func[var][j] += (1.0 / K) * N0[p] * fv->snormal[q] * d_Pi->X[p][q][b][j];
+            }
+          }
+        }
+      }
+    }
+
+    for (int b = 0; b < VIM; b++) {
+      int var = VELOCITY1 + b;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (int p = 0; p < pd->Num_Dim; p++) {
+            for (int q = 0; q < pd->Num_Dim; q++) {
+              d_func[var][j] += (1.0 / K) * N0[p] * fv->snormal[q] * d_Pi->v[p][q][b][j];
+            }
+          }
+        }
+      }
+    }
+    int var = PRESSURE;
+    if (pd->v[pg->imtrx][var]) {
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        for (int p = 0; p < pd->Num_Dim; p++) {
+          for (int q = 0; q < pd->Num_Dim; q++) {
+            d_func[var][j] += (1.0 / K) * N0[p] * fv->snormal[q] * d_Pi->P[p][q][j];
+          }
+        }
+      }
+    }
+  } /* end of if Assemble_Jacobian */
+}
+
 /*****************************************************************************/
 /****************************************************************************/
 void fvelo_normal_bc(double func[DIM],
@@ -1973,6 +2066,67 @@ void fvelo_tangent_3d(double func[MAX_PDIM],
 
 } /* END of routine fvelo_tangential_3d  */
 
+void fvelo_tangential_roll_bc(double func[],
+                              double d_func[MAX_PDIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                              dbl roll_rotation_rate,
+                              dbl roll_center_x,
+                              dbl roll_center_y) {
+
+  dbl rate = roll_rotation_rate;
+  dbl N0[DIM] = {fv->x0[0] - roll_center_x, fv->x0[1] - roll_center_y, 0.};
+
+  dbl R = sqrt(N0[0] * N0[0] + N0[1] * N0[1]);
+
+  dbl V_rig = rate * R;
+
+  dbl V_tan = 0;
+  for (int i = 0; i < VIM; i++) {
+    V_tan += N0[i] * fv->snormal[i];
+  }
+  V_tan = V_rig / V_tan;
+
+  /* Calculate the residual contribution	*/
+  if (pd->Num_Dim == 2) {
+    /*  Velo-tangent bc	*/
+    *func = V_tan;
+    for (int p = 0; p < VIM; p++) {
+      *func += fv->stangent[0][p] * fv->v[p];
+    }
+  } else if (pd->Num_Dim == 3) {
+    GOMA_EH(GOMA_ERROR, "Velo-tangent roll in 3D is ill-defined");
+  }
+
+  if (af->Assemble_Jacobian) {
+    for (int b = 0; b < pd->Num_Dim; b++) {
+      int var = MESH_DISPLACEMENT1 + b;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+          dbl d_V_tan = 0;
+          for (int i = 0; i < VIM; i++) {
+            d_V_tan += N0[i] * fv->dsnormal_dx[i][b][j];
+          }
+          d_V_tan = -(V_tan * V_tan / V_rig) * d_V_tan;
+
+          d_func[0][var][j] += d_V_tan;
+          for (int p = 0; p < VIM; p++) {
+            d_func[0][var][j] += fv->dstangent_dx[0][p][b][j] * fv->v[p];
+          }
+        }
+      }
+    }
+
+    for (int b = 0; b < WIM; b++) {
+      int var = VELOCITY1 + b;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          dbl phi_j = bf[var]->phi[j];
+          d_func[0][var][j] += phi_j * fv->stangent[0][b];
+        }
+      }
+    }
+  } /* end of if Assemble_Jacobian */
+}
 /****************************************************************************/
 
 void fvelo_tangential_bc(double func[],

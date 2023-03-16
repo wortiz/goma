@@ -39,6 +39,8 @@
 EXTERN void
 ls_attach_bc(double[DIM], double[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE], const double);
 
+void fspring_roll_bc(double *func, double d_func[MAX_VARIABLE_TYPES + MAX_CONC][MDE], dbl *BC_Data_Float);
+
 EXTERN void fvelo_normal_bc(double[DIM], /* func                                      */
                             double[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE], /* d_func           */
                             const double,           /* vnormal - normal velocity                 */
@@ -92,6 +94,13 @@ EXTERN void fmesh_etch_bc(double *, /* func                                     
                                           * from explicit (tt = 1) to
                                           * implicit (tt = 0)                         */
                           const double); /* dt - current value of the time step       */
+
+
+void fvelo_tangential_roll_bc(double func[],
+                         double d_func[MAX_PDIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                         dbl roll_rotation_velocity,
+                         dbl roll_center_x,
+                         dbl roll_center_y);
 
 EXTERN void fvelo_tangential_ls_bc(double[DIM], /* func                                      */
                                    double[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE], /* d_func */
