@@ -356,25 +356,29 @@ void fspring_roll_bc(double *func,
 
   dbl K = BC_Data_Float[0];
   dbl roll_center[DIM] = {BC_Data_Float[1], BC_Data_Float[2], 0.};
+  dbl roll_radius = BC_Data_Float[3];
 
   // Assume undeformed coordinates are consistent with the roll
-  dbl X0[DIM] = {fv->x0[0] + roll_center[0], fv->x0[1]+roll_center[1], fv->x0[2] + roll_center[2]};
+  dbl R0[DIM] = {fv->x0[0] - roll_center[0], fv->x0[1]-roll_center[1], fv->x0[2] - roll_center[2]};
 
+  dbl R0_mag = 0;
+  for (int p = 0; p < pd->Num_Dim; p++) {
+    R0_mag += R0[p] * R0[p];
+  }
+  R0_mag = sqrt(R0_mag);
+
+  
   dbl N0[DIM] = {
-      X0[0] - roll_center[0],
-      X0[1] - roll_center[1],
-      X0[2] - roll_center[2],
+      R0[0]/R0_mag,
+      R0[1]/R0_mag,
+      R0[2]/R0_mag,
   };
 
-  dbl inv_N0_norm = 0;
+  dbl X0[DIM] = {0.};
   for (int p = 0; p < pd->Num_Dim; p++) {
-    inv_N0_norm += N0[p] * N0[p];
+    X0[p] = N0[p] * roll_radius + roll_center[p];
   }
-  inv_N0_norm = 1.0 / sqrt(inv_N0_norm);
 
-  for (int p = 0; p < pd->Num_Dim; p++) {
-    N0[p] *= inv_N0_norm;
-  }
 
   if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV || vn->evssModel == CONF) {
     fluid_stress_conf(Pi, d_Pi);
@@ -384,14 +388,14 @@ void fspring_roll_bc(double *func,
     fluid_stress(Pi, d_Pi);
   }
 
-  func[0] = 0;
+  *func = 0;
   for (int kdir = 0; kdir < pd->Num_Dim; kdir++) {
-    *func += (fv->x[kdir] - X0[kdir]) * N0[kdir];
+    *func += K * (fv->x[kdir] - X0[kdir]) * N0[kdir];
   }
 
   for (int p = 0; p < pd->Num_Dim; p++) {
     for (int q = 0; q < pd->Num_Dim; q++) {
-      *func += (1.0 / K) * N0[p] * fv->snormal[q] * Pi[p][q];
+      *func += N0[p] * fv->snormal[q] * Pi[p][q];
     }
   }
 
@@ -402,12 +406,12 @@ void fspring_roll_bc(double *func,
       if (pd->v[pg->imtrx][var]) {
         for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           dbl phi_j = bf[var]->phi[j];
-          d_func[var][j] += phi_j * N0[b];
+          d_func[var][j] += K * phi_j * N0[b];
 
           for (int p = 0; p < pd->Num_Dim; p++) {
             for (int q = 0; q < pd->Num_Dim; q++) {
-              d_func[var][j] += (1.0 / K) * N0[p] * fv->dsnormal_dx[q][b][j] * Pi[p][q];
-              d_func[var][j] += (1.0 / K) * N0[p] * fv->snormal[q] * d_Pi->X[p][q][b][j];
+              d_func[var][j] += N0[p] * fv->dsnormal_dx[q][b][j] * Pi[p][q];
+              d_func[var][j] += N0[p] * fv->snormal[q] * d_Pi->X[p][q][b][j];
             }
           }
         }
@@ -420,7 +424,7 @@ void fspring_roll_bc(double *func,
         for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           for (int p = 0; p < pd->Num_Dim; p++) {
             for (int q = 0; q < pd->Num_Dim; q++) {
-              d_func[var][j] += (1.0 / K) * N0[p] * fv->snormal[q] * d_Pi->v[p][q][b][j];
+              d_func[var][j] += N0[p] * fv->snormal[q] * d_Pi->v[p][q][b][j];
             }
           }
         }
@@ -431,7 +435,7 @@ void fspring_roll_bc(double *func,
       for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         for (int p = 0; p < pd->Num_Dim; p++) {
           for (int q = 0; q < pd->Num_Dim; q++) {
-            d_func[var][j] += (1.0 / K) * N0[p] * fv->snormal[q] * d_Pi->P[p][q][j];
+            d_func[var][j] += N0[p] * fv->snormal[q] * d_Pi->P[p][q][j];
           }
         }
       }
