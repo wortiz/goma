@@ -359,7 +359,8 @@ void fspring_roll_bc(double *func,
   dbl roll_radius = BC_Data_Float[3];
 
   // Assume undeformed coordinates are consistent with the roll
-  dbl R0[DIM] = {fv->x0[0] - roll_center[0], fv->x0[1]-roll_center[1], fv->x0[2] - roll_center[2]};
+  dbl R0[DIM] = {fv->x0[0] - roll_center[0], fv->x0[1] - roll_center[1],
+                 fv->x0[2] - roll_center[2]};
 
   dbl R0_mag = 0;
   for (int p = 0; p < pd->Num_Dim; p++) {
@@ -367,18 +368,16 @@ void fspring_roll_bc(double *func,
   }
   R0_mag = sqrt(R0_mag);
 
-  
   dbl N0[DIM] = {
-      R0[0]/R0_mag,
-      R0[1]/R0_mag,
-      R0[2]/R0_mag,
+      R0[0] / R0_mag,
+      R0[1] / R0_mag,
+      R0[2] / R0_mag,
   };
 
   dbl X0[DIM] = {0.};
   for (int p = 0; p < pd->Num_Dim; p++) {
     X0[p] = N0[p] * roll_radius + roll_center[p];
   }
-
 
   if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV || vn->evssModel == CONF) {
     fluid_stress_conf(Pi, d_Pi);

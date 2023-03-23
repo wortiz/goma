@@ -183,7 +183,6 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
         GOMA_EH(err, "load_bf_mesh_derivs");
       }
 
-
       /* calculate the shape functions and their gradients */
 
       /* calculate the determinant of the surface jacobian  and the normal to
