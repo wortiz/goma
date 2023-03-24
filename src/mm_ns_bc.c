@@ -349,7 +349,7 @@ void ls_attach_bc(double func[DIM],
 void fspring_roll_bc(double *func,
                      double d_func[MAX_VARIABLE_TYPES + MAX_CONC][MDE],
                      dbl *BC_Data_Float) {
-  dbl Pi[DIM][DIM];
+  dbl Pi[DIM][DIM] = {{0.}};
   STRESS_DEPENDENCE_STRUCT d_Pi_struct;
   STRESS_DEPENDENCE_STRUCT *d_Pi = &d_Pi_struct;
   memset(d_Pi, 0, sizeof(STRESS_DEPENDENCE_STRUCT));
@@ -379,6 +379,16 @@ void fspring_roll_bc(double *func,
     X0[p] = N0[p] * roll_radius + roll_center[p];
   }
 
+#ifdef SPRING_ROLL_PRESSURE_ONLY
+  Pi[0][0] = -fv->P;
+  Pi[1][1] = -fv->P;
+  Pi[2][2] = -fv->P;
+  for (int j = 0; j < ei[pg->imtrx]->dof[PRESSURE]; j++) {
+    d_Pi->P[0][0][j] = -bf[PRESSURE]->phi[j];
+    d_Pi->P[1][1][j] = -bf[PRESSURE]->phi[j];
+    d_Pi->P[2][2][j] = -bf[PRESSURE]->phi[j];
+  }
+#else
   if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV || vn->evssModel == CONF) {
     fluid_stress_conf(Pi, d_Pi);
   } else if (vn->evssModel == SQRT_CONF) {
@@ -386,6 +396,7 @@ void fspring_roll_bc(double *func,
   } else {
     fluid_stress(Pi, d_Pi);
   }
+#endif
 
   *func = 0;
   for (int kdir = 0; kdir < pd->Num_Dim; kdir++) {
