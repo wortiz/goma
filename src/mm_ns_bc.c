@@ -2089,22 +2089,25 @@ void fvelo_tangential_roll_bc(double func[],
   dbl rate = roll_rotation_rate;
   dbl N0[DIM] = {fv->x0[0] - roll_center_x, fv->x0[1] - roll_center_y, 0.};
 
-  dbl R = sqrt(N0[0] * N0[0] + N0[1] * N0[1]);
+  dbl R0 = sqrt(N0[0] * N0[0] + N0[1] * N0[1]);
+  dbl Rvect[DIM] = {fv->x[0] - roll_center_x, fv->x[1] - roll_center_y, 0.};
+  dbl R = sqrt(Rvect[0] * Rvect[0] + Rvect[1] * Rvect[1]);
 
   dbl V_rig = rate * R;
 
   dbl V_tan = 0;
+  dbl V_tand = 0;
   for (int i = 0; i < VIM; i++) {
-    V_tan += N0[i] * fv->snormal[i];
+    N0[i] = N0[i] / R0;
+    V_tand += N0[i] * fv->snormal[i];
   }
-  V_tan = V_rig / V_tan;
+  V_tan = V_rig / V_tand;
 
   /* Calculate the residual contribution	*/
   if (pd->Num_Dim == 2) {
     /*  Velo-tangent bc	*/
-    *func = V_tan;
     for (int p = 0; p < VIM; p++) {
-      *func += fv->stangent[0][p] * fv->v[p];
+      *func += fv->stangent[0][p] * V_tan + fv->stangent[0][p] * fv->v[p];
     }
   } else if (pd->Num_Dim == 3) {
     GOMA_EH(GOMA_ERROR, "Velo-tangent roll in 3D is ill-defined");
@@ -2116,15 +2119,18 @@ void fvelo_tangential_roll_bc(double func[],
       if (pd->v[pg->imtrx][var]) {
         for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
-          dbl d_V_tan = 0;
-          for (int i = 0; i < VIM; i++) {
-            d_V_tan += N0[i] * fv->dsnormal_dx[i][b][j];
-          }
-          d_V_tan = -(V_tan * V_tan / V_rig) * d_V_tan;
+          dbl d_V_rig = rate * bf[var]->phi[j] * Rvect[b] / R;
 
-          d_func[0][var][j] += d_V_tan;
+          dbl d_V_tand = 0;
+          for (int i = 0; i < VIM; i++) {
+            d_V_tand += N0[i] * fv->dsnormal_dx[i][b][j];
+          }
+          dbl d_V_tan = d_V_rig / V_tand - V_rig * d_V_tand / (V_tand * V_tand);
+
           for (int p = 0; p < VIM; p++) {
-            d_func[0][var][j] += fv->dstangent_dx[0][p][b][j] * fv->v[p];
+            d_func[0][var][j] += fv->stangent[0][p] * d_V_tan +
+                                 fv->dstangent_dx[0][p][b][j] * V_tan +
+                                 fv->dstangent_dx[0][p][b][j] * fv->v[p];
           }
         }
       }
@@ -3309,6 +3315,7 @@ void fvelo_slip_bc(double func[MAX_PDIM],
      In 3D it spins with omega pointing in z
      direction about x0,y0  */
   /* Note: positive omega is CLOCKWISE */
+  dbl dvs_dx[DIM][DIM][MDE] = {{{0.}}};
   if (type == VELO_SLIP_ROT_BC || type == VELO_SLIP_ROT_FILL_BC || type == VELO_SLIP_ROT_FLUID_BC) {
     double factor = 1.0, current_rad, rad_input = bc_float[5];
     omega = vsx;
@@ -3323,6 +3330,48 @@ void fvelo_slip_bc(double func[MAX_PDIM],
     vs[0] = factor * omega * (fv->x[1] - X_0[1]);
     vs[1] = -factor * omega * (fv->x[0] - X_0[0]);
     vs[2] = 0.;
+  } /* if: VELO_SLIP_ROT_BC */
+  if (type == VELO_SLIP_ROLL_BC) {
+    omega = vsx;
+    X_0[0] = vsy;
+    X_0[1] = vsz;
+    dbl N0[DIM] = {fv->x0[0] - X_0[0], fv->x0[1] - X_0[0], 0.};
+
+    dbl R0 = sqrt(N0[0] * N0[0] + N0[1] * N0[1]);
+    dbl Rvect[DIM] = {fv->x[0] - X_0[0], fv->x[1] - X_0[0], 0.};
+    dbl R = sqrt(Rvect[0] * Rvect[0] + Rvect[1] * Rvect[1]);
+
+    dbl V_rig = omega * R;
+
+    dbl V_tan = 0;
+    dbl V_tand = 0;
+    for (int i = 0; i < VIM; i++) {
+      N0[i] = N0[i] / R0;
+      V_tand += N0[i] * fv->snormal[i];
+    }
+    V_tan = V_rig / V_tand;
+    vs[0] = fv->stangent[0][0] * V_tan;
+    vs[1] = fv->stangent[0][1] * V_tan;
+    vs[2] = 0.;
+    for (int b = 0; b < pd->Num_Dim; b++) {
+      int var = MESH_DISPLACEMENT1 + b;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+          dbl d_V_rig = omega * bf[var]->phi[j] * Rvect[b] / R;
+
+          dbl d_V_tand = 0;
+          for (int i = 0; i < VIM; i++) {
+            d_V_tand += N0[i] * fv->dsnormal_dx[i][b][j];
+          }
+          dbl d_V_tan = d_V_rig / V_tand - V_rig * d_V_tand / (V_tand * V_tand);
+
+          for (int p = 0; p < VIM; p++) {
+            dvs_dx[p][b][j] += fv->stangent[0][p] * d_V_tan + fv->dstangent_dx[0][p][b][j] * V_tan;
+          }
+        }
+      }
+    }
   } /* if: VELO_SLIP_ROT_BC */
 
   memset(vrel, 0, sizeof(double) * MAX_PDIM);
@@ -3580,6 +3629,7 @@ fprintf(stderr,"more %g %g %g %g\n",res,jac,betainv, dthick_dV);
             for (p = 0; p < pd->Num_Dim; p++) {
               d_func[p][var][j] +=
                   -betainv * dthick_dV * vslip[p] * tang_sgn * fv->dstangent_dx[0][p][jvar][j];
+              d_func[p][var][j] += -betainv * dvs_dx[p][jvar][j];
               if (Pflag) {
                 d_func[p][var][j] += 0.5 * thick * dthick_dV * pg_factor * fv->grad_P[p] *
                                      tang_sgn * fv->dstangent_dx[0][p][jvar][j];

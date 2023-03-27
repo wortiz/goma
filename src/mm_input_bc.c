@@ -958,6 +958,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
      */
     case VELO_SLIP_BC:
     case VELO_SLIP_ROT_BC:
+    case VELO_SLIP_ROLL_BC:
     case VELO_SLIP_FLUID_BC:
     case VELO_SLIP_ROT_FLUID_BC:
     case VELO_SLIP_FILL_BC:

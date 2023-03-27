@@ -696,6 +696,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
         case VELO_SLIP_BC:
         case VELO_SLIP_ROT_BC:
+        case VELO_SLIP_ROLL_BC:
         case VELO_SLIP_FILL_BC:
         case VELO_SLIP_ROT_FILL_BC:
         case VELO_SLIP_FLUID_BC:

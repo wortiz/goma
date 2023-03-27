@@ -883,6 +883,7 @@
 #define VELO_SLIP_EK_BC            964440000
 #define VELO_SLIP_POWER_BC         964400001
 #define VELO_SLIP_POWER_CARD_BC    964400002
+#define VELO_SLIP_ROLL_BC          964410003
 
 #define VELO_EK_3D_BC          964450000
 #define MOVING_CA_BC           964500000
