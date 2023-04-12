@@ -22,6 +22,7 @@
 #include "dpi.h"
 #include "el_elm.h"
 #include "el_elm_info.h"
+#include "el_geom.h"
 #include "exo_struct.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
@@ -741,6 +742,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                 if (BC_Types[ibc1].BC_Name == KINEMATIC_BC ||
                     BC_Types[ibc1].BC_Name == KINEMATIC_DISC_BC ||
                     BC_Types[ibc1].BC_Name == KINEMATIC_PETROV_BC ||
+                    BC_Types[ibc1].BC_Name == LUB_KINEMATIC_BC ||
                     BC_Types[ibc1].BC_Name == KINEMATIC_COLLOC_BC) {
                   for (j = 0; j < idup2; j++) {
                     ibc2 = BC_Unk_List[inode][offset_mom2][j];
@@ -1505,6 +1507,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
                              */
                           case KIN_LEAK_BC:
                           case KINEMATIC_BC:
+                          case LUB_KINEMATIC_BC:
                           case KINEMATIC_DISC_BC:
                           case KINEMATIC_COLLOC_BC:
                           case KINEMATIC_PETROV_BC:
@@ -2032,7 +2035,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
   int standard_BC, ndup, j_DC, j_PC, j_SI, j_CSWI;
   int save_this_bc[MAX_SS_PER_NODE];
   int ndup1[DIM], save_this_bc1[DIM][MAX_SS_PER_NODE];
-  int faceBC, vertexBC, edgeBC;
+  int nedelecBC, faceBC, vertexBC, edgeBC;
   FILE *ofbc = NULL;     /* output file stream handle for BC info */
   char ofbc_fn[MAX_FNL]; /* output file name for BC info */
   int matIndex, offset, retn_matIndex;
@@ -2220,10 +2223,15 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
 
         /*
          * Determine what entity this boundary condition is applied to
-         * - face, edge, or vertex.
+         * - nedelec, face, edge, or vertex
          */
-        faceBC = edgeBC = vertexBC = FALSE;
-        if (BC_Types[ibc].BC_ID != -1 && BC_Types[ibc].BC_ID2 == -1 && BC_Types[ibc].BC_ID3 == -1) {
+        nedelecBC = faceBC = edgeBC = vertexBC = FALSE;
+        if ((BC_Types[ibc].desc->method == WEAK_INT_NEDELEC ||
+             BC_Types[ibc].desc->method == STRONG_INT_NEDELEC) &&
+            BC_Types[ibc].BC_ID != -1 && BC_Types[ibc].BC_ID2 == -1 && BC_Types[ibc].BC_ID3 == -1) {
+          nedelecBC = TRUE;
+        } else if (BC_Types[ibc].BC_ID != -1 && BC_Types[ibc].BC_ID2 == -1 &&
+                   BC_Types[ibc].BC_ID3 == -1) {
           faceBC = TRUE;
         } else if (BC_Types[ibc].BC_ID != -1 && BC_Types[ibc].BC_ID2 != -1 &&
                    BC_Types[ibc].BC_ID3 == -1) {
@@ -2263,6 +2271,17 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                  * which this bc applies
                  */
                 node_ok = 0;
+
+                /* Nedelec conditions, only on edge nodes */
+                if (nedelecBC) {
+                  int lnn;
+                  for (lnn = 0; lnn < exo->eb_num_nodes_per_elem[elem_block_index]; lnn++) {
+                    if (inode == Proc_Elem_Connect[Proc_Connect_Ptr[ielem] + lnn])
+                      break;
+                  }
+                  node_ok =
+                      dof_lnode_interp_type(lnn, exo->eb_elem_itype[elem_block_index], I_N1, false);
+                }
 
                 /* Face conditions */
                 if (faceBC)
@@ -2609,7 +2628,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
 
                       /* retain all weak conditions */
                       if (BC_Types[ibc1].desc->method == WEAK_INT_SURF ||
-                          BC_Types[ibc1].desc->method == WEAK_SHARP_INT) {
+                          BC_Types[ibc1].desc->method == WEAK_SHARP_INT ||
+                          BC_Types[ibc1].desc->method == WEAK_INT_NEDELEC ||
+                          BC_Types[ibc1].desc->method == STRONG_INT_NEDELEC) {
                         save_this_bc1[q][j] = 1;
 
                         /* retain all weak conditions */

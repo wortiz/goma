@@ -996,6 +996,9 @@ void noahs_ark(void) {
   ddd_add_member(n, &upd->XFEM, 1, MPI_INT);
   ddd_add_member(n, &upd->Process_Temperature, 1, MPI_DOUBLE);
   ddd_add_member(n, &upd->Acoustic_Frequency, 1, MPI_DOUBLE);
+  ddd_add_member(n, &upd->EM_Frequency, 1, MPI_DOUBLE);
+  ddd_add_member(n, &upd->Free_Space_Permittivity, 1, MPI_DOUBLE);
+  ddd_add_member(n, &upd->Free_Space_Permeability, 1, MPI_DOUBLE);
   ddd_add_member(n, &upd->Light_Cosmu, 1, MPI_DOUBLE);
   ddd_add_member(n, &upd->SegregatedSolve, 1, MPI_INT);
   ddd_add_member(n, &upd->SegregatedSubcycles, 1, MPI_INT);
@@ -1133,6 +1136,9 @@ void noahs_ark(void) {
     ddd_add_member(n, &augc[i].lm_dim, 1, MPI_INT);
     ddd_add_member(n, &augc[i].lm_value, 1, MPI_DOUBLE);
     ddd_add_member(n, &augc[i].lm_resid, 1, MPI_DOUBLE);
+    ddd_add_member(n, &augc[i].Params_File, 128, MPI_CHAR);
+    ddd_add_member(n, &augc[i].AP_param, 64, MPI_CHAR);
+    ddd_add_member(n, &augc[i].Aprepro_lib_string_len, 1, MPI_INT);
   }
 
   /*
@@ -1446,7 +1452,9 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->density, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->electrical_conductivity, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->permittivity, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->permittivity_imag, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->magnetic_permeability, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->incident_wave, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->VoltageFormulation, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->heat_capacity, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->heat_source, 1, MPI_DOUBLE);
@@ -1466,6 +1474,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->matrix_density, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->specific_heat, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->permeability, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->permeability_imag, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->PorousLiqCompress, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->PorousLiqRefPress, 1, MPI_DOUBLE);
     ddd_add_member(n, &mp_glob[i]->rel_gas_perm, 1, MPI_DOUBLE);
@@ -1545,6 +1554,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->DcaLFunctionModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->FSIModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->TurbulentLubricationModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->LubIntegrationModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedPorosityModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedRadiusModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedHeightModel, 1, MPI_INT);
@@ -1606,6 +1616,8 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->Light_AbsorptionModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->Shell_User_ParModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PermittivityModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->MagneticPermeabilityModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->IncidentWaveModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PBE_BA_Type, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->SBM_Length_enabled, 1, MPI_INT);
 
@@ -1759,6 +1771,8 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->len_u_density, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_electrical_conductivity, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_permittivity, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->len_u_magnetic_permeability, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->len_u_incident_wave, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_heat_capacity, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_heat_source, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_mass_source, 1, MPI_INT);
@@ -1814,6 +1828,8 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->diffusivity_tableid, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->saturation_tableid, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->cap_pres_tableid, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->LubInt_NGP, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->LubInt_PL, 1, MPI_DOUBLE);
 
     /*
      * Material property constants that are vectors over the concentration
@@ -2258,6 +2274,8 @@ void noahs_ark(void) {
       ddd_add_member(n, &ve_glob[i][mode]->epsModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->yieldModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->saramitoNexpModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->muJeffreys, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->muJeffreysModel, 1, MPI_INT);
 
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.time_const, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.alpha, 1, MPI_DOUBLE);
@@ -2352,6 +2370,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &elc_glob[i]->len_u_solid_viscosity, 1, MPI_INT);
     ddd_add_member(n, &elc_glob[i]->solid_dil_viscosity, 1, MPI_DOUBLE);
     ddd_add_member(n, &elc_glob[i]->solid_dil_viscosity_model, 1, MPI_INT);
+    ddd_add_member(n, &elc_glob[i]->len_u_solid_dil_viscosity, 1, MPI_INT);
 
     ddd_add_member(n, &elc_glob[i]->bend_stiffness, 1, MPI_DOUBLE);
     ddd_add_member(n, &elc_glob[i]->bend_stiffness_model, 1, MPI_INT);
@@ -2415,6 +2434,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &elc_rs_glob[i]->len_u_solid_viscosity, 1, MPI_INT);
     ddd_add_member(n, &elc_rs_glob[i]->solid_dil_viscosity, 1, MPI_DOUBLE);
     ddd_add_member(n, &elc_rs_glob[i]->solid_dil_viscosity_model, 1, MPI_INT);
+    ddd_add_member(n, &elc_rs_glob[i]->len_u_solid_dil_viscosity, 1, MPI_INT);
 
     ddd_add_member(n, &elc_rs_glob[i]->poisson, 1, MPI_DOUBLE);
     ddd_add_member(n, &elc_rs_glob[i]->Strss_fr_sol_vol_frac, 1, MPI_DOUBLE);
@@ -2544,7 +2564,7 @@ void noahs_ark(void) {
   ddd_add_member(n, &VON_MISES_STRAIN, 1, MPI_INT);
   ddd_add_member(n, &VON_MISES_STRESS, 1, MPI_INT);
   ddd_add_member(n, &UNTRACKED_SPEC, 1, MPI_INT);
-  ddd_add_member(n, &LOG_CONF_MAP, 1, MPI_INT);
+  ddd_add_member(n, &CONF_MAP, 1, MPI_INT);
   ddd_add_member(n, &VELO_SPEED, 1, MPI_INT);
   ddd_add_member(n, &GIES_CRIT, 1, MPI_INT);
   ddd_add_member(n, &J_FLUX, 1, MPI_INT);
@@ -2563,9 +2583,6 @@ void noahs_ark(void) {
   ddd_add_member(n, &SURFACE_VECTORS, 1, MPI_INT);
   ddd_add_member(n, &SHELL_NORMALS, 1, MPI_INT);
   ddd_add_member(n, &len_u_post_proc, 1, MPI_INT);
-  if (len_u_post_proc > 0) {
-    ddd_add_member(n, u_post_proc, len_u_post_proc, MPI_DOUBLE);
-  }
   ddd_add_member(n, &LAMB_VECTOR, 1, MPI_INT);
   ddd_add_member(n, &Q_FCN, 1, MPI_INT);
   ddd_add_member(n, &POYNTING_VECTORS, 1, MPI_INT);
@@ -2575,8 +2592,18 @@ void noahs_ark(void) {
   ddd_add_member(n, &VISCOUS_STRESS, 1, MPI_INT);
   ddd_add_member(n, &VISCOUS_STRESS_NORM, 1, MPI_INT);
   ddd_add_member(n, &VISCOUS_VON_MISES_STRESS, 1, MPI_INT);
+  ddd_add_member(n, &EM_CONTOURS, 1, MPI_INT);
+  ddd_add_member(n, &TOTAL_EM_CONTOURS, 1, MPI_INT);
+  ddd_add_member(n, &SCATTERED_EM_CONTOURS, 1, MPI_INT);
   ddd_add_member(n, &len_u_post_proc, 1, MPI_INT);
   ddd_add_member(n, &PSPG_PP, 1, MPI_INT);
+  ddd_add_member(n, &ORIENTATION_VECTORS, 1, MPI_INT);
+  ddd_add_member(n, &FIRST_STRAINRATE_INVAR, 1, MPI_INT);
+  ddd_add_member(n, &SEC_STRAINRATE_INVAR, 1, MPI_INT);
+  ddd_add_member(n, &THIRD_STRAINRATE_INVAR, 1, MPI_INT);
+  if (len_u_post_proc > 0) {
+    ddd_add_member(n, u_post_proc, len_u_post_proc, MPI_DOUBLE);
+  }
 
   if (nn_post_fluxes > 0) {
     for (i = 0; i < nn_post_fluxes; i++) {
@@ -2856,6 +2883,10 @@ void ark_landing(void) {
 
     dalloc(m->len_u_permittivity, m->u_permittivity);
 
+    dalloc(m->len_u_magnetic_permeability, m->u_magnetic_permeability);
+
+    dalloc(m->len_u_incident_wave, m->u_incident_wave);
+
     dalloc(m->len_u_elect_surf_diffusivity, m->u_elect_surf_diffusivity);
 
     dalloc(m->len_u_heat_capacity, m->u_heat_capacity);
@@ -3050,6 +3081,10 @@ void ark_landing(void) {
 
     dalloc(e->len_u_thermal_expansion, e->u_thermal_expansion);
 
+    dalloc(e->len_u_solid_viscosity, e->u_solid_viscosity);
+
+    dalloc(e->len_u_solid_dil_viscosity, e->u_solid_dil_viscosity);
+
     e = elc_rs_glob[i];
 
     dalloc(e->len_u_mu, e->u_mu);
@@ -3061,6 +3096,10 @@ void ark_landing(void) {
     dalloc(e->len_u_v_mesh_sfs, e->u_v_mesh_sfs);
 
     dalloc(e->len_u_thermal_expansion, e->u_thermal_expansion);
+
+    dalloc(e->len_u_solid_viscosity, e->u_solid_viscosity);
+
+    dalloc(e->len_u_solid_dil_viscosity, e->u_solid_dil_viscosity);
 
     dalloc(evpl_glob[i]->len_u_plastic_mu, evpl_glob[i]->u_plastic_mu);
 
@@ -3086,6 +3125,9 @@ void ark_landing(void) {
 
   for (i = 0; i < nAC; i++) {
     dalloc(augc[i].len_AC, augc[i].DataFlt);
+    if (augc[i].Aprepro_lib_string_len > 0) {
+      augc[i].Aprepro_lib_string = calloc(augc[i].Aprepro_lib_string_len + 1, sizeof(char));
+    }
   }
 
   for (i = 0; i < nn_volume; i++) {
@@ -3143,6 +3185,10 @@ void noahs_dove(void) {
     crdv(m->len_u_electrical_conductivity, m->u_electrical_conductivity);
 
     crdv(m->len_u_permittivity, m->u_permittivity);
+
+    crdv(m->len_u_magnetic_permeability, m->u_magnetic_permeability);
+
+    crdv(m->len_u_incident_wave, m->u_incident_wave);
 
     crdv(m->len_u_elect_surf_diffusivity, m->u_elect_surf_diffusivity);
 
@@ -3229,6 +3275,9 @@ void noahs_dove(void) {
     crdv(m->len_tfmp_drop_lattice_const, m->tfmp_drop_lattice_const);
 
     crdv(m->len_shell_tangent_seed_vec_const, m->shell_tangent_seed_vec_const);
+
+    crdv(m->LubInt_NGP, m->Lub_gpts);
+    crdv(m->LubInt_NGP, m->Lub_wts);
 
     /*
      *  Add species names
@@ -3338,6 +3387,10 @@ void noahs_dove(void) {
 
     crdv(e->len_u_thermal_expansion, e->u_thermal_expansion);
 
+    crdv(e->len_u_solid_viscosity, e->u_solid_viscosity);
+
+    crdv(e->len_u_solid_dil_viscosity, e->u_solid_dil_viscosity);
+
     e = elc_rs_glob[i];
 
     crdv(e->len_u_mu, e->u_mu);
@@ -3349,6 +3402,10 @@ void noahs_dove(void) {
     crdv(e->len_u_v_mesh_sfs, e->u_v_mesh_sfs);
 
     crdv(e->len_u_thermal_expansion, e->u_thermal_expansion);
+
+    crdv(e->len_u_solid_viscosity, e->u_solid_viscosity);
+
+    crdv(e->len_u_solid_dil_viscosity, e->u_solid_dil_viscosity);
 
     crdv(evpl_glob[i]->len_u_plastic_mu, evpl_glob[i]->u_plastic_mu);
 
@@ -3390,6 +3447,9 @@ void noahs_dove(void) {
 
   for (i = 0; i < nAC; i++) {
     crdv(augc[i].len_AC, augc[i].DataFlt);
+    if (augc[i].Aprepro_lib_string_len > 0) {
+      ddd_add_member(n, augc[i].Aprepro_lib_string, augc[i].Aprepro_lib_string_len, MPI_CHAR);
+    }
   }
   /*   Post-processing parameters    */
 
