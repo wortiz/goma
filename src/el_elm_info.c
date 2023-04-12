@@ -810,6 +810,7 @@ int dof_lnode_interp_type(const int n,
   case TRISHELL:
     switch (interp_type) {
     case I_Q1: /* 3 node, 1 dof/node, Lagrangian linear */
+    case I_Q1_D: /* 3 node, 1 dof/node, Lagrangian linear */
       return ((n < 3) ? 1 : 0);
     case I_Q2: /* 6 node, 1 dof/node, Lagrangian quadratic */
       return ((n < 6) ? 1 : 0);

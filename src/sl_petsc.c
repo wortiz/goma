@@ -1677,6 +1677,25 @@ int petsc_set_diagonal_only(struct GomaLinearSolverData *ams, int irow) {
 
 // vim: expandtab sw=2 ts=8
 int petsc_solve(struct GomaLinearSolverData *ams, double *x_, double *b_, int *its) {
+  if (*its == 0) {
+  PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;
+  KSPDestroy(&matrix_data->ksp);
+  int err = KSPCreate(MPI_COMM_WORLD, &matrix_data->ksp);
+  CHKERRQ(err);
+
+  char ksp_prefix[25];
+  if (upd->Total_Num_Matrices > 1) {
+    snprintf(ksp_prefix, 24, "sys%d_", pg->imtrx);
+    err = KSPSetOptionsPrefix(matrix_data->ksp, ksp_prefix);
+    CHKERRQ(err);
+  }
+
+  err = KSPSetOperators(matrix_data->ksp, matrix_data->mat, matrix_data->mat);
+  CHKERRQ(err);
+  err = KSPSetFromOptions(matrix_data->ksp);
+  CHKERRQ(err);
+
+  }
   PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;
   MatAssemblyBegin(matrix_data->mat, MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(matrix_data->mat, MAT_FINAL_ASSEMBLY);

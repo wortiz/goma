@@ -3638,7 +3638,7 @@ double newshape(const double xi[],       /* local coordinates    */
     break;
 
   case TRIANGLE:
-    if (interpolation == I_Q1) {
+    if (interpolation == I_Q1 || interpolation == I_Q1_D) {
       value = shape(s, t, u, LINEAR_TRI, Iquant, Inode);
     } else if (interpolation == I_Q2) {
       value = shape(s, t, u, QUAD_TRI, Iquant, Inode);

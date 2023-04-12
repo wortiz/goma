@@ -1379,7 +1379,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 #ifdef GOMA_ENABLE_PETSC
     case PETSC_SOLVER:
       if (strcmp(Matrix_Format, "petsc") == 0) {
-        int its;
+        int its = inewton;
         petsc_solve(ams, delta_x, resid_vector, &its);
         exchange_dof(cx, dpi, delta_x, pg->imtrx);
         matrix_solved = 1;
