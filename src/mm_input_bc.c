@@ -823,6 +823,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case SH_S11_WEAK_BC:
     case SH_S22_WEAK_BC:
     case VELO_NORMAL_LUB_BC:
+    case VELO_TANGENT_ROLL_BC:
 
       if (fscanf(ifp, "%lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
                  &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2]) != 3) {
@@ -957,12 +958,17 @@ void rd_bc_specs(FILE *ifp, char *input) {
      */
     case VELO_SLIP_BC:
     case VELO_SLIP_ROT_BC:
+    case VELO_SLIP_ROLL_BC:
     case VELO_SLIP_FLUID_BC:
     case VELO_SLIP_ROT_FLUID_BC:
     case VELO_SLIP_FILL_BC:
     case VELO_SLIP_ROT_FILL_BC:
     case AIR_FILM_BC:
     case AIR_FILM_ROT_BC:
+    case SPRING_ROLL_BC:
+    case SPRING_ROLL_Y_BC:
+    case SPRING_ROLL_COLLOC_BC:
+    case SPRING_ROLL_Y_COLLOC_BC:
       if (fscanf(ifp, "%lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],
                  &BC_Types[ibc].BC_Data_Float[1], &BC_Types[ibc].BC_Data_Float[2],
                  &BC_Types[ibc].BC_Data_Float[3]) != 4) {

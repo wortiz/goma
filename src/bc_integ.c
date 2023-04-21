@@ -536,6 +536,11 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           }
           break;
 
+        case SPRING_ROLL_BC:
+        case SPRING_ROLL_Y_BC:
+          fspring_roll_bc(&func[0], d_func[0], BC_Types[bc_input_id].BC_Data_Float);
+          break;
+
         case LS_ATTACH_BC:
           fvelo_normal_bc(func, d_func, 0.0, contact_flag = FALSE, x_dot, theta, delta_t,
                           (int)bc->BC_Name, 0, 0, 135.0);
@@ -649,6 +654,10 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           }
           break;
 
+        case VELO_TANGENT_ROLL_BC:
+          fvelo_tangential_roll_bc(func, d_func, bc->BC_Data_Float[0], bc->BC_Data_Float[1],
+                                   bc->BC_Data_Float[2]);
+          break;
         case VELO_TANGENT_BC:
         case VELO_TANGENT_USER_BC:
         case VELO_STREAMING_BC:
@@ -687,6 +696,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
         case VELO_SLIP_BC:
         case VELO_SLIP_ROT_BC:
+        case VELO_SLIP_ROLL_BC:
         case VELO_SLIP_FILL_BC:
         case VELO_SLIP_ROT_FILL_BC:
         case VELO_SLIP_FLUID_BC:
