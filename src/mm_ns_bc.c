@@ -7575,7 +7575,6 @@ void stress_no_v_dot_gradS(double func[MAX_MODES][6],
 } /* END of routine stress_no_v_dot_gradS                                    */
 /*****************************************************************************/
 
-
 void stress_no_v_dot_gradS_logc(double func[MAX_MODES][6],
                                 double d_func[MAX_MODES][6][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
                                 const double dt,

@@ -19,7 +19,7 @@
 #include "mm_as_structs.h"
 #include "std.h"
 void advective_decomposition(int mode,
-dbl grad_v[DIM][DIM],
+                             dbl grad_v[DIM][DIM],
                              dbl xi,
                              bool compute_jacobian_entries,
                              dbl advective_term[DIM][DIM],

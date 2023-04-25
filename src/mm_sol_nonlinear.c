@@ -874,7 +874,6 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
          is properly communicated */
       exchange_dof(cx, dpi, x, pg->imtrx);
 
-      
       dbl *x_scale = pg->x_scale;
       int *x_count = pg->x_count;
       memset(x_scale, 0, (MAX_VARIABLE_TYPES) * sizeof(dbl));
@@ -894,7 +893,6 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           x_scale[i] = sqrt(x_scale_glob[i] / x_count_glob[i]);
         }
       }
-
 
       err = matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update,
                              &delta_t, &theta, First_Elem_Side_BC_Array[pg->imtrx], &time_value,

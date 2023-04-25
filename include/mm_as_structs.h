@@ -2018,7 +2018,6 @@ struct Field_Variables {
   struct Log_C_Field_Variables *log_c;
 };
 
-
 /*
  * These are old and dot field variables at the Gauss points of interest.
  * Not all the information is needed for the old and dot terms ...

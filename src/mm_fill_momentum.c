@@ -1858,30 +1858,30 @@ int assemble_momentum(dbl time,       /* current time */
 
                   if (c >= b) {
 
-                  if (pdv[var]) {
+                    if (pdv[var]) {
 
-                    pvar = upd->vp[pg->imtrx][var];
+                      pvar = upd->vp[pg->imtrx][var];
 
-                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
+                      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
 
-                    {
-                      phi_j = bf[var]->phi[j];
+                      {
+                        phi_j = bf[var]->phi[j];
 
-                      diffusion = 0.;
+                        diffusion = 0.;
 
-                      if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-                        for (p = 0; p < VIM; p++) {
-                          for (q = 0; q < VIM; q++) {
-                            diffusion -= grad_phi_i_e_a[p][q] * d_Pi->S[p][q][mode][b][c][j];
+                        if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+                          for (p = 0; p < VIM; p++) {
+                            for (q = 0; q < VIM; q++) {
+                              diffusion -= grad_phi_i_e_a[p][q] * d_Pi->S[p][q][mode][b][c][j];
+                            }
                           }
+                          diffusion *= det_J * wt * h3;
+                          diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
                         }
-                        diffusion *= det_J * wt * h3;
-                        diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-                      }
 
-                      lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                        lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                      }
                     }
-                  }
                   }
                 }
               }

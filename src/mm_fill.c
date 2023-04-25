@@ -583,7 +583,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     ve[mode] = ve_glob[mn][mode];
   }
 
-  if (is_log_c_model(vn->evssModel)){
+  if (is_log_c_model(vn->evssModel)) {
     alloc_fv_log_c(fv);
   }
 
@@ -4921,7 +4921,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   /*                            CLEANUP BLOCK                                   */
   /******************************************************************************/
 
-  if (is_log_c_model(vn->evssModel)){
+  if (is_log_c_model(vn->evssModel)) {
     free_fv_log_c(fv);
   }
 

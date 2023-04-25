@@ -112,7 +112,7 @@ void advective_decomposition(int mode,
   for (int i = 0; i < VIM; i++) {
     for (int j = 0; j < VIM; j++) {
       advective_term[i][j] = -(omega_s[i][j] - s_omega[i][j]) - 2 * B[i][j];
-      //advective_term[i][j] = w[i][j] - 2 * B[i][j];
+      // advective_term[i][j] = w[i][j] - 2 * B[i][j];
     }
   }
 
@@ -253,7 +253,7 @@ void advective_decomposition(int mode,
             for (int j = 0; j < VIM; j++) {
               d_advective_term_ds[i][j][p][q][k] =
                   -(d_omega_s[i][j] - d_s_omega[i][j]) - 2 * d_B[i][j];
-                  // d_w[i][j] - 2 * d_B[i][j];
+              // d_w[i][j] - 2 * d_B[i][j];
             }
           }
         }
@@ -277,19 +277,20 @@ void source_term_logc(int mode,
     dbl inner[DIM][DIM] = {{0.}};
     for (int i = 0; i < VIM; i++) {
       inner[i][i] = (1.0 / lambda) * (1.0 - 1.0 / (fv->log_c->eig_values[mode][i] + 1e-16));
-      inner[i][i] = (1.0/lambda) + (1.0/lambda) * (-(1.0 / (fv->log_c->eig_values[mode][i] + 1e-16)));
+      inner[i][i] =
+          (1.0 / lambda) + (1.0 / lambda) * (-(1.0 / (fv->log_c->eig_values[mode][i] + 1e-16)));
     }
 
     tensor_dot(fv->log_c->R[mode], inner, tmp, VIM);
     tensor_dot(tmp, fv->log_c->R_T[mode], source_term, VIM);
-              for (int i = 0; i < VIM; i++) {
-                for (int j = 0; j < VIM; j++) {
-                  source_term[i][j] = fv->log_c->eig_values[mode][i];
-                }
-              }
+    for (int i = 0; i < VIM; i++) {
+      for (int j = 0; j < VIM; j++) {
+        source_term[i][j] = fv->log_c->eig_values[mode][i];
+      }
+    }
 
     if (af->Assemble_Jacobian && d_source_term != NULL) {
-      memset(d_source_term, 0, sizeof(dbl)*DIM*DIM*DIM*DIM*MDE);
+      memset(d_source_term, 0, sizeof(dbl) * DIM * DIM * DIM * DIM * MDE);
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
           if (q >= p) {
@@ -299,10 +300,9 @@ void source_term_logc(int mode,
               dbl d_tmp[DIM][DIM] = {{0.}};
               for (int i = 0; i < VIM; i++) {
                 d_inner[i][i] =
-                    (1.0 / lambda) *
-                    (fv->log_c->d_eig_values_ds[mode][p][q][k][i]/(pow(fv->log_c->eig_values[mode][i] + 1e-16,2.0)));
+                    (1.0 / lambda) * (fv->log_c->d_eig_values_ds[mode][p][q][k][i] /
+                                      (pow(fv->log_c->eig_values[mode][i] + 1e-16, 2.0)));
               }
-
 
               for (int i = 0; i < VIM; i++) {
                 for (int j = 0; j < VIM; j++) {
@@ -310,27 +310,27 @@ void source_term_logc(int mode,
                 }
               }
 
-              //tensor_dot(fv->log_c->R[mode], d_inner, tmp, VIM);
-              //tensor_dot(tmp, fv->log_c->R_T[mode], d_tmp, VIM);
-              //for (int i = 0; i < VIM; i++) {
-              //  for (int j = 0; j < VIM; j++) {
-              //    d_source_term[i][j][p][q][k] += d_tmp[i][j];
-              //  }
-              //}
-              //tensor_dot(fv->log_c->d_R_ds[mode][p][q][k], inner, tmp, VIM);
-              //tensor_dot(tmp, fv->log_c->R_T[mode], d_tmp, VIM);
-              //for (int i = 0; i < VIM; i++) {
-              //  for (int j = 0; j < VIM; j++) {
-              //    d_source_term[i][j][p][q][k] += d_tmp[i][j];
-              //  }
-              //}
-              //tensor_dot(fv->log_c->R[mode], inner, tmp, VIM);
-              //tensor_dot(tmp, fv->log_c->d_R_T_ds[mode][p][q][k], d_tmp, VIM);
-              //for (int i = 0; i < VIM; i++) {
-              //  for (int j = 0; j < VIM; j++) {
-              //    d_source_term[i][j][p][q][k] += d_tmp[i][j];
-              //  }
-              //}
+              // tensor_dot(fv->log_c->R[mode], d_inner, tmp, VIM);
+              // tensor_dot(tmp, fv->log_c->R_T[mode], d_tmp, VIM);
+              // for (int i = 0; i < VIM; i++) {
+              //   for (int j = 0; j < VIM; j++) {
+              //     d_source_term[i][j][p][q][k] += d_tmp[i][j];
+              //   }
+              // }
+              // tensor_dot(fv->log_c->d_R_ds[mode][p][q][k], inner, tmp, VIM);
+              // tensor_dot(tmp, fv->log_c->R_T[mode], d_tmp, VIM);
+              // for (int i = 0; i < VIM; i++) {
+              //   for (int j = 0; j < VIM; j++) {
+              //     d_source_term[i][j][p][q][k] += d_tmp[i][j];
+              //   }
+              // }
+              // tensor_dot(fv->log_c->R[mode], inner, tmp, VIM);
+              // tensor_dot(tmp, fv->log_c->d_R_T_ds[mode][p][q][k], d_tmp, VIM);
+              // for (int i = 0; i < VIM; i++) {
+              //   for (int j = 0; j < VIM; j++) {
+              //     d_source_term[i][j][p][q][k] += d_tmp[i][j];
+              //   }
+              // }
             }
           }
         }
@@ -505,50 +505,50 @@ int assemble_stress_log_conf(dbl tt, dbl dt, PG_DATA *pg_data) {
               for (int p = 0; p < VIM; p++) {
                 for (int q = 0; q < VIM; q++) {
                   if (p <= q) {
-                  int var = v_s[mode][p][q];
-                  if (pd->v[pg->imtrx][var]) {
+                    int var = v_s[mode][p][q];
+                    if (pd->v[pg->imtrx][var]) {
 
-                    int pvar = upd->vp[pg->imtrx][var];
-                    for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                      double phi_j = bf[var]->phi[j];
-                      dbl mass = 0.;
-                      if (pd->TimeIntegration != STEADY) {
-                        if (pd->e[pg->imtrx][eqn] & T_MASS) {
-                          mass = (1. + 2. * tt) * phi_j / dt * (double)delta(a, p) *
-                                 (double)delta(b, q);
-                          mass *= h3 * det_J;
-                          mass *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-                        }
-                      }
-
-                      dbl advection = 0.;
-
-                      if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-                        if ((a == p) && (b == q)) {
-                          for (int r = 0; r < dim; r++) {
-                            advection += fv->v[r] * bf[var]->grad_phi[j][r];
-                            if (pd->gv[R_MESH1] && pd->TimeIntegration != STEADY) {
-                              advection += -fv_dot->x[r] * bf[var]->grad_phi[j][r];
-                            }
+                      int pvar = upd->vp[pg->imtrx][var];
+                      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                        double phi_j = bf[var]->phi[j];
+                        dbl mass = 0.;
+                        if (pd->TimeIntegration != STEADY) {
+                          if (pd->e[pg->imtrx][eqn] & T_MASS) {
+                            mass = (1. + 2. * tt) * phi_j / dt * (double)delta(a, p) *
+                                   (double)delta(b, q);
+                            mass *= h3 * det_J;
+                            mass *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
                           }
                         }
 
-                        advection += d_advective_term_ds[a][b][p][q][j];
+                        dbl advection = 0.;
 
-                        advection *= h3 * det_J;
+                        if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+                          if ((a == p) && (b == q)) {
+                            for (int r = 0; r < dim; r++) {
+                              advection += fv->v[r] * bf[var]->grad_phi[j][r];
+                              if (pd->gv[R_MESH1] && pd->TimeIntegration != STEADY) {
+                                advection += -fv_dot->x[r] * bf[var]->grad_phi[j][r];
+                              }
+                            }
+                          }
 
-                        advection *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                          advection += d_advective_term_ds[a][b][p][q][j];
+
+                          advection *= h3 * det_J;
+
+                          advection *= wt_func * wt * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                        }
+
+                        dbl source = 0;
+                        if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+                          source += d_source_term_ds[b][b][p][q][j];
+                          source *= wt_func * det_J * h3 * wt;
+                          source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                        }
+                        lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + source;
                       }
-
-                      dbl source = 0;
-                      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-                        source += d_source_term_ds[b][b][p][q][j];
-                        source *= wt_func * det_J * h3 * wt;
-                        source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
-                      }
-                      lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += mass + advection + source;
                     }
-                  }
                   }
                 }
               }

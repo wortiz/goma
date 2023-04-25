@@ -24,7 +24,9 @@ void alloc_fv_log_c(struct Field_Variables *fv);
 
 void free_fv_log_c(struct Field_Variables *fv);
 
-void load_fv_log_c(struct Field_Variables *fv, struct Element_Stiffness_Pointers *esp, bool compute_jacobian);
+void load_fv_log_c(struct Field_Variables *fv,
+                   struct Element_Stiffness_Pointers *esp,
+                   bool compute_jacobian);
 
 void ve_stress_term(dbl mu,
                     dbl mus,

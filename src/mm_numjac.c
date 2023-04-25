@@ -212,12 +212,11 @@ static Coloring *find_coloring(struct GomaLinearSolverData *ams,
   int num_stress_unknowns = 0;
   for (j = 0; j < num_unknowns; j++) {
     column_color[j] = -1;
-        for (int mode = 0; mode < vn->modes; mode++) {
-          if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] &&
-               idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
-                num_stress_unknowns++;
-               }
-        }
+    for (int mode = 0; mode < vn->modes; mode++) {
+      if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] && idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
+        num_stress_unknowns++;
+      }
+    }
   }
 
   /* greedy coloring
@@ -233,30 +232,29 @@ static Coloring *find_coloring(struct GomaLinearSolverData *ams,
   while (num_colored < num_stress_unknowns) {
     // Color ever column we can with the current color
     for (j = 0; j < num_unknowns; j++) {
-        for (int mode = 0; mode < vn->modes; mode++) {
-          if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] &&
-               idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
-      if (column_color[j] == -1) {
-        // Only valid if all rows are not in this color
-        int valid = TRUE;
-        for (i = colptr[j]; i < colptr[j + 1]; i++) {
-          if (has_row[rowidx[i]]) {
-            valid = FALSE;
-            break;
-          }
-        }
+      for (int mode = 0; mode < vn->modes; mode++) {
+        if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] && idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
+          if (column_color[j] == -1) {
+            // Only valid if all rows are not in this color
+            int valid = TRUE;
+            for (i = colptr[j]; i < colptr[j + 1]; i++) {
+              if (has_row[rowidx[i]]) {
+                valid = FALSE;
+                break;
+              }
+            }
 
-        // We can add this column to the current color
-        if (valid) {
-          for (i = colptr[j]; i < colptr[j + 1]; i++) {
-            has_row[rowidx[i]] = TRUE;
+            // We can add this column to the current color
+            if (valid) {
+              for (i = colptr[j]; i < colptr[j + 1]; i++) {
+                has_row[rowidx[i]] = TRUE;
+              }
+              column_color[j] = num_colors;
+              num_colored++;
+            }
           }
-          column_color[j] = num_colors;
-          num_colored++;
         }
       }
-    }
-        }
     }
     memset(has_row, 0, sizeof(int) * num_unknowns);
     num_colors++;
@@ -571,28 +569,28 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
 
     IntLinkedList *elptr;
     if (count > 0) {
-    for (elptr = elem_list; elptr != NULL; elptr = elptr->next) {
-      int ielem = elptr->val;
-      int ebn;
-      /*First we must calculate the material-referenced element
-       *number so as to be compatible with the ElemStorage struct
-       */
-      ebn = find_elemblock_index(ielem, exo);
-      int mn = Matilda[ebn];
-      if (mn < 0) {
-        continue;
+      for (elptr = elem_list; elptr != NULL; elptr = elptr->next) {
+        int ielem = elptr->val;
+        int ebn;
+        /*First we must calculate the material-referenced element
+         *number so as to be compatible with the ElemStorage struct
+         */
+        ebn = find_elemblock_index(ielem, exo);
+        int mn = Matilda[ebn];
+        if (mn < 0) {
+          continue;
+        }
+
+        /*needed for saturation hyst. func. */
+        PRS_mat_ielem = ielem - exo->eb_ptr[ebn];
+
+        int err = matrix_fill(ams, x_1, resid_vector_1, x_old, x_older, xdot, xdot_old, x_update,
+                              &delta_t, &theta, first_elem_side_BC_array, &time_value, exo, dpi,
+                              &ielem, &num_total_nodes, h_elem_avg, U_norm, NULL, zeroCA);
+        if (err)
+          retval = -1;
+        zeroCA = -1;
       }
-
-      /*needed for saturation hyst. func. */
-      PRS_mat_ielem = ielem - exo->eb_ptr[ebn];
-
-      int err = matrix_fill(ams, x_1, resid_vector_1, x_old, x_older, xdot, xdot_old, x_update,
-                            &delta_t, &theta, first_elem_side_BC_array, &time_value, exo, dpi,
-                            &ielem, &num_total_nodes, h_elem_avg, U_norm, NULL, zeroCA);
-      if (err)
-        retval = -1;
-      zeroCA = -1;
-    }
     }
 
 #ifdef DEBUG_FD_COLORING
@@ -642,27 +640,27 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
             //            idv[pg->imtrx][i][0] <= v_s[mode][2][2]) ||
             if ((idv[pg->imtrx][j][0] >= v_s[mode][0][0] &&
                  idv[pg->imtrx][j][0] <= v_s[mode][2][2])) {
-          //
-          if (Inter_Mask[pg->imtrx][var_i][var_j]) {
+              //
+              if (Inter_Mask[pg->imtrx][var_i][var_j]) {
 
-            int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i + 1], ams->bindx);
-            if (ja == -1) {
-              sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j,
-                      idv[pg->imtrx][i][0], idv[pg->imtrx][j][0]);
-              GOMA_EH(ja, errstring);
+                int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i + 1], ams->bindx);
+                if (ja == -1) {
+                  sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j,
+                          idv[pg->imtrx][i][0], idv[pg->imtrx][j][0]);
+                  GOMA_EH(ja, errstring);
+                }
+                if (Nodes[gnode]->DBC[pg->imtrx] && Nodes[gnode]->DBC[pg->imtrx][i_offset] != -1 &&
+                    i == j) {
+                  nj[ja] = 1.0;
+                } else if (Nodes[gnode]->DBC[pg->imtrx] &&
+                           Nodes[gnode]->DBC[pg->imtrx][i_offset] != -1) {
+                  nj[ja] = 0.0;
+                } else {
+                  nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx_col[j]);
+                }
+              }
             }
-            if (Nodes[gnode]->DBC[pg->imtrx] && Nodes[gnode]->DBC[pg->imtrx][i_offset] != -1 &&
-                i == j) {
-              nj[ja] = 1.0;
-            } else if (Nodes[gnode]->DBC[pg->imtrx] &&
-                       Nodes[gnode]->DBC[pg->imtrx][i_offset] != -1) {
-              nj[ja] = 0.0;
-            } else {
-              nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx_col[j]);
-            }
-          }
-             }
-           } // Loop over modes
+          } // Loop over modes
         }
       }
     }
