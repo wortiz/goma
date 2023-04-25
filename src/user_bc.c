@@ -20,6 +20,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <exodusII.h>
 
 /* GOMA include files */
 

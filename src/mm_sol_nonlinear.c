@@ -1585,6 +1585,41 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                 "interface\n");
           }
           break;
+#ifdef GOMA_ENABLE_PETSC
+#if PETSC_USE_COMPLEX
+    case PETSC_COMPLEX_SOLVER:
+      if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+        int its;
+        petsc_solve_complex(ams, &wAC[iAC][0], &bAC[iAC][0], &its);
+        exchange_dof(cx, dpi, delta_x, pg->imtrx);
+        matrix_solved = 1;
+        char itsstring[10];
+        itsstring[9] = '\0';
+        snprintf(itsstring, 9, "%d", its);
+        strcpy(stringer, itsstring);
+      } else {
+        GOMA_EH(GOMA_ERROR, "Sorry, only petsc_complex matrix formats are currently supported with "
+                            "the petsc solver\n");
+      }
+      break;
+#else
+    case PETSC_SOLVER:
+      if (strcmp(Matrix_Format, "petsc") == 0) {
+        int its = 1;
+        petsc_solve(ams, &wAC[iAC][0], &bAC[iAC][0], &its);
+        exchange_dof(cx, dpi, delta_x, pg->imtrx);
+        matrix_solved = 1;
+        char itsstring[10];
+        itsstring[9] = '\0';
+        snprintf(itsstring, 9, "%d", its);
+        strcpy(stringer, itsstring);
+      } else {
+        GOMA_EH(GOMA_ERROR,
+                "Sorry, only petsc matrix formats are currently supported with the petsc solver\n");
+      }
+      break;
+#endif
+#endif
         default:
           GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented.");
           break;

@@ -1832,20 +1832,5 @@ void petsc_solve_post_proc(double **post_proc_vect, RESULTS_DESCRIPTION_STRUCT *
   P0PRINTF("Post Proc Time = %4.4e s\n\n", end - start);
 }
 
-goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams) {
-  PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;
-  PetscErrorCode err;
-
-  err = MatDestroy(&matrix_data->mat);
-  CHKERRQ(err);
-  err = VecDestroy(&matrix_data->residual);
-  CHKERRQ(err);
-  err = VecDestroy(&matrix_data->update);
-  CHKERRQ(err);
-  err = KSPDestroy(&matrix_data->ksp);
-  CHKERRQ(err);
-
-  return GOMA_SUCCESS;
-}
 #endif
 #endif
