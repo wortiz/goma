@@ -967,6 +967,8 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case AIR_FILM_ROT_BC:
     case SPRING_ROLL_BC:
     case SPRING_ROLL_Y_BC:
+    case SPRING_ROLL_SOLID_BC:
+    case SPRING_ROLL_SOLID_COLLOC_BC:
     case SPRING_ROLL_COLLOC_BC:
     case SPRING_ROLL_Y_COLLOC_BC:
       if (fscanf(ifp, "%lf %lf %lf %lf", &BC_Types[ibc].BC_Data_Float[0],

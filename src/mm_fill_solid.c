@@ -5335,6 +5335,115 @@ int check_for_neg_elem_volume(int eb,
   return neg_elem_volume;
 }
 
+void fspring_roll_solid_bc(double *func,
+                           double d_func[MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                           dbl *BC_Data_Float) {
+  dbl TT[DIM][DIM]; /* Mesh stress tensor... */
+
+  dbl dTT_dx[DIM][DIM][DIM][MDE];      /* Sensitivity of stress tensor...
+                          to nodal displacements */
+  dbl dTT_dp[DIM][DIM][MDE];           /* Sensitivity of stress tensor...
+                                  to nodal pressure*/
+  dbl dTT_dc[DIM][DIM][MAX_CONC][MDE]; /* Sensitivity of stress tensor...
+                          to nodal concentration */
+  dbl dTT_dp_liq[DIM][DIM][MDE];       /* Sensitivity of stress tensor...
+                                           to nodal porous liquid pressure*/
+  dbl dTT_dp_gas[DIM][DIM][MDE];       /* Sensitivity of stress tensor...
+                                           to nodal porous gas pressure*/
+  dbl dTT_dporosity[DIM][DIM][MDE];    /* Sensitivity of stress tensor...
+                                        to nodal porosity*/
+  dbl dTT_dsink_mass[DIM][DIM][MDE];   /* Sensitivity of stress tensor...
+                                          to nodal sink_mass*/
+  dbl dTT_dT[DIM][DIM][MDE];           /* Sensitivity of stress tensor...
+                                      to temperature*/
+  dbl dTT_dmax_strain[DIM][DIM][MDE];  /* Sensitivity of stress tensor...
+                             to max_strain*/
+  dbl dTT_dcur_strain[DIM][DIM][MDE];  /* Sensitivity of stress tensor...
+                             to cur_strain*/
+
+  memset(TT, 0, sizeof(double) * DIM * DIM);
+  if (af->Assemble_Jacobian) {
+    memset(dTT_dx, 0, sizeof(double) * DIM * DIM * DIM * MDE);
+    memset(dTT_dp, 0, sizeof(double) * DIM * DIM * MDE);
+    memset(dTT_dc, 0, sizeof(double) * DIM * DIM * MAX_CONC * MDE);
+    memset(dTT_dp_liq, 0, sizeof(double) * DIM * DIM * MDE);
+    memset(dTT_dp_gas, 0, sizeof(double) * DIM * DIM * MDE);
+    memset(dTT_dporosity, 0, sizeof(double) * DIM * DIM * MDE);
+    memset(dTT_dsink_mass, 0, sizeof(double) * DIM * DIM * MDE);
+    memset(dTT_dT, 0, sizeof(double) * DIM * DIM * MDE);
+    memset(dTT_dmax_strain, 0, sizeof(double) * DIM * DIM * MDE);
+    memset(dTT_dcur_strain, 0, sizeof(double) * DIM * DIM * MDE);
+  }
+
+  dbl mu;
+  dbl lambda;
+  mu = elc->lame_mu;
+  lambda = elc->lame_lambda;
+  
+  int ip = 0;
+  int ip_total = 0;
+  int ielem = ei[pg->imtrx]->ielem;
+  dbl dt = tran->delta_t;
+  int err = mesh_stress_tensor(TT, dTT_dx, dTT_dp, dTT_dc, dTT_dp_liq, dTT_dp_gas, dTT_dporosity,
+                           dTT_dsink_mass, dTT_dT, dTT_dmax_strain, dTT_dcur_strain, mu, lambda, dt,
+                           ielem, ip, ip_total);
+  dbl K = BC_Data_Float[0];
+  dbl roll_center[DIM] = {BC_Data_Float[1], BC_Data_Float[2], 0.};
+  dbl roll_radius = BC_Data_Float[3];
+
+  // Assume undeformed coordinates are consistent with the roll
+  dbl R0[DIM] = {fv->x0[0] - roll_center[0], fv->x0[1] - roll_center[1],
+                 fv->x0[2] - roll_center[2]};
+
+  dbl R0_mag = 0;
+  for (int p = 0; p < pd->Num_Dim; p++) {
+    R0_mag += R0[p] * R0[p];
+  }
+  R0_mag = sqrt(R0_mag);
+
+  dbl N0[DIM] = {
+      R0[0] / R0_mag,
+      R0[1] / R0_mag,
+      R0[2] / R0_mag,
+  };
+
+  dbl X0[DIM] = {0.};
+  for (int p = 0; p < pd->Num_Dim; p++) {
+    X0[p] = N0[p] * roll_radius + roll_center[p];
+  }
+
+  *func = 0;
+  for (int kdir = 0; kdir < pd->Num_Dim; kdir++) {
+    *func += K * (fv->x[kdir] - X0[kdir]) * N0[kdir];
+  }
+
+  for (int p = 0; p < pd->Num_Dim; p++) {
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      *func += N0[p] * fv->snormal[q] * TT[p][q];
+    }
+  }
+
+  if (af->Assemble_Jacobian) {
+
+    for (int b = 0; b < pd->Num_Dim; b++) {
+      int var = MESH_DISPLACEMENT1 + b;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          dbl phi_j = bf[var]->phi[j];
+          d_func[var][j] += K * phi_j * N0[b];
+
+          for (int p = 0; p < pd->Num_Dim; p++) {
+            for (int q = 0; q < pd->Num_Dim; q++) {
+              d_func[var][j] += N0[p] * fv->dsnormal_dx[q][b][j] * TT[p][q];
+              d_func[var][j] += N0[p] * fv->snormal[q] * dTT_dx[p][q][b][j];
+            }
+          }
+        }
+      }
+    }
+  } /* end of if Assemble_Jacobian */
+}
+
 /*****************************************************************************/
 /* end of file mm_fill_solid.c */
 /*****************************************************************************/
