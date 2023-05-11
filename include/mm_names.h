@@ -6180,7 +6180,7 @@ struct BC_descriptions BC_Desc[] = {
      DVI_SINGLE_PHASE_DB},
     {"SPRING_ROLL_SOLID",
      "SPRING_ROLL_SOLID_BC",
-     COLLOCATE_SURF,
+     WEAK_INT_SURF,
      SPRING_ROLL_SOLID_BC,
      R_MESH1,
      VECTOR,

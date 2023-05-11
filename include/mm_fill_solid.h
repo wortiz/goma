@@ -283,4 +283,7 @@ EXTERN void friction_n_dot_f_bc /* mm_fill_solid.c                         */
      const double[],                                  /* parameter_list*/
      const int);                                      /* number of parameters  */
 
+void fspring_roll_solid_bc(double *func,
+                           double d_func[MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                           dbl *BC_Data_Float);
 #endif /* GOMA_MM_FILL_SOLID_H */

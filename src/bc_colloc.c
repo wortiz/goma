@@ -615,6 +615,16 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               func = kfunc[0];
               break;
 
+            case SPRING_ROLL_SOLID_COLLOC_BC:
+              /* initialize the general function to zero may have more than
+               * one entry for vector conditions like capillary */
+              memset(kfunc, 0, DIM * sizeof(double));
+              memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
+              fspring_roll_solid_bc(&kfunc[0], d_kfunc[0], BC_Types[bc_input_id].BC_Data_Float);
+              doFullJac = 1;
+              func = kfunc[0];
+              break;
+
             case VELO_TANG1_COLLOC_BC:
               GOMA_EH(GOMA_ERROR, "VELO_TANG1_COLLOC_BC not implemented");
               // fzero_velo_tangent_3d(kfunc, d_kfunc, elem_side_bc->id_side, I);

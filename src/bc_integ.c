@@ -541,6 +541,10 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
           fspring_roll_bc(&func[0], d_func[0], BC_Types[bc_input_id].BC_Data_Float);
           break;
 
+        case SPRING_ROLL_SOLID_BC:
+          fspring_roll_solid_bc(&func[0], d_func[0], BC_Types[bc_input_id].BC_Data_Float);
+          break;
+
         case LS_ATTACH_BC:
           fvelo_normal_bc(func, d_func, 0.0, contact_flag = FALSE, x_dot, theta, delta_t,
                           (int)bc->BC_Name, 0, 0, 135.0);
