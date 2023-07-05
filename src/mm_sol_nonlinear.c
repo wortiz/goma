@@ -727,6 +727,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                              upd->turbulent_info->node_set_ids, upd->turbulent_info->num_side_sets,
                              upd->turbulent_info->side_set_ids,
                              upd->turbulent_info->wall_distances);
+      exchange_node(cx, dpi, upd->turbulent_info->wall_distances);
     }
   }
 

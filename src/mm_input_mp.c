@@ -1453,7 +1453,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   /* read in constants for constitutive equation if they are input */
 
-  if ((ConstitutiveEquation == NEWTONIAN) || (ConstitutiveEquation == TURBULENT_SA)) {
+  if ((ConstitutiveEquation == NEWTONIAN) || (ConstitutiveEquation == TURBULENT_SA) || (ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
     model_read = look_for_mat_proptable(
         imp, "Viscosity", &(mp_glob[mn]->ViscosityModel), &(mp_glob[mn]->viscosity),
         &(mp_glob[mn]->u_viscosity), &(mp_glob[mn]->len_u_viscosity),

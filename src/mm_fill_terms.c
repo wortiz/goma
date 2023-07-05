@@ -8685,15 +8685,15 @@ int load_fv(void)
 
   // internal wall distance calculations
   if (upd->turbulent_info->use_internal_wall_distance) {
-    fv->wall_distance = 0.;
-    if (pdgv[pd->ShapeVar]) {
-      dofs = ei[pg->imtrx]->dof[pd->ShapeVar];
-      for (i = 0; i < dofs; i++) {
-        fv->wall_distance +=
-            upd->turbulent_info->wall_distances[ei[pg->imtrx]->gnn_list[pd->ShapeVar][i]] *
-            bf[pd->ShapeVar]->phi[i];
-      }
-    }
+   fv->wall_distance = 0.;
+   if (pdgv[pd->ShapeVar]) {
+     dofs = ei[pg->imtrx]->dof[pd->ShapeVar];
+     for (i = 0; i < dofs; i++) {
+       fv->wall_distance +=
+           upd->turbulent_info->wall_distances[ei[pg->imtrx]->gnn_list[pd->ShapeVar][i]] *
+           bf[pd->ShapeVar]->phi[i];
+     }
+   }
   }
 
   /*
@@ -8787,6 +8787,8 @@ int load_fv(void)
     if (!upd->turbulent_info->use_internal_wall_distance) {
       int i_d_wall = mp->dist_wall_ext_field_index;
       double d = fv->external_field[i_d_wall];
+      if (fabs(fv->wall_distance - d) > 1e-13)
+        printf("wall diff %g %g\n", fv->wall_distance, d);
       fv->wall_distance = d;
     }
   } else {
