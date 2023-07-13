@@ -37,6 +37,7 @@
 #include "el_geom.h"
 #include "exo_struct.h"
 #include "gds/gds_vector.h"
+#include "load_field_variables.h"
 #include "mm_as.h"
 #include "mm_as_structs.h"
 #include "mm_bc.h"
@@ -2579,6 +2580,11 @@ int load_variable(double *x_var,       /* variable value */
   case CUR_STRAIN:
     *x_var = fv->cur_strain;
     var = CUR_STRAIN;
+    *d_x_var = 1.;
+    break;
+  case EDDY_NU:
+    *x_var = fv->eddy_nu;
+    var = EDDY_NU;
     *d_x_var = 1.;
     break;
   case LIGHT_INTP:

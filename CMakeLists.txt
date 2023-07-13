@@ -82,31 +82,11 @@ set(GOMA_COMPILER_OVERRIDE
       "allow goma to compile with different compilers than TPLs, use with caution"
 )
 
-if (${Trilinos_VERSION} LESS 14)
 # Trilinos required packages
 foreach(package Amesos AztecOO Epetra)
   list(FIND Trilinos_PACKAGE_LIST ${package} trilinos_package_index)
   if(${trilinos_package_index} LESS 0)
     message(FATAL_ERROR "Trilinos not built with ${package} a required package")
-  endif()
-endforeach()
-
-# Trilinos required TPLs
-foreach(package MPI)
-  list(FIND Trilinos_TPL_LIST ${package} trilinos_package_index)
-  if(${trilinos_package_index} LESS 0)
-    message(FATAL_ERROR "Trilinos not built with TPL ${package} a required TPL")
-  endif()
-endforeach()
-
-# Trilinos extra TPLs
-foreach(package SuperLUDist MUMPS)
-  list(FIND Trilinos_TPL_LIST ${package} trilinos_package_index)
-  if(${trilinos_package_index} LESS 0)
-    message(
-      WARNING
-        "Trilinos not built with TPL ${package} some features of Goma won't work"
-    )
   endif()
 endforeach()
 
@@ -127,19 +107,6 @@ if(${stratimikos_package_index} GREATER_EQUAL 0)
     endif()
   endif()
 endif()
-else() # Trilinos > 13
-  option(ENABLE_STRATIMIKOS "ENABLE_STRATIMIKOS" ON)
-  option(ENABLE_TEKO "ENABLE_TEKO" ON)
-  if(ENABLE_STRATIMIKOS)
-    message(STATUS "Stratimikos enabled set with -DENABLE_STRATIMIKOS=ON/OFF")
-    list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_STRATIMIKOS)
-      option(ENABLE_TEKO "ENABLE_TEKO" ON)
-      if(ENABLE_TEKO)
-    message(STATUS "TEKO enabled set with -DENABLE_TEKO=ON/OFF")
-        list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_TEKO)
-      endif()
-  endif()
-endif()
 
 # Exodus
 find_package(SEACASExodus REQUIRED HINTS ${Trilinos_DIR}/../SEACASExodus)
@@ -147,10 +114,10 @@ message(STATUS "SEACASExodus_DIR = ${SEACASExodus_DIR}")
 
 option(ENABLE_APREPRO_LIB "ENABLE_APREPRO_LIB" ON)
 if(ENABLE_APREPRO_LIB)
-  find_package(SEACASAprepro HINTS ${SEACASExodus_DIR}/../SEACASAprepro)
-  if(SEACASAprepro_FOUND)
+  find_package(SEACASAprepro_lib HINTS ${SEACASExodus_DIR}/../SEACASAprepro_lib)
+  if(SEACASAprepro_lib_FOUND)
     message(STATUS "Aprepro Library found, enabling")
-    message(STATUS "SEACASAprepro_DIR = ${SEACASAprepro_DIR}")
+    message(STATUS "SEACASAprepro_lib_DIR = ${SEACASAprepro_lib_DIR}")
   endif()
 endif()
 
@@ -376,7 +343,8 @@ if(ARPACK_FOUND)
   endif()
   if(EIGEN_PARALLEL)
     find_package(PARPACK)
-    set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} ${PARPACK_LIBRARIES} ${ARPACK_LIBRARIES})
+    set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} ${PARPACK_LIBRARIES}
+                           ${ARPACK_LIBRARIES})
     if(NOT ARPACK_FOUND)
       message(FATAL_ERROR "Cannot use EIGEN_PARALLEL without ARPACK Library")
     endif()
@@ -401,7 +369,7 @@ if(PRINT_STACK_TRACE_ON_EH)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
 endif()
 
-if(ENABLE_APREPRO_LIB AND SEACASAprepro_FOUND)
+if(ENABLE_APREPRO_LIB AND SEACASAprepro_lib_FOUND)
   list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_APREPRO_LIB)
 endif()
 
@@ -418,6 +386,7 @@ option_definition(DO_NO_UNROLL OFF)
 option_definition(USERMAT_INITIALIZATION OFF)
 option_definition(ENABLE_LOGGING OFF)
 option_definition(ENABLE_KOMPLEX OFF)
+option_definition(PHASE_COUPLED_FILL OFF)
 set(MDE
     "27"
     CACHE STRING "set MDE")
@@ -457,6 +426,7 @@ set(GOMA_INCLUDES
     include/bc_special.h
     include/bc_surfacedomain.h
     include/decomp_interface.h
+    include/density.h
     include/dp_comm.h
     include/dpi.h
     include/dp_map_comm_vec.h
@@ -470,6 +440,7 @@ set(GOMA_INCLUDES
     include/el_quality.h
     include/exo_conn.h
     include/exo_struct.h
+    include/load_field_variables.h
     include/loca_const.h
     include/loca_util_const.h
     include/md_timer.h
@@ -485,11 +456,15 @@ set(GOMA_INCLUDES
     include/mm_elem_block_structs.h
     include/mm_fill_aux.h
     include/mm_fill_common.h
+    include/mm_fill_continuity.h
     include/mm_fill_em.h
+    include/mm_fill_energy.h
     include/mm_fill_fill.h
     include/mm_fill.h
     include/mm_fill_jac.h
     include/mm_fill_ls.h
+    include/mm_fill_ls_capillary_bcs.h
+    include/mm_fill_momentum.h
     include/mm_fill_population.h
     include/mm_fill_porous.h
     include/mm_fill_potential.h
@@ -502,6 +477,7 @@ set(GOMA_INCLUDES
     include/mm_fill_split.h
     include/mm_fill_stress.h
     include/mm_fill_terms.h
+    include/mm_fill_turbulent.h
     include/mm_fill_util.h
     include/mm_fill_stabilization.h
     include/mm_flux.h
@@ -604,6 +580,7 @@ set(GOMA_SOURCES
     src/bc_special.c
     src/bc_surfacedomain.c
     src/decomp_interface.c
+    src/density.c
     src/dp_comm.c
     src/dp_map_comm_vec.c
     src/dp_utils.c
@@ -613,6 +590,7 @@ set(GOMA_SOURCES
     src/el_quality.c
     src/exo_conn.c
     src/globals.c
+    src/load_field_variables.c
     src/loca_bord.c
     src/loca_eigen_c2f.F
     src/loca_eigen_cayley.F
@@ -631,11 +609,15 @@ set(GOMA_SOURCES
     src/mm_fill_aux.c
     src/mm_fill.c
     src/mm_fill_common.c
+    src/mm_fill_continuity.c
     src/mm_fill_em.c
+    src/mm_fill_energy.c
     src/mm_fill_fill.c
     src/mm_fill_interface.c
     src/mm_fill_jac.c
     src/mm_fill_ls.c
+    src/mm_fill_ls_capillary_bcs.c
+    src/mm_fill_momentum.c
     src/mm_fill_population.c
     src/mm_fill_porous.c
     src/mm_fill_potential.c
@@ -647,6 +629,7 @@ set(GOMA_SOURCES
     src/mm_fill_species.c
     src/mm_fill_stress.c
     src/mm_fill_terms.c
+    src/mm_fill_turbulent.c
     src/mm_fill_split.c
     src/mm_fill_util.c
     src/mm_fill_stabilization.c
@@ -755,11 +738,12 @@ set(GOMA_USER_SOURCES
     src/user_print.c
     src/user_senkin.F)
 
-set(GOMA_UTIL_INCLUDES include/bc/rotate_util.h include/mm_eh.h
-                       include/util/goma_normal.h include/util/aprepro_helper.h)
+set(GOMA_UTIL_INCLUDES
+    include/bc/rotate_util.h include/mm_eh.h include/util/goma_normal.h
+    include/util/aprepro_helper.h include/util/distance_helpers.h)
 
 set(GOMA_UTIL_SOURCES src/bc/rotate_util.c src/util/goma_normal.c src/mm_eh.c
-                      src/util/aprepro_helper.cpp)
+                      src/util/aprepro_helper.cpp src/util/distance_helpers.cpp)
 
 set(GDS_INCLUDES include/gds/gds_vector.h)
 
@@ -946,15 +930,15 @@ set(GOMA_TPL_INCLUDES
     ${Sparse_INCLUDES}
     ${SEACASExodus_INCLUDE_DIRS}
     ${SEACASExodus_TPL_INCLUDE_DIRS}
-    ${SEACASAprepro_INCLUDE_DIRS}
-    ${SEACASAprepro_TPL_INCLUDE_DIRS}
+    ${SEACASAprepro_lib_INCLUDE_DIRS}
+    ${SEACASAprepro_lib_TPL_INCLUDE_DIRS}
     ${Trilinos_INCLUDE_DIRS}
     ${Trilinos_TPL_INCLUDE_DIRS}
     ${MPI_C_INCLUDE_PATH})
 
 set(GOMA_TPL_LIBRARY_DIRS
     ${SEACASExodus_LIBRARY_DIRS} ${SEACASExodus_TPL_LIBRARY_DIRS}
-    ${SEACASAprepro_LIBRARY_DIRS} ${SEACASAprepro_TPL_LIBRARY_DIRS}
+    ${SEACASAprepro_lib_LIBRARY_DIRS} ${SEACASAprepro_lib_TPL_LIBRARY_DIRS}
     ${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 if(ENABLE_PETSC AND PETSC_FOUND)
   set(GOMA_TPL_LIBRARY_DIRS ${GOMA_TPL_LIBRARY_DIRS}
@@ -964,8 +948,8 @@ endif()
 set(GOMA_TPL_LIBRARIES
     ${SEACASExodus_LIBRARIES}
     ${SEACASExodus_TPL_LIBRARIES}
-    ${SEACASAprepro_LIBRARIES}
-    ${SEACASAprepro_TPL_LIBRARIES}
+    ${SEACASAprepro_lib_LIBRARIES}
+    ${SEACASAprepro_lib_TPL_LIBRARIES}
     ${GOMA_TPL_LIBRARIES}
     ${Trilinos_LIBRARIES}
     ${Trilinos_TPL_LIBRARIES}
@@ -1037,7 +1021,8 @@ if(ENABLE_WARNINGS)
 endif()
 
 add_library(goma_util ${GOMA_UTIL_SOURCES} ${GOMA_UTIL_INCLUDES})
-target_include_directories(goma_util PUBLIC include)
+target_include_directories(
+  goma_util PUBLIC include ${PROJECT_SOURCE_DIR}/tpls/nanoflann/include)
 target_include_directories(goma_util SYSTEM PRIVATE ${GOMA_TPL_INCLUDES})
 target_link_libraries(goma_util PUBLIC ${GOMA_TPL_LIBRARIES} gds)
 target_link_directories(goma_util PUBLIC ${GOMA_TPL_LIBRARY_DIRS})

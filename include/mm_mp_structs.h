@@ -290,8 +290,14 @@ struct Material_Properties {
   int DilationalViscosityModel;
   int dilationalViscosity_tableid;
 
+  /* Integer for wall distance external field index */
+  int dist_wall_ext_field_index;
+
   int Mwt_funcModel;
   dbl Mwt_func;
+
+  int SAwt_funcModel;
+  dbl SAwt_func;
 
   dbl surface_tension;
   int len_u_surface_tension;
@@ -1152,6 +1158,24 @@ struct Viscoelastic_Constitutive {
   dbl eps; /* This is the PTT elongational parameter */
   int epsModel;
 
+  // Rolie Poly
+  dbl stretch_time;
+  int stretchModel;
+
+  dbl CCR_coefficient;
+  int CCR_coefficientModel;
+
+  dbl polymer_exponent;
+  int polymer_exponentModel;
+
+  dbl maximum_stretch_ratio;
+  int maximum_stretch_ratioModel;
+
+  // FENE
+  dbl extensibility;
+  int extensibilityModel;
+
+  // level set
   struct Positive_LS_Viscoelastic_Properties pos_ls;
   dbl muJeffreys; /* 2nd viscosity used in modified Jeffreys model */
   int muJeffreysModel;

@@ -1108,9 +1108,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (num_const != 0) {
           GOMA_EH(GOMA_ERROR, "EXPANDED Shell Moment Tensor Model takes no other input parameters");
         }
-      } else
-
-          if (model_read == 1 && !strcmp(model_name, "SIMPLE")) {
+      } else if (model_read == 1 && !strcmp(model_name, "SIMPLE")) {
         model_read = 1;
         mat_ptr->shell_moment_tensor_model = SMT_SIMPLE;
         //	num_const = read_constants(imp, &(mat_ptr->shell_tangent_seed_vec),
@@ -1119,9 +1117,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         if (num_const != 0) {
           GOMA_EH(GOMA_ERROR, "SIMPLE Shell Moment Tensor Model takes no other input parameters");
         }
-      }
-
-      else {
+      } else {
         // default is simple
         mat_ptr->shell_tangent_model = SMT_SIMPLE;
         SPF(es, "%s = %s", search_string, "SIMPLE");
@@ -1440,6 +1436,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ConstitutiveEquation = CARREAU_WLF_CONC_EXP;
   } else if (!strcmp(model_name, "FOAM_PMDI_10")) {
     ConstitutiveEquation = FOAM_PMDI_10;
+  } else if (!strcmp(model_name, "TURBULENT_SA")) {
+    ConstitutiveEquation = TURBULENT_SA;
+  } else if (!strcmp(model_name, "TURBULENT_SA_DYNAMIC")) {
+    ConstitutiveEquation = TURBULENT_SA_DYNAMIC;
   } else {
     GOMA_EH(GOMA_ERROR, "Unrecognizable Constitutive Equation");
   }
@@ -1453,7 +1453,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   /* read in constants for constitutive equation if they are input */
 
-  if (ConstitutiveEquation == NEWTONIAN) {
+  if ((ConstitutiveEquation == NEWTONIAN) || (ConstitutiveEquation == TURBULENT_SA)) {
     model_read = look_for_mat_proptable(
         imp, "Viscosity", &(mp_glob[mn]->ViscosityModel), &(mp_glob[mn]->viscosity),
         &(mp_glob[mn]->u_viscosity), &(mp_glob[mn]->len_u_viscosity),
@@ -1533,6 +1533,21 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       gn_glob[mn]->mu0 = mat_ptr->viscosity;
     }
     gn_glob[mn]->mu0 = mat_ptr->viscosity;
+
+    /* If turbulent flow, read external field for distance from walls */
+    if (ConstitutiveEquation == TURBULENT_SA && !upd->turbulent_info->use_internal_wall_distance) {
+      mat_ptr->dist_wall_ext_field_index = -1;
+      if (efv->ev) {
+        for (i = 0; i < efv->Num_external_field; i++) {
+          if (!strcmp(efv->name[i], "DIST")) {
+            mat_ptr->dist_wall_ext_field_index = i;
+          }
+        }
+      } else {
+        GOMA_EH(GOMA_ERROR, "You need an external field DIST to use TURBULENT_SA model without "
+                            "internal distance calculations");
+      }
+    }
 
     ECHO(es, echo_file);
   }
@@ -2153,6 +2168,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     vn_glob[mn]->ConstitutiveEquation = SARAMITO_PTT;
   } else if (!strcmp(model_name, "MODIFIED_JEFFREYS")) {
     vn_glob[mn]->ConstitutiveEquation = MODIFIED_JEFFREYS;
+  } else if (!strcmp(model_name, "ROLIE_POLY")) {
+    vn_glob[mn]->ConstitutiveEquation = ROLIE_POLY;
+  } else if (!strcmp(model_name, "FENE_P")) {
+    vn_glob[mn]->ConstitutiveEquation = FENE_P;
   } else if (!strcmp(model_name, "NOPOLYMER")) {
     vn_glob[mn]->ConstitutiveEquation = NOPOLYMER;
     /* set defaults if the next section is not entered */
@@ -2669,6 +2688,35 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
     }
 
+    if (vn_glob[mn]->ConstitutiveEquation == FENE_P) {
+      strcpy(search_string, "Extensibility Parameter");
+
+      model_read = look_for_modal_prop(imp, "Extensibility Parameter", vn_glob[mn]->modes,
+                                       &matl_model, modal_data, es);
+
+      if (model_read < 1) {
+        if (model_read == -1)
+          SPF(err_msg, "%s is missing", search_string);
+        if (model_read == -2)
+          SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
+        fprintf(stderr, "%s\n", err_msg);
+        exit(-1);
+      }
+
+      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+        ve_glob[mn][mm]->extensibility = modal_data[mm];
+        ve_glob[mn][mm]->extensibilityModel = matl_model;
+      }
+
+      ECHO(es, echo_file);
+
+    } else {
+      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+        ve_glob[mn][mm]->extensibility = 0.;
+        ve_glob[mn][mm]->extensibilityModel = CONSTANT;
+      }
+    }
+
     /*
      * If one of the Saramito model combinations is enabled, ensure that a yield stress card is
      * present
@@ -2835,6 +2883,104 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       }
     }
 
+    if ((vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY) ||
+        (vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY_FE)) {
+      strcpy(search_string, "Stretch Time Constant");
+
+      model_read = look_for_modal_prop(imp, "Stretch Time Constant", vn_glob[mn]->modes,
+                                       &matl_model, modal_data, es);
+
+      if (model_read < 1) {
+        if (model_read == -1)
+          SPF(err_msg, "%s is missing", search_string);
+        if (model_read == -2)
+          SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
+        fprintf(stderr, "%s\n", err_msg);
+        exit(-1);
+      } else if (model_read == 1) {
+        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+          ve_glob[mn][mm]->stretch_time = modal_data[mm];
+          ve_glob[mn][mm]->stretchModel = matl_model;
+        }
+        ECHO(es, echo_file);
+      }
+
+      strcpy(search_string, "CCR Coefficient");
+
+      model_read = look_for_modal_prop(imp, "CCR Coefficient", vn_glob[mn]->modes, &matl_model,
+                                       modal_data, es);
+
+      if (model_read < 1) {
+        if (model_read == -1)
+          SPF(err_msg, "%s is missing", search_string);
+        if (model_read == -2)
+          SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
+        fprintf(stderr, "%s\n", err_msg);
+        exit(-1);
+
+      } else if (model_read == 1) {
+        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+          ve_glob[mn][mm]->CCR_coefficient = modal_data[mm];
+          ve_glob[mn][mm]->CCR_coefficientModel = matl_model;
+        }
+        ECHO(es, echo_file);
+      }
+
+      strcpy(search_string, "Polymer Exponent");
+
+      model_read = look_for_modal_prop(imp, "Polymer Exponent", vn_glob[mn]->modes, &matl_model,
+                                       modal_data, es);
+
+      if (model_read < 1) {
+        if (model_read == -1)
+          SPF(err_msg, "%s is missing", search_string);
+        if (model_read == -2)
+          SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
+        fprintf(stderr, "%s\n", err_msg);
+        exit(-1);
+
+      } else if (model_read == 1) {
+        for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+          ve_glob[mn][mm]->polymer_exponent = modal_data[mm];
+          ve_glob[mn][mm]->polymer_exponentModel = matl_model;
+        }
+        ECHO(es, echo_file);
+      }
+
+      if (vn_glob[mn]->ConstitutiveEquation == ROLIE_POLY_FE) {
+        strcpy(search_string, "Maximum Stretch Ratio");
+        model_read = look_for_modal_prop(imp, "Maximum Stretch Ratio", vn_glob[mn]->modes,
+                                         &matl_model, modal_data, es);
+
+        if (model_read < 1) {
+          if (model_read == -1)
+            SPF(err_msg, "%s is missing", search_string);
+          if (model_read == -2)
+            SPF(err_msg, "Only CONSTANT %s mode models supported.", search_string);
+          fprintf(stderr, "%s\n", err_msg);
+          exit(-1);
+
+        } else if (model_read == 1) {
+          for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+            ve_glob[mn][mm]->maximum_stretch_ratio = modal_data[mm];
+            ve_glob[mn][mm]->maximum_stretch_ratioModel = matl_model;
+          }
+          ECHO(es, echo_file);
+        }
+      }
+    } else {
+      for (mm = 0; mm < vn_glob[mn]->modes; mm++) {
+        ve_glob[mn][mm]->stretch_time = 0.;
+        ve_glob[mn][mm]->stretchModel = CONSTANT;
+        ve_glob[mn][mm]->CCR_coefficient = 0;
+        ve_glob[mn][mm]->CCR_coefficientModel = CONSTANT;
+        ve_glob[mn][mm]->polymer_exponent = 0;
+        ve_glob[mn][mm]->polymer_exponentModel = CONSTANT;
+        ve_glob[mn][mm]->maximum_stretch_ratio = 0;
+        ve_glob[mn][mm]->maximum_stretch_ratioModel = CONSTANT;
+      }
+    }
+
     free(modal_data);
   }
 
@@ -2888,6 +3034,35 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       SPF(es, "\t(%s = %s %.4g)", search_string, "CONSTANT", mat_ptr->surface_tension);
     }
+  }
+
+  ECHO(es, echo_file);
+
+  strcpy(search_string, "Spalart Allmaras Weight Function");
+  model_read =
+      look_for_mat_prop(imp, search_string, &(mat_ptr->SAwt_funcModel), &(mat_ptr->SAwt_func),
+                        NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  if (strncmp(model_name, " ", 1) != 0) {
+    if (!strcmp(model_name, "GALERKIN")) {
+      mat_ptr->SAwt_funcModel = GALERKIN;
+      mat_ptr->SAwt_func = 0.;
+    } else if (!strcmp(model_name, "SUPG")) {
+      int err;
+      mat_ptr->SAwt_funcModel = SUPG;
+      err = fscanf(imp, "%lg", &(mat_ptr->SAwt_func));
+      if (err != 1) {
+        GOMA_EH(GOMA_ERROR,
+                "Expected to read one double for Spalart Allmaras Weight Function SUPG");
+      }
+      SPF(endofstring(es), " %.4g", mat_ptr->SAwt_func);
+    } else {
+      SPF(err_msg, "Syntax error or invalid model for %s\n", search_string);
+      GOMA_EH(GOMA_ERROR, err_msg);
+    }
+  } else {
+    mat_ptr->SAwt_funcModel = GALERKIN;
+    mat_ptr->SAwt_func = 0.;
+    SPF(es, "\t(%s = %s)", search_string, "GALERKIN");
   }
 
   ECHO(es, echo_file);
@@ -10459,15 +10634,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         model_read = 1;
         mat_ptr->ehl_gap_model = GM_NDOTD;
 
-      } else
-
-          if (model_read == 1 && !strcmp(model_name, "RADIAL")) {
+      } else if (model_read == 1 && !strcmp(model_name, "RADIAL")) {
         model_read = 1;
         mat_ptr->ehl_gap_model = GM_RADIAL;
 
-      }
-
-      else {
+      } else {
         // default is simple
         mat_ptr->ehl_gap_model = GM_RADIAL;
         SPF(es, "%s = %s", search_string, "RADIAL");
@@ -10540,15 +10711,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         model_read = 1;
         mat_ptr->ehl_integration_kind = SIK_S;
 
-      } else
-
-          if (model_read == 1 && !strcmp(model_name, "XY")) {
+      } else if (model_read == 1 && !strcmp(model_name, "XY")) {
         model_read = 1;
         mat_ptr->ehl_integration_kind = SIK_XY;
 
-      }
-
-      else {
+      } else {
         // default is XY
         mat_ptr->ehl_integration_kind = SIK_XY;
         SPF(es, "%s = %s", search_string, "XY");

@@ -171,6 +171,9 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define SARAMITO_GIESEKUS 11
 #define SARAMITO_PTT      12
 #define MODIFIED_JEFFREYS 13
+#define ROLIE_POLY        14
+#define ROLIE_POLY_FE     15
+#define FENE_P            16
 #define MODIFIED_WLF      39
 
 // PTT forms
@@ -328,6 +331,10 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 
 #define MOMENT_CONSTANT_GROWTH            50
 #define MOMENT_SIZE_DEPENDENT_COALESCENCE 51
+
+/* Turbulent viscosity models for Reynolds Averaged NS */
+#define TURBULENT_SA         52 /* Spallart Allmaras */
+#define TURBULENT_SA_DYNAMIC 53 /* Spallart Allmaras */
 
 /*
  *  Heat source modeling

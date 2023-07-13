@@ -568,6 +568,8 @@ struct Element_Variable_Pointers {
   dbl *sh_sat_1[MDE];   /* Porous shell saturation layer 1 */
   dbl *sh_sat_2[MDE];   /* Porous shell saturation layer 2 */
   dbl *sh_sat_3[MDE];   /* Porous shell saturation layer 3 */
+
+  dbl *eddy_nu[MDE]; /* Eddy viscosity for turbulent flow */
 };
 
 /*___________________________________________________________________________*/
@@ -694,6 +696,8 @@ struct Element_Stiffness_Pointers {
   dbl **sh_sat_2; /* Porous shell saturation layer 2 */
   dbl **sh_sat_3; /* Porous shell saturation layer 3 */
 
+  dbl **eddy_nu; /* Eddy viscosity for turbulent flow */
+
   /*
    * These are for debugging purposes...
    */
@@ -803,6 +807,15 @@ struct Action_Flags {
    */
 };
 
+typedef struct turbulent_information {
+  double *wall_distances;
+  int *side_set_ids;
+  int *node_set_ids;
+  int num_side_sets;
+  int num_node_sets;
+  int use_internal_wall_distance;
+} turbulent_information;
+
 /*
  * This contains information that is uniformaly relevant
  * to all portions of the problem without regard to
@@ -890,6 +903,7 @@ struct Uniform_Problem_Description {
   int petsc_solve_post_proc;
   void *petsc_post_proc_data;
   int devss_traceless_gradient;
+  turbulent_information *turbulent_info;
 };
 typedef struct Uniform_Problem_Description UPD_STRUCT;
 /*____________________________________________________________________________*/
@@ -1713,6 +1727,9 @@ struct Field_Variables {
   dbl sh_sat_2;   /* Porous shell saturation layer 2 */
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
+  dbl eddy_nu;       /* Eddy viscosity for turbulent flow */
+  dbl wall_distance; /* Distance to nearest wall */
+
   /*
    * Grads of scalars...
    */
@@ -1759,6 +1776,8 @@ struct Field_Variables {
   dbl grad_sh_sat_1[DIM];  /* Gradient of porous shell saturation layer 1 */
   dbl grad_sh_sat_2[DIM];  /* Gradient of porous shell saturation layer 2 */
   dbl grad_sh_sat_3[DIM];  /* Gradient of porous shell saturation layer 3 */
+
+  dbl grad_eddy_nu[DIM]; /* Gradient of Eddy viscosity */
 
   /*
    * Grads of vectors...
@@ -1942,6 +1961,7 @@ struct Field_Variables {
   dbl d_grad_sh_p_open_2_dmesh[DIM][DIM][MDE];
   dbl d_max_strain_dmesh[DIM][MDE];
   dbl d_cur_strain_dmesh[DIM][MDE];
+  dbl d_grad_eddy_nu_dmesh[DIM][DIM][MDE];
   dbl d_grad_restime_dmesh[DIM][DIM][MDE];
   /*
    * Values at surfaces for integrated boundary conditions
@@ -2093,6 +2113,8 @@ struct Diet_Field_Variables {
   dbl sh_sat_1;   /* Porous shell saturation layer 1 */
   dbl sh_sat_2;   /* Porous shell saturation layer 2 */
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
+
+  dbl eddy_nu; /* Eddy viscosity for turbulent flow */
 
   dbl grad_em_er[DIM][DIM]; /* EM wave Fields */
   dbl grad_em_ei[DIM][DIM]; /* EM wave Fields */
@@ -3002,6 +3024,7 @@ struct stress_dependence {
   double S[DIM][DIM][MAX_MODES][DIM][DIM][MDE];
   double pf[DIM][DIM][MAX_PHASE_FUNC][MDE];
   double degrade[DIM][DIM][MDE];
+  double eddy_nu[DIM][DIM][MDE];
 };
 typedef struct stress_dependence STRESS_DEPENDENCE_STRUCT;
 
@@ -3050,6 +3073,7 @@ struct viscosity_dependence {
   double gd;                      /* strain rate dependence */
   double pf[MAX_PHASE_FUNC][MDE]; /* phase function */
   double degrade[MDE];            /* amount of degradation */
+  double eddy_nu[MDE];            /* Turbulent viscosity */
 };
 typedef struct viscosity_dependence VISCOSITY_DEPENDENCE_STRUCT;
 
@@ -3074,57 +3098,6 @@ struct dilViscosity_dependence {
   double degrade[MDE];            /* amount of degradation */
 };
 typedef struct dilViscosity_dependence DILVISCOSITY_DEPENDENCE_STRUCT;
-
-/* struct for d_rho */
-struct density_dependence {
-  double T[MDE];
-  double C[MAX_CONC][MDE];
-  double F[MDE];
-  double pf[MAX_PHASE_FUNC][MDE]; /* phase function */
-  double moment[MAX_MOMENTS][MDE];
-  double rho[MDE];
-};
-typedef struct density_dependence DENSITY_DEPENDENCE_STRUCT;
-
-/* struct for d_Cp */
-struct heat_capacity_dependence {
-  double v[DIM][MDE];      /* velocity dependence. */
-  double X[DIM][MDE];      /* mesh dependence. */
-  double T[MDE];           /* temperature dependence. */
-  double C[MAX_CONC][MDE]; /* conc dependence. */
-  double V[MDE];           /* voltage dependence. */
-  double F[MDE];           /* FILL dependence. */
-};
-typedef struct heat_capacity_dependence HEAT_CAPACITY_DEPENDENCE_STRUCT;
-
-/* struct for d_h */
-struct heat_source_dependence {
-  double v[DIM][MDE];                 /* velocity dependence. */
-  double X[DIM][MDE];                 /* mesh dependence. */
-  double T[MDE];                      /* temperature dependence. */
-  double C[MAX_CONC][MDE];            /* conc dependence. */
-  double V[MDE];                      /* voltage dependence. */
-  double S[MAX_MODES][DIM][DIM][MDE]; /* stress mode dependence. */
-  double F[MDE];                      /* level set field dependence */
-  double P[MDE];                      /* acoustic pressure dependence  */
-  double APR[MDE];                    /* acoustic pressure dependence  */
-  double API[MDE];                    /* acoustic pressure dependence  */
-  double INT[MDE];                    /* acoustic pressure dependence  */
-  double EM_ER[DIM][MDE];             /* time-harmonic electromagnetic dependence */
-  double EM_EI[DIM][MDE];             /* time-harmonic electromagnetic dependence */
-  double rst[MDE];                    /* residence time field dependence  */
-};
-typedef struct heat_source_dependence HEAT_SOURCE_DEPENDENCE_STRUCT;
-
-/* struct for d_k */
-struct conductivity_dependence {
-  double X[DIM][MDE];      /* mesh dependence. */
-  double T[MDE];           /* temperature dependence. */
-  double C[MAX_CONC][MDE]; /* conc dependence. */
-  double F[MDE];           /* FILL dependence. */
-  double moment[MAX_MOMENTS][MDE];
-};
-typedef struct conductivity_dependence CONDUCTIVITY_DEPENDENCE_STRUCT;
 
 /* struct for d_vconv */
 struct convection_velocity_dependence {
@@ -3159,8 +3132,9 @@ typedef struct normal_energy_dependence NORMAL_ENERGY_DEPENDENCE_STRUCT;
 
 /* struct for d_pspg */
 struct pspg_dependence {
-  double v[DIM][DIM][MDE];      /* velocity dependence. */
-  double T[DIM][MDE];           /* temperature dependence. */
+  double v[DIM][DIM][MDE]; /* velocity dependence. */
+  double T[DIM][MDE];      /* temperature dependence. */
+  double eddy_nu[DIM][MDE];
   double P[DIM][MDE];           /* pressure dependence. */
   double C[DIM][MAX_CONC][MDE]; /* conc dependence. */
   double X[DIM][DIM][MDE];      /* mesh dependence. */
