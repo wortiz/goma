@@ -67,7 +67,8 @@ EXTERN int load_elem_dofptr /* mm_fill_ptrs.c                            */
                              * global_h_elem_siz, but not all the
                              * computationally expensive pointers        */
 
-int load_elem_dofptr_all(const int ielem, const Exo_DB *exo);
+int load_elem_dofptr_all(
+    const int ielem, dbl *x, dbl *x_old, dbl *xdot, dbl *xdot_old, const Exo_DB *exo);
 
 EXTERN int load_elem_aijaptr /* mm_fill_ptrs.c                            */
     (int[],                  /* ija - column indeces                      */

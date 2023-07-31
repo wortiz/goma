@@ -482,6 +482,8 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
           xdot[j] += (x_1[j] - x[j]) * (1.0 + 2 * theta) / delta_t;
         }
 
+        pg->matrices[pg->imtrx].x = x_1;
+
         dx_col[j] = dx;
 #ifdef DEBUG_FD_COLORING
         count++;
@@ -655,6 +657,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
       }
     }
     memcpy(x_1, x, numProcUnknowns * (sizeof(double)));
+    pg->matrices[pg->imtrx].x = x;
     free_int_linked_list(elem_list);
     elem_list = NULL;
 #ifdef DEBUG_FD_COLORING
