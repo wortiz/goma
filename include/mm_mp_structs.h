@@ -299,6 +299,12 @@ struct Material_Properties {
   int SAwt_funcModel;
   dbl SAwt_func;
 
+  int turb_k_wt_funcModel;
+  dbl turb_k_wt_func;
+
+  int turb_omega_wt_funcModel;
+  dbl turb_omega_wt_func;
+
   dbl surface_tension;
   int len_u_surface_tension;
   dbl *u_surface_tension;

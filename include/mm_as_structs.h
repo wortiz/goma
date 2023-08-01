@@ -570,6 +570,8 @@ struct Element_Variable_Pointers {
   dbl *sh_sat_3[MDE];   /* Porous shell saturation layer 3 */
 
   dbl *eddy_nu[MDE]; /* Eddy viscosity for turbulent flow */
+  dbl *turb_k[MDE];
+  dbl *turb_omega[MDE];
 };
 
 /*___________________________________________________________________________*/
@@ -697,6 +699,8 @@ struct Element_Stiffness_Pointers {
   dbl **sh_sat_3; /* Porous shell saturation layer 3 */
 
   dbl **eddy_nu; /* Eddy viscosity for turbulent flow */
+  dbl **turb_k;
+  dbl **turb_omega;
 
   /*
    * These are for debugging purposes...
@@ -1728,6 +1732,8 @@ struct Field_Variables {
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
   dbl eddy_nu;       /* Eddy viscosity for turbulent flow */
+  dbl turb_k;
+  dbl turb_omega;
   dbl wall_distance; /* Distance to nearest wall */
 
   /*
@@ -1778,6 +1784,8 @@ struct Field_Variables {
   dbl grad_sh_sat_3[DIM];  /* Gradient of porous shell saturation layer 3 */
 
   dbl grad_eddy_nu[DIM]; /* Gradient of Eddy viscosity */
+  dbl grad_turb_k[DIM];
+  dbl grad_turb_omega[DIM];
 
   /*
    * Grads of vectors...
@@ -1962,6 +1970,8 @@ struct Field_Variables {
   dbl d_max_strain_dmesh[DIM][MDE];
   dbl d_cur_strain_dmesh[DIM][MDE];
   dbl d_grad_eddy_nu_dmesh[DIM][DIM][MDE];
+  dbl d_grad_turb_k_dmesh[DIM][DIM][MDE];
+  dbl d_grad_turb_omega_dmesh[DIM][DIM][MDE];
   dbl d_grad_restime_dmesh[DIM][DIM][MDE];
   /*
    * Values at surfaces for integrated boundary conditions
@@ -2115,6 +2125,8 @@ struct Diet_Field_Variables {
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
   dbl eddy_nu; /* Eddy viscosity for turbulent flow */
+  dbl turb_k;
+  dbl turb_omega;
 
   dbl grad_em_er[DIM][DIM]; /* EM wave Fields */
   dbl grad_em_ei[DIM][DIM]; /* EM wave Fields */
@@ -2157,6 +2169,8 @@ struct Diet_Field_Variables {
   dbl d_grad_d_dmesh[DIM][DIM][DIM][MDE];
   dbl d_grad_d_dot_dmesh[DIM][DIM][DIM][MDE];
   dbl grad_restime[DIM]; /* Gradient of the Residence time field */
+  dbl grad_turb_k[DIM];
+  dbl grad_turb_omega[DIM];
 
   dbl grad_moment[MAX_MOMENTS][DIM];
 };

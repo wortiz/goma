@@ -3083,6 +3083,60 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     SPF(es, "\t(%s = %s)", search_string, "GALERKIN");
   }
 
+  strcpy(search_string, "Turbulent k Weight Function");
+  model_read =
+      look_for_mat_prop(imp, search_string, &(mat_ptr->turb_k_wt_funcModel), &(mat_ptr->turb_k_wt_func),
+                        NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  if (strncmp(model_name, " ", 1) != 0) {
+    if (!strcmp(model_name, "GALERKIN")) {
+      mat_ptr->turb_k_wt_funcModel = GALERKIN;
+      mat_ptr->turb_k_wt_func = 0.;
+    } else if (!strcmp(model_name, "SUPG")) {
+      int err;
+      mat_ptr->turb_k_wt_funcModel = SUPG;
+      err = fscanf(imp, "%lg", &(mat_ptr->turb_k_wt_func));
+      if (err != 1) {
+        GOMA_EH(GOMA_ERROR,
+                "Expected to read one double for Spalart Allmaras Weight Function SUPG");
+      }
+      SPF(endofstring(es), " %.4g", mat_ptr->turb_k_wt_func);
+    } else {
+      SPF(err_msg, "Syntax error or invalid model for %s\n", search_string);
+      GOMA_EH(GOMA_ERROR, err_msg);
+    }
+  } else {
+    mat_ptr->turb_k_wt_funcModel = GALERKIN;
+    mat_ptr->turb_k_wt_func = 0.;
+    SPF(es, "\t(%s = %s)", search_string, "GALERKIN");
+  }
+
+  strcpy(search_string, "Turbulent omega Weight Function");
+  model_read =
+      look_for_mat_prop(imp, search_string, &(mat_ptr->turb_omega_wt_funcModel), &(mat_ptr->turb_omega_wt_func),
+                        NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  if (strncmp(model_name, " ", 1) != 0) {
+    if (!strcmp(model_name, "GALERKIN")) {
+      mat_ptr->turb_omega_wt_funcModel = GALERKIN;
+      mat_ptr->turb_omega_wt_func = 0.;
+    } else if (!strcmp(model_name, "SUPG")) {
+      int err;
+      mat_ptr->turb_omega_wt_funcModel = SUPG;
+      err = fscanf(imp, "%lg", &(mat_ptr->turb_omega_wt_func));
+      if (err != 1) {
+        GOMA_EH(GOMA_ERROR,
+                "Expected to read one double for Spalart Allmaras Weight Function SUPG");
+      }
+      SPF(endofstring(es), " %.4g", mat_ptr->turb_omega_wt_func);
+    } else {
+      SPF(err_msg, "Syntax error or invalid model for %s\n", search_string);
+      GOMA_EH(GOMA_ERROR, err_msg);
+    }
+  } else {
+    mat_ptr->turb_omega_wt_funcModel = GALERKIN;
+    mat_ptr->turb_omega_wt_func = 0.;
+    SPF(es, "\t(%s = %s)", search_string, "GALERKIN");
+  }
+
   ECHO(es, echo_file);
 
   /* Projection Equation Surface Diffusivity */

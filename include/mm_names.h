@@ -7445,6 +7445,8 @@ struct Equation_Names EQ_Name[] = {
     {"R_VSTAR", "VSTAR", R_VSTAR},
     {"R_WSTAR", "WSTAR", R_WSTAR},
     {"R_EDDY_NU", "EDDY_NU", R_EDDY_NU},
+    {"R_TURB_K", "TURB_K", R_TURB_K},
+    {"R_TURB_OMEGA", "TURB_OMEGA", R_TURB_OMEGA},
 
     /*
      *  Note -> these entries must remain until we get rid
@@ -7745,6 +7747,8 @@ struct Equation_Names Var_Name[] = {
     {"VSTAR", "USY", VSTAR},
     {"WSTAR", "USZ", WSTAR},
     {"EDDY_NU", "EDDY_NU", EDDY_NU},
+    {"TURB_K", "TURB_K", TURB_K},
+    {"TURB_OMEGA", "TURB_OMEGA", TURB_OMEGA},
 
     {"MESH_POSITION1", "X", MESH_POSITION1},
     {"MESH_POSITION2", "Y", MESH_POSITION2}, /* 206 */
@@ -8016,6 +8020,8 @@ struct Equation_Names Exo_Var_Names[] = {
     {"V Int.", "USY", VSTAR},
     {"W Int.", "USZ", WSTAR},
     {"Eddy Turbulence Viscosity.", "EDDY_NU", EDDY_NU},
+    {"K Turbulence.", "TURB_K", TURB_K},
+    {"Omega Turbulence.", "TURB_OMEGA", TURB_OMEGA},
 };
 
 int Num_Exo_Var_Names = sizeof(Exo_Var_Names) / sizeof(struct Equation_Names);
@@ -8322,6 +8328,8 @@ struct Equation_Names Var_Units[] = {
     {"VSTAR", "[1]", VSTAR},
     {"WSTAR", "[1]", WSTAR},
     {"EDDY_NU", "[1]", EDDY_NU},
+    {"TURB_K", "[1]", TURB_K},
+    {"TURB_OMEGA", "[1]", TURB_OMEGA},
 };
 
 int Num_Var_Units = sizeof(Var_Units) / sizeof(struct Equation_Names);

@@ -820,6 +820,22 @@ int load_fv(void)
     stateVector[EDDY_NU] = fv->eddy_nu;
   }
 
+  if (pdgv[TURB_K]) {
+    v = TURB_K;
+    scalar_fv_fill(esp->turb_k, esp_dot->turb_k, esp_old->turb_k, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_k), &(fv_dot->turb_k),
+                   &(fv_old->turb_k));
+    stateVector[TURB_K] = fv->turb_k;
+  }
+
+  if (pdgv[TURB_OMEGA]) {
+    v = TURB_OMEGA;
+    scalar_fv_fill(esp->turb_omega, esp_dot->turb_omega, esp_old->turb_omega, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_omega), &(fv_dot->turb_omega),
+                   &(fv_old->turb_omega));
+    stateVector[TURB_OMEGA] = fv->turb_omega;
+  }
+
   if (pdgv[LIGHT_INTP]) {
     v = LIGHT_INTP;
     scalar_fv_fill(esp->poynt[0], esp_dot->poynt[0], esp_old->poynt[0], bf[v]->phi,
@@ -3191,6 +3207,38 @@ int load_fv_grads(void)
     }
   }
 
+  if (pd->gv[TURB_K]) {
+    v = TURB_K;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_k[p] = 0.0;
+      for (i = 0; i < dofs; i++) {
+        fv->grad_turb_k[p] += *esp->turb_k[i] * bfn->grad_phi[i][p];
+      }
+    }
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TURB_K] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_k[p] = 0.0;
+    }
+  }
+
+  if (pd->gv[TURB_OMEGA]) {
+    v = TURB_OMEGA;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_omega[p] = 0.0;
+      for (i = 0; i < dofs; i++) {
+        fv->grad_turb_omega[p] += *esp->turb_omega[i] * bfn->grad_phi[i][p];
+      }
+    }
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TURB_OMEGA] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_omega[p] = 0.0;
+    }
+  }
+
   /*
    * grad(APR)
    */
@@ -4867,6 +4915,48 @@ int load_fv_mesh_derivs(int okToZero)
   } else if (upd->vp[pg->imtrx][EDDY_NU] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
     memset(&(fv->d_grad_eddy_nu_dmesh[0][0][0]), 0, siz);
+  }
+
+  if (pd->gv[TURB_K]) {
+    v = TURB_K;
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
+    siz = sizeof(double) * DIM * DIM * MDE;
+    memset(&(fv->d_grad_turb_k_dmesh[0][0][0]), 0, siz);
+    for (i = 0; i < vdofs; i++) {
+      T_i = *esp->turb_k[i];
+      for (p = 0; p < dimNonSym; p++) {
+        for (b = 0; b < dim; b++) {
+          for (j = 0; j < mdofs; j++) {
+            fv->d_grad_turb_k_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+          }
+        }
+      }
+    }
+  } else if (upd->vp[pg->imtrx][TURB_K] != -1) {
+    siz = sizeof(double) * DIM * DIM * MDE;
+    memset(&(fv->d_grad_turb_k_dmesh[0][0][0]), 0, siz);
+  }
+
+  if (pd->gv[TURB_OMEGA]) {
+    v = TURB_OMEGA;
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
+    siz = sizeof(double) * DIM * DIM * MDE;
+    memset(&(fv->d_grad_turb_omega_dmesh[0][0][0]), 0, siz);
+    for (i = 0; i < vdofs; i++) {
+      T_i = *esp->turb_omega[i];
+      for (p = 0; p < dimNonSym; p++) {
+        for (b = 0; b < dim; b++) {
+          for (j = 0; j < mdofs; j++) {
+            fv->d_grad_turb_omega_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+          }
+        }
+      }
+    }
+  } else if (upd->vp[pg->imtrx][TURB_OMEGA] != -1) {
+    siz = sizeof(double) * DIM * DIM * MDE;
+    memset(&(fv->d_grad_turb_omega_dmesh[0][0][0]), 0, siz);
   }
 
   if (pd->gv[LIGHT_INTP]) {

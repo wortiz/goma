@@ -2018,6 +2018,18 @@ int load_elem_dofptr_all(
                                           esp_dot->eddy_nu);
     }
 
+    eqn = R_TURB_K;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->turb_k, esp_old->turb_k,
+                                          esp_dot->turb_k);
+    }
+
+    eqn = R_TURB_OMEGA;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->turb_omega, esp_old->turb_omega,
+                                          esp_dot->turb_omega);
+    }
+
     /* This should loop through all the stress variables
      * for all the modes.
      */

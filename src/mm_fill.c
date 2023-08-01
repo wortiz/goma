@@ -2403,6 +2403,27 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
     }
 
+    if (pde[R_TURB_K]) {
+      err = assemble_turb_k(time_value, theta, delta_t, &pg_data);
+      GOMA_EH(err, "assemble_turb_k");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_turb_k");
+      if (err)
+        return -1;
+#endif
+    }
+
+    if (pde[R_TURB_OMEGA]) {
+      err = assemble_turb_omega(time_value, theta, delta_t, &pg_data);
+      GOMA_EH(err, "assemble_turb_omega");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_turb_omega");
+      if (err)
+        return -1;
+#endif
+    }
+
+
     if (pde[R_MOMENT0] || pde[R_MOMENT1] || pde[R_MOMENT2] || pde[R_MOMENT3]) {
       err = assemble_moments(time_value, theta, delta_t, &pg_data);
       GOMA_EH(err, "assemble_moments");

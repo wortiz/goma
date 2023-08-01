@@ -152,7 +152,7 @@ static char rcsid[] = "$Id: mm_fill_shell.c,v 5.62 2010-07-30 21:14:52 prschun E
  *    ETM term which is used. This assignment is tricky since bitwise
  *    operators are used, so refer carefully to existing entries.
  *
- *  STEP 10:  File mm_fill_terms.c
+ *  STEP 10:  File load_field_variables.c
  *    In function load_fv(), add a block of code to load the new variable
  *    into the fv structure. See the comments there about zeroing out
  *    previous values.
