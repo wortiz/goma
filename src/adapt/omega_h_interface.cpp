@@ -727,6 +727,18 @@ void convert_omega_h_to_goma(
   }
   std::sort(neighbor_list.begin(), neighbor_list.end());
 
+  std::vector<int> local_owners(mesh->nverts(), ProcID);
+  for (int proc = 0; proc < Num_Proc; proc++) {
+    int offset = proc * max_comm_size;
+    for (int i = 0; i < max_comm_size; i++) {
+      int gnode = all_neighbors_comm_nodes[offset + i];
+      if (gnode != -1 && global_node_to_local.find(gnode) != global_node_to_local.end()) {
+        int owner = global_to_owner.at(gnode);
+        local_owners[global_node_to_local[gnode]] = owner;
+      }
+    }
+  }
+
   std::vector<int> proc_node_counts(neighbor_list.size());
   std::vector<std::vector<int>> proc_node_list(neighbor_list.size());
   std::vector<int> proc_node_idx(neighbor_list.size() + 1);
@@ -740,12 +752,15 @@ void convert_omega_h_to_goma(
       int gnode = all_neighbors_comm_nodes[offset + i];
       if (gnode != -1) {
         if (global_node_to_local.find(gnode) != global_node_to_local.end()) {
-          auto it = std::find(neighbor_list.begin(), neighbor_list.end(), proc);
-          assert(it != neighbor_list.end());
-          int index = it - neighbor_list.begin();
-          proc_node_list[index].push_back(global_node_to_local[gnode]);
-          proc_node_counts[index] += 1;
-          boundary_nodes.insert(global_node_to_local[gnode]);
+          int local_node = global_node_to_local[gnode];
+          if (local_owners[local_node] == ProcID || local_owners[local_node] == proc) {
+            auto it = std::find(neighbor_list.begin(), neighbor_list.end(), proc);
+            assert(it != neighbor_list.end());
+            int index = it - neighbor_list.begin();
+            proc_node_list[index].push_back(local_node);
+            proc_node_counts[index] += 1;
+          }
+         boundary_nodes.insert(local_node);
         }
       }
     }
@@ -772,8 +787,8 @@ void convert_omega_h_to_goma(
   std::vector<int> boundary_nodes_sorted(boundary_nodes.begin(), boundary_nodes.end());
   std::sort(boundary_nodes_sorted.begin(), boundary_nodes_sorted.end());
   std::vector<int> internal_nodes;
-  for (int j = 0; j < vert_owners.size(); j++) {
-    if (vert_owners[j] == ProcID) {
+  for (unsigned int j = 0; j < local_owners.size(); j++) {
+    if (local_owners[j] == ProcID) {
       if (!std::binary_search(boundary_nodes_sorted.begin(), boundary_nodes_sorted.end(), j)) {
         internal_nodes.push_back(j);
       }
