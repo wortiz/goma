@@ -1769,10 +1769,10 @@ int load_fv(void)
   if (upd->turbulent_info->use_internal_wall_distance) {
     fv->wall_distance = 0.;
     if (pdgv[pd->ShapeVar]) {
-      dofs = ei[pg->imtrx]->dof[pd->ShapeVar];
+      dofs = ei[upd->matrix_index[pd->ShapeVar]]->dof[pd->ShapeVar];
       for (i = 0; i < dofs; i++) {
         fv->wall_distance +=
-            upd->turbulent_info->wall_distances[ei[pg->imtrx]->gnn_list[pd->ShapeVar][i]] *
+            upd->turbulent_info->wall_distances[ei[upd->matrix_index[pd->ShapeVar]]->gnn_list[pd->ShapeVar][i]] *
             bf[pd->ShapeVar]->phi[i];
       }
     }

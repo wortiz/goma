@@ -31,6 +31,7 @@
 #include "mm_eh.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_terms.h"
+#include "mm_fill_turbulent.h"
 #include "mm_fill_util.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
@@ -130,7 +131,8 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 
   if ((gn_local->ConstitutiveEquation == NEWTONIAN) ||
       (gn_local->ConstitutiveEquation == TURBULENT_SA) ||
-      (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
+      (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) ||
+      (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA_SST)) {
     if (mp->ViscosityModel == USER) {
       err = usr_viscosity(mp->u_viscosity);
       mu = mp->viscosity;
@@ -337,6 +339,56 @@ double viscosity(struct Generalized_Newtonian *gn_local,
         if (d_mu != NULL) {
           for (j = 0; j < ei[pg->imtrx]->dof[EDDY_NU]; j++) {
             d_mu->eddy_nu[j] = scale * bf[EDDY_NU]->phi[j] * (fv1 + mu_e * dfv1_dmu_e);
+          }
+        }
+      }
+    } else if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA_SST) {
+      double mu_newt = mp->viscosity;
+      dbl rho;
+      DENSITY_DEPENDENCE_STRUCT d_rho_struct;
+      DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+      rho = density(d_rho, tran->time_value);
+      dbl F1 = 0;
+      dbl F2 = 0;
+      calc_blending_functions(rho, d_rho, &F1, &F2, NULL, NULL);
+
+      dbl omega[DIM][DIM];
+      dbl omega_old[DIM][DIM];
+      for (int a = 0; a < VIM; a++) {
+        for (int b = 0; b < VIM; b++) {
+          omega[a][b] = (fv->grad_v[a][b] - fv->grad_v[b][a]);
+          omega_old[a][b] = (fv_old->grad_v[a][b] - fv_old->grad_v[b][a]);
+        }
+      }
+      /* Vorticity */
+      dbl Omega = 0.0;
+      dbl Omega_old = 0;
+      dbl dOmega_dvelo[DIM][MDE];
+      dbl dOmega_dmesh[DIM][MDE];
+      calc_vort_mag(&Omega, omega, dOmega_dvelo, dOmega_dmesh);
+      calc_vort_mag(&Omega_old, omega_old, NULL, NULL);
+      dbl a1 = 0.31;
+      dbl mu_t = rho * a1 * fv->turb_k / (fmax(a1 * fv->turb_omega, Omega_old * F2));
+
+      mu = mu_newt + mu_t;
+
+      if (d_mu != NULL) {
+        for (j = 0; j < ei[pg->imtrx]->dof[TURB_OMEGA]; j++) {
+          d_mu->turb_omega[j] = 0.0;
+          if (a1 * fv->turb_omega > Omega * F2) {
+            d_mu->turb_omega[j] = -rho * a1 * fv->turb_k * F2 / pow(a1 * fv->turb_omega, 2);
+          }
+        }
+        for (j = 0; j < ei[pg->imtrx]->dof[TURB_K]; j++) {
+          d_mu->turb_k[j] = rho * a1 / (fmax(a1 * fv->turb_omega, Omega * F2));
+        }
+        for (int b = 0; b < VIM; b++) {
+          int var = VELOCITY1 + b;
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            d_mu->v[b][j] = 0.;
+            if (a1 * fv->turb_omega < Omega * F2) {
+              d_mu->v[b][j] = rho * a1 * fv->turb_k * dOmega_dvelo[b][j] / pow(Omega * F2, 2);
+            }
           }
         }
       }

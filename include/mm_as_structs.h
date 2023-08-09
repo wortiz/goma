@@ -3088,6 +3088,8 @@ struct viscosity_dependence {
   double pf[MAX_PHASE_FUNC][MDE]; /* phase function */
   double degrade[MDE];            /* amount of degradation */
   double eddy_nu[MDE];            /* Turbulent viscosity */
+  double turb_omega[MDE];         /* Turbulent omega */
+  double turb_k[MDE];             /* Turbulent k */
 };
 typedef struct viscosity_dependence VISCOSITY_DEPENDENCE_STRUCT;
 

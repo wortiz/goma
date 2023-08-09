@@ -1119,32 +1119,15 @@ int load_elem_dofptr(const int ielem,
                                               * global_h_elem_siz, but not all the
                                               * computationally expensive pointers */
 {
-  int eqn; /* equation, variable name indeces */
-  int gnn; /* Global Node Number */
   int dofs = 0;
-  int nvdof, ledof, mode;
   int ie;   /* index into global solution */
   int i;    /* indeces for dofs */
-  int b, c; /* index for concentration */
-  int p;    /* for vector eq.'s. */
   int status;
   int k;
-  int R_s[MAX_MODES][DIM][DIM], R_g[DIM][DIM];
   int err;
   struct Level_Set_Data *ls_old;
 
   /* load eqn and variable number in tensor form */
-  (void)stress_eqn_pointer(R_s);
-
-  R_g[0][0] = R_GRADIENT11;
-  R_g[0][1] = R_GRADIENT12;
-  R_g[1][0] = R_GRADIENT21;
-  R_g[1][1] = R_GRADIENT22;
-  R_g[0][2] = R_GRADIENT13;
-  R_g[1][2] = R_GRADIENT23;
-  R_g[2][0] = R_GRADIENT31;
-  R_g[2][1] = R_GRADIENT32;
-  R_g[2][2] = R_GRADIENT33;
 
   /*
    * Count how many dofs/node for each kind of variable...

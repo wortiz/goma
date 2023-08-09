@@ -13,6 +13,7 @@
 \************************************************************************/
 
 #include "density.h"
+#include "mm_eh.h"
 #include "mm_fill_stabilization.h"
 #include "rf_bc_const.h"
 #include <stdio.h>
@@ -34,7 +35,7 @@
 
 /*  _______________________________________________________________________  */
 
-static int calc_vort_mag(dbl *vort_mag,
+int calc_vort_mag(dbl *vort_mag,
                          dbl omega[DIM][DIM],
                          dbl d_vort_mag_dv[DIM][MDE],
                          dbl d_vort_mag_dmesh[DIM][MDE]) {
@@ -662,12 +663,32 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
   return (status);
 }
 
-typedef struct {
-  dbl dk[MDE];
-  dbl domega[MDE];
-} blending_dependence_struct;
 
-static void calc_blending_functions(dbl rho,
+double turb_omega_wall_bc(void){
+  double rho = density(NULL, tran->time_value);
+  double beta1 = 0.075;
+  double nu = mp->viscosity / rho;
+  double Dy = 0.0;
+  
+  if (upd->turbulent_info->use_internal_wall_distance) {
+    fv->wall_distance = 0.;
+    if (pd->gv[pd->ShapeVar]) {
+      int dofs = ei[upd->matrix_index[pd->ShapeVar]]->dof[pd->ShapeVar];
+      for (int i = 0; i < dofs; i++) {
+        dbl d =
+            upd->turbulent_info->wall_distances[ei[upd->matrix_index[pd->ShapeVar]]->gnn_list[pd->ShapeVar][i]];
+            if (d > Dy) {
+              Dy = d;
+            }
+      }
+    }
+  } else {
+    GOMA_EH(GOMA_ERROR, "Unimplemented wall distance for turb_omega_wall_bc\n");
+  }
+  double omega_wall = 10.0 * (6 * nu) / (beta1 * Dy * Dy);
+  return omega_wall;
+}
+void calc_blending_functions(dbl rho,
                                     DENSITY_DEPENDENCE_STRUCT *d_rho,
                                     dbl *F1,
                                     dbl *F2,
@@ -683,12 +704,12 @@ static void calc_blending_functions(dbl rho,
   for (int i = 0; i < pd->Num_Dim; i++) {
     ddkdomega += fv_old->grad_turb_k[i] * fv_old->grad_turb_omega[i];
   }
-  dbl CD_komega = fmax(2 * rho * sigma_omega2 * ddkdomega / omega, 1e-10);
+  dbl CD_komega = fmax(2 * rho * sigma_omega2 * ddkdomega / omega, 1e-20);
   dbl C500 = 500 * nu / (d * d * omega);
 
-  dbl arg1 = fmin(fmax(sqrt(k) / (beta_star * omega * d), C500),
+  dbl arg1 = fmin(fmax(sqrt(fmax(k,0)) / (beta_star * omega * d), C500),
                   4 * rho * sigma_omega2 * k / (CD_komega * d * d));
-  dbl arg2 = fmax(2 * sqrt(k) / (beta_star * omega * d), C500);
+  dbl arg2 = fmax(2 * sqrt(fmax(k,0)) / (beta_star * omega * d), C500);
 
   *F1 = tanh(arg1 * arg1 * arg1 * arg1);
   *F2 = tanh(arg2 * arg2);
@@ -779,6 +800,24 @@ int assemble_turb_k(dbl time_value, /* current time */
   calc_shearrate(&SI, gamma_dot, d_SI_dv, d_SI_dmesh);
   dbl a1 = 0.31;
 
+  /* Rate of rotation tensor  */
+  dbl omega[DIM][DIM];
+  dbl omega_old[DIM][DIM];
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      omega[a][b] = (fv->grad_v[a][b] - fv->grad_v[b][a]);
+      omega_old[a][b] = (fv_old->grad_v[a][b] - fv_old->grad_v[b][a]);
+    }
+  }
+
+  /* Vorticity */
+  dbl Omega = 0.0;
+  dbl Omega_old = 0;
+  dbl dOmega_dvelo[DIM][MDE];
+  dbl dOmega_dmesh[DIM][MDE];
+  calc_vort_mag(&Omega, omega, dOmega_dvelo, dOmega_dmesh);
+  calc_vort_mag(&Omega_old, omega_old, NULL, NULL);
+
   dbl x_dot[DIM] = {0.};
   if (pd->gv[R_MESH1]) {
     for (int i = 0; i < DIM; i++) {
@@ -793,9 +832,10 @@ int assemble_turb_k(dbl time_value, /* current time */
   } else if (mp->SAwt_funcModel == SUPG || mp->SAwt_funcModel == SUPG_GP ||
              mp->SAwt_funcModel == SUPG_SHAKIB) {
     supg = mp->SAwt_func;
-    supg_tau_shakib(&supg_terms, pd->Num_Dim, dt, mu, EDDY_NU);
+    supg_tau_shakib(&supg_terms, pd->Num_Dim, dt, mu, TURB_K);
   }
 
+  
   dbl beta_star = 0.09;
   dbl sigma_k1 = 0.85;
   dbl sigma_k2 = 1.0;
@@ -803,29 +843,31 @@ int assemble_turb_k(dbl time_value, /* current time */
   // blended values
   dbl sigma_k = F1 * sigma_k1 + (1 - F1) * sigma_k2;
 
-  dbl mu_t = rho * a1 * fv->turb_k / (fmax(a1 * fv->turb_omega, SI * F2));
-  dbl d_mu_t_dk = rho * a1 / (fmax(a1 * fv->turb_omega, SI * F2));
+  dbl mu_t = rho * a1 * fv_old->turb_k / (fmax(a1 * fv_old->turb_omega, Omega * F2));
+  dbl d_mu_t_dk = 0; //rho * a1 / (fmax(a1 * fv->turb_omega, SI * F2));
   dbl d_mu_t_domega = 0;
-  dbl d_mu_t_SI = 0;
-  if (a1 * fv->turb_omega > SI * F2) {
-    d_mu_t_domega = -rho * a1 * fv->turb_k / ((a1 * fv->turb_omega) * (a1 * fv->turb_omega));
+  dbl d_mu_t_Omega = 0;
+  if (a1 * fv->turb_omega > Omega * F2) {
+    d_mu_t_domega = -rho * a1 * fv_old->turb_k / ((a1 * fv_old->turb_omega) * (a1 * fv_old->turb_omega));
   } else {
-    d_mu_t_SI = -rho * a1 * fv->turb_k / ((SI * F2) * (SI * F2));
+    d_mu_t_Omega = -rho * a1 * fv_old->turb_k / ((Omega * F2) * (Omega * F2));
   }
   dbl P = mu_t * SI * SI;
-  dbl Plim = fmin(P, 10 * beta_star * rho * fv->turb_omega * fv->turb_k);
+  dbl Plim = fmin(P, 20 * beta_star * rho * fv_old->turb_omega * fv_old->turb_k);
 
   dbl d_Plim_dk = 0;
   dbl d_Plim_domega = 0;
+  dbl d_Plim_dOmega = 0;
   dbl d_Plim_dSI = 0;
-  if (P < 10 * beta_star * rho * fv->turb_omega * fv->turb_k) {
-    d_Plim_dk = 10 * beta_star * rho * fv->turb_omega;
-    d_Plim_domega = 10 * beta_star * rho * fv->turb_k;
-  } else {
-    d_Plim_dSI = d_mu_t_SI * SI * SI + 2 * mu_t * SI;
-    d_Plim_dk = d_mu_t_dk * SI * SI;
-    d_Plim_domega = d_mu_t_domega * SI * SI;
-  }
+  // if (P < 20 * beta_star * rho * fv->turb_omega * fv->turb_k) {
+  //   d_Plim_dk = 20 * beta_star * rho * fv->turb_omega;
+  //   d_Plim_domega = 20 * beta_star * rho * fv->turb_k;
+  // } else {
+  //   d_Plim_dOmega = d_mu_t_Omega * SI * SI;
+  //   d_Plim_dSI = 2 * mu_t * SI;
+  //   d_Plim_dk = d_mu_t_dk * SI * SI;
+  //   d_Plim_domega = d_mu_t_domega * SI * SI;
+  // }
 
   /*
    * Residuals_________________________________________________________________
@@ -866,7 +908,7 @@ int assemble_turb_k(dbl time_value, /* current time */
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      src = Plim - beta_star * rho * fv->turb_omega * fv->turb_k;
+      src = Plim - beta_star * rho * fv_old->turb_omega * fv_old->turb_k;
       src *= -wt_func * d_area;
       src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
@@ -949,7 +991,8 @@ int assemble_turb_k(dbl time_value, /* current time */
           adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
           /* Assemble source term */
-          src = bf[var]->phi[j] * (d_Plim_dk - beta_star * rho * fv->turb_omega);
+          // src = bf[var]->phi[j] * (d_Plim_dk - beta_star * rho * fv->turb_omega);
+          src = 0;
           src *= -wt_func * d_area;
           src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
@@ -1026,13 +1069,13 @@ int assemble_turb_k(dbl time_value, /* current time */
             adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
             /* Assemble source term */
-            src = d_Plim_dSI * d_SI_dv[b][j];
+            src = d_Plim_dOmega * dOmega_dvelo[b][j] +d_Plim_dSI * d_SI_dv[b][j];
             src *= -wt_func * d_area;
             src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
             diff = 0.0;
             for (int p = 0; p < VIM; p++) {
-              diff += bf[eqn]->grad_phi[i][p] * (d_SI_dv[b][j] * d_mu_t_SI * sigma_k) *
+              diff += bf[eqn]->grad_phi[i][p] * (dOmega_dvelo[b][j] * d_mu_t_Omega * sigma_k) *
                       fv->grad_turb_k[p];
             }
             diff *= d_area;
@@ -1126,6 +1169,23 @@ int assemble_turb_omega(dbl time_value, /* current time */
       gamma_dot[i][j] = (fv->grad_v[i][j] + fv->grad_v[j][i]);
     }
   }
+
+  dbl omega[DIM][DIM];
+  dbl omega_old[DIM][DIM];
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      omega[a][b] = (fv->grad_v[a][b] - fv->grad_v[b][a]);
+      omega_old[a][b] = (fv_old->grad_v[a][b] - fv_old->grad_v[b][a]);
+    }
+  }
+  /* Vorticity */
+  dbl Omega = 0.0;
+  dbl Omega_old = 0;
+  dbl dOmega_dvelo[DIM][MDE];
+  dbl dOmega_dmesh[DIM][MDE];
+  calc_vort_mag(&Omega, omega, dOmega_dvelo, dOmega_dmesh);
+  calc_vort_mag(&Omega_old, omega_old, NULL, NULL);
+
   dbl d_SI_dv[DIM][MDE];
   dbl d_SI_dmesh[DIM][MDE];
   calc_shearrate(&SI, gamma_dot, d_SI_dv, d_SI_dmesh);
@@ -1145,7 +1205,7 @@ int assemble_turb_omega(dbl time_value, /* current time */
   } else if (mp->SAwt_funcModel == SUPG || mp->SAwt_funcModel == SUPG_GP ||
              mp->SAwt_funcModel == SUPG_SHAKIB) {
     supg = mp->SAwt_func;
-    supg_tau_shakib(&supg_terms, pd->Num_Dim, dt, mu, EDDY_NU);
+    supg_tau_shakib(&supg_terms, pd->Num_Dim, dt, mu, TURB_OMEGA);
   }
 
   dbl beta_star = 0.09;
@@ -1155,8 +1215,8 @@ int assemble_turb_omega(dbl time_value, /* current time */
   dbl sigma_omega2 = 0.856;
   dbl beta1 = 0.075;
   dbl beta2 = 0.0828;
-  dbl gamma1 = 5.0 / 9.0;
-  dbl gamma2 = 0.44;
+  dbl gamma1 = beta1/beta_star;
+  dbl gamma2 = beta2/beta_star;
 
   // blended values
   dbl gamma = F1 * gamma1 + (1 - F1) * gamma2;
@@ -1164,29 +1224,31 @@ int assemble_turb_omega(dbl time_value, /* current time */
   dbl sigma_omega = F1 * sigma_omega1 + (1 - F1) * sigma_omega2;
   dbl beta = F1 * beta1 + (1 - F1) * beta2;
 
-  dbl mu_t = rho * a1 * fv->turb_k / (fmax(a1 * fv->turb_omega, SI * F2));
-  dbl d_mu_t_dk = rho * a1 / (fmax(a1 * fv->turb_omega, SI * F2));
+  dbl mu_t = rho * a1 * fv_old->turb_k / (fmax(a1 * fv_old->turb_omega, Omega * F2));
+  dbl d_mu_t_dk = 0; //rho * a1 / (fmax(a1 * fv_old->turb_omega, Omega * F2));
   dbl d_mu_t_domega = 0;
-  dbl d_mu_t_SI = 0;
-  if (a1 * fv->turb_omega > SI * F2) {
-    d_mu_t_domega = -rho * a1 * fv->turb_k / ((a1 * fv->turb_omega) * (a1 * fv->turb_omega));
-  } else {
-    d_mu_t_SI = -rho * a1 * fv->turb_k / ((SI * F2) * (SI * F2));
-  }
+  dbl d_mu_t_Omega = 0;
+  // if (a1 * fv->turb_omega > SI * F2) {
+  //   d_mu_t_domega = -rho * a1 * a1 * fv->turb_k / ((a1 * fv->turb_omega) * (a1 * fv->turb_omega));
+  // } else {
+  //   d_mu_t_Omega = -rho * a1 * fv->turb_k / ((Omega * F2) * (Omega * F2));
+  // }
   dbl P = mu_t * SI * SI;
-  dbl Plim = fmin(P, 10 * beta_star * rho * fv->turb_omega * fv->turb_k);
+  dbl Plim = fmin(P, 10 * beta_star * rho * fv_old->turb_omega * fv_old->turb_k);
 
   dbl d_Plim_dk = 0;
   dbl d_Plim_domega = 0;
   dbl d_Plim_dSI = 0;
-  if (P < 10 * beta_star * rho * fv->turb_omega * fv->turb_k) {
-    d_Plim_dk = 10 * beta_star * rho * fv->turb_omega;
-    d_Plim_domega = 10 * beta_star * rho * fv->turb_k;
-  } else {
-    d_Plim_dSI = d_mu_t_SI * SI * SI + 2 * mu_t * SI;
-    d_Plim_dk = d_mu_t_dk * SI * SI;
-    d_Plim_domega = d_mu_t_domega * SI * SI;
-  }
+  dbl d_Plim_dOmega = 0;
+  // if (P < 10 * beta_star * rho * fv->turb_omega * fv->turb_k) {
+  //   d_Plim_dk = 10 * beta_star * rho * fv->turb_omega;
+  //   d_Plim_domega = 10 * beta_star * rho * fv->turb_k;
+  // } else {
+  //   d_Plim_dSI = 2 * mu_t * SI;
+  //   d_Plim_dOmega = d_mu_t_Omega * SI * SI;
+  //   d_Plim_dk = d_mu_t_dk * SI * SI;
+  //   d_Plim_domega = d_mu_t_domega * SI * SI;
+  // }
 
   /*
    * Residuals_________________________________________________________________
@@ -1195,7 +1257,7 @@ int assemble_turb_omega(dbl time_value, /* current time */
     /*
      * Assemble residual for eddy viscosity
      */
-    eqn = TURB_K;
+    eqn = TURB_OMEGA;
     peqn = upd->ep[pg->imtrx][eqn];
 
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
@@ -1227,12 +1289,12 @@ int assemble_turb_omega(dbl time_value, /* current time */
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      dbl src1 = (gamma * rho / mu_t) * Plim - beta * rho * fv->turb_omega * fv->turb_omega;
+      dbl src1 = (gamma * rho / mu_t) * Plim - beta * rho * fv_old->turb_omega * fv_old->turb_omega;
       dbl src2 = 0;
       for (int p = 0; p < pd->Num_Dim; p++) {
-        src2 += fv->grad_turb_k[p] * fv->grad_turb_omega[p];
+        src2 += fv_old->grad_turb_k[p] * fv_old->grad_turb_omega[p];
       }
-      src2 *= 2 * (1 - F1) * rho * sigma_omega2 / fv->turb_omega;
+      src2 *= 2 * (1 - F1) * rho * sigma_omega2 / fv_old->turb_omega;
       src = src1 + src2;
       src *= -wt_func * d_area;
       src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
@@ -1254,7 +1316,7 @@ int assemble_turb_omega(dbl time_value, /* current time */
    */
 
   if (af->Assemble_Jacobian) {
-    eqn = TURB_K;
+    eqn = TURB_OMEGA;
     peqn = upd->ep[pg->imtrx][eqn];
 
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
@@ -1322,20 +1384,20 @@ int assemble_turb_omega(dbl time_value, /* current time */
           adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
           /* Assemble source term */
-          dbl src_1 = bf[var]->phi[j] * ((gamma * rho / mu_t) * d_Plim_domega +
-                                         (-d_mu_t_domega * gamma * rho / (mu_t * mu_t)) * Plim -
-                                         2.0 * beta * rho * fv->turb_omega);
-          dbl src_2a = 0;
-          dbl src_2b = 0;
-          for (int p = 0; p < pd->Num_Dim; p++) {
-            src_2a += fv->grad_turb_k[p] * fv->grad_turb_omega[p];
-            src_2b += fv->grad_turb_k[p] * bf[var]->grad_phi[j][p];
-          }
-          dbl src_2 =
-              (2 * (1 - F1) * rho * sigma_omega2 / fv->turb_omega) * (src_2b) +
-              (bf[var]->phi[j] * -2 * (1 - F1) * rho * sigma_omega2 / (SQUARE(fv->turb_omega))) *
-                  src_2a;
-          src = src_1 + src_2;
+          // dbl src_1 = bf[var]->phi[j] * ((gamma * rho / mu_t) * d_Plim_domega +
+          //                                (-d_mu_t_domega * gamma * rho / (mu_t * mu_t)) * Plim -
+          //                                2.0 * beta * rho * fv->turb_omega);
+          // dbl src_2a = 0;
+          // dbl src_2b = 0;
+          // for (int p = 0; p < pd->Num_Dim; p++) {
+          //   src_2a += fv->grad_turb_k[p] * fv->grad_turb_omega[p];
+          //   src_2b += fv->grad_turb_k[p] * bf[var]->grad_phi[j][p];
+          // }
+          // dbl src_2 =
+          //     (2 * (1 - F1) * rho * sigma_omega2 / fv->turb_omega) * (src_2b) +
+          //     (bf[var]->phi[j] * -2 * (1 - F1) * rho * sigma_omega2 / (SQUARE(fv->turb_omega))) *
+          //         src_2a;
+          src = 0;
           src *= -wt_func * d_area;
           src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
@@ -1418,15 +1480,14 @@ int assemble_turb_omega(dbl time_value, /* current time */
             adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
             /* Assemble source term */
-            dbl src = ((gamma * rho / mu_t) * d_Plim_dSI +
-                       (-gamma * rho * d_mu_t_SI / (SQUARE(mu_t)) * Plim)) *
-                      d_SI_dv[b][j];
+            dbl src = ((gamma * rho / mu_t) * d_Plim_dSI * d_SI_dv[b][j] +
+                       (-gamma * rho * d_mu_t_Omega / (SQUARE(mu_t)) * Plim + (gamma * rho / mu_t) * d_Plim_dOmega ) * dOmega_dvelo[b][j]);
             src *= -wt_func * d_area;
             src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
             diff = 0.0;
             for (int p = 0; p < VIM; p++) {
-              diff += bf[eqn]->grad_phi[i][p] * (d_SI_dv[b][j] * d_mu_t_SI * sigma_omega) *
+              diff += bf[eqn]->grad_phi[i][p] * (dOmega_dvelo[b][j] * d_mu_t_Omega * sigma_omega) *
                       fv->grad_turb_omega[p];
             }
             diff *= d_area;

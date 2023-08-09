@@ -47,6 +47,7 @@
 #include "mm_fill_rs.h"
 #include "mm_fill_solid.h"
 #include "mm_fill_terms.h"
+#include "mm_fill_turbulent.h"
 #include "mm_fill_util.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
@@ -701,6 +702,12 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               func = kfunc[0];
               doFullJac = 1;
               break;
+
+            case TURB_OMEGA_WALL_BC:
+              memset(d_kfunc, 0, DIM * (MAX_VARIABLE_TYPES + MAX_CONC) * MDE * sizeof(double));
+              func = kfunc[0] = turb_omega_wall_bc();
+              break;
+
 
             } /* end of SWITCH statement */
 

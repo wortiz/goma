@@ -138,7 +138,7 @@ void get_metric_tensor_deriv(dbl B[DIM][DIM],
     }
   }
 }
-
+#if 1
 void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_scale) {
   dbl G[DIM][DIM];
   dbl gamma[DIM][DIM];
@@ -269,6 +269,58 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
     }
   }
 }
+#else
+void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_scale) {
+  dbl G[DIM][DIM];
+  dbl gamma[DIM][DIM];
+  dbl mu;
+  dbl inv_rho = 1.0;
+  DENSITY_DEPENDENCE_STRUCT d_rho_struct;
+  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+  VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;
+  VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
+
+  if (pspg_scale) {
+    dbl rho = density(d_rho, dt);
+    inv_rho = 1.0 / rho;
+  }
+
+  int interp_eqn = VELOCITY1;
+  get_metric_tensor(bf[interp_eqn]->B, dim, ei[pg->imtrx]->ielem_type, G);
+
+  dbl v_d_gv = 0;
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      v_d_gv += fabs(fv_old->v[i] * G[i][j] * fv_old->v[j]);
+    }
+  }
+
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      gamma[i][j] = fv_old->grad_v[i][j] + fv_old->grad_v[j][i];
+    }
+  }
+
+  mu = viscosity(gn, gamma, d_mu);
+
+  dbl coeff = (12.0 * mu * mu);
+  dbl diff_g_g = 0;
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      diff_g_g += coeff * G[i][j] * G[i][j];
+    }
+  }
+
+  memset(tau_terms, 0, sizeof(momentum_tau_terms));
+
+  if (pd->TimeIntegration != STEADY) {
+    tau_terms->tau = inv_rho / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
+  } else {
+    tau_terms->tau = inv_rho / (sqrt(v_d_gv + diff_g_g) + 1e-14);
+  }
+
+}
+#endif
 
 void supg_tau_shakib(SUPG_terms *supg_terms, int dim, dbl dt, dbl diffusivity, int interp_eqn) {
   dbl G[DIM][DIM];

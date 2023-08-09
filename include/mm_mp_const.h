@@ -335,6 +335,8 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 /* Turbulent viscosity models for Reynolds Averaged NS */
 #define TURBULENT_SA         52 /* Spallart Allmaras */
 #define TURBULENT_SA_DYNAMIC 53 /* Spallart Allmaras */
+#define TURBULENT_K_OMEGA_SST 54 /* SST k-omega */
+
 
 /*
  *  Heat source modeling

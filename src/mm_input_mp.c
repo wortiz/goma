@@ -1458,6 +1458,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ConstitutiveEquation = TURBULENT_SA;
   } else if (!strcmp(model_name, "TURBULENT_SA_DYNAMIC")) {
     ConstitutiveEquation = TURBULENT_SA_DYNAMIC;
+  } else if (!strcmp(model_name, "TURBULENT_K_OMEGA_SST")) {
+    ConstitutiveEquation = TURBULENT_K_OMEGA_SST;
   } else {
     GOMA_EH(GOMA_ERROR, "Unrecognizable Constitutive Equation");
   }
@@ -1471,7 +1473,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   /* read in constants for constitutive equation if they are input */
 
-  if ((ConstitutiveEquation == NEWTONIAN) || (ConstitutiveEquation == TURBULENT_SA)) {
+  if ((ConstitutiveEquation == NEWTONIAN) || (ConstitutiveEquation == TURBULENT_SA) ||
+      (ConstitutiveEquation == TURBULENT_SA_DYNAMIC) ||
+      (ConstitutiveEquation == TURBULENT_K_OMEGA_SST)) {
     model_read = look_for_mat_proptable(
         imp, "Viscosity", &(mp_glob[mn]->ViscosityModel), &(mp_glob[mn]->viscosity),
         &(mp_glob[mn]->u_viscosity), &(mp_glob[mn]->len_u_viscosity),
@@ -1553,7 +1557,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     gn_glob[mn]->mu0 = mat_ptr->viscosity;
 
     /* If turbulent flow, read external field for distance from walls */
-    if (ConstitutiveEquation == TURBULENT_SA && !upd->turbulent_info->use_internal_wall_distance) {
+    if (((ConstitutiveEquation == TURBULENT_SA) || (ConstitutiveEquation == TURBULENT_SA_DYNAMIC) ||
+         (ConstitutiveEquation == TURBULENT_K_OMEGA_SST)) &&
+        !upd->turbulent_info->use_internal_wall_distance) {
       mat_ptr->dist_wall_ext_field_index = -1;
       if (efv->ev) {
         for (i = 0; i < efv->Num_external_field; i++) {
@@ -3084,9 +3090,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   strcpy(search_string, "Turbulent k Weight Function");
-  model_read =
-      look_for_mat_prop(imp, search_string, &(mat_ptr->turb_k_wt_funcModel), &(mat_ptr->turb_k_wt_func),
-                        NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(imp, search_string, &(mat_ptr->turb_k_wt_funcModel),
+                                 &(mat_ptr->turb_k_wt_func), NO_USER, NULL, model_name,
+                                 SCALAR_INPUT, &NO_SPECIES, es);
   if (strncmp(model_name, " ", 1) != 0) {
     if (!strcmp(model_name, "GALERKIN")) {
       mat_ptr->turb_k_wt_funcModel = GALERKIN;
@@ -3111,9 +3117,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   strcpy(search_string, "Turbulent omega Weight Function");
-  model_read =
-      look_for_mat_prop(imp, search_string, &(mat_ptr->turb_omega_wt_funcModel), &(mat_ptr->turb_omega_wt_func),
-                        NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+  model_read = look_for_mat_prop(imp, search_string, &(mat_ptr->turb_omega_wt_funcModel),
+                                 &(mat_ptr->turb_omega_wt_func), NO_USER, NULL, model_name,
+                                 SCALAR_INPUT, &NO_SPECIES, es);
   if (strncmp(model_name, " ", 1) != 0) {
     if (!strcmp(model_name, "GALERKIN")) {
       mat_ptr->turb_omega_wt_funcModel = GALERKIN;
@@ -10753,9 +10759,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
         model_read = 1;
         mat_ptr->ehl_normal_method = NCM_PRIMITIVE_XY;
 
-      }
-
-      else {
+      } else {
         // default is normal of roller
         mat_ptr->ehl_normal_method = NCM_PRIMITIVE_S_ROLLER;
         SPF(es, "%s = %s", search_string, "SIK_S_ROLLER");
