@@ -570,6 +570,8 @@ struct Element_Variable_Pointers {
   dbl *sh_sat_3[MDE];   /* Porous shell saturation layer 3 */
 
   dbl *eddy_nu[MDE]; /* Eddy viscosity for turbulent flow */
+  dbl *turb_k[MDE]; /* Eddy viscosity for turbulent flow */
+  dbl *turb_omega[MDE]; /* Eddy viscosity for turbulent flow */
 };
 
 /*___________________________________________________________________________*/
@@ -697,6 +699,8 @@ struct Element_Stiffness_Pointers {
   dbl **sh_sat_3; /* Porous shell saturation layer 3 */
 
   dbl **eddy_nu; /* Eddy viscosity for turbulent flow */
+  dbl **turb_k; /* Eddy viscosity for turbulent flow */
+  dbl **turb_omega; /* Eddy viscosity for turbulent flow */
 
   /*
    * These are for debugging purposes...
@@ -1730,6 +1734,8 @@ struct Field_Variables {
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
   dbl eddy_nu;       /* Eddy viscosity for turbulent flow */
+  dbl turb_k;       /* Eddy viscosity for turbulent flow */
+  dbl turb_omega;       /* Eddy viscosity for turbulent flow */
   dbl wall_distance; /* Distance to nearest wall */
 
   /*
@@ -1780,6 +1786,8 @@ struct Field_Variables {
   dbl grad_sh_sat_3[DIM];  /* Gradient of porous shell saturation layer 3 */
 
   dbl grad_eddy_nu[DIM];       /* Gradient of Eddy viscosity */
+  dbl grad_turb_k[DIM];       /* Gradient of Eddy viscosity */
+  dbl grad_turb_omega[DIM];       /* Gradient of Eddy viscosity */
   dbl grad_wall_distance[DIM]; /* Distance to nearest wall */
 
   /*
@@ -1965,6 +1973,8 @@ struct Field_Variables {
   dbl d_max_strain_dmesh[DIM][MDE];
   dbl d_cur_strain_dmesh[DIM][MDE];
   dbl d_grad_eddy_nu_dmesh[DIM][DIM][MDE];
+  dbl d_grad_turb_k_dmesh[DIM][DIM][MDE];
+  dbl d_grad_turb_omega_dmesh[DIM][DIM][MDE];
   dbl d_grad_restime_dmesh[DIM][DIM][MDE];
   /*
    * Values at surfaces for integrated boundary conditions
@@ -2118,6 +2128,8 @@ struct Diet_Field_Variables {
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
   dbl eddy_nu; /* Eddy viscosity for turbulent flow */
+  dbl turb_k; /* Eddy viscosity for turbulent flow */
+  dbl turb_omega; /* Eddy viscosity for turbulent flow */
 
   dbl grad_em_er[DIM][DIM]; /* EM wave Fields */
   dbl grad_em_ei[DIM][DIM]; /* EM wave Fields */
@@ -2146,6 +2158,7 @@ struct Diet_Field_Variables {
   dbl grad_tfmp_sat[DIM];  /* Gradient of the thin-film multi-phase lubrication saturation */
 
   dbl grad_n[DIM][DIM]; /* Normal to level set function OR shell normal */
+  dbl grad_turb_omega[DIM];
   dbl div_n;            /* Divergence of LS normal field */
 
   /* Material tensors used at old time values */
@@ -3028,6 +3041,8 @@ struct stress_dependence {
   double pf[DIM][DIM][MAX_PHASE_FUNC][MDE];
   double degrade[DIM][DIM][MDE];
   double eddy_nu[DIM][DIM][MDE];
+  double turb_k[DIM][DIM][MDE];
+  double turb_omega[DIM][DIM][MDE];
 };
 typedef struct stress_dependence STRESS_DEPENDENCE_STRUCT;
 
@@ -3077,6 +3092,8 @@ struct viscosity_dependence {
   double pf[MAX_PHASE_FUNC][MDE]; /* phase function */
   double degrade[MDE];            /* amount of degradation */
   double eddy_nu[MDE];            /* Turbulent viscosity */
+  double turb_k[MDE];            /* Turbulent k */
+  double turb_omega[MDE];            /* Turbulent omega */
 };
 typedef struct viscosity_dependence VISCOSITY_DEPENDENCE_STRUCT;
 
@@ -3138,6 +3155,8 @@ struct pspg_dependence {
   double v[DIM][DIM][MDE]; /* velocity dependence. */
   double T[DIM][MDE];      /* temperature dependence. */
   double eddy_nu[DIM][MDE];
+  double turb_k[DIM][MDE];
+  double turb_omega[DIM][MDE];
   double P[DIM][MDE];           /* pressure dependence. */
   double C[DIM][MAX_CONC][MDE]; /* conc dependence. */
   double X[DIM][DIM][MDE];      /* mesh dependence. */

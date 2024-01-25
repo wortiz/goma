@@ -108,6 +108,16 @@ if(${stratimikos_package_index} GREATER_EQUAL 0)
   endif()
 endif()
 
+list(FIND Trilinos_PACKAGE_LIST Sacado sacado_package_index)
+if(${sacado_package_index} GREATER_EQUAL 0)
+  option(ENABLE_SACADO "ENABLE_SACADO" ON)
+  if(ENABLE_SACADO)
+    message(STATUS "TRILINOS: Sacado found, enabling in Goma")
+    list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_SACADO)
+  endif()
+endif()
+
+
 # Exodus
 find_package(SEACASExodus REQUIRED HINTS ${Trilinos_DIR}/../SEACASExodus)
 message(STATUS "SEACASExodus_DIR = ${SEACASExodus_DIR}")
@@ -416,6 +426,7 @@ set(GOMA_INCLUDES
     include/ac_stability.h
     include/ac_stability_util.h
     include/ac_update_parameter.h
+    include/ad_turbulence.h
     include/bc_colloc.h
     include/bc_contact.h
     include/bc_curve.h
@@ -571,6 +582,7 @@ set(GOMA_SOURCES
     src/ac_stability.c
     src/ac_stability_util.c
     src/ac_update_parameter.c
+    src/ad_turbulence.cpp
     src/bc_colloc.c
     src/bc_contact.c
     src/bc_curve.c
