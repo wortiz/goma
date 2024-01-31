@@ -1328,6 +1328,7 @@ surface_determinant_and_normal(
   memset(T, 0, siz);
   memset(t, 0, siz);
   /*  since T & t are zeroed, only need to set nonzero elements */
+  dbl sdet_scale = 1.0;
   switch (ielem_surf_dim) {
   case 1:
     switch (ei[pg->imtrx]->ielem_shape) {
@@ -1337,10 +1338,11 @@ surface_determinant_and_normal(
         /*
         T[0][0] = -Ref; T[0][1] = Ref;
         */
-        T[0][0] = -1.;
-        T[0][1] = 1.;
+        dbl Ref = 1/sqrt(2.0);
+        T[0][0] = -Ref;
+        T[0][1] = Ref;
       } else if (id_side == 2) {
-        T[0][1] = -1.;
+        T[0][1] = 1.;
       } else if (id_side == 3) {
         T[0][0] = 1.;
       } else {
@@ -1500,7 +1502,7 @@ surface_determinant_and_normal(
 
     r_det_h01 = 1. / det_h01;
 
-    fv->sdet = fv->h[2] * det_h01;
+    fv->sdet = fv->h[2] * det_h01 * sdet_scale;
     r_det = 1. / fv->sdet;
 
     /* calculate surface normal using the coordinate scale factors
@@ -1526,7 +1528,7 @@ surface_determinant_and_normal(
 
             /* calculate sensitivity of surface determinant using the coordinate scale factors
              * for orthogonal curvilinear coordinates */
-            fv->dsurfdet_dx[a][ldof] = fv->hq[2][a] * phi_i * det_h01 + fv->h[2] * d_det_h01_x;
+            fv->dsurfdet_dx[a][ldof] = fv->hq[2][a] * phi_i * det_h01 + fv->h[2] * d_det_h01_x *sdet_scale;
 
             /* calculate sensitivity of surface normal using the coordinate scale factors
              * for orthogonal curvilinear coordinates */

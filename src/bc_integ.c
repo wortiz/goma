@@ -265,6 +265,38 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
     surface_determinant_and_normal(ielem, iconnect_ptr, num_local_nodes, ielem_dim - 1,
                                    (int)elem_side_bc->id_side, (int)elem_side_bc->num_nodes_on_side,
                                    (elem_side_bc->local_elem_node_id));
+#if 0
+    bool print = false;
+    for (ibc = 0; (bc_input_id = (int)elem_side_bc->BC_input_id[ibc]) != -1; ibc++) {
+      bc = BC_Types + bc_input_id;
+      if (1 || bc->BC_Name == CAPILLARY_BC) {
+      if (bc->desc->method == bc_application) {
+        print = true;
+      }
+      }
+    }
+    if (print) {
+      static int first_elem = -1;
+      if (first_elem == -1 && elem_side_bc->ielem > first_elem)
+        first_elem = elem_side_bc->ielem;
+
+      FILE *snorm;
+      char snorm_n[128];
+      snprintf(snorm_n, 127, "snorm_%f.csv", tran->time_value);
+      multiname(snorm_n, ProcID, Num_Proc);
+
+      if (elem_side_bc->ielem == first_elem && ip == 0) {
+        snorm = fopen(snorm_n, "w");
+        fprintf(snorm, "x,y,nx,ny,id_side,elem\n");
+      } else {
+        snorm = fopen(snorm_n, "a");
+      }
+
+      fprintf(snorm, "%.14f,%.14f,%.14f,%.14f,%d,%d\n", fv->x[0], fv->x[1], fv->snormal[0], fv->snormal[1], elem_side_bc->id_side,elem_side_bc->ielem);
+
+      fclose(snorm);
+    }
+#endif
 
     /*  Need to avoid calling this for shells*/
     if (ielem_dim != 3 && ielem_dim == pd->Num_Dim) {
@@ -2762,7 +2794,7 @@ int apply_nedelec_bc(double x[],            /* Solution vector for the current p
           GOMA_EH(GOMA_ERROR, "Integrated BC %s not found", bc_desc->name1);
           break;
 
-        } /* end of switch over bc type */
+        } /* end of siwitch over bc type */
 
         /**********************************************************************/
         /*        LOOP OVER THE LOCAL ELEMENT NODE NUMBER                     */

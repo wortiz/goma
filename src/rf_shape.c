@@ -56,13 +56,13 @@ double shape(const double s, /* quadrature point coordinates */
     case PSI:          /* shape function */
       switch (Inode) { /* select specific shape function */
       case 0:
-        value = s;
+        value = 1.0 - s - t;
         break;
       case 1:
-        value = t;
+        value = s;
         break;
       case 2:
-        value = 1.0 - s - t;
+        value = t;
         break;
       }
       break;
@@ -70,13 +70,13 @@ double shape(const double s, /* quadrature point coordinates */
     case DPSI_S:       /* partial of shape fn w.r.t. s */
       switch (Inode) { /* select specific shape function */
       case 0:
-        value = 1.0;
+        value = -1.0;
         break;
       case 1:
-        value = 0.0;
+        value = 1.0;
         break;
       case 2:
-        value = -1.0;
+        value = 0.0;
         break;
       }
       break;
@@ -84,13 +84,13 @@ double shape(const double s, /* quadrature point coordinates */
     case DPSI_T:       /* partial of shape fn w.r.t. t */
       switch (Inode) { /* select specific shape function */
       case 0:
-        value = 0.0;
+        value = -1.0;
         break;
       case 1:
-        value = 1.0;
+        value = 0.0;
         break;
       case 2:
-        value = -1.0;
+        value = 1.0;
         break;
       }
       break;
@@ -108,23 +108,24 @@ double shape(const double s, /* quadrature point coordinates */
     switch (Iquant) {  /* select quantity */
     case PSI:          /* shape function */
       switch (Inode) { /* select specific shape function */
+
       case 0:
-        value = s * (2. * s - 1.);
+        value = (1.0 - s - t) * (1.0 - 2.0 * s - 2.0 * t);
         break;
       case 1:
-        value = t * (2. * t - 1.);
+        value = s * (2.0 * s - 1.0);
         break;
       case 2:
-        value = temp * (2. * temp - 1.);
+        value = t * (2.0 * t - 1.0);
         break;
       case 3:
-        value = 4. * s * t;
+        value = 4.0 * s * (1.0 - s - t);
         break;
       case 4:
-        value = 4. * t * temp;
+        value = 4.0 * s * t;
         break;
       case 5:
-        value = 4. * s * temp;
+        value = 4.0 * t * (1.0 - s - t);
         break;
       }
       break;
@@ -132,22 +133,22 @@ double shape(const double s, /* quadrature point coordinates */
     case DPSI_S:       /* partial of shape fn w.r.t. s */
       switch (Inode) { /* select specific shape function */
       case 0:
-        value = 4. * s - 1.;
+        value = 4. * s + 4. * t - 3.0;
         break;
       case 1:
-        value = 0.0;
+        value = 4. * s - 1.;
         break;
       case 2:
-        value = 1. - 4. * temp;
+        value = 0.;
         break;
       case 3:
-        value = 4. * t;
+        value = -8. * s - 4. * t + 4.;
         break;
       case 4:
-        value = -4. * t;
+        value = 4. * t;
         break;
       case 5:
-        value = 4. * (temp - s);
+        value = -4. * t;
         break;
       }
       break;
@@ -155,22 +156,22 @@ double shape(const double s, /* quadrature point coordinates */
     case DPSI_T:       /* partial of shape fn w.r.t. t */
       switch (Inode) { /* select specific shape function */
       case 0:
-        value = 0.;
+        value = 4. * s + 4. * t - 3.0;
         break;
       case 1:
-        value = 4. * t - 1.;
+        value = 0;
         break;
       case 2:
-        value = 1. - 4. * temp;
+        value = 4. * t - 1.;
         break;
       case 3:
-        value = 4. * s;
+        value = -4. * s;
         break;
       case 4:
-        value = 4. * (temp - t);
+        value = 4. * s;
         break;
       case 5:
-        value = -4. * s;
+        value = -8. * t - 4. * s + 4.;
         break;
       }
       break;

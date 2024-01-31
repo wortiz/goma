@@ -3545,7 +3545,6 @@ int fill_variable_vector(int inode, int ivec_varType[], int ivec_matID[])
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-
 void zero_lec_row(double *local_J,
                   int eqn_type, /* Eqn Type of row to be zeroed     */
                   int ldof)     /* Local dof of that equation type  */
@@ -3565,8 +3564,10 @@ void zero_lec_row(double *local_J,
   /***************************** EXECUTION BEGINS
    * *******************************/
 
-  for (i_var = 0; i_var < MAX_PROB_EQN + MAX_CONC; i_var++) {
-    memset(&(local_J[LEC_J_INDEX(eqn_type, i_var, ldof, 0)]), 0, sizeof(double) * lec->max_dof);
+  for (i_var = V_FIRST; i_var < V_LAST; i_var++) {
+    int pvar = upd->vp[pg->imtrx][i_var];
+    if (pvar >= 0)
+      memset(&(local_J[LEC_J_INDEX(eqn_type, pvar, ldof, 0)]), 0, sizeof(double) * lec->max_dof);
   }
 
 } /* END of routine zero_lec_row                                        */

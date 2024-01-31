@@ -2093,26 +2093,27 @@ void find_surf_st(const int iquad,      /* current GQ index */
     *t = 0.;
     switch (iside) {
     case 1:
+    {
       switch (iquad) {
       case 0:
-        xi[0] = 1. - Tri3;
-        xi[1] = *s = Tri3;
+        *s = Tri3;
         break;
       case 1:
-        xi[0] = 0.5;
-        xi[1] = *s = 0.5;
+        *s = 0.5;
         break;
       case 2:
-        xi[0] = 1. - Tri4;
-        xi[1] = *s = Tri4;
+        *s = Tri4;
         break;
       }
+      xi[0] = *s;
+      xi[1] = 1 - *s;
+    }
       break;
     case 2:
       switch (iquad) {
       case 0:
         xi[0] = 0.;
-        xi[1] = *s = Tri4;
+        xi[1] = *s = Tri3;
         break;
       case 1:
         xi[0] = 0.;
@@ -2120,7 +2121,7 @@ void find_surf_st(const int iquad,      /* current GQ index */
         break;
       case 2:
         xi[0] = 0.;
-        xi[1] = *s = Tri3;
+        xi[1] = *s = Tri4;
         break;
       }
       break;
@@ -2128,15 +2129,15 @@ void find_surf_st(const int iquad,      /* current GQ index */
       switch (iquad) {
       case 0:
         xi[0] = *s = Tri3;
-        xi[1] = 0.;
+        xi[1] = 0;
         break;
       case 1:
         xi[0] = *s = 0.5;
-        xi[1] = 0.;
+        xi[1] = 0;
         break;
       case 2:
         xi[0] = *s = Tri4;
-        xi[1] = 0.;
+        xi[1] = 0;
         break;
       }
       break;

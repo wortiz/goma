@@ -38,6 +38,7 @@
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
+#include "mm_eh.h"
 #include "mm_elem_block_structs.h"
 #include "mm_fill_energy.h"
 #include "mm_fill_jac.h"
@@ -11124,6 +11125,11 @@ void apply_ST_scalar(double func[MAX_PDIM],
 
   if (userSign == -1) {
     sign = -1.0 * sign;
+  }
+
+
+  if (ei[pg->imtrx]->ielem_shape == TRIANGLE) {
+    GOMA_WH_ALL_PROC(GOMA_ERROR, "CAP_ENDFORCE_SCALAR tangent %g * [%g,%g]", -1.0 * sign, fv->stangent[0][0], fv->stangent[0][1]);
   }
 
   GOMA_WH(1, "Sign on Surface Tangent Scalar is be incorrect in certain cases");
