@@ -17,9 +17,11 @@
 #include "Sacado.hpp"
 #include "Sacado_Fad_DFad.hpp"
 
+#include "ad_turbulence.h"
 extern "C" {
 #include "mm_fill_stabilization.h"
 /* GOMA include files */
+#include "mm_fill_stress.h"
 #define GOMA_AD_TURBULENCE_CPP
 #include "density.h"
 #include "el_elm.h"
@@ -37,7 +39,7 @@ extern "C" {
 #include "std.h"
 }
 
-using ADType = Sacado::Fad::DFad<double>;
+AD_Field_Variables ad_fv;
 
 ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local);
 
@@ -73,27 +75,6 @@ static int ad_calc_sa_S(scalar &S,                /* strain rate invariant */
   return 0;
 }
 
-struct AD_Field_Variables {
-  int ielem;
-  int v_offset[DIM];
-  ADType v[DIM];
-  ADType v_dot[DIM];
-  ADType grad_v[DIM][DIM];
-  int eddy_nu_offset;
-  ADType eddy_nu;
-  ADType eddy_nu_dot;
-  ADType grad_eddy_nu[DIM];
-  int turb_k_offset;
-  ADType turb_k;
-  ADType turb_k_dot;
-  ADType grad_turb_k[DIM];
-  int turb_omega_offset;
-  ADType turb_omega;
-  ADType turb_omega_dot;
-  ADType grad_turb_omega[DIM];
-  int total_ad_variables;
-};
-
 static int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
                              ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
   gammadot = 0.;
@@ -108,43 +89,35 @@ static int ad_calc_shearrate(ADType &gammadot,             /* strain rate invari
   return 0;
 }
 
-static AD_Field_Variables ad_fv;
 extern "C" void fill_ad_field_variables() {
   ad_fv.ielem = ei[pg->imtrx]->ielem;
   int num_ad_variables = 0;
-  ad_fv.v_offset[0] = num_ad_variables;
-  if (pd->gv[VELOCITY1]) {
-    num_ad_variables += ei[upd->matrix_index[VELOCITY1]]->dof[VELOCITY1];
-    ad_fv.v_offset[1] = num_ad_variables;
-    num_ad_variables += ei[upd->matrix_index[VELOCITY2]]->dof[VELOCITY2];
-    ad_fv.v_offset[2] = num_ad_variables;
-    if (WIM == 3) {
-      num_ad_variables += ei[upd->matrix_index[VELOCITY3]]->dof[VELOCITY3];
+  for (int i = V_FIRST; i < V_LAST; i++) {
+    ad_fv.offset[i] = 0;
+    if (pd->gv[i]) {
+      ad_fv.offset[i] = num_ad_variables;
+      num_ad_variables += ei[upd->matrix_index[i]]->dof[i];
     }
-  }
-
-  if (pd->gv[EDDY_NU]) {
-    ad_fv.eddy_nu_offset = num_ad_variables;
-    num_ad_variables += ei[upd->matrix_index[EDDY_NU]]->dof[EDDY_NU];
-  }
-
-  if (pd->gv[TURB_K]) {
-    ad_fv.turb_k_offset = num_ad_variables;
-    num_ad_variables += ei[upd->matrix_index[TURB_K]]->dof[TURB_K];
-  }
-
-  if (pd->gv[TURB_OMEGA]) {
-    ad_fv.turb_omega_offset = num_ad_variables;
-    num_ad_variables += ei[upd->matrix_index[TURB_OMEGA]]->dof[TURB_OMEGA];
   }
 
   ad_fv.total_ad_variables = num_ad_variables;
   if (pd->gv[VELOCITY1]) {
     for (int p = 0; p < WIM; p++) {
+      ad_fv.x_dot[p] = 0;
       ad_fv.v[p] = 0;
+      ad_fv.v_dot[p] = 0;
       for (int i = 0; i < ei[upd->matrix_index[VELOCITY1 + p]]->dof[VELOCITY1 + p]; i++) {
-        ad_fv.v[p] += ADType(num_ad_variables, ad_fv.v_offset[p] + i, *esp->v[p][i]) *
+        ad_fv.v[p] += ADType(num_ad_variables, ad_fv.offset[VELOCITY1 + p] + i, *esp->v[p][i]) *
                       bf[VELOCITY1 + p]->phi[i];
+        if (pd->TimeIntegration != STEADY) {
+          ADType udot =
+              ADType(num_ad_variables, ad_fv.offset[VELOCITY1 + p] + i, *esp_dot->v[p][i]);
+          udot.fastAccessDx(ad_fv.offset[VELOCITY1 + p] + i) =
+              (1. + 2. * tran->theta) / tran->delta_t;
+          ad_fv.v_dot[p] += udot * bf[VELOCITY1 + p]->phi[i];
+        } else {
+          ad_fv.v_dot[p] = 0;
+        }
       }
     }
     for (int p = 0; p < VIM; p++) {
@@ -153,8 +126,9 @@ extern "C" void fill_ad_field_variables() {
 
         for (int r = 0; r < WIM; r++) {
           for (int i = 0; i < ei[upd->matrix_index[VELOCITY1 + r]]->dof[VELOCITY1 + r]; i++) {
-            ad_fv.grad_v[p][q] += ADType(num_ad_variables, ad_fv.v_offset[r] + i, *esp->v[r][i]) *
-                                  bf[VELOCITY1 + r]->grad_phi_e[i][r][p][q];
+            ad_fv.grad_v[p][q] +=
+                ADType(num_ad_variables, ad_fv.offset[VELOCITY1 + r] + i, *esp->v[r][i]) *
+                bf[VELOCITY1 + r]->grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -165,12 +139,16 @@ extern "C" void fill_ad_field_variables() {
     ad_fv.eddy_nu = 0;
     ad_fv.eddy_nu_dot = 0;
     for (int i = 0; i < ei[upd->matrix_index[EDDY_NU]]->dof[EDDY_NU]; i++) {
-      ad_fv.eddy_nu += ADType(num_ad_variables, ad_fv.eddy_nu_offset + i, *esp->eddy_nu[i]) *
+      ad_fv.eddy_nu += ADType(num_ad_variables, ad_fv.offset[EDDY_NU] + i, *esp->eddy_nu[i]) *
                        bf[EDDY_NU]->phi[i];
 
-      ADType ednudot = ADType(num_ad_variables, ad_fv.eddy_nu_offset + i, *esp_dot->eddy_nu[i]);
-      ednudot.fastAccessDx(ad_fv.eddy_nu_offset + i) = (1. + 2. * tran->theta) / tran->delta_t;
-      ad_fv.eddy_nu_dot += ednudot * bf[EDDY_NU]->phi[i];
+      if (pd->TimeIntegration != STEADY) {
+        ADType ednudot = ADType(num_ad_variables, ad_fv.offset[EDDY_NU] + i, *esp_dot->eddy_nu[i]);
+        ednudot.fastAccessDx(ad_fv.offset[EDDY_NU] + i) = (1. + 2. * tran->theta) / tran->delta_t;
+        ad_fv.eddy_nu_dot += ednudot * bf[EDDY_NU]->phi[i];
+      } else {
+        ad_fv.eddy_nu_dot = 0;
+      }
     }
 
     for (int q = 0; q < pd->Num_Dim; q++) {
@@ -178,7 +156,7 @@ extern "C" void fill_ad_field_variables() {
 
       for (int i = 0; i < ei[upd->matrix_index[EDDY_NU]]->dof[EDDY_NU]; i++) {
         ad_fv.grad_eddy_nu[q] +=
-            ADType(num_ad_variables, ad_fv.eddy_nu_offset + i, *esp->eddy_nu[i]) *
+            ADType(num_ad_variables, ad_fv.offset[EDDY_NU] + i, *esp->eddy_nu[i]) *
             bf[EDDY_NU]->grad_phi[i][q];
       }
     }
@@ -189,19 +167,24 @@ extern "C" void fill_ad_field_variables() {
     ad_fv.turb_k_dot = 0;
     for (int i = 0; i < ei[upd->matrix_index[TURB_K]]->dof[TURB_K]; i++) {
       ad_fv.turb_k +=
-          ADType(num_ad_variables, ad_fv.turb_k_offset + i, *esp->turb_k[i]) * bf[TURB_K]->phi[i];
+          ADType(num_ad_variables, ad_fv.offset[TURB_K] + i, *esp->turb_k[i]) * bf[TURB_K]->phi[i];
 
-      ADType ednudot = ADType(num_ad_variables, ad_fv.turb_k_offset + i, *esp_dot->turb_k[i]);
-      ednudot.fastAccessDx(ad_fv.turb_k_offset + i) = (1. + 2. * tran->theta) / tran->delta_t;
-      ad_fv.turb_k_dot += ednudot * bf[TURB_K]->phi[i];
+      if (pd->TimeIntegration != STEADY) {
+        ADType ednudot = ADType(num_ad_variables, ad_fv.offset[TURB_K] + i, *esp_dot->turb_k[i]);
+        ednudot.fastAccessDx(ad_fv.offset[TURB_K] + i) = (1. + 2. * tran->theta) / tran->delta_t;
+        ad_fv.turb_k_dot += ednudot * bf[TURB_K]->phi[i];
+      } else {
+        ad_fv.turb_k_dot = 0;
+      }
     }
 
     for (int q = 0; q < pd->Num_Dim; q++) {
       ad_fv.grad_turb_k[q] = 0;
 
       for (int i = 0; i < ei[upd->matrix_index[TURB_K]]->dof[TURB_K]; i++) {
-        ad_fv.grad_turb_k[q] += ADType(num_ad_variables, ad_fv.turb_k_offset + i, *esp->turb_k[i]) *
-                                bf[TURB_K]->grad_phi[i][q];
+        ad_fv.grad_turb_k[q] +=
+            ADType(num_ad_variables, ad_fv.offset[TURB_K] + i, *esp->turb_k[i]) *
+            bf[TURB_K]->grad_phi[i][q];
       }
     }
   }
@@ -211,13 +194,18 @@ extern "C" void fill_ad_field_variables() {
     ad_fv.turb_omega_dot = 0;
     for (int i = 0; i < ei[upd->matrix_index[TURB_OMEGA]]->dof[TURB_OMEGA]; i++) {
       ad_fv.turb_omega +=
-          ADType(num_ad_variables, ad_fv.turb_omega_offset + i, *esp->turb_omega[i]) *
+          ADType(num_ad_variables, ad_fv.offset[TURB_OMEGA] + i, *esp->turb_omega[i]) *
           bf[TURB_OMEGA]->phi[i];
 
-      ADType ednudot =
-          ADType(num_ad_variables, ad_fv.turb_omega_offset + i, *esp_dot->turb_omega[i]);
-      ednudot.fastAccessDx(ad_fv.turb_omega_offset + i) = (1. + 2. * tran->theta) / tran->delta_t;
-      ad_fv.turb_omega_dot += ednudot * bf[TURB_OMEGA]->phi[i];
+      if (pd->TimeIntegration != STEADY) {
+        ADType ednudot =
+            ADType(num_ad_variables, ad_fv.offset[TURB_OMEGA] + i, *esp_dot->turb_omega[i]);
+        ednudot.fastAccessDx(ad_fv.offset[TURB_OMEGA] + i) =
+            (1. + 2. * tran->theta) / tran->delta_t;
+        ad_fv.turb_omega_dot += ednudot * bf[TURB_OMEGA]->phi[i];
+      } else {
+        ad_fv.turb_omega_dot = 0;
+      }
     }
 
     for (int q = 0; q < pd->Num_Dim; q++) {
@@ -225,8 +213,95 @@ extern "C" void fill_ad_field_variables() {
 
       for (int i = 0; i < ei[upd->matrix_index[TURB_OMEGA]]->dof[TURB_OMEGA]; i++) {
         ad_fv.grad_turb_omega[q] +=
-            ADType(num_ad_variables, ad_fv.turb_omega_offset + i, *esp->turb_omega[i]) *
+            ADType(num_ad_variables, ad_fv.offset[TURB_OMEGA] + i, *esp->turb_omega[i]) *
             bf[TURB_OMEGA]->grad_phi[i][q];
+      }
+    }
+  }
+
+  if (pd->gv[PRESSURE]) {
+    ad_fv.P = 0;
+    for (int i = 0; i < ei[upd->matrix_index[PRESSURE]]->dof[PRESSURE]; i++) {
+      ad_fv.P +=
+          ADType(num_ad_variables, ad_fv.offset[PRESSURE] + i, *esp->P[i]) * bf[PRESSURE]->phi[i];
+    }
+  }
+
+  if (pd->gv[POLYMER_STRESS11]) {
+    int v_s[MAX_MODES][DIM][DIM];
+    stress_eqn_pointer(v_s);
+    for (int mode = 0; mode < vn->modes; mode++) {
+      for (int p = 0; p < VIM; p++) {
+        for (int q = 0; q < VIM; q++) {
+          ad_fv.S[mode][p][q] = 0;
+          if (p <= q) {
+            int v = v_s[mode][p][q];
+            if (pd->gv[v]) {
+              int dofs = ei[upd->matrix_index[v]]->dof[v];
+              for (int i = 0; i < dofs; i++) {
+                ad_fv.S[mode][p][q] +=
+                    ADType(num_ad_variables, ad_fv.offset[v] + i, *esp->S[mode][p][q][i]) *
+                    bf[v]->phi[i];
+                if (pd->TimeIntegration != STEADY) {
+                  if (pd->TimeIntegration != STEADY) {
+                    ADType sdot =
+                        ADType(num_ad_variables, ad_fv.offset[v] + i, *esp_dot->S[mode][p][q][i]);
+                    sdot.fastAccessDx(ad_fv.offset[v] + i) =
+                        (1. + 2. * tran->theta) / tran->delta_t;
+                    ad_fv.S_dot[mode][p][q] += sdot * bf[v]->phi[i];
+                  } else {
+                    ad_fv.S_dot[mode][p][q] = 0;
+                  }
+                }
+              }
+            }
+            /* form the entire symmetric stress matrix for the momentum equation */
+            ad_fv.S[mode][q][p] = ad_fv.S[mode][p][q];
+            ad_fv.S_dot[mode][q][p] = ad_fv.S_dot[mode][p][q];
+          }
+          for (int r = 0; r < VIM; r++) {
+            ad_fv.grad_S[mode][r][p][q] = 0.;
+            int v = v_s[mode][p][q];
+            int dofs = ei[upd->matrix_index[v]]->dof[v];
+
+            for (int i = 0; i < dofs; i++) {
+              if (p <= q) {
+                ad_fv.grad_S[mode][r][p][q] +=
+                    ADType(num_ad_variables, ad_fv.offset[v_s[mode][p][q]] + i,
+                           *esp->S[mode][p][q][i]) *
+                    bf[v]->grad_phi[i][r];
+              } else {
+                ad_fv.grad_S[mode][r][p][q] +=
+                    ADType(num_ad_variables, ad_fv.offset[v_s[mode][p][q]] + i,
+                           *esp->S[mode][q][p][i]) *
+                    bf[v]->grad_phi[i][r];
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  for (int p = 0; pd->gv[VELOCITY_GRADIENT11] && p < VIM; p++) {
+    int v_g[DIM][DIM];
+    v_g[0][0] = VELOCITY_GRADIENT11;
+    v_g[0][1] = VELOCITY_GRADIENT12;
+    v_g[1][0] = VELOCITY_GRADIENT21;
+    v_g[1][1] = VELOCITY_GRADIENT22;
+    v_g[0][2] = VELOCITY_GRADIENT13;
+    v_g[1][2] = VELOCITY_GRADIENT23;
+    v_g[2][0] = VELOCITY_GRADIENT31;
+    v_g[2][1] = VELOCITY_GRADIENT32;
+    v_g[2][2] = VELOCITY_GRADIENT33;
+    for (int q = 0; q < VIM; q++) {
+      int v = v_g[p][q];
+      if (pd->gv[v]) {
+        ad_fv.G[p][q] = 0;
+        int dofs = ei[upd->matrix_index[v]]->dof[v];
+        for (int i = 0; i < dofs; i++) {
+          ad_fv.G[p][q] +=
+              ADType(num_ad_variables, ad_fv.offset[v]+ i, *esp->G[p][q][i]) * bf[v]->phi[i];
+        }
       }
     }
   }
@@ -259,7 +334,7 @@ extern "C" void fill_ad_field_variables() {
 #endif
 }
 
-static void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int interp_eqn) {
+void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int interp_eqn) {
   dbl G[DIM][DIM];
 
   get_metric_tensor(bf[interp_eqn]->B, dim, ei[pg->imtrx]->ielem_type, G);
@@ -269,11 +344,11 @@ static void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivit
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      v_d_gv += fabs(ad_fv.v[i] * G[i][j] * ad_fv.v[j]);
+      v_d_gv += std::abs(ad_fv.v[i] * G[i][j] * ad_fv.v[j]);
     }
   }
 
-  dbl diff_g_g = 0;
+  ADType diff_g_g = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
       diff_g_g += G[i][j] * G[i][j];
@@ -284,7 +359,46 @@ static void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivit
   if (dt > 0) {
     supg_tau = 1.0 / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
   } else {
-    supg_tau = 1.0 / (sqrt(v_d_gv + diff_g_g) + 1e-14);
+    supg_tau = std::max(1e-4,1.0 / (sqrt(v_d_gv + diff_g_g) + 1e-32));
+  }
+  // printf("supg_tau %g %g %g\n", supg_tau.val(), v_d_gv.val(), diff_g_g.val());
+}
+void ad_only_tau_momentum_shakib(ADType tau, int dim, dbl dt, int pspg_scale) {
+  dbl G[DIM][DIM];
+  dbl inv_rho = 1.0;
+  DENSITY_DEPENDENCE_STRUCT d_rho_struct;
+  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+
+  if (pspg_scale) {
+    dbl rho = density(d_rho, dt);
+    inv_rho = 1.0 / rho;
+  }
+
+  int interp_eqn = VELOCITY1;
+  get_metric_tensor(bf[interp_eqn]->B, dim, ei[pg->imtrx]->ielem_type, G);
+
+  ADType v_d_gv = 0;
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      v_d_gv += fabs(ad_fv.v[i] * G[i][j] * ad_fv.v[j]);
+    }
+  }
+
+  ADType mu = ad_sa_viscosity(gn);
+
+  ADType coeff = (12.0 * mu * mu);
+
+  ADType diff_g_g = 0;
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      diff_g_g += coeff * G[i][j] * G[i][j];
+    }
+  }
+
+  if (pd->TimeIntegration != STEADY) {
+    tau = inv_rho / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
+  } else {
+    tau = inv_rho / (sqrt(v_d_gv + diff_g_g) + 1e-14);
   }
 }
 
@@ -345,7 +459,7 @@ ad_tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_
 
   for (int a = 0; a < dim; a++) {
     for (int k = 0; k < ei[pg->imtrx]->dof[VELOCITY1]; k++) {
-      tau_terms->d_tau_dv[a][k] = tau.dx(ad_fv.v_offset[a] + k);
+      tau_terms->d_tau_dv[a][k] = tau.dx(ad_fv.offset[VELOCITY1 + a] + k);
     }
   }
 
@@ -398,7 +512,7 @@ ad_tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_
 #endif
   if (pd->e[pg->imtrx][EDDY_NU]) {
     for (int k = 0; k < ei[pg->imtrx]->dof[EDDY_NU]; k++) {
-      tau_terms->d_tau_dEDDY_NU[k] = tau.dx(ad_fv.eddy_nu_offset + k);
+      tau_terms->d_tau_dEDDY_NU[k] = tau.dx(ad_fv.offset[EDDY_NU] + k);
     }
   }
 #if 0
@@ -426,13 +540,13 @@ ad_tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_
 }
 
 extern "C" void ad_sa_wall_func(double func[DIM],
-                                 double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE]) {
+                                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE]) {
   // kind of hacky, near wall velocity is velocity at central node
   ADType unw[DIM];
   ADType eddy_nw;
-  unw[0] = ADType(ad_fv.total_ad_variables, ad_fv.v_offset[0] + 8, *esp->v[0][8]);
-  unw[1] = ADType(ad_fv.total_ad_variables, ad_fv.v_offset[1] + 8, *esp->v[1][8]);
-  eddy_nw = ADType(ad_fv.total_ad_variables, ad_fv.eddy_nu_offset + 8, *esp->eddy_nu[8]);
+  unw[0] = ADType(ad_fv.total_ad_variables, ad_fv.offset[VELOCITY1] + 8, *esp->v[0][8]);
+  unw[1] = ADType(ad_fv.total_ad_variables, ad_fv.offset[VELOCITY2] + 8, *esp->v[1][8]);
+  eddy_nw = ADType(ad_fv.total_ad_variables, ad_fv.offset[EDDY_NU] + 8, *esp->eddy_nu[8]);
 
   ADType mu = 0;
   dbl scale = 1.0;
@@ -479,14 +593,12 @@ extern "C" void ad_sa_wall_func(double func[DIM],
 
   ADType mu_tt = std::max(mu_t - mu, 0);
 
-
   ADType omega[DIM][DIM];
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
       omega[a][b] = fv_old->grad_v[a][b] + fv_old->grad_v[b][a];
     }
   }
-
 
   ADType S = 0.;
   /* get gamma_dot invariant for viscosity calculations */
@@ -498,7 +610,7 @@ extern "C" void ad_sa_wall_func(double func[DIM],
 
   S = sqrt(0.5 * (S) + 1e-16);
 
-  ADType eddy_nu = std::min(std::min(5 , 1e-1 * scale * S * mp->viscosity), fv_old->eddy_nu * 1.5);
+  ADType eddy_nu = std::min(std::min(5, 1e-1 * scale * S * mp->viscosity), fv_old->eddy_nu * 1.5);
 
   func[0] = fv->eddy_nu - eddy_nu.val();
 
@@ -576,7 +688,7 @@ extern "C" dbl ad_sa_viscosity(struct Generalized_Newtonian *gn_local,
 
     if (d_mu != NULL) {
       for (int j = 0; j < ei[pg->imtrx]->dof[EDDY_NU]; j++) {
-        d_mu->eddy_nu[j] = mu.dx(ad_fv.eddy_nu_offset + j);
+        d_mu->eddy_nu[j] = mu.dx(ad_fv.offset[EDDY_NU] + j);
       }
     }
   }
@@ -828,7 +940,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
         pvar = upd->vp[pg->imtrx][var];
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.eddy_nu_offset + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[EDDY_NU] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -839,7 +951,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
           pvar = upd->vp[pg->imtrx][var];
 
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.v_offset[b] + j);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
 
           } /* End of loop over j */
         }   /* End of if the variale is active */
@@ -1103,7 +1215,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.turb_k_offset + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -1113,7 +1225,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
         pvar = upd->vp[pg->imtrx][var];
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.turb_omega_offset + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -1124,7 +1236,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
           pvar = upd->vp[pg->imtrx][var];
 
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.v_offset[b] + j);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
           } /* End of loop over j */
         }   /* End of if the variale is active */
       }     /* End of loop over velocity components */
@@ -1160,15 +1272,15 @@ extern "C" dbl ad_turb_k_omega_sst_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_mu) 
   mu = mu_newt + mu_t;
   if (d_mu != NULL) {
     for (int j = 0; j < ei[pg->imtrx]->dof[TURB_OMEGA]; j++) {
-      d_mu->turb_omega[j] = mu.dx(ad_fv.turb_omega_offset + j);
+      d_mu->turb_omega[j] = mu.dx(ad_fv.offset[TURB_OMEGA] + j);
     }
     for (int j = 0; j < ei[pg->imtrx]->dof[TURB_K]; j++) {
-      d_mu->turb_k[j] = mu.dx(ad_fv.turb_k_offset + j);
+      d_mu->turb_k[j] = mu.dx(ad_fv.offset[TURB_K] + j);
     }
     for (int b = 0; b < VIM; b++) {
       int var = VELOCITY1 + b;
       for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->v[b][j] = mu.dx(ad_fv.v_offset[b] + j);
+        d_mu->v[b][j] = mu.dx(ad_fv.offset[var] + j);
       }
     }
   }
@@ -1356,7 +1468,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
         pvar = upd->vp[pg->imtrx][var];
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.turb_omega_offset + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -1365,7 +1477,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       if (pdv[var]) {
         pvar = upd->vp[pg->imtrx][var];
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.turb_k_offset + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -1376,7 +1488,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
           pvar = upd->vp[pg->imtrx][var];
 
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.v_offset[b] + j);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
 
           } /* End of loop over j */
         }   /* End of if the variale is active */

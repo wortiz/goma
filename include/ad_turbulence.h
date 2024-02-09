@@ -4,6 +4,41 @@
 #ifdef GOMA_ENABLE_SACADO
 
 #ifdef __cplusplus
+#include <Sacado.hpp>
+extern "C" {
+    #include "std.h"
+    #include "el_elm.h"
+    #include "mm_mp_const.h"
+}
+using ADType = Sacado::Fad::DFad<double>;
+void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int interp_eqn);
+struct AD_Field_Variables {
+  ADType v[DIM];
+  ADType v_dot[DIM];
+  ADType x_dot[DIM];
+  ADType grad_v[DIM][DIM];
+  ADType G[DIM][DIM];
+  ADType S[MAX_MODES][DIM][DIM];
+  ADType S_dot[MAX_MODES][DIM][DIM];
+  ADType grad_S[MAX_MODES][DIM][DIM][DIM];
+  ADType eddy_nu;
+  ADType P;
+  ADType eddy_nu_dot;
+  ADType grad_eddy_nu[DIM];
+  ADType turb_k;
+  ADType turb_k_dot;
+  ADType grad_turb_k[DIM];
+  ADType turb_omega;
+  ADType turb_omega_dot;
+  ADType grad_turb_omega[DIM];
+  int total_ad_variables;
+  int ielem;
+  int offset[V_LAST];
+};
+
+extern AD_Field_Variables ad_fv;
+
+void ad_only_tau_momentum_shakib(ADType tau, int dim, dbl dt, int pspg_scale);
 extern "C" {
 #endif
 
