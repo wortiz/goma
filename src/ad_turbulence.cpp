@@ -335,33 +335,29 @@ extern "C" void fill_ad_field_variables() {
 }
 
 void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int interp_eqn) {
-  dbl G[DIM][DIM];
-
-  get_metric_tensor(bf[interp_eqn]->B, dim, ei[pg->imtrx]->ielem_type, G);
-
-  supg_tau = 0;
-
-  ADType v_d_gv = 0;
-  for (int i = 0; i < dim; i++) {
-    for (int j = 0; j < dim; j++) {
-      v_d_gv += std::abs(ad_fv.v[i] * G[i][j] * ad_fv.v[j]);
+  ADType h_e = 0;
+  for (int i = 0; i < ei[upd->matrix_index[interp_eqn]]->dof[interp_eqn]; i++) {
+    ADType tmp = 0;
+    for (int j = 0; j < pd->Num_Dim; j++) {
+      tmp += bf[interp_eqn]->grad_phi[i][j] * bf[interp_eqn]->grad_phi[i][j];
     }
+    h_e += sqrt(tmp);
   }
+  h_e = 1 / h_e;
 
-  ADType diff_g_g = 0;
-  for (int i = 0; i < dim; i++) {
-    for (int j = 0; j < dim; j++) {
-      diff_g_g += G[i][j] * G[i][j];
+  ADType u_e = 0;
+  for (int i = 0; i < ei[upd->matrix_index[VELOCITY1]]->dof[VELOCITY1]; i++) {
+    ADType tmp = 0;
+    for (int j = 0; j < WIM; j++) {
+      ADType u_i = ADType(ad_fv.total_ad_variables, ad_fv.offset[VELOCITY1+j], *esp->v[j][i]);
+      ADType xdot_i = 0;
+      tmp += SQUARE(u_i - xdot_i);
     }
+    u_e += sqrt(tmp + 1e-32);
   }
-  diff_g_g *= 9 * diffusivity * diffusivity;
+  u_e /= ei[upd->matrix_index[VELOCITY1]]->dof[VELOCITY1];
 
-  if (dt > 0) {
-    supg_tau = 1.0 / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
-  } else {
-    supg_tau = std::max(1e-4,1.0 / (sqrt(v_d_gv + diff_g_g) + 1e-32));
-  }
-  // printf("supg_tau %g %g %g\n", supg_tau.val(), v_d_gv.val(), diff_g_g.val());
+  supg_tau = h_e / u_e;
 }
 void ad_only_tau_momentum_shakib(ADType tau, int dim, dbl dt, int pspg_scale) {
   dbl G[DIM][DIM];
