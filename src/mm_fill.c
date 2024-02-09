@@ -25,6 +25,7 @@
 
 /* GOMA include files */
 
+#include "ad_momentum.h"
 #include "ad_turbulence.h"
 #include "ac_stability.h"
 #include "ac_stability_util.h"
@@ -1508,7 +1509,8 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     } else if (vn->evssModel == SQRT_CONF) {
-      err = assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
+      // err = assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
+      err = ad_assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
 
       GOMA_EH(err, "assemble_stress_sqrt_conf");
       if (err)
@@ -2397,7 +2399,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         CHECKFINITE("assemble_momentum");
 #endif
       } else {
-        err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+        err = ad_assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
         GOMA_EH(err, "assemble_momentum");
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_momentum");
@@ -2526,7 +2528,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (neg_elem_volume)
           return -1;
       } else {
-        err = assemble_continuity(time_value, theta, delta_t, &pg_data);
+        err = ad_assemble_continuity(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_continuity");
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_continuity");
@@ -4150,7 +4152,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
         return -1;
 #endif
     } else if (vn->evssModel == SQRT_CONF) {
-      err = assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
+      err = ad_assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
 
       GOMA_EH(err, "assemble_stress_sqrt_conf");
       if (err)
