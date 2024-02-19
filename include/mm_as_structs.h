@@ -1124,6 +1124,7 @@ struct Transient_Information {
   dbl theta;                            /* time step parameter: theta = 0. => Backward Euler
                                                                 theta = 1. => Forward Euler
                                                                 theta = .5 => Crack-Nicholson  */
+  dbl current_theta;
   dbl eps;                              /* time step error  */
   int use_var_norm[MAX_VARIABLE_TYPES]; /* Booleans used for time step
                                            truncation error control */

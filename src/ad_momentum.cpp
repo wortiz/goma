@@ -232,7 +232,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
   std::vector<std::vector<ADType>> resid(WIM);
   for (a = 0; a < WIM; a++) {
     resid[a].resize(ei[pg->imtrx]->dof[eqn + a]);
-    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn + a]; i++) {
       resid[a][i] = 0;
     }
   }
@@ -281,7 +281,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
           /* add Petrov-Galerkin terms as necessary */
           if (supg != 0.) {
             for (p = 0; p < dim; p++) {
-              wt_func += supg * tau * ad_fv.v[p] * bfm->grad_phi[i][p];
+              wt_func += supg * tau * ad_fv->v[p] * bfm->grad_phi[i][p];
             }
           }
           grad_phi_i_e_a = bfm->grad_phi_e[i][a];
@@ -294,7 +294,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
           ADType mass = 0.;
           if (transient_run) {
             if (mass_on) {
-              mass = ad_fv.v_dot[a] * rho;
+              mass = ad_fv->v_dot[a] * rho;
               mass *= -wt_func * d_area;
               mass *= mass_etm;
             }
@@ -307,10 +307,10 @@ int ad_assemble_momentum(dbl time,       /* current time */
               advection += (v[p] - x_dot[p]) * grad_v[p][a];
             }
 #else
-            advection += (ad_fv.v[0] - ad_fv.x_dot[0]) * ad_fv.grad_v[0][a];
-            advection += (ad_fv.v[1] - ad_fv.x_dot[1]) * ad_fv.grad_v[1][a];
+            advection += (ad_fv->v[0] - ad_fv->x_dot[0]) * ad_fv->grad_v[0][a];
+            advection += (ad_fv->v[1] - ad_fv->x_dot[1]) * ad_fv->grad_v[1][a];
             if (WIM == 3)
-              advection += (ad_fv.v[2] - ad_fv.x_dot[2]) * ad_fv.grad_v[2][a];
+              advection += (ad_fv->v[2] - ad_fv->x_dot[2]) * ad_fv->grad_v[2][a];
 #endif
 
             advection *= rho;
@@ -347,6 +347,9 @@ int ad_assemble_momentum(dbl time,       /* current time */
           /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
           R[ii] += mass.val() + advection.val() + diffusion.val() + source.val();
           resid[a][ii] += mass + advection + diffusion + source;
+          // if (ei[pg->imtrx]->ielem == 418) {
+          //   printf("diff = %.15f\n", diffusion.val());
+          // }
         } /*end if (active_dofs) */
       }   /* end of for (i=0,ei[pg->imtrx]->dofs...) */
     }
@@ -375,7 +378,8 @@ int ad_assemble_momentum(dbl time,       /* current time */
               int pvar = upd->vp[pg->imtrx][var];
 
               for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid[a][ii].dx(ad_fv.offset[var] + j);
+                // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid[a][ii].dx(ad_fv->offset[var] + j);
 
               } /* End of loop over j */
             }   /* End of if the variale is active */
@@ -446,7 +450,7 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
       for (int ii = 0; ii < VIM; ii++) {
         for (int jj = 0; jj < VIM; jj++) {
           if (ii <= jj) {
-            b[ii][jj] = ad_fv.S[mode][ii][jj];
+            b[ii][jj] = ad_fv->S[mode][ii][jj];
             b[jj][ii] = b[ii][jj];
           }
         }
@@ -467,7 +471,7 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
     for (int mode = 0; mode < vn->modes; mode++) {
       for (int i = 0; i < VIM; i++) {
         for (int j = 0; j < VIM; j++) {
-          stress[i][j] += ad_fv.S[mode][i][j];
+          stress[i][j] += ad_fv->S[mode][i][j];
         }
       }
     }
@@ -542,7 +546,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   if (evss_f) {
     for (int a = 0; a < VIM; a++) {
       for (int b = 0; b < VIM; b++) {
-        gamma_cont[a][b] = ad_fv.G[a][b] + ad_fv.G[b][a];
+        gamma_cont[a][b] = ad_fv->G[a][b] + ad_fv->G[b][a];
       }
     }
   } else {
@@ -557,7 +561,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
       dgamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
-      gamma[a][b] = ad_fv.grad_v[a][b] + ad_fv.grad_v[b][a];
+      gamma[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
     }
   }
 
@@ -614,7 +618,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
 
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
-      Pi[a][b] = -ad_fv.P * (double)delta(a, b) + mu * gamma[a][b];
+      Pi[a][b] = -ad_fv->P * (double)delta(a, b) + mu * gamma[a][b];
     }
   }
 
@@ -723,10 +727,10 @@ int ad_assemble_continuity(dbl time_value, /* current time */
                                * (in stress-free state) input as source
                                * constant from input file                  */
 
-  dbl det_J;
+  ADType det_J;
   dbl h3;
   dbl wt;
-  dbl d_area;
+  ADType d_area;
 
   dbl d_h3detJ_dmesh_bj; /* for specific (b,j) mesh dof */
 
@@ -807,7 +811,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
   ADType div_v = 0;
 
   for (a = 0; a < VIM; a++) {
-    div_v += ad_fv.grad_v[a][a];
+    div_v += ad_fv->grad_v[a][a];
   }
 
   /*
@@ -835,8 +839,8 @@ int ad_assemble_continuity(dbl time_value, /* current time */
   }
 
   wt = fv->wt;
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
-  h3 = fv->h3;           /* Differential volume element (scales). */
+  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  h3 = fv->h3;         /* Differential volume element (scales). */
 
   d_area = wt * det_J * h3;
 
@@ -980,7 +984,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
       }
 
       source = 0.0;
-      pressure_stabilization = 0.0;
+      ADType pressure_stabilization = 0.0;
       if (PSPG) {
         GOMA_EH(GOMA_ERROR, "Error");
         for (a = 0; a < WIM; a++) {
@@ -996,7 +1000,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
        *  Add up the individual contributions and sum them into the local element
        *  contribution for the total continuity equation for the ith local unknown
        */
-      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + pressure_stabilization;
+      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + pressure_stabilization.val();
       resid[i] = advection + pressure_stabilization;
     }
   }
@@ -1007,17 +1011,14 @@ int ad_assemble_continuity(dbl time_value, /* current time */
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
 
       /* Sensitivity w.r.t. velocity */
-      for (b = 0; b < VIM; b++) {
-        var = VELOCITY1 + b;
+      for (int var = V_FIRST; var < V_LAST; var++) {
         if (pdv[var]) {
           pvar = upd->vp[pg->imtrx][var];
-
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
-
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
           } /* End of loop over j */
         }   /* End of if the variale is active */
-      }     /* End of loop over velocity components */
+      }
 
     } /* End of loop over i */
   }   /* End of if assemble Jacobian */
@@ -1192,9 +1193,9 @@ void ad_load_modal_pointers(
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      s[a][b] = ad_fv.S[ve_mode][a][b];
+      s[a][b] = ad_fv->S[ve_mode][a][b];
       if (pd->TimeIntegration != STEADY) {
-        s_dot[a][b] = ad_fv.S_dot[ve_mode][a][b];
+        s_dot[a][b] = ad_fv->S_dot[ve_mode][a][b];
       } else {
         s_dot[a][b] = 0.;
       }
@@ -1204,7 +1205,7 @@ void ad_load_modal_pointers(
   for (p = 0; p < VIM; p++) {
     for (a = 0; a < VIM; a++) {
       for (b = 0; b < VIM; b++) {
-        grad_s[p][a][b] = ad_fv.grad_S[ve_mode][p][a][b];
+        grad_s[p][a][b] = ad_fv->grad_S[ve_mode][p][a][b];
       }
     }
   }
@@ -1229,7 +1230,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   ADType grad_v[DIM][DIM];
   ADType gamma[DIM][DIM]; /* Shear-rate tensor based on velocity */
   dbl dgamma[DIM][DIM];   /* Shear-rate tensor based on velocity */
-  dbl det_J;              /* determinant of element Jacobian */
+  ADType det_J;           /* determinant of element Jacobian */
 
   dbl d_det_J_dmesh_pj; /* for specific (p,j) mesh dof */
 
@@ -1344,7 +1345,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
   wt = fv->wt;
 
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
 
   h3 = fv->h3; /* Differential volume element (scales). */
 
@@ -1366,12 +1367,12 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
    * Field variables...
    */
   for (int a = 0; a < WIM; a++) {
-    v[a] = ad_fv.v[a];
+    v[a] = ad_fv->v[a];
 
     /* note, these are zero for steady calculations */
     x_dot[a] = 0.0;
     if (pd->TimeIntegration != STEADY && pd->gv[MESH_DISPLACEMENT1 + a]) {
-      x_dot[a] = ad_fv.x_dot[a];
+      x_dot[a] = ad_fv->x_dot[a];
     }
   }
 
@@ -1386,7 +1387,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
-      grad_v[a][b] = ad_fv.grad_v[a][b];
+      grad_v[a][b] = ad_fv->grad_v[a][b];
     }
   }
 
@@ -1401,10 +1402,10 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
       if (evss_gradv) {
-        g[a][b] = ad_fv.grad_v[a][b];
-        gt[a][b] = ad_fv.grad_v[b][a];
+        g[a][b] = ad_fv->grad_v[a][b];
+        gt[a][b] = ad_fv->grad_v[b][a];
       } else {
-        g[a][b] = ad_fv.G[a][b];
+        g[a][b] = ad_fv->G[a][b];
         gt[b][a] = g[a][b];
       }
     }
@@ -1586,7 +1587,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
               /* add Petrov-Galerkin terms as necessary */
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
-                  wt_func += supg * supg_tau * v[w] * bf[eqn]->grad_phi[i][w];
+                  wt_func += supg * supg_tau * ad_fv->v[w] * ad_fv->basis[eqn].grad_phi[i][w];
                 }
               }
 
@@ -1628,7 +1629,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   ADType js = 0;
                   for (int k = 0; k < ei[pg->imtrx]->dof[eqn]; k++) {
                     for (int p = 0; p < VIM; p++) {
-                      js += fabs(grad_b[p][ii][jj] * bf[eqn]->grad_phi[k][p]);
+                      js += fabs(grad_b[p][ii][jj] * ad_fv->basis[eqn].grad_phi[k][p]);
                     }
                   }
                   hdc = 1 / (js + 1e-16);
@@ -1642,17 +1643,15 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   for (int ib = 0; ib < 1; ib++) {
                     ADType bt = beta[ib];
                     if (bt > 1.0) {
-                    kdc += fabs(Y_inv * Z) * pow(hdc, bt) * pow(fabs(b[ii][jj]), 1 - bt);
+                      kdc += fabs(Y_inv * Z) * pow(hdc, bt) * pow(fabs(b[ii][jj]), 1 - bt);
                     } else {
-                    kdc += fabs(Y_inv * Z) * hdc *
-                           pow(inner, bt / 2 - 1);
-
+                      kdc += fabs(Y_inv * Z) * hdc * pow(inner, bt / 2 - 1);
                     }
                     // kdc += pow(inner, bt / 2 - 1);
                   }
                   kdc *= 0.5;
                   for (int r = 0; r < VIM; r++) {
-                    diffusion += kdc * grad_b[r][ii][jj] * bf[eqn]->grad_phi[i][r];
+                    diffusion += kdc * grad_b[r][ii][jj] * ad_fv->basis[eqn].grad_phi[i][r];
                   }
 
                   diffusion *= yzbeta_factor * det_J * wt * h3;
@@ -1682,7 +1681,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
                     ADType tmp = 0;
                     for (int w = 0; w < dim; w++) {
-                      tmp += bf[eqn]->grad_phi[q][w] * bf[eqn]->grad_phi[q][w];
+                      tmp += ad_fv->basis[eqn].grad_phi[q][w] * ad_fv->basis[eqn].grad_phi[q][w];
                     }
                     he += 1.0 / sqrt(tmp);
                   }
@@ -1690,7 +1689,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   tmp = 0;
                   for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
                     for (int w = 0; w < dim; w++) {
-                      tmp += fabs(r[w] * bf[eqn]->grad_phi[q][w]);
+                      tmp += fabs(r[w] * ad_fv->basis[eqn].grad_phi[q][w]);
                     }
                   }
                   ADType hrgn = 1.0 / (tmp + 1e-14);
@@ -1701,12 +1700,12 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   }
                   magv = sqrt(magv + 1e-32);
 
-                  ADType tau_dcdd =
-                      0.5 * he * magv * magv * pow((1.0 / (mags + 1e-16)) * hrgn, 1.0);
-                  // ADType tau_dcdd = (1.0 / mags) * hrgn * hrgn;
+                  ADType tau_dcdd = 0.5 * he * (1.0 / (mags + 1e-16)) * hrgn * hrgn;
+                  // ADType tau_dcdd = he * (1.0 / mags) * hrgn * hrgn / lambda;
+                  // printf("%g %g ", supg_tau.val(), tau_dcdd.val());
                   tau_dcdd = 1 / sqrt(1.0 / (supg_tau * supg_tau + 1e-32) +
-                                      (supg_tau * supg_tau * supg_tau * supg_tau + 1e-32) +
                                       1.0 / (tau_dcdd * tau_dcdd + 1e-32));
+                  // printf("%g \n ", tau_dcdd.val());
                   ADType ss[DIM][DIM] = {{0.0}};
                   ADType rr[DIM][DIM] = {{0.0}};
                   ADType rdots = 0.0;
@@ -1736,7 +1735,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   }
 
                   for (int w = 0; w < dim; w++) {
-                    diffusion -= tau_dcdd * gs_inner_dot[w] * bf[eqn]->grad_phi[i][w];
+                    diffusion += tau_dcdd * gs_inner_dot[w] * ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= dcdd_factor * det_J * wt * h3;
                 }
@@ -1786,7 +1785,8 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                 if (pd->v[pg->imtrx][var]) {
                   pvar = upd->vp[pg->imtrx][var];
                   for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                    lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[ii][jj][i].dx(ad_fv.offset[var] + j);
+                    lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                        resid[ii][jj][i].dx(ad_fv->offset[var] + j);
                   }
                 }
               }
