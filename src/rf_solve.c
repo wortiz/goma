@@ -1890,6 +1890,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        */
       dcopy1(numProcUnknowns, x, x_save);
       dcopy1(numProcUnknowns, xdot, xdot_save);
+      tran->current_theta = theta;
       err = solve_nonlinear_problem(ams[JAC], x, delta_t, theta, x_old, x_older, xdot, xdot_old,
                                     resid_vector, x_update, scale, &converged, &nprint, tev,
                                     tev_post, gv, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo,

@@ -21,10 +21,12 @@
 extern "C" {
 #include "mm_fill_stabilization.h"
 /* GOMA include files */
+#include "mm_eh.h"
 #include "mm_fill_stress.h"
 #define GOMA_AD_TURBULENCE_CPP
 #include "density.h"
 #include "el_elm.h"
+#include "el_geom.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -39,7 +41,7 @@ extern "C" {
 #include "std.h"
 }
 
-AD_Field_Variables ad_fv;
+AD_Field_Variables *ad_fv = NULL;
 
 ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local);
 
@@ -89,46 +91,379 @@ static int ad_calc_shearrate(ADType &gammadot,             /* strain rate invari
   return 0;
 }
 
+int ad_beer_belly(void) {
+  if (ad_fv == NULL) {
+    ad_fv = new AD_Field_Variables();
+  }
+  int status = 0, i, j, k, n, t, dim, pdim, mdof, index, node, si;
+  int DeformingMesh, ShapeVar;
+  struct Basis_Functions *MapBf;
+  size_t v_length;
+  int imtrx = upd->matrix_index[pd->ShapeVar];
+
+  static int is_initialized = FALSE;
+  static int elem_blk_id_save = -123;
+
+  dim = ei[imtrx]->ielem_dim;
+  pdim = pd->Num_Dim;
+  int elem_type = ei[imtrx]->ielem_type;
+  int elem_shape = type2shape(elem_type);
+
+  ShapeVar = pd->ShapeVar;
+
+  /* If this is a shell element, it may be a deforming mesh
+   * even if there are no mesh equations on the shell block.
+   * The ei[imtrx]->deforming_mesh flag is TRUE for shell elements when
+   * there are mesh equations active on either the shell block or
+   * any neighboring bulk block.
+   */
+
+  if (pd->gv[MESH_DISPLACEMENT1]) {
+    DeformingMesh = ei[upd->matrix_index[MESH_DISPLACEMENT1]]->deforming_mesh;
+  } else {
+    DeformingMesh = ei[imtrx]->deforming_mesh;
+  }
+
+  if ((si = in_list(pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations)) == -1) {
+    GOMA_EH(GOMA_ERROR, "Seems to be a problem finding the IntegrationMap interpolation.");
+  }
+  MapBf = bfd[si];
+
+  mdof = ei[imtrx]->dof[ShapeVar];
+
+  if (MapBf->interpolation == I_N1) {
+    mdof = MapBf->shape_dof;
+  }
+
+  /*
+   * For every type "t" of unique basis function used in this problem,
+   * initialize appropriate arrays...
+   */
+
+  if (ei[imtrx]->elem_blk_id != elem_blk_id_save) {
+    is_initialized = FALSE;
+  }
+
+  if (!is_initialized) {
+    is_initialized = TRUE;
+    elem_blk_id_save = ei[imtrx]->elem_blk_id;
+  }
+
+  /*
+   * For convenience, while we are here, interpolate to find physical space
+   * location using the mesh basis function.
+   *
+   * Generally, the other basis functions will give various different estimates
+   * for position, depending on whether the shapes are mapped sub/iso/super
+   * parametrically...
+   */
+  for (i = 0; i < VIM; i++) {
+    ad_fv->x[i] = 0.;
+  }
+
+  /*
+   * NOTE: pdim is the number of coordinates, which may differ from
+   * the element dimension (dim), as for shell elements!
+   */
+  for (i = 0; i < pdim; i++) {
+    if (DeformingMesh) {
+      for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
+        node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
+
+        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
+
+        ad_fv->x[i] += (Coor[i][index] + ADType(ad_fv->total_ad_variables,
+                                                ad_fv->offset[R_MESH1 + i] + k, *esp->d[i][k])) *
+                       bf[R_MESH1]->phi[k];
+      }
+    } else {
+      for (k = 0; k < mdof; k++) {
+        node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
+
+        index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[imtrx]->ielem] + node];
+
+        ad_fv->x[i] += Coor[i][index] * MapBf->phi[k];
+      }
+    }
+  }
+
+  /*
+   * Elemental Jacobian is now affected by mesh displacement of nodes
+   * from their initial nodal point coordinates...
+   */
+
+  for (i = 0; i < dim; i++) {
+    for (j = 0; j < pdim; j++) {
+      ad_fv->J[i][j] = 0.0;
+      if (DeformingMesh) {
+        for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
+          node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
+
+          index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
+
+          ad_fv->J[i][j] +=
+              (Coor[j][index] +
+               ADType(ad_fv->total_ad_variables, ad_fv->offset[R_MESH1 + j] + k, *esp->d[j][k])) *
+              bf[R_MESH1]->dphidxi[k][i];
+        }
+      } else {
+        for (k = 0; k < mdof; k++) {
+          node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
+          index = Proc_Elem_Connect[Proc_Connect_Ptr[ei[imtrx]->ielem] + node];
+          ad_fv->J[i][j] += Coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
+        }
+      }
+    }
+  }
+
+  if (elem_shape == SHELL || elem_shape == TRISHELL || (mp->ehl_integration_kind == SIK_S)) {
+    GOMA_EH(GOMA_ERROR, "This is not implemented for shell elements. ad_beer_belly");
+  }
+
+  /* Compute inverse of Jacobian for only the MapBf right now */
+
+  /*
+   * Wiggly mesh derivatives..
+   */
+  switch (dim) {
+  case 1:
+    GOMA_EH(GOMA_ERROR, "dim = 1 not implemented in ad_beer_belly");
+    break;
+
+  case 2:
+    dim = ei[pg->imtrx]->ielem_dim;
+    ad_fv->detJ = ad_fv->J[0][0] * ad_fv->J[1][1] - ad_fv->J[0][1] * ad_fv->J[1][0];
+
+    ad_fv->B[0][0] = ad_fv->J[1][1] / ad_fv->detJ;
+    ad_fv->B[0][1] = -ad_fv->J[0][1] / ad_fv->detJ;
+    ad_fv->B[1][0] = -ad_fv->J[1][0] / ad_fv->detJ;
+    ad_fv->B[1][1] = ad_fv->J[0][0] / ad_fv->detJ;
+
+    break;
+
+  case 3:
+
+    /* Now that we are here, reset dim for the shell case */
+    dim = ei[imtrx]->ielem_dim;
+
+    ad_fv->detJ =
+        ad_fv->J[0][0] * (ad_fv->J[1][1] * ad_fv->J[2][2] - ad_fv->J[1][2] * ad_fv->J[2][1]) -
+        ad_fv->J[0][1] * (ad_fv->J[1][0] * ad_fv->J[2][2] - ad_fv->J[2][0] * ad_fv->J[1][2]) +
+        ad_fv->J[0][2] * (ad_fv->J[1][0] * ad_fv->J[2][1] - ad_fv->J[2][0] * ad_fv->J[1][1]);
+
+    ad_fv->B[0][0] =
+        (ad_fv->J[1][1] * ad_fv->J[2][2] - ad_fv->J[2][1] * ad_fv->J[1][2]) / (ad_fv->detJ);
+
+    ad_fv->B[0][1] =
+        -(ad_fv->J[0][1] * ad_fv->J[2][2] - ad_fv->J[2][1] * ad_fv->J[0][2]) / (ad_fv->detJ);
+
+    ad_fv->B[0][2] =
+        (ad_fv->J[0][1] * ad_fv->J[1][2] - ad_fv->J[1][1] * ad_fv->J[0][2]) / (ad_fv->detJ);
+
+    ad_fv->B[1][0] =
+        -(ad_fv->J[1][0] * ad_fv->J[2][2] - ad_fv->J[2][0] * ad_fv->J[1][2]) / (ad_fv->detJ);
+
+    ad_fv->B[1][1] =
+        (ad_fv->J[0][0] * ad_fv->J[2][2] - ad_fv->J[2][0] * ad_fv->J[0][2]) / (ad_fv->detJ);
+
+    ad_fv->B[1][2] =
+        -(ad_fv->J[0][0] * ad_fv->J[1][2] - ad_fv->J[1][0] * ad_fv->J[0][2]) / (ad_fv->detJ);
+
+    ad_fv->B[2][0] =
+        (ad_fv->J[1][0] * ad_fv->J[2][1] - ad_fv->J[1][1] * ad_fv->J[2][0]) / (ad_fv->detJ);
+
+    ad_fv->B[2][1] =
+        -(ad_fv->J[0][0] * ad_fv->J[2][1] - ad_fv->J[2][0] * ad_fv->J[0][1]) / (ad_fv->detJ);
+
+    ad_fv->B[2][2] =
+        (ad_fv->J[0][0] * ad_fv->J[1][1] - ad_fv->J[1][0] * ad_fv->J[0][1]) / (ad_fv->detJ);
+
+    break;
+
+  default:
+    GOMA_EH(GOMA_ERROR, "Bad dim.");
+    break;
+  }
+  return (status);
+}
+
+int ad_load_bf_grad(void) {
+  int i, k, a, b, p, dofs = 0, v, vi, status, siz;
+  struct Basis_Functions *bfv;
+
+#ifdef DO_NOT_UNROLL
+  int WIM;
+
+  if ((pd->CoordinateSystem == CARTESIAN) || (pd->CoordinateSystem == CYLINDRICAL)) {
+    WIM = pd->Num_Dim;
+  } else {
+    WIM = VIM;
+  }
+#endif
+
+  status = 0;
+
+  /* zero array for initialization */
+  /*  v_length = DIM*DIM*DIM*MDE;
+      init_vec_value(zero_array, 0., v_length); */
+  if (ad_fv->basis.empty()) {
+    ad_fv->basis.resize(V_LAST);
+  }
+
+  for (int v = V_FIRST; v < V_LAST; v++) {
+    if (pd->gv[v]) {
+
+      bfv = bf[v];
+      dofs = ei[upd->matrix_index[v]]->dof[v];
+      if (bfv->interpolation == I_N1) {
+        dofs = bfv->shape_dof;
+      }
+
+      /* initialize variables */
+      siz = pd->Num_Dim * MDE * sizeof(double);
+      /* memset(&(bfv->d_phi[0][0]),0,siz); */
+
+      /*
+       * First load up components of the *raw* derivative vector "d_phi"
+       */
+      switch (pd->Num_Dim) {
+      case 1:
+        for (i = 0; i < dofs; i++) {
+          ad_fv->basis[v].d_phi[i][0] =
+              (ad_fv->B[0][0] * bfv->dphidxi[i][0] + ad_fv->B[0][1] * bfv->dphidxi[i][1]);
+          ad_fv->basis[v].d_phi[i][1] = 0.0;
+          ad_fv->basis[v].d_phi[i][2] = 0.0;
+        }
+        break;
+      case 2:
+        for (i = 0; i < dofs; i++) {
+          ad_fv->basis[v].d_phi[i][0] =
+              (ad_fv->B[0][0] * bfv->dphidxi[i][0] + ad_fv->B[0][1] * bfv->dphidxi[i][1]);
+          ad_fv->basis[v].d_phi[i][1] =
+              (ad_fv->B[1][0] * bfv->dphidxi[i][0] + ad_fv->B[1][1] * bfv->dphidxi[i][1]);
+          ad_fv->basis[v].d_phi[i][2] = 0.0;
+        }
+        break;
+      case 3:
+        for (i = 0; i < dofs; i++) {
+          ad_fv->basis[v].d_phi[i][0] =
+              (ad_fv->B[0][0] * bfv->dphidxi[i][0] + ad_fv->B[0][1] * bfv->dphidxi[i][1] +
+               ad_fv->B[0][2] * bfv->dphidxi[i][2]);
+          ad_fv->basis[v].d_phi[i][1] =
+              (ad_fv->B[1][0] * bfv->dphidxi[i][0] + ad_fv->B[1][1] * bfv->dphidxi[i][1] +
+               ad_fv->B[1][2] * bfv->dphidxi[i][2]);
+          ad_fv->basis[v].d_phi[i][2] =
+              (ad_fv->B[2][0] * bfv->dphidxi[i][0] + ad_fv->B[2][1] * bfv->dphidxi[i][1] +
+               ad_fv->B[2][2] * bfv->dphidxi[i][2]);
+        }
+        break;
+      default:
+        GOMA_EH(GOMA_ERROR, "Unexpected Dimension");
+        break;
+      }
+
+      /*
+       * Now, patch up the physical space gradient of this prototype
+       * scalar function so scale factors are included.
+       */
+
+      /*	memset(&(bfv->grad_phi[0][0]),0,size1);  */
+
+      for (i = 0; i < dofs; i++) {
+        for (p = 0; p < WIM; p++) {
+          ad_fv->basis[v].grad_phi[i][p] = (ad_fv->basis[v].d_phi[i][p]) / (fv->h[p]);
+        }
+      }
+
+      for (i = 0; i < dofs; i++) {
+        for (p = 0; p < VIM; p++) {
+          for (a = 0; a < VIM; a++) {
+            for (int q = 0; q < VIM; q++) {
+              if (q == a)
+                ad_fv->basis[v].grad_phi_e[i][a][p][a] = ad_fv->basis[v].grad_phi[i][p];
+              else
+                ad_fv->basis[v].grad_phi_e[i][a][p][q] = 0.0;
+            }
+          }
+        }
+
+        /* } */
+
+        if (pd->CoordinateSystem != CARTESIAN) {
+          GOMA_EH(GOMA_ERROR, "Only Cartesian coordinate system is supported, ad_load_bf_grad");
+        }
+      }
+    } /* end of if v */
+  }   /* end of basis function loop. */
+
+  return (status);
+}
+
 extern "C" void fill_ad_field_variables() {
-  ad_fv.ielem = ei[pg->imtrx]->ielem;
+  if (ad_fv == NULL) {
+    ad_fv = new AD_Field_Variables();
+  }
+  ad_fv->ielem = ei[pg->imtrx]->ielem;
   int num_ad_variables = 0;
   for (int i = V_FIRST; i < V_LAST; i++) {
-    ad_fv.offset[i] = 0;
+    ad_fv->offset[i] = 0;
     if (pd->gv[i]) {
-      ad_fv.offset[i] = num_ad_variables;
+      ad_fv->offset[i] = num_ad_variables;
       num_ad_variables += ei[upd->matrix_index[i]]->dof[i];
     }
   }
 
-  ad_fv.total_ad_variables = num_ad_variables;
+  ad_fv->total_ad_variables = num_ad_variables;
+
+  ad_beer_belly();
+  ad_load_bf_grad();
+  for (int p = 0; p < WIM; p++) {
+    ad_fv->x_dot[p] = 0;
+  }
+  if (pd->gv[R_MESH1]) {
+    for (int p = 0; p < WIM; p++) {
+      for (int i = 0; i < ei[upd->matrix_index[R_MESH1 + p]]->dof[R_MESH1 + p]; i++) {
+        ad_fv->d[p] += ADType(num_ad_variables, ad_fv->offset[R_MESH1 + p] + i, *esp->d[p][i]) *
+                       bf[R_MESH1 + p]->phi[i];
+        if (pd->TimeIntegration != STEADY) {
+          ADType udot = ADType(num_ad_variables, ad_fv->offset[R_MESH1 + p] + i, *esp_dot->d[p][i]);
+          udot.fastAccessDx(ad_fv->offset[R_MESH1 + p] + i) =
+              (1. + 2. * tran->current_theta) / tran->delta_t;
+          ad_fv->x_dot[p] += udot * bf[R_MESH1 + p]->phi[i];
+        } else {
+          ad_fv->x_dot[p] = 0;
+        }
+      }
+    }
+  }
+
   if (pd->gv[VELOCITY1]) {
     for (int p = 0; p < WIM; p++) {
-      ad_fv.x_dot[p] = 0;
-      ad_fv.v[p] = 0;
-      ad_fv.v_dot[p] = 0;
+      ad_fv->v[p] = 0;
+      ad_fv->v_dot[p] = 0;
       for (int i = 0; i < ei[upd->matrix_index[VELOCITY1 + p]]->dof[VELOCITY1 + p]; i++) {
-        ad_fv.v[p] += ADType(num_ad_variables, ad_fv.offset[VELOCITY1 + p] + i, *esp->v[p][i]) *
-                      bf[VELOCITY1 + p]->phi[i];
+        ad_fv->v[p] += ADType(num_ad_variables, ad_fv->offset[VELOCITY1 + p] + i, *esp->v[p][i]) *
+                       bf[VELOCITY1 + p]->phi[i];
         if (pd->TimeIntegration != STEADY) {
           ADType udot =
-              ADType(num_ad_variables, ad_fv.offset[VELOCITY1 + p] + i, *esp_dot->v[p][i]);
-          udot.fastAccessDx(ad_fv.offset[VELOCITY1 + p] + i) =
-              (1. + 2. * tran->theta) / tran->delta_t;
-          ad_fv.v_dot[p] += udot * bf[VELOCITY1 + p]->phi[i];
+              ADType(num_ad_variables, ad_fv->offset[VELOCITY1 + p] + i, *esp_dot->v[p][i]);
+          udot.fastAccessDx(ad_fv->offset[VELOCITY1 + p] + i) =
+              (1. + 2. * tran->current_theta) / tran->delta_t;
+          ad_fv->v_dot[p] += udot * bf[VELOCITY1 + p]->phi[i];
         } else {
-          ad_fv.v_dot[p] = 0;
+          ad_fv->v_dot[p] = 0;
         }
       }
     }
     for (int p = 0; p < VIM; p++) {
       for (int q = 0; q < VIM; q++) {
-        ad_fv.grad_v[p][q] = 0;
+        ad_fv->grad_v[p][q] = 0;
 
         for (int r = 0; r < WIM; r++) {
           for (int i = 0; i < ei[upd->matrix_index[VELOCITY1 + r]]->dof[VELOCITY1 + r]; i++) {
-            ad_fv.grad_v[p][q] +=
-                ADType(num_ad_variables, ad_fv.offset[VELOCITY1 + r] + i, *esp->v[r][i]) *
-                bf[VELOCITY1 + r]->grad_phi_e[i][r][p][q];
+            ad_fv->grad_v[p][q] +=
+                ADType(num_ad_variables, ad_fv->offset[VELOCITY1 + r] + i, *esp->v[r][i]) *
+                ad_fv->basis[VELOCITY1 + r].grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -136,94 +471,96 @@ extern "C" void fill_ad_field_variables() {
   }
 
   if (pd->gv[EDDY_NU]) {
-    ad_fv.eddy_nu = 0;
-    ad_fv.eddy_nu_dot = 0;
+    ad_fv->eddy_nu = 0;
+    ad_fv->eddy_nu_dot = 0;
     for (int i = 0; i < ei[upd->matrix_index[EDDY_NU]]->dof[EDDY_NU]; i++) {
-      ad_fv.eddy_nu += ADType(num_ad_variables, ad_fv.offset[EDDY_NU] + i, *esp->eddy_nu[i]) *
-                       bf[EDDY_NU]->phi[i];
+      ad_fv->eddy_nu += ADType(num_ad_variables, ad_fv->offset[EDDY_NU] + i, *esp->eddy_nu[i]) *
+                        bf[EDDY_NU]->phi[i];
 
       if (pd->TimeIntegration != STEADY) {
-        ADType ednudot = ADType(num_ad_variables, ad_fv.offset[EDDY_NU] + i, *esp_dot->eddy_nu[i]);
-        ednudot.fastAccessDx(ad_fv.offset[EDDY_NU] + i) = (1. + 2. * tran->theta) / tran->delta_t;
-        ad_fv.eddy_nu_dot += ednudot * bf[EDDY_NU]->phi[i];
+        ADType ednudot = ADType(num_ad_variables, ad_fv->offset[EDDY_NU] + i, *esp_dot->eddy_nu[i]);
+        ednudot.fastAccessDx(ad_fv->offset[EDDY_NU] + i) =
+            (1. + 2. * tran->current_theta) / tran->delta_t;
+        ad_fv->eddy_nu_dot += ednudot * bf[EDDY_NU]->phi[i];
       } else {
-        ad_fv.eddy_nu_dot = 0;
+        ad_fv->eddy_nu_dot = 0;
       }
     }
 
     for (int q = 0; q < pd->Num_Dim; q++) {
-      ad_fv.grad_eddy_nu[q] = 0;
+      ad_fv->grad_eddy_nu[q] = 0;
 
       for (int i = 0; i < ei[upd->matrix_index[EDDY_NU]]->dof[EDDY_NU]; i++) {
-        ad_fv.grad_eddy_nu[q] +=
-            ADType(num_ad_variables, ad_fv.offset[EDDY_NU] + i, *esp->eddy_nu[i]) *
-            bf[EDDY_NU]->grad_phi[i][q];
+        ad_fv->grad_eddy_nu[q] +=
+            ADType(num_ad_variables, ad_fv->offset[EDDY_NU] + i, *esp->eddy_nu[i]) *
+            ad_fv->basis[EDDY_NU].grad_phi[i][q];
       }
     }
   }
 
   if (pd->gv[TURB_K]) {
-    ad_fv.turb_k = 0;
-    ad_fv.turb_k_dot = 0;
+    ad_fv->turb_k = 0;
+    ad_fv->turb_k_dot = 0;
     for (int i = 0; i < ei[upd->matrix_index[TURB_K]]->dof[TURB_K]; i++) {
-      ad_fv.turb_k +=
-          ADType(num_ad_variables, ad_fv.offset[TURB_K] + i, *esp->turb_k[i]) * bf[TURB_K]->phi[i];
+      ad_fv->turb_k +=
+          ADType(num_ad_variables, ad_fv->offset[TURB_K] + i, *esp->turb_k[i]) * bf[TURB_K]->phi[i];
 
       if (pd->TimeIntegration != STEADY) {
-        ADType ednudot = ADType(num_ad_variables, ad_fv.offset[TURB_K] + i, *esp_dot->turb_k[i]);
-        ednudot.fastAccessDx(ad_fv.offset[TURB_K] + i) = (1. + 2. * tran->theta) / tran->delta_t;
-        ad_fv.turb_k_dot += ednudot * bf[TURB_K]->phi[i];
+        ADType ednudot = ADType(num_ad_variables, ad_fv->offset[TURB_K] + i, *esp_dot->turb_k[i]);
+        ednudot.fastAccessDx(ad_fv->offset[TURB_K] + i) =
+            (1. + 2. * tran->current_theta) / tran->delta_t;
+        ad_fv->turb_k_dot += ednudot * bf[TURB_K]->phi[i];
       } else {
-        ad_fv.turb_k_dot = 0;
+        ad_fv->turb_k_dot = 0;
       }
     }
 
     for (int q = 0; q < pd->Num_Dim; q++) {
-      ad_fv.grad_turb_k[q] = 0;
+      ad_fv->grad_turb_k[q] = 0;
 
       for (int i = 0; i < ei[upd->matrix_index[TURB_K]]->dof[TURB_K]; i++) {
-        ad_fv.grad_turb_k[q] +=
-            ADType(num_ad_variables, ad_fv.offset[TURB_K] + i, *esp->turb_k[i]) *
-            bf[TURB_K]->grad_phi[i][q];
+        ad_fv->grad_turb_k[q] +=
+            ADType(num_ad_variables, ad_fv->offset[TURB_K] + i, *esp->turb_k[i]) *
+            ad_fv->basis[TURB_K].grad_phi[i][q];
       }
     }
   }
 
   if (pd->gv[TURB_OMEGA]) {
-    ad_fv.turb_omega = 0;
-    ad_fv.turb_omega_dot = 0;
+    ad_fv->turb_omega = 0;
+    ad_fv->turb_omega_dot = 0;
     for (int i = 0; i < ei[upd->matrix_index[TURB_OMEGA]]->dof[TURB_OMEGA]; i++) {
-      ad_fv.turb_omega +=
-          ADType(num_ad_variables, ad_fv.offset[TURB_OMEGA] + i, *esp->turb_omega[i]) *
+      ad_fv->turb_omega +=
+          ADType(num_ad_variables, ad_fv->offset[TURB_OMEGA] + i, *esp->turb_omega[i]) *
           bf[TURB_OMEGA]->phi[i];
 
       if (pd->TimeIntegration != STEADY) {
         ADType ednudot =
-            ADType(num_ad_variables, ad_fv.offset[TURB_OMEGA] + i, *esp_dot->turb_omega[i]);
-        ednudot.fastAccessDx(ad_fv.offset[TURB_OMEGA] + i) =
-            (1. + 2. * tran->theta) / tran->delta_t;
-        ad_fv.turb_omega_dot += ednudot * bf[TURB_OMEGA]->phi[i];
+            ADType(num_ad_variables, ad_fv->offset[TURB_OMEGA] + i, *esp_dot->turb_omega[i]);
+        ednudot.fastAccessDx(ad_fv->offset[TURB_OMEGA] + i) =
+            (1. + 2. * tran->current_theta) / tran->delta_t;
+        ad_fv->turb_omega_dot += ednudot * bf[TURB_OMEGA]->phi[i];
       } else {
-        ad_fv.turb_omega_dot = 0;
+        ad_fv->turb_omega_dot = 0;
       }
     }
 
     for (int q = 0; q < pd->Num_Dim; q++) {
-      ad_fv.grad_turb_omega[q] = 0;
+      ad_fv->grad_turb_omega[q] = 0;
 
       for (int i = 0; i < ei[upd->matrix_index[TURB_OMEGA]]->dof[TURB_OMEGA]; i++) {
-        ad_fv.grad_turb_omega[q] +=
-            ADType(num_ad_variables, ad_fv.offset[TURB_OMEGA] + i, *esp->turb_omega[i]) *
-            bf[TURB_OMEGA]->grad_phi[i][q];
+        ad_fv->grad_turb_omega[q] +=
+            ADType(num_ad_variables, ad_fv->offset[TURB_OMEGA] + i, *esp->turb_omega[i]) *
+            ad_fv->basis[TURB_OMEGA].grad_phi[i][q];
       }
     }
   }
 
   if (pd->gv[PRESSURE]) {
-    ad_fv.P = 0;
+    ad_fv->P = 0;
     for (int i = 0; i < ei[upd->matrix_index[PRESSURE]]->dof[PRESSURE]; i++) {
-      ad_fv.P +=
-          ADType(num_ad_variables, ad_fv.offset[PRESSURE] + i, *esp->P[i]) * bf[PRESSURE]->phi[i];
+      ad_fv->P +=
+          ADType(num_ad_variables, ad_fv->offset[PRESSURE] + i, *esp->P[i]) * bf[PRESSURE]->phi[i];
     }
   }
 
@@ -233,48 +570,45 @@ extern "C" void fill_ad_field_variables() {
     for (int mode = 0; mode < vn->modes; mode++) {
       for (int p = 0; p < VIM; p++) {
         for (int q = 0; q < VIM; q++) {
-          ad_fv.S[mode][p][q] = 0;
+          ad_fv->S[mode][p][q] = 0;
+          ad_fv->S_dot[mode][p][q] = 0;
           if (p <= q) {
             int v = v_s[mode][p][q];
             if (pd->gv[v]) {
               int dofs = ei[upd->matrix_index[v]]->dof[v];
               for (int i = 0; i < dofs; i++) {
-                ad_fv.S[mode][p][q] +=
-                    ADType(num_ad_variables, ad_fv.offset[v] + i, *esp->S[mode][p][q][i]) *
+                ad_fv->S[mode][p][q] +=
+                    ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->S[mode][p][q][i]) *
                     bf[v]->phi[i];
                 if (pd->TimeIntegration != STEADY) {
-                  if (pd->TimeIntegration != STEADY) {
-                    ADType sdot =
-                        ADType(num_ad_variables, ad_fv.offset[v] + i, *esp_dot->S[mode][p][q][i]);
-                    sdot.fastAccessDx(ad_fv.offset[v] + i) =
-                        (1. + 2. * tran->theta) / tran->delta_t;
-                    ad_fv.S_dot[mode][p][q] += sdot * bf[v]->phi[i];
-                  } else {
-                    ad_fv.S_dot[mode][p][q] = 0;
-                  }
+                  ADType sdot =
+                      ADType(num_ad_variables, ad_fv->offset[v] + i, *esp_dot->S[mode][p][q][i]);
+                  sdot.fastAccessDx(ad_fv->offset[v] + i) =
+                      (1. + 2. * tran->current_theta) / tran->delta_t;
+                  ad_fv->S_dot[mode][p][q] += sdot * bf[v]->phi[i];
+                } else {
+                  ad_fv->S_dot[mode][p][q] = 0;
                 }
               }
             }
             /* form the entire symmetric stress matrix for the momentum equation */
-            ad_fv.S[mode][q][p] = ad_fv.S[mode][p][q];
-            ad_fv.S_dot[mode][q][p] = ad_fv.S_dot[mode][p][q];
+            ad_fv->S[mode][q][p] = ad_fv->S[mode][p][q];
+            ad_fv->S_dot[mode][q][p] = ad_fv->S_dot[mode][p][q];
           }
           for (int r = 0; r < VIM; r++) {
-            ad_fv.grad_S[mode][r][p][q] = 0.;
+            ad_fv->grad_S[mode][r][p][q] = 0.;
             int v = v_s[mode][p][q];
             int dofs = ei[upd->matrix_index[v]]->dof[v];
 
             for (int i = 0; i < dofs; i++) {
               if (p <= q) {
-                ad_fv.grad_S[mode][r][p][q] +=
-                    ADType(num_ad_variables, ad_fv.offset[v_s[mode][p][q]] + i,
-                           *esp->S[mode][p][q][i]) *
-                    bf[v]->grad_phi[i][r];
+                ad_fv->grad_S[mode][r][p][q] +=
+                    ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->S[mode][p][q][i]) *
+                    ad_fv->basis[v].grad_phi[i][r];
               } else {
-                ad_fv.grad_S[mode][r][p][q] +=
-                    ADType(num_ad_variables, ad_fv.offset[v_s[mode][p][q]] + i,
-                           *esp->S[mode][q][p][i]) *
-                    bf[v]->grad_phi[i][r];
+                ad_fv->grad_S[mode][r][p][q] +=
+                    ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->S[mode][q][p][i]) *
+                    ad_fv->basis[v].grad_phi[i][r];
               }
             }
           }
@@ -296,38 +630,42 @@ extern "C" void fill_ad_field_variables() {
     for (int q = 0; q < VIM; q++) {
       int v = v_g[p][q];
       if (pd->gv[v]) {
-        ad_fv.G[p][q] = 0;
+        ad_fv->G[p][q] = 0;
         int dofs = ei[upd->matrix_index[v]]->dof[v];
         for (int i = 0; i < dofs; i++) {
-          ad_fv.G[p][q] +=
-              ADType(num_ad_variables, ad_fv.offset[v]+ i, *esp->G[p][q][i]) * bf[v]->phi[i];
+          ad_fv->G[p][q] +=
+              ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->G[p][q][i]) * bf[v]->phi[i];
         }
       }
     }
   }
 
+  // if (ei[pg->imtrx]->ielem == 418) {
+  //   printf("ad_fv->P = %.15f\n", ad_fv->P.val());
+  // }
+
 #if 0
   // check field variables
   for (int p = 0; p < VIM; p++) {
-    if (fabs(ad_fv.v[p].val() - fv->v[p]) > 1e-14) {
-      printf("diff in fv->v[%d] %.12f != %.12f\n", p, ad_fv.v[p].val(), fv->v[p]);
+    if (fabs(ad_fv->v[p].val() - fv->v[p]) > 1e-14) {
+      printf("diff in fv->v[%d] %.12f != %.12f\n", p, ad_fv->v[p].val(), fv->v[p]);
     }
     for (int q = 0; q < VIM; q++) {
-      if (fabs(ad_fv.grad_v[p][q].val() - fv->grad_v[p][q]) > 1e-12) {
-        printf("diff in fv->grad_v[%d][%d] %.12f != %.12f\n", p, q, ad_fv.grad_v[p][q].val(),
+      if (fabs(ad_fv->grad_v[p][q].val() - fv->grad_v[p][q]) > 1e-12) {
+        printf("diff in fv->grad_v[%d][%d] %.12f != %.12f\n", p, q, ad_fv->grad_v[p][q].val(),
                fv->grad_v[p][q]);
       }
     }
   }
-  if (fabs(ad_fv.eddy_nu.val() - fv->eddy_nu) > 1e-14) {
-    printf("diff in fv->eddy_nu %.12f != %.12f\n", ad_fv.eddy_nu.val(), fv->eddy_nu);
+  if (fabs(ad_fv->eddy_nu.val() - fv->eddy_nu) > 1e-14) {
+    printf("diff in fv->eddy_nu %.12f != %.12f\n", ad_fv->eddy_nu.val(), fv->eddy_nu);
   }
-  if (fabs(ad_fv.eddy_nu_dot.val() - fv_dot->eddy_nu) > 1e-14) {
-    printf("diff in fv->eddy_nu_dot %.12f != %.12f\n", ad_fv.eddy_nu_dot.val(), fv_dot->eddy_nu);
+  if (fabs(ad_fv->eddy_nu_dot.val() - fv_dot->eddy_nu) > 1e-14) {
+    printf("diff in fv->eddy_nu_dot %.12f != %.12f\n", ad_fv->eddy_nu_dot.val(), fv_dot->eddy_nu);
   }
   for (int p = 0; p < pd->Num_Dim; p++) {
-    if (fabs(ad_fv.grad_eddy_nu[p].val() - fv->grad_eddy_nu[p]) > 1e-14) {
-      printf("diff in fv->grad_eddy_nu[%d] %.12f != %.12f\n", p, ad_fv.grad_eddy_nu[p].val(),
+    if (fabs(ad_fv->grad_eddy_nu[p].val() - fv->grad_eddy_nu[p]) > 1e-14) {
+      printf("diff in fv->grad_eddy_nu[%d] %.12f != %.12f\n", p, ad_fv->grad_eddy_nu[p].val(),
              fv->grad_eddy_nu[p]);
     }
   }
@@ -339,26 +677,55 @@ void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int 
   for (int i = 0; i < ei[upd->matrix_index[interp_eqn]]->dof[interp_eqn]; i++) {
     ADType tmp = 0;
     for (int j = 0; j < pd->Num_Dim; j++) {
-      tmp += bf[interp_eqn]->grad_phi[i][j] * bf[interp_eqn]->grad_phi[i][j];
+      tmp += ad_fv->basis[interp_eqn].grad_phi[i][j] * ad_fv->basis[interp_eqn].grad_phi[i][j];
     }
-    h_e += sqrt(tmp);
+    h_e += std::sqrt(tmp);
   }
   h_e = 1 / h_e;
+
+  ADType h_ugn = 0;
+  ADType vmag = 0;
+  for (int j = 0; j < pd->Num_Dim; j++) {
+    vmag += (ad_fv->v[j] - ad_fv->x_dot[j]) * (ad_fv->v[j] - ad_fv->x_dot[j]);
+  }
+  vmag = std::sqrt(vmag + 1e-32);
+  for (int i = 0; i < ei[upd->matrix_index[interp_eqn]]->dof[interp_eqn]; i++) {
+    ADType tmp = 0;
+    for (int j = 0; j < pd->Num_Dim; j++) {
+      tmp += std::abs((ad_fv->v[j] - ad_fv->x_dot[j]) * ad_fv->basis[interp_eqn].grad_phi[i][j]);
+    }
+    h_ugn += tmp;
+  }
+  if (vmag > 1e-14) {
+    h_ugn = vmag / (h_ugn + 1e-16);
+  } else {
+    h_ugn = 0;
+  }
 
   ADType u_e = 0;
   for (int i = 0; i < ei[upd->matrix_index[VELOCITY1]]->dof[VELOCITY1]; i++) {
     ADType tmp = 0;
     for (int j = 0; j < WIM; j++) {
-      ADType u_i = ADType(ad_fv.total_ad_variables, ad_fv.offset[VELOCITY1+j], *esp->v[j][i]);
+      ADType u_i =
+          ADType(ad_fv->total_ad_variables, ad_fv->offset[VELOCITY1 + j] + i, *esp->v[j][i]);
       ADType xdot_i = 0;
+      if (pd->gv[R_MESH1 + j]) {
+        xdot_i =
+            ADType(ad_fv->total_ad_variables, ad_fv->offset[R_MESH1 + j] + i, *esp_dot->d[j][i]);
+      }
       tmp += SQUARE(u_i - xdot_i);
     }
     u_e += sqrt(tmp + 1e-32);
   }
   u_e /= ei[upd->matrix_index[VELOCITY1]]->dof[VELOCITY1];
 
-  supg_tau = h_e / u_e;
+  if (dt > 0) {
+    supg_tau = 1 / sqrt(4.0 / (dt * dt) + h_ugn * h_ugn / (u_e*u_e));
+  } else {
+    supg_tau = h_ugn / u_e;
+  }
 }
+
 void ad_only_tau_momentum_shakib(ADType tau, int dim, dbl dt, int pspg_scale) {
   dbl G[DIM][DIM];
   dbl inv_rho = 1.0;
@@ -376,7 +743,7 @@ void ad_only_tau_momentum_shakib(ADType tau, int dim, dbl dt, int pspg_scale) {
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      v_d_gv += fabs(ad_fv.v[i] * G[i][j] * ad_fv.v[j]);
+      v_d_gv += fabs(ad_fv->v[i] * G[i][j] * ad_fv->v[j]);
     }
   }
 
@@ -416,7 +783,7 @@ ad_tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      v_d_gv += fabs(ad_fv.v[i] * G[i][j] * ad_fv.v[j]);
+      v_d_gv += fabs(ad_fv->v[i] * G[i][j] * ad_fv->v[j]);
     }
   }
 
@@ -455,7 +822,7 @@ ad_tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_
 
   for (int a = 0; a < dim; a++) {
     for (int k = 0; k < ei[pg->imtrx]->dof[VELOCITY1]; k++) {
-      tau_terms->d_tau_dv[a][k] = tau.dx(ad_fv.offset[VELOCITY1 + a] + k);
+      tau_terms->d_tau_dv[a][k] = tau.dx(ad_fv->offset[VELOCITY1 + a] + k);
     }
   }
 
@@ -508,7 +875,7 @@ ad_tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_
 #endif
   if (pd->e[pg->imtrx][EDDY_NU]) {
     for (int k = 0; k < ei[pg->imtrx]->dof[EDDY_NU]; k++) {
-      tau_terms->d_tau_dEDDY_NU[k] = tau.dx(ad_fv.offset[EDDY_NU] + k);
+      tau_terms->d_tau_dEDDY_NU[k] = tau.dx(ad_fv->offset[EDDY_NU] + k);
     }
   }
 #if 0
@@ -540,9 +907,9 @@ extern "C" void ad_sa_wall_func(double func[DIM],
   // kind of hacky, near wall velocity is velocity at central node
   ADType unw[DIM];
   ADType eddy_nw;
-  unw[0] = ADType(ad_fv.total_ad_variables, ad_fv.offset[VELOCITY1] + 8, *esp->v[0][8]);
-  unw[1] = ADType(ad_fv.total_ad_variables, ad_fv.offset[VELOCITY2] + 8, *esp->v[1][8]);
-  eddy_nw = ADType(ad_fv.total_ad_variables, ad_fv.offset[EDDY_NU] + 8, *esp->eddy_nu[8]);
+  unw[0] = ADType(ad_fv->total_ad_variables, ad_fv->offset[VELOCITY1] + 8, *esp->v[0][8]);
+  unw[1] = ADType(ad_fv->total_ad_variables, ad_fv->offset[VELOCITY2] + 8, *esp->v[1][8]);
+  eddy_nw = ADType(ad_fv->total_ad_variables, ad_fv->offset[EDDY_NU] + 8, *esp->eddy_nu[8]);
 
   ADType mu = 0;
   dbl scale = 1.0;
@@ -580,7 +947,7 @@ extern "C" void ad_sa_wall_func(double func[DIM],
   ADType normgv = 0;
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < 2; j++) {
-      normgv += ad_fv.grad_v[i][j] * ad_fv.grad_v[i][j];
+      normgv += ad_fv->grad_v[i][j] * ad_fv->grad_v[i][j];
     }
   }
   normgv = std::sqrt(normgv);
@@ -614,12 +981,12 @@ extern "C" void ad_sa_wall_func(double func[DIM],
 
   // for (int p = 0; p < WIM; p++) {
   //   for (int i = 0; i < ei[pg->imtrx]->dof[VELOCITY1 + p]; i++) {
-  //     d_func[0][VELOCITY1 + p][i] = eddy_nu.dx(ad_fv.v_offset[p] + i);
+  //     d_func[0][VELOCITY1 + p][i] = eddy_nu.dx(ad_fv->v_offset[p] + i);
   //   }
   // }
 
   // for (int i = 0; i < ei[pg->imtrx]->dof[EDDY_NU]; i++) {
-  //   d_func[0][EDDY_NU][i] = eddy_nu.dx(ad_fv.eddy_nu_offset + i);
+  //   d_func[0][EDDY_NU][i] = eddy_nu.dx(ad_fv->eddy_nu_offset + i);
   // }
 }
 
@@ -640,7 +1007,7 @@ ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local) {
     mu = mu_newt;
   } else {
 
-    ADType mu_e = ad_fv.eddy_nu;
+    ADType mu_e = ad_fv->eddy_nu;
     ADType cv1 = 7.1;
     ADType chi = mu_e / mu_newt;
     ADType fv1 = pow(chi, 3) / (pow(chi, 3) + pow(cv1, 3));
@@ -672,7 +1039,7 @@ extern "C" dbl ad_sa_viscosity(struct Generalized_Newtonian *gn_local,
     mu = mu_newt;
   } else {
 
-    ADType mu_e = ad_fv.eddy_nu;
+    ADType mu_e = ad_fv->eddy_nu;
     ADType cv1 = 7.1;
     ADType chi = mu_e / mu_newt;
     ADType fv1 = pow(chi, 3) / (pow(chi, 3) + pow(cv1, 3));
@@ -684,7 +1051,7 @@ extern "C" dbl ad_sa_viscosity(struct Generalized_Newtonian *gn_local,
 
     if (d_mu != NULL) {
       for (int j = 0; j < ei[pg->imtrx]->dof[EDDY_NU]; j++) {
-        d_mu->eddy_nu[j] = mu.dx(ad_fv.offset[EDDY_NU] + j);
+        d_mu->eddy_nu[j] = mu.dx(ad_fv->offset[EDDY_NU] + j);
       }
     }
   }
@@ -732,7 +1099,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
   double d_area = fv->wt * bf[eqn]->detJ * fv->h3;
 
   /* Get Eddy viscosity at Gauss point */
-  ADType mu_e = ad_fv.eddy_nu;
+  ADType mu_e = ad_fv->eddy_nu;
 
   int negative_sa = false;
   // Previous workaround, see comment for negative_Se below
@@ -761,7 +1128,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
   double omega_old[DIM][DIM];
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      omega[a][b] = (ad_fv.grad_v[a][b] - ad_fv.grad_v[b][a]);
+      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
       omega_old[a][b] = (fv_old->grad_v[a][b] - fv_old->grad_v[b][a]);
     }
   }
@@ -870,7 +1237,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * supg_tau * ad_fv.v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -879,7 +1246,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (pd->TimeIntegration != STEADY) {
         if (pd->e[pg->imtrx][eqn] & T_MASS) {
-          mass += ad_fv.eddy_nu_dot * wt_func * d_area;
+          mass += ad_fv->eddy_nu_dot * wt_func * d_area;
           mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -887,7 +1254,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < VIM; p++) {
-        adv += ad_fv.v[p] * ad_fv.grad_eddy_nu[p];
+        adv += ad_fv->v[p] * ad_fv->grad_eddy_nu[p];
       }
       adv *= wt_func * d_area;
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -908,8 +1275,8 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
       ADType diff_1 = 0.0;
       ADType diff_2 = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff_1 += bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) * ad_fv.grad_eddy_nu[p];
-        diff_2 += wt_func * cb2 * ad_fv.grad_eddy_nu[p] * ad_fv.grad_eddy_nu[p];
+        diff_1 += bf[eqn]->grad_phi[i][p] * (mu_newt + mu_e * fn) * ad_fv->grad_eddy_nu[p];
+        diff_2 += wt_func * cb2 * ad_fv->grad_eddy_nu[p] * ad_fv->grad_eddy_nu[p];
       }
       ADType diff = (1.0 / sigma) * (diff_1 - diff_2);
       diff *= d_area;
@@ -936,7 +1303,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
         pvar = upd->vp[pg->imtrx][var];
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[EDDY_NU] + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[EDDY_NU] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -947,7 +1314,7 @@ extern "C" int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
           pvar = upd->vp[pg->imtrx][var];
 
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         }   /* End of if the variale is active */
@@ -987,14 +1354,14 @@ ADType turb_omega_wall_bc(void) {
 static void
 calc_blending_functions(dbl rho, DENSITY_DEPENDENCE_STRUCT *d_rho, ADType &F1, ADType &F2) {
   dbl d = fv->wall_distance;
-  ADType k = ad_fv.turb_k;
-  ADType omega = ad_fv.turb_omega;
+  ADType k = ad_fv->turb_k;
+  ADType omega = ad_fv->turb_omega;
   dbl nu = mp->viscosity / rho;
   dbl beta_star = 0.09;
   dbl sigma_omega2 = 0.856;
   ADType ddkdomega = 0;
   for (int i = 0; i < pd->Num_Dim; i++) {
-    ddkdomega += ad_fv.grad_turb_k[i] * ad_fv.grad_turb_omega[i];
+    ddkdomega += ad_fv->grad_turb_k[i] * ad_fv->grad_turb_omega[i];
   }
   ADType CD_komega = std::max(2 * rho * sigma_omega2 * ddkdomega / (omega + 1e-20), 1e-20);
   ADType C500 = 500 * nu / (d * d * omega + 1e-20);
@@ -1088,7 +1455,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
   ADType gamma_dot[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      gamma_dot[i][j] = (ad_fv.grad_v[i][j] + ad_fv.grad_v[j][i]);
+      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
     }
   }
   ad_calc_shearrate(SI, gamma_dot);
@@ -1098,7 +1465,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
   ADType omega[DIM][DIM];
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
-      omega[a][b] = (ad_fv.grad_v[a][b] - ad_fv.grad_v[b][a]);
+      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
 
@@ -1130,9 +1497,9 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
   // blended values
   ADType sigma_k = F1 * sigma_k1 + (1 - F1) * sigma_k2;
 
-  ADType mu_t = rho * a1 * fv_old->turb_k / (std::max(a1 * ad_fv.turb_omega, Omega * F2) + 1e-16);
+  ADType mu_t = rho * a1 * fv_old->turb_k / (std::max(a1 * ad_fv->turb_omega, Omega * F2) + 1e-16);
   ADType P = mu_t * SI * SI;
-  ADType Plim = std::min(P, 20 * beta_star * rho * ad_fv.turb_omega * fv_old->turb_k);
+  ADType Plim = std::min(P, 20 * beta_star * rho * ad_fv->turb_omega * fv_old->turb_k);
 
   std::vector<ADType> resid(ei[pg->imtrx]->dof[eqn]);
   for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
@@ -1154,7 +1521,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * supg_tau * ad_fv.v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -1163,7 +1530,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (pd->TimeIntegration != STEADY) {
         if (pd->e[pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv.turb_k_dot * wt_func * d_area;
+          mass += rho * ad_fv->turb_k_dot * wt_func * d_area;
           mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -1171,20 +1538,20 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < VIM; p++) {
-        adv += rho * (ad_fv.v[p] - x_dot[p]) * ad_fv.grad_turb_k[p];
+        adv += rho * (ad_fv->v[p] - x_dot[p]) * ad_fv->grad_turb_k[p];
       }
       adv *= wt_func * d_area;
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      ADType src = Plim - beta_star * rho * ad_fv.turb_omega * fv_old->turb_k;
+      ADType src = Plim - beta_star * rho * ad_fv->turb_omega * fv_old->turb_k;
       src *= -wt_func * d_area;
       src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_k) * ad_fv.grad_turb_k[p];
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_k) * ad_fv->grad_turb_k[p];
       }
       diff *= d_area;
       diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -1211,7 +1578,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -1221,7 +1588,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
         pvar = upd->vp[pg->imtrx][var];
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -1232,7 +1599,7 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
           pvar = upd->vp[pg->imtrx][var];
 
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
           } /* End of loop over j */
         }   /* End of if the variale is active */
       }     /* End of loop over velocity components */
@@ -1256,27 +1623,27 @@ extern "C" dbl ad_turb_k_omega_sst_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_mu) 
   ADType omega[DIM][DIM];
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
-      omega[a][b] = (ad_fv.grad_v[a][b] - ad_fv.grad_v[b][a]);
+      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
   /* Vorticity */
   ADType Omega = 0.0;
   calc_vort_mag(Omega, omega);
   dbl a1 = 0.31;
-  ADType mu_t = rho * a1 * ad_fv.turb_k / (std::max(a1 * ad_fv.turb_omega, Omega * F2) + 1e-16);
+  ADType mu_t = rho * a1 * ad_fv->turb_k / (std::max(a1 * ad_fv->turb_omega, Omega * F2) + 1e-16);
 
   mu = mu_newt + mu_t;
   if (d_mu != NULL) {
     for (int j = 0; j < ei[pg->imtrx]->dof[TURB_OMEGA]; j++) {
-      d_mu->turb_omega[j] = mu.dx(ad_fv.offset[TURB_OMEGA] + j);
+      d_mu->turb_omega[j] = mu.dx(ad_fv->offset[TURB_OMEGA] + j);
     }
     for (int j = 0; j < ei[pg->imtrx]->dof[TURB_K]; j++) {
-      d_mu->turb_k[j] = mu.dx(ad_fv.offset[TURB_K] + j);
+      d_mu->turb_k[j] = mu.dx(ad_fv->offset[TURB_K] + j);
     }
     for (int b = 0; b < VIM; b++) {
       int var = VELOCITY1 + b;
       for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_mu->v[b][j] = mu.dx(ad_fv.offset[var] + j);
+        d_mu->v[b][j] = mu.dx(ad_fv->offset[var] + j);
       }
     }
   }
@@ -1328,14 +1695,14 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
   ADType gamma_dot[DIM][DIM];
   for (int i = 0; i < DIM; i++) {
     for (int j = 0; j < DIM; j++) {
-      gamma_dot[i][j] = (ad_fv.grad_v[i][j] + ad_fv.grad_v[j][i]);
+      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
     }
   }
 
   ADType omega[DIM][DIM];
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
-      omega[a][b] = (ad_fv.grad_v[a][b] - ad_fv.grad_v[b][a]);
+      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
     }
   }
   /* Vorticity */
@@ -1378,9 +1745,9 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
   ADType sigma_omega = F1 * sigma_omega1 + (1 - F1) * sigma_omega2;
   ADType beta = F1 * beta1 + (1 - F1) * beta2;
 
-  ADType mu_t = rho * a1 * ad_fv.turb_k / (std::max(a1 * fv_old->turb_omega, Omega * F2) + 1e-16);
+  ADType mu_t = rho * a1 * ad_fv->turb_k / (std::max(a1 * fv_old->turb_omega, Omega * F2) + 1e-16);
   ADType P = mu_t * SI * SI;
-  ADType Plim = std::min(P, 10 * beta_star * rho * fv_old->turb_omega * ad_fv.turb_k);
+  ADType Plim = std::min(P, 10 * beta_star * rho * fv_old->turb_omega * ad_fv->turb_k);
 
   std::vector<ADType> resid(ei[pg->imtrx]->dof[eqn]);
   for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
@@ -1402,7 +1769,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * supg_tau * ad_fv.v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -1411,7 +1778,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       ADType mass = 0.0;
       if (pd->TimeIntegration != STEADY) {
         if (pd->e[pg->imtrx][eqn] & T_MASS) {
-          mass += rho * ad_fv.turb_omega_dot * wt_func * d_area;
+          mass += rho * ad_fv->turb_omega_dot * wt_func * d_area;
           mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
         }
       }
@@ -1419,7 +1786,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       /* Assemble advection term */
       ADType adv = 0;
       for (int p = 0; p < VIM; p++) {
-        adv += rho * (ad_fv.v[p] - x_dot[p]) * ad_fv.grad_turb_omega[p];
+        adv += rho * (ad_fv->v[p] - x_dot[p]) * ad_fv->grad_turb_omega[p];
       }
       adv *= wt_func * d_area;
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
@@ -1429,7 +1796,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
                     beta * rho * fv_old->turb_omega * fv_old->turb_omega;
       ADType src2 = 0;
       for (int p = 0; p < pd->Num_Dim; p++) {
-        src2 += ad_fv.grad_turb_k[p] * fv_old->grad_turb_omega[p];
+        src2 += ad_fv->grad_turb_k[p] * fv_old->grad_turb_omega[p];
       }
       src2 *= 2 * (1 - F1) * rho * sigma_omega2 / (fv_old->turb_omega + 1e-16);
       ADType src = src1 + src2;
@@ -1439,7 +1806,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       /* Assemble diffusion terms */
       ADType diff = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) * ad_fv.grad_turb_omega[p];
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) * ad_fv->grad_turb_omega[p];
       }
       diff *= d_area;
       diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -1464,7 +1831,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
         pvar = upd->vp[pg->imtrx][var];
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -1473,7 +1840,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
       if (pdv[var]) {
         pvar = upd->vp[pg->imtrx][var];
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
         } /* End of loop over j */
       }   /* End of if the variable is active */
 
@@ -1484,7 +1851,7 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
           pvar = upd->vp[pg->imtrx][var];
 
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv.offset[var] + j);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         }   /* End of if the variale is active */

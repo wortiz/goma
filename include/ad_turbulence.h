@@ -12,17 +12,31 @@ extern "C" {
 }
 using ADType = Sacado::Fad::DFad<double>;
 void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int interp_eqn);
+struct AD_Basis {
+  ADType d_phi[MDE][DIM];    /* d_phi[i][a]    = d(phi_i)/d(q_a) */
+  ADType grad_phi[MDE][DIM]; /* grad_phi[i][a] = e_a . grad(phi_i) */
+  ADType grad_phi_e[MDE][DIM][DIM][DIM]; /* grad_phi_e[i][a][p][q] */
+                                      /* = (e_p e_q): grad(phi_i e_a) */
+  ADType curl_phi_e[MDE][DIM][DIM];
+};
 struct AD_Field_Variables {
+  AD_Field_Variables() = default;
+  std::vector<AD_Basis> basis;
+  ADType detJ;
+  ADType J[DIM][DIM];
+  ADType B[DIM][DIM];
   ADType v[DIM];
   ADType v_dot[DIM];
+  ADType x[DIM];
+  ADType d[DIM];
   ADType x_dot[DIM];
   ADType grad_v[DIM][DIM];
   ADType G[DIM][DIM];
   ADType S[MAX_MODES][DIM][DIM];
   ADType S_dot[MAX_MODES][DIM][DIM];
   ADType grad_S[MAX_MODES][DIM][DIM][DIM];
-  ADType eddy_nu;
   ADType P;
+  ADType eddy_nu;
   ADType eddy_nu_dot;
   ADType grad_eddy_nu[DIM];
   ADType turb_k;
@@ -36,7 +50,7 @@ struct AD_Field_Variables {
   int offset[V_LAST];
 };
 
-extern AD_Field_Variables ad_fv;
+extern AD_Field_Variables *ad_fv;
 
 void ad_only_tau_momentum_shakib(ADType tau, int dim, dbl dt, int pspg_scale);
 extern "C" {
