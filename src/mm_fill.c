@@ -2399,8 +2399,8 @@ Revised:         Summer 1998, SY Tam (UNM)
         CHECKFINITE("assemble_momentum");
 #endif
       } else {
-        // err = ad_assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
-        err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+        err = ad_assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+        // err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
         GOMA_EH(err, "assemble_momentum");
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_momentum");

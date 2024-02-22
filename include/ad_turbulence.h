@@ -32,10 +32,14 @@ struct AD_Field_Variables {
   ADType x_dot[DIM];
   ADType grad_v[DIM][DIM];
   ADType G[DIM][DIM];
+  ADType grad_G[DIM][DIM][DIM];
+  ADType div_G[DIM];
   ADType S[MAX_MODES][DIM][DIM];
   ADType S_dot[MAX_MODES][DIM][DIM];
   ADType grad_S[MAX_MODES][DIM][DIM][DIM];
+  ADType div_S[MAX_MODES][DIM];
   ADType P;
+  ADType grad_P[DIM];
   ADType eddy_nu;
   ADType eddy_nu_dot;
   ADType grad_eddy_nu[DIM];
@@ -52,7 +56,7 @@ struct AD_Field_Variables {
 
 extern AD_Field_Variables *ad_fv;
 
-void ad_only_tau_momentum_shakib(ADType tau, int dim, dbl dt, int pspg_scale);
+void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale);
 extern "C" {
 #endif
 

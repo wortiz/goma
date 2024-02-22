@@ -10976,6 +10976,7 @@ void fapply_ST(double func[MAX_PDIM],
   /*First id side and appropriate sign */
 
   sign = (id_side < 3) ? 1. : -1.;
+  sign = 1;
 
   /* Calculate the residual contribution					     */
 
