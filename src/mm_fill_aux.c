@@ -1337,8 +1337,8 @@ surface_determinant_and_normal(
         /*
         T[0][0] = -Ref; T[0][1] = Ref;
         */
-        T[0][0] = -1.;
-        T[0][1] = 1.;
+        T[0][0] = -1./sqrt(2.0);
+        T[0][1] = 1./sqrt(2.0);
       } else if (id_side == 2) {
         T[0][1] = -1.;
       } else if (id_side == 3) {

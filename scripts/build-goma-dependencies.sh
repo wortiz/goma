@@ -1667,6 +1667,10 @@ cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
 -D Trilinos_ENABLE_ML:BOOL=ON \
 -D Trilinos_ENABLE_MueLu:BOOL=ON \
 -D Trilinos_ENABLE_AztecOO:BOOL=ON \
+-D Trilinos_ENABLE_Belos:BOOL=ON \
+-D Trilinos_ENABLE_Amesos2:BOOL=ON \
+-D Trilinos_ENABLE_Sacado:BOOL=ON \
+-D Trilinos_ENABLE_Tpetra:BOOL=ON \
 -D Trilinos_ENABLE_Stratimikos:BOOL=ON \
 -D Trilinos_ENABLE_Teko:BOOL=ON \
 -D Trilinos_ENABLE_Belos:BOOL=ON \

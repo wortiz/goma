@@ -562,6 +562,14 @@ extern "C" void fill_ad_field_variables() {
       ad_fv->P +=
           ADType(num_ad_variables, ad_fv->offset[PRESSURE] + i, *esp->P[i]) * bf[PRESSURE]->phi[i];
     }
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      ad_fv->grad_P[q] = 0;
+
+      for (int i = 0; i < ei[upd->matrix_index[PRESSURE]]->dof[PRESSURE]; i++) {
+        ad_fv->grad_P[q] += ADType(num_ad_variables, ad_fv->offset[PRESSURE] + i, *esp->P[i]) *
+                            ad_fv->basis[PRESSURE].grad_phi[i][q];
+      }
+    }
   }
 
   if (pd->gv[POLYMER_STRESS11]) {
@@ -614,6 +622,13 @@ extern "C" void fill_ad_field_variables() {
           }
         }
       }
+      for (int r = 0; r < pd->Num_Dim; r++) {
+        ad_fv->div_S[mode][r] = 0.0;
+
+        for (int q = 0; q < pd->Num_Dim; q++) {
+          ad_fv->div_S[mode][r] += ad_fv->grad_S[mode][q][q][r];
+        }
+      }
     }
   }
   for (int p = 0; pd->gv[VELOCITY_GRADIENT11] && p < VIM; p++) {
@@ -636,6 +651,30 @@ extern "C" void fill_ad_field_variables() {
           ad_fv->G[p][q] +=
               ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->G[p][q][i]) * bf[v]->phi[i];
         }
+      }
+    }
+    for (int p = 0; p < VIM; p++) {
+      for (int q = 0; q < VIM; q++) {
+        int v = v_g[p][q];
+        for (int r = 0; r < VIM; r++) {
+          ad_fv->grad_G[r][p][q] = 0.0;
+          int dofs = ei[upd->matrix_index[v]]->dof[v];
+          for (int i = 0; i < dofs; i++) {
+            ad_fv->grad_G[r][p][q] +=
+                ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->G[p][q][i]) *
+                bf[v]->grad_phi[i][r];
+          }
+        }
+      }
+    }
+
+    /*
+     * div(G) - this is a vector!
+     */
+    for (int r = 0; r < pd->Num_Dim; r++) {
+      ad_fv->div_G[r] = 0.0;
+      for (int q = 0; q < pd->Num_Dim; q++) {
+        ad_fv->div_G[r] += ad_fv->grad_G[q][q][r];
       }
     }
   }
@@ -712,6 +751,8 @@ void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int 
       if (pd->gv[R_MESH1 + j]) {
         xdot_i =
             ADType(ad_fv->total_ad_variables, ad_fv->offset[R_MESH1 + j] + i, *esp_dot->d[j][i]);
+        xdot_i.fastAccessDx(ad_fv->offset[R_MESH1 + j] + i) =
+            (1. + 2. * tran->current_theta) / tran->delta_t;
       }
       tmp += SQUARE(u_i - xdot_i);
     }
@@ -720,34 +761,89 @@ void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int 
   u_e /= ei[upd->matrix_index[VELOCITY1]]->dof[VELOCITY1];
 
   if (dt > 0) {
-    supg_tau = 1 / sqrt(4.0 / (dt * dt) + h_ugn * h_ugn / (u_e*u_e));
+    supg_tau = 1 / sqrt(4.0 / (dt * dt) + h_ugn * h_ugn / (u_e * u_e));
   } else {
     supg_tau = h_ugn / u_e;
   }
 }
 
-void ad_only_tau_momentum_shakib(ADType tau, int dim, dbl dt, int pspg_scale) {
-  dbl G[DIM][DIM];
+void ad_get_metric_tensor(ADType B[DIM][DIM], int dim, int element_type, ADType G[DIM][DIM]) {
+  dbl adjustment[DIM][DIM] = {{0}};
+  const dbl invroot3 = 0.577350269189626;
+  const dbl tetscale = 0.629960524947437; // 0.5 * cubroot(2)
+
+  switch (element_type) {
+  case LINEAR_TRI:
+    adjustment[0][0] = (invroot3) * 2;
+    adjustment[0][1] = (invroot3) * -1;
+    adjustment[1][0] = (invroot3) * -1;
+    adjustment[1][1] = (invroot3) * 2;
+    break;
+  case LINEAR_TET:
+    adjustment[0][0] = tetscale * 2;
+    adjustment[0][1] = tetscale * 1;
+    adjustment[0][2] = tetscale * 1;
+    adjustment[1][0] = tetscale * 1;
+    adjustment[1][1] = tetscale * 2;
+    adjustment[1][2] = tetscale * 1;
+    adjustment[2][0] = tetscale * 1;
+    adjustment[2][1] = tetscale * 1;
+    adjustment[2][2] = tetscale * 2;
+    break;
+  default:
+    adjustment[0][0] = 1.0;
+    adjustment[1][1] = 1.0;
+    adjustment[2][2] = 1.0;
+    break;
+  }
+
+  // G = B * adjustment * B^T where B = J^-1
+
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      G[i][j] = 0;
+      for (int k = 0; k < dim; k++) {
+        for (int m = 0; m < dim; m++) {
+          G[i][j] += B[i][k] * adjustment[k][m] * B[j][m];
+        }
+      }
+    }
+  }
+}
+void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
+  ADType G[DIM][DIM];
   dbl inv_rho = 1.0;
   DENSITY_DEPENDENCE_STRUCT d_rho_struct;
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+  dbl dgamma[DIM][DIM];
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      dgamma[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+    }
+  }
 
   if (pspg_scale) {
     dbl rho = density(d_rho, dt);
-    inv_rho = 1.0 / rho;
+    if (rho > 0.0) {
+      inv_rho = 1.0 / rho;
+    }
   }
 
   int interp_eqn = VELOCITY1;
-  get_metric_tensor(bf[interp_eqn]->B, dim, ei[pg->imtrx]->ielem_type, G);
+  ad_get_metric_tensor(ad_fv->B, dim, ei[pg->imtrx]->ielem_type, G);
 
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      v_d_gv += fabs(ad_fv->v[i] * G[i][j] * ad_fv->v[j]);
+      v_d_gv += fabs((ad_fv->v[i] - ad_fv->x_dot[i]) * G[i][j] * (ad_fv->v[j] - ad_fv->x_dot[j]));
     }
   }
 
-  ADType mu = ad_sa_viscosity(gn);
+  ADType mu = viscosity(gn, dgamma, NULL);
+  for (int mode = 0; mode < vn->modes; mode++) {
+    ADType mup = viscosity(ve[mode]->gn, dgamma, NULL);
+    mu += mup;
+  }
 
   ADType coeff = (12.0 * mu * mu);
 

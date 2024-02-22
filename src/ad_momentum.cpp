@@ -95,8 +95,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
 
   ADType f[DIM]; /* Body force. */
 
-  dbl det_J; /* determinant of element Jacobian */
-  dbl d_area;
+  ADType d_area;
 
   /*
    *
@@ -165,11 +164,10 @@ int ad_assemble_momentum(dbl time,       /* current time */
 
   wt = fv->wt;
 
-  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
 
   h3 = fv->h3; /* Differential volume element (scales). */
 
-  d_area = det_J * wt * h3;
+  d_area = ad_fv->detJ * wt * h3;
 
   dbl supg = 0.;
 
@@ -322,7 +320,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
           if (diffusion_on) {
             for (p = 0; p < VIM; p++) {
               for (q = 0; q < VIM; q++) {
-                diffusion += grad_phi_i_e_a[p][q] * Pi[q][p];
+                diffusion += ad_fv->basis[eqn].grad_phi_e[i][a][p][q] * Pi[q][p];
               }
             }
             diffusion *= -d_area;
@@ -499,7 +497,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   ADType mup;
 
   /*  shift function */
-  ADType at = 0.0;
+  ADType at = 1.0;
 
   /* solvent viscosity and derivatives */
 
@@ -696,6 +694,449 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
   return (status);
 }
 
+int ad_calc_pspg(ADType pspg[DIM],
+                 dbl time_value, /* current time */
+                 dbl tt,         /* parameter to vary time integration from
+                                                    explicit (tt = 1) to implicit (tt = 0)    */
+                 dbl dt,         /* current time step size                    */
+                 const PG_DATA *pg_data) {
+  const dbl h_elem_avg = pg_data->h_elem_avg;
+  const dbl *hsquared = pg_data->hsquared; /* element size information for PSPG         */
+  const dbl U_norm = pg_data->U_norm;      /* global velocity norm for PSPG calcs       */
+  const dbl mu_avg = pg_data->mu_avg;      /* element viscosity for PSPG calculations   */
+  const dbl rho_avg = pg_data->rho_avg;    /* element density for PSPG calculations   */
+  const dbl *v_avg = pg_data->v_avg;       /* element velocity for PSPG calculations   */
+
+  int dim;
+  int p, a, b, c;
+  int var;
+  int w, j;
+
+  int pspg_global;
+  int pspg_local;
+
+  dbl *v = fv->v; /* Velocity field. */
+  ADType *grad_P = ad_fv->grad_P;
+
+  /*
+   * Variables for vicosity and derivative
+   */
+  dbl mu;
+  VISCOSITY_DEPENDENCE_STRUCT d_mu_struct; /* viscosity dependence */
+  VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
+
+  /*
+   * density and sensitivity terms
+   */
+  dbl rho;
+  dbl rho_t;
+  DENSITY_DEPENDENCE_STRUCT d_rho_struct; /* density dependence */
+  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+
+  ADType f[DIM];                               /* Body force. */
+  MOMENTUM_SOURCE_DEPENDENCE_STRUCT df_struct; /* Body force dependence */
+  MOMENTUM_SOURCE_DEPENDENCE_STRUCT *df = &df_struct;
+
+  /*
+   * Interpolation functions...
+   */
+
+  dbl phi_j;
+
+  /*
+   * Variables for Pressure Stabilization Petrov-Galerkin...
+   */
+  int meqn, meqn1;
+  int r;
+  int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
+
+  ADType mass, advection, diffusion, source, porous;
+
+  ADType momentum[DIM]; /* momentum residual for PSPG */
+  ADType x_dot[DIM];
+  ADType v_dot[DIM];
+  ADType *grad_v[DIM];
+  ADType div_s[DIM];
+  ADType div_G[DIM];
+
+  /* variables for Brinkman porous flow */
+  ADType por = 0, por2 = 0, per = 0, vis = 0, dvis_dT[MDE], sc = 0, speed = 0;
+
+  ADType h_elem = 0;
+  ADType Re;
+  ADType tau_pspg = 0.;
+  ADType tau_pspg1 = 0.;
+
+  ADType hh_siz, vv_speed;
+
+  ADType gamma[DIM][DIM]; /* shrearrate tensor based on velocity */
+  dbl dgamma[DIM][DIM];   /* shrearrate tensor based on velocity */
+
+  int w0 = 0;
+
+  int mode;
+
+  /* For particle momentum model.
+   */
+  int species;              /* species number for particle phase,  */
+  dbl ompvf;                /* 1 - partical volume fraction */
+  int particle_momentum_on; /* boolean. */
+  /* particle stress for suspension balance model*/
+  static int is_initialized = FALSE;
+
+  dim = pd->Num_Dim;
+
+  /* initialize */
+  for (a = 0; a < DIM; a++)
+    pspg[a] = 0.;
+
+  /* This is the flag for the standard global PSPG */
+  if (PSPG == 1) {
+    pspg_global = TRUE;
+    pspg_local = FALSE;
+  }
+  /* This is the flag for the standard local PSPG */
+  else if (PSPG == 2) {
+    pspg_global = FALSE;
+    pspg_local = TRUE;
+  } else if (PSPG == 3) { // Shakib
+    pspg_global = FALSE;
+    pspg_local = FALSE;
+  } else {
+    return 0;
+  }
+
+  if (pd->gv[POLYMER_STRESS11]) {
+    stress_eqn_pointer(v_s);
+
+    v_g[0][0] = VELOCITY_GRADIENT11;
+    v_g[0][1] = VELOCITY_GRADIENT12;
+    v_g[1][0] = VELOCITY_GRADIENT21;
+    v_g[1][1] = VELOCITY_GRADIENT22;
+    v_g[0][2] = VELOCITY_GRADIENT13;
+    v_g[1][2] = VELOCITY_GRADIENT23;
+    v_g[2][0] = VELOCITY_GRADIENT31;
+    v_g[2][1] = VELOCITY_GRADIENT32;
+    v_g[2][2] = VELOCITY_GRADIENT33;
+  }
+
+  /* initialize dependencies */
+
+  if (cr->MassFluxModel == DM_SUSPENSION_BALANCE && PSPG) {
+    w0 = gn->sus_species_no;
+    /* This is the divergence of the particle stress  */
+    /* divergence_particle_stress(div_tau_p, d_div_tau_p_dgd, d_div_tau_p_dy,
+         d_div_tau_p_dv, d_div_tau_p_dX, w0); */
+  }
+
+  if (pd->e[pg->imtrx][R_PMOMENTUM1]) {
+    particle_momentum_on = 1;
+    species = (int)mp->u_density[0];
+    ompvf = 1.0 - fv->c[species];
+  } else {
+    particle_momentum_on = 0;
+    species = -1;
+    ompvf = 1.0;
+  }
+
+  // Global average for pspg_global's element size
+  h_elem = h_elem_avg;
+
+  /*** Density ***/
+  rho = density(NULL, time_value);
+
+  ADType pspg_tau;
+
+  if (pspg_global) {
+    GOMA_EH(GOMA_ERROR, "PSPG Global not enabled for AD");
+  } else if (pspg_local) {
+    GOMA_EH(GOMA_ERROR, "PSPG Local not enabled for AD");
+  } else if (PSPG == 3) { // shakib
+    ad_only_tau_momentum_shakib(pspg_tau, pd->Num_Dim, dt, TRUE);
+  }
+
+  for (a = 0; a < VIM; a++)
+    grad_v[a] = ad_fv->grad_v[a];
+
+  /* load up shearrate tensor based on velocity */
+  for (a = 0; a < VIM; a++) {
+    for (b = 0; b < VIM; b++) {
+      gamma[a][b] = grad_v[a][b] + grad_v[b][a];
+      dgamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+    }
+  }
+
+  /*
+   * get viscosity for velocity second derivative/diffusion
+   * term in PSPG stuff
+   */
+  mu = viscosity(gn, dgamma, NULL);
+
+  /* get variables we will need for momentum residual */
+
+  for (a = 0; a < WIM; a++) {
+    if (pd->TimeIntegration != STEADY && pd->v[pg->imtrx][MESH_DISPLACEMENT1 + a]) {
+      x_dot[a] = ad_fv->x_dot[a];
+    } else {
+      x_dot[a] = 0.;
+    }
+
+    if (pd->TimeIntegration != STEADY) {
+      v_dot[a] = ad_fv->v_dot[a];
+    } else {
+      v_dot[a] = 0.;
+    }
+  }
+
+  for (p = 0; p < WIM; p++)
+    div_s[p] = 0.;
+
+  if (pd->gv[POLYMER_STRESS11]) {
+    if (vn->evssModel == LOG_CONF || vn->evssModel == LOG_CONF_GRADV ||
+        vn->evssModel == LOG_CONF_TRANSIENT || vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
+      for (mode = 0; mode < vn->modes; mode++) {
+        dbl lambda = 0.0;
+        if (ve[mode]->time_constModel == CONSTANT) {
+          lambda = ve[mode]->time_const;
+        }
+        dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
+        int dofs = ei[upd->matrix_index[v_s[mode][0][0]]]->dof[v_s[mode][0][0]];
+        dbl grad_S[DIM][DIM][DIM] = {{{0.0}}};
+        dbl s[MDE][DIM][DIM];
+        dbl exp_s[MDE][DIM][DIM] = {{{0.0}}};
+        dbl eig_values[DIM];
+        dbl R[DIM][DIM];
+        for (int k = 0; k < dofs; k++) {
+          if (pg->imtrx == upd->matrix_index[POLYMER_STRESS11] &&
+              (vn->evssModel == LOG_CONF_TRANSIENT_GRADV || vn->evssModel == LOG_CONF_TRANSIENT)) {
+            for (int i = 0; i < VIM; i++) {
+              for (int j = 0; j < VIM; j++) {
+                if (j >= i) {
+                  s[k][i][j] = *esp_old->S[mode][i][j][k];
+                } else {
+                  s[k][i][j] = *esp_old->S[mode][j][i][k];
+                }
+              }
+            }
+          } else {
+            for (int i = 0; i < VIM; i++) {
+              for (int j = 0; j < VIM; j++) {
+                if (j >= i) {
+                  s[k][i][j] = *esp->S[mode][i][j][k];
+                } else {
+                  s[k][i][j] = *esp->S[mode][j][i][k];
+                }
+              }
+            }
+          }
+          compute_exp_s(s[k], exp_s[k], eig_values, R);
+        }
+        for (int p = 0; p < VIM; p++) {
+          for (int q = 0; q < VIM; q++) {
+            for (int r = 0; r < VIM; r++) {
+              grad_S[r][p][q] = 0.;
+              for (int i = 0; i < dofs; i++) {
+                if (p <= q) {
+                  grad_S[r][p][q] += exp_s[i][p][q] * bf[POLYMER_STRESS11]->grad_phi[i][r];
+                } else {
+                  grad_S[r][p][q] += exp_s[i][q][p] * bf[POLYMER_STRESS11]->grad_phi[i][r];
+                }
+              }
+            }
+          }
+        }
+        dbl div_exp_s[DIM];
+        for (int r = 0; r < dim; r++) {
+          div_exp_s[r] = 0.0;
+
+          for (int q = 0; q < dim; q++) {
+            div_exp_s[r] += grad_S[q][q][r];
+          }
+        }
+        for (p = 0; p < WIM; p++) {
+          div_s[p] += (mup / lambda) * div_exp_s[p];
+        }
+      }
+    } else if (vn->evssModel == SQRT_CONF) {
+      for (mode = 0; mode < vn->modes; mode++) {
+        int dofs = ei[upd->matrix_index[v_s[mode][0][0]]]->dof[v_s[mode][0][0]];
+        dbl lambda = 0.0;
+        if (ve[mode]->time_constModel == CONSTANT) {
+          lambda = ve[mode]->time_const;
+        }
+        dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
+        ADType b[MDE][DIM][DIM];
+        ADType bdotb[MDE][DIM][DIM];
+        for (int i = 0; i < VIM; i++) {
+          for (int j = 0; j < VIM; j++) {
+
+            for (int k = 0; k < dofs; k++) {
+              if (j >= i) {
+                b[k][i][j] = ADType(ad_fv->total_ad_variables, ad_fv->offset[v_s[mode][i][j]] + k,
+                                    *esp->S[mode][i][j][k]);
+              } else {
+                b[k][i][j] = ADType(ad_fv->total_ad_variables, ad_fv->offset[v_s[mode][i][j]] + k,
+                                    *esp->S[mode][j][i][k]);
+              }
+            }
+          }
+        }
+        for (int i = 0; i < dofs; i++) {
+          ad_tensor_dot(b[i], b[i], bdotb[i], VIM);
+        }
+
+        ADType grad_S[DIM][DIM][DIM];
+        for (int p = 0; p < VIM; p++) {
+          for (int q = 0; q < VIM; q++) {
+            for (int r = 0; r < VIM; r++) {
+              grad_S[r][p][q] = 0.;
+              for (int i = 0; i < dofs; i++) {
+
+                if (p <= q) {
+                  grad_S[r][p][q] += bdotb[i][p][q] * ad_fv->basis[v_s[mode][p][q]].grad_phi[i][r];
+                } else {
+                  grad_S[r][p][q] += bdotb[i][q][p] * ad_fv->basis[v_s[mode][q][p]].grad_phi[i][r];
+                }
+              }
+            }
+          }
+        }
+        ADType div_bdotb[DIM];
+        for (int r = 0; r < dim; r++) {
+          div_bdotb[r] = 0.0;
+
+          for (int q = 0; q < dim; q++) {
+            div_bdotb[r] += grad_S[q][q][r];
+          }
+        }
+        for (p = 0; p < WIM; p++) {
+          div_s[p] += (mup / lambda) * div_bdotb[p];
+        }
+      }
+      // for (mode = 0; mode < vn->modes; mode++) {
+      //   dbl lambda = 0.0;
+      //   if (ve[mode]->time_constModel == CONSTANT) {
+      //     lambda = ve[mode]->time_const;
+      //   }
+      //   dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
+      //   ADType b[DIM][DIM];
+      //   ADType divb[DIM];
+      //   for (int i = 0; i < VIM; i++) {
+      //     divb[i] = ad_fv->div_S[mode][i];
+      //     for (int j = 0; j < VIM; j++) {
+      //       b[i][j] = ad_fv->S[mode][i][j];
+      //     }
+      //   }
+      //   ADType divbdotb[DIM];
+      //   ADType bddotgradb[DIM];
+      //   for (int i = 0; i < VIM; i++) {
+      //     divbdotb[i] = 0;
+      //     bddotgradb[i] = 0;
+      //     for (int j = 0; j < VIM; j++) {
+      //       divbdotb[i] += divb[j] * b[j][i];
+      //       for (int k = 0; k < VIM; k++) {
+      //         bddotgradb[i] += b[i][j] * ad_fv->grad_S[mode][i][j][k];
+      //       }
+      //     }
+      //   }
+
+      //   for (int i = 0; i < VIM; i++) {
+      //     div_s[i] += -(mup / lambda) * -1.0 * (divbdotb[i] + bddotgradb[i]);
+      //   }
+      // }
+    } else {
+      for (p = 0; p < WIM; p++) {
+        for (mode = 0; mode < vn->modes; mode++) {
+          div_s[p] += fv->div_S[mode][p];
+        }
+      }
+    }
+  }
+
+  if (cr->MassFluxModel == DM_SUSPENSION_BALANCE || cr->MassFluxModel == HYDRODYNAMIC_QTENSOR_OLD ||
+      cr->MassFluxModel == HYDRODYNAMIC_QTENSOR)
+    GOMA_EH(GOMA_ERROR, "Particle stress not enabled for AD");
+
+  if (pd->gv[VELOCITY_GRADIENT11]) {
+    for (p = 0; p < WIM; p++) {
+      div_G[p] = ad_fv->div_G[p];
+    }
+  } else {
+    for (p = 0; p < WIM; p++) {
+      div_G[p] = 0.;
+    }
+  }
+
+  if (pd->e[upd->matrix_index[R_MOMENTUM1]][R_MOMENTUM1] & T_POROUS_BRINK) {
+    GOMA_EH(GOMA_ERROR, "Porous Brinkman not enabled for AD");
+  } else {
+    por = 1.;
+    por2 = 1.;
+    per = 1.;
+    vis = mp->viscosity;
+    sc = 0.;
+  }
+
+  /* for porous media stuff */
+  speed = 0.0;
+  for (a = 0; a < WIM; a++) {
+    speed += v[a] * v[a];
+  }
+  speed = sqrt(speed);
+
+  /* get momentum source term */
+  ad_momentum_source_term(f, time_value);
+
+  if (pd->gv[R_PMOMENTUM1]) {
+    rho_t = ompvf * rho;
+    meqn1 = R_PMOMENTUM1;
+  } else {
+    rho_t = rho;
+    meqn1 = R_MOMENTUM1;
+  }
+
+  for (a = 0; a < WIM; a++) {
+    meqn = meqn1 + a;
+
+    mass = 0.;
+    if ((pd->e[upd->matrix_index[meqn]][meqn] & T_MASS) && (pd->TimeIntegration != STEADY)) {
+      mass = rho_t * v_dot[a] / por;
+      mass *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_MASS)];
+    }
+
+    advection = 0.;
+    if (pd->e[upd->matrix_index[meqn]][meqn] & T_ADVECTION) {
+      for (p = 0; p < WIM; p++) {
+        advection += rho_t * (v[p] - x_dot[p]) * grad_v[p][a] / por2;
+      }
+      advection *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_ADVECTION)];
+    }
+
+    diffusion = 0.;
+    if (pd->e[upd->matrix_index[meqn]][meqn] & T_DIFFUSION) {
+      diffusion = grad_P[a] - div_s[a];
+      /*diffusion  -= div_tau_p[a]  */
+      diffusion -= mu * div_G[a];
+      diffusion *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_DIFFUSION)];
+    }
+
+    source = 0.;
+    if (pd->e[upd->matrix_index[meqn]][meqn] & T_SOURCE) {
+      source = -f[a];
+      source *= pd->etm[upd->matrix_index[meqn]][meqn][(LOG2_SOURCE)];
+    }
+
+    porous = 0.;
+    if (pd->e[upd->matrix_index[meqn]][meqn] & T_POROUS_BRINK) {
+    }
+
+    momentum[a] = mass + advection + diffusion + source + porous;
+    pspg[a] = pspg_tau * momentum[a];
+  }
+
+  return 0;
+}
+
 int ad_assemble_continuity(dbl time_value, /* current time */
                            dbl tt,         /* parameter to vary time integration from
                                               explicit (tt = 1) to implicit (tt = 0)    */
@@ -754,9 +1195,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
 
   int *pdv = pd->v[pg->imtrx];
 
-  dbl pspg[DIM];
-  PSPG_DEPENDENCE_STRUCT d_pspg_struct;
-  PSPG_DEPENDENCE_STRUCT *d_pspg = &d_pspg_struct;
+  ADType pspg[DIM];
 
   dbl mass, mass_a;
   dbl source_a;
@@ -886,7 +1325,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
   }
 
   if (PSPG) {
-    calc_pspg(pspg, d_pspg, time_value, tt, dt, pg_data);
+    ad_calc_pspg(pspg, time_value, tt, dt, pg_data);
   }
 
   if ((lagrangian_mesh_motion || total_ale_and_velo_off) && (mp->PorousMediaType == CONTINUOUS)) {
@@ -986,11 +1425,10 @@ int ad_assemble_continuity(dbl time_value, /* current time */
       source = 0.0;
       ADType pressure_stabilization = 0.0;
       if (PSPG) {
-        GOMA_EH(GOMA_ERROR, "Error");
         for (a = 0; a < WIM; a++) {
           meqn = R_MOMENTUM1 + a;
           if (pd->gv[meqn]) {
-            pressure_stabilization += grad_phi[i][a] * pspg[a];
+            pressure_stabilization += ad_fv->basis[eqn].grad_phi[i][a] * pspg[a];
           }
         }
         pressure_stabilization *= d_area * ls_disable_pspg;
@@ -1587,6 +2025,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
               /* add Petrov-Galerkin terms as necessary */
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
+                  // wt_func += supg * supg_tau * ad_fv->v[w];// * ad_fv->basis[eqn].grad_phi[i][w];
                   wt_func += supg * supg_tau * ad_fv->v[w] * ad_fv->basis[eqn].grad_phi[i][w];
                 }
               }
@@ -1703,8 +2142,9 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   ADType tau_dcdd = 0.5 * he * (1.0 / (mags + 1e-16)) * hrgn * hrgn;
                   // ADType tau_dcdd = he * (1.0 / mags) * hrgn * hrgn / lambda;
                   // printf("%g %g ", supg_tau.val(), tau_dcdd.val());
-                  tau_dcdd = 1 / sqrt(1.0 / (supg_tau * supg_tau + 1e-32) +
-                                      1.0 / (tau_dcdd * tau_dcdd + 1e-32));
+                  // tau_dcdd = 1 / sqrt(1.0 / (supg_tau * supg_tau + 1e-32) +
+                  //                     1.0 / (tau_dcdd * tau_dcdd + 1e-32));
+                  tau_dcdd = std::min(supg_tau, tau_dcdd);
                   // printf("%g \n ", tau_dcdd.val());
                   ADType ss[DIM][DIM] = {{0.0}};
                   ADType rr[DIM][DIM] = {{0.0}};
@@ -1735,6 +2175,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                   }
 
                   for (int w = 0; w < dim; w++) {
+                    // diffusion += tau_dcdd * grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
                     diffusion += tau_dcdd * gs_inner_dot[w] * ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= dcdd_factor * det_J * wt * h3;
