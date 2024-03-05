@@ -6469,8 +6469,18 @@ double load_cap_pres(int ipore, int ilnode, int ignode, double saturation)
     m_inv = -1.0 / mexp;
 
     /* Normalized saturation - should be between 0 to 1 */
-    sat_norm = (saturation - sat_min) / (sat_max - sat_min);
-    d_sat_norm_d_saturation = 1.0 / (sat_max - sat_min);
+    if (saturation < (1e-9 * (sat_max - sat_min) + sat_min)) {
+      sat_norm = 1e-9;
+      d_sat_norm_d_saturation = 0.0;
+    } else if (saturation > sat_max) {
+      sat_norm = 1.0;
+      d_sat_norm_d_saturation = 0.0;
+    } else {
+      sat_norm = (saturation - sat_min) / (sat_max - sat_min);
+      d_sat_norm_d_saturation = 1.0 / (sat_max - sat_min);
+    }
+    // sat_norm = (saturation - sat_min) / (sat_max - sat_min);
+    // d_sat_norm_d_saturation = 1.0 / (sat_max - sat_min);
 
     brack_in = pow(sat_norm, m_inv) - 1.0;
     d_brack_in_d_sat_norm = m_inv * pow(sat_norm, (m_inv - 1.0));
@@ -6490,18 +6500,30 @@ double load_cap_pres(int ipore, int ilnode, int ignode, double saturation)
 
     switch (ipore) {
     case 0:
-      mp->d_cap_pres[SHELL_SAT_1] = n_inv * con_c * pow(brack_in, (n_inv - 1.0)) *
-                                    d_brack_in_d_sat_norm * d_sat_norm_d_saturation;
+      if (brack_in > 0.0) {
+        mp->d_cap_pres[SHELL_SAT_1] = n_inv * con_c * pow(brack_in, (n_inv - 1.0)) *
+                                      d_brack_in_d_sat_norm * d_sat_norm_d_saturation;
+      } else {
+        mp->d_cap_pres[SHELL_SAT_1] = 0.0;
+      }
       break;
 
     case 1:
-      mp->d_cap_pres[SHELL_SAT_2] = n_inv * con_c * pow(brack_in, (n_inv - 1.0)) *
-                                    d_brack_in_d_sat_norm * d_sat_norm_d_saturation;
+      if (brack_in > 0.0) {
+        mp->d_cap_pres[SHELL_SAT_2] = n_inv * con_c * pow(brack_in, (n_inv - 1.0)) *
+                                      d_brack_in_d_sat_norm * d_sat_norm_d_saturation;
+      } else {
+        mp->d_cap_pres[SHELL_SAT_2] = 0.0;
+      }
       break;
 
     case 2:
-      mp->d_cap_pres[SHELL_SAT_3] = n_inv * con_c * pow(brack_in, (n_inv - 1.0)) *
-                                    d_brack_in_d_sat_norm * d_sat_norm_d_saturation;
+      if (brack_in > 0.0) {
+        mp->d_cap_pres[SHELL_SAT_3] = n_inv * con_c * pow(brack_in, (n_inv - 1.0)) *
+                                      d_brack_in_d_sat_norm * d_sat_norm_d_saturation;
+      } else {
+        mp->d_cap_pres[SHELL_SAT_3] = 0.0;
+      }
       break;
 
     default:

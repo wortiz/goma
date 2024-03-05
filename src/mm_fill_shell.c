@@ -13265,6 +13265,7 @@ int assemble_porous_shell_saturation(dbl tt,           // Time integration form
 
   // Group saturation values at nodes and Gauss point
   dbl sat_nodes[MAX_POR_SHELL][MDE] = {{0.0}};
+  dbl sat_nodes_old[MAX_POR_SHELL][MDE] = {{0.0}};
   dbl sat_dot_nodes[MAX_POR_SHELL][MDE] = {{0.0}};
   dbl sat_gauss[MAX_POR_SHELL] = {0.0};
   dbl grad_sat_gauss[MAX_POR_SHELL][DIM] = {{0.0}};
@@ -13277,14 +13278,17 @@ int assemble_porous_shell_saturation(dbl tt,           // Time integration form
         switch (ipore) {
         case 0:
           sat_nodes[ipore][j] = *esp->sh_sat_1[j];
+          sat_nodes_old[ipore][j] = *esp_old->sh_sat_1[j];
           sat_dot_nodes[ipore][j] = *esp_dot->sh_sat_1[j];
           break;
         case 1:
           sat_nodes[ipore][j] = *esp->sh_sat_2[j];
+          sat_nodes_old[ipore][j] = *esp_old->sh_sat_2[j];
           sat_dot_nodes[ipore][j] = *esp_dot->sh_sat_2[j];
           break;
         case 2:
           sat_nodes[ipore][j] = *esp->sh_sat_3[j];
+          sat_nodes_old[ipore][j] = *esp_old->sh_sat_3[j];
           sat_dot_nodes[ipore][j] = *esp_dot->sh_sat_3[j];
           break;
         }
@@ -13379,8 +13383,14 @@ int assemble_porous_shell_saturation(dbl tt,           // Time integration form
     if (pd->v[pg->imtrx][var]) {
       /* Old method */
       for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+// #define LAG_CAP_PRESSURE
+#ifdef LAG_CAP_PRESSURE
+        cap_pres[ipore][j] = load_cap_pres(ipore, j, -1, sat_nodes_old[ipore][j]);
+        d_cap_pres_dS[ipore][j] = 0;
+#else
         cap_pres[ipore][j] = load_cap_pres(ipore, j, -1, sat_nodes[ipore][j]);
         d_cap_pres_dS[ipore][j] = mp->d_cap_pres[var];
+#endif
       }
       for (a = 0; a < DIM; a++) {
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {

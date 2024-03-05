@@ -1959,6 +1959,7 @@ void porous_shell_open_source_model(
   dbl mu = mp->viscosity;           // Viscosity
 
   dbl sat_nodes[MAX_POR_SHELL][MDE] = {{0.0}};
+  dbl sat_nodes_old[MAX_POR_SHELL][MDE] = {{0.0}};
   dbl cap_pres_nodes[MAX_POR_SHELL][MDE] = {{0.0}};
   dbl d_cap_pres_nodes_dS[MAX_POR_SHELL][MDE] = {{0.0}};
 
@@ -1968,6 +1969,7 @@ void porous_shell_open_source_model(
   dbl dHside_1_square_dS[MDE] = {0.0};
   dbl sat_max_1 = 0.99;
   dbl width_1 = 0.24;
+  // dbl width_1 = 0.0;
   dbl alpha_1 = 0.5 * width_1;
   dbl sat_center_1 = sat_max_1 - alpha_1;
   dbl sat_normalized_1[MDE] = {0.0};
@@ -1975,7 +1977,10 @@ void porous_shell_open_source_model(
   dbl Hside_2[MDE] = {0.0};
   dbl dHside_2_dS[MDE] = {0.0};
   dbl sat_min_2 = 0.5;
+  // dbl sat_min_2 = 0.1;
+  // dbl sat_min_2 = 5e-2;
   dbl width_2 = 0.05;
+  // dbl width_2 = 0.00;
   dbl alpha_2 = 0.5 * width_2;
   dbl sat_center_2 = sat_min_2 - alpha_2;
   dbl sat_normalized_2[MDE] = {0.0};
@@ -1986,9 +1991,13 @@ void porous_shell_open_source_model(
   dbl dHside_3_square_dS[MDE] = {0.0};
   dbl sat_max_3 = 0.99;
   dbl width_3 = 0.24;
+  // dbl width_3 = 0.0;
   dbl alpha_3 = 0.5 * width_3;
   dbl sat_center_3 = sat_max_3 - alpha_3;
   dbl sat_normalized_3[MDE] = {0.0};
+
+#define LAG_SAT_NORM
+#define LAG_CAP_PRESSURE
 
   /* Extract all of the necessary information */
   for (ipore = 0; ipore < pd->Num_Porous_Shell_Eqn; ipore++) {
@@ -1998,19 +2007,39 @@ void porous_shell_open_source_model(
         switch (ipore) {
         case 0:
           sat_nodes[ipore][j] = *esp->sh_sat_1[j];
+          sat_nodes_old[ipore][j] = *esp_old->sh_sat_1[j];
+#ifdef LAG_SAT_NORM
+          sat_normalized_1[j] = sat_nodes_old[ipore][j] - sat_center_1;
+#else
           sat_normalized_1[j] = sat_nodes[ipore][j] - sat_center_1;
+#endif
           break;
         case 1:
           sat_nodes[ipore][j] = *esp->sh_sat_2[j];
+          sat_nodes_old[ipore][j] = *esp_old->sh_sat_2[j];
+#ifdef LAG_SAT_NORM
+          sat_normalized_2[j] = sat_nodes_old[ipore][j] - sat_center_2;
+#else
           sat_normalized_2[j] = sat_nodes[ipore][j] - sat_center_2;
+#endif
           break;
         case 2:
           sat_nodes[ipore][j] = *esp->sh_sat_3[j];
+          sat_nodes_old[ipore][j] = *esp_old->sh_sat_3[j];
+#ifdef LAG_SAT_NORM
+          sat_normalized_3[j] = sat_nodes_old[ipore][j] - sat_center_3;
+#else
           sat_normalized_3[j] = sat_nodes[ipore][j] - sat_center_3;
+#endif
           break;
         }
+#ifdef LAG_CAP_PRESSURE
+        cap_pres_nodes[ipore][j] = load_cap_pres(ipore, j, -1, sat_nodes_old[ipore][j]);
+        d_cap_pres_nodes_dS[ipore][j] = 0;
+#else
         cap_pres_nodes[ipore][j] = load_cap_pres(ipore, j, -1, sat_nodes[ipore][j]);
         d_cap_pres_nodes_dS[ipore][j] = mp->d_cap_pres[var];
+#endif
       }
       H[ipore] = porous_shell_height_model(ipore);
       kappa[ipore] = porous_shell_cross_perm_model(ipore);
@@ -2020,12 +2049,22 @@ void porous_shell_open_source_model(
   /* Apply heaviside function to deactivate flux at S_1 > 0.99*/
 
   for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_1]; j++) {
-    if (sat_nodes[0][j] >= sat_max_1) {
+
+// #define DISABLE_H1
+// #define DISABLE_H2
+// #define DISABLE_H3
+#ifdef DISABLE_H1
+    Hside_1[j] = 1.0;
+    dHside_1_dS[j] = 0.0;
+    Hside_1_square[j] = 1.0;
+    dHside_1_square_dS[j] = 0.0;
+#else
+    if (sat_nodes_old[0][j] >= sat_max_1) {
       Hside_1[j] = 0.0;
       dHside_1_dS[j] = 0.0;
       Hside_1_square[j] = 0.0;
       dHside_1_square_dS[j] = 0.0;
-    } else if (sat_nodes[0][j] <= (sat_max_1 - width_1)) {
+    } else if (sat_nodes_old[0][j] <= (sat_max_1 - width_1)) {
       Hside_1[j] = 1.0;
       dHside_1_dS[j] = 0.0;
       Hside_1_square[j] = 1.0;
@@ -2035,35 +2074,53 @@ void porous_shell_open_source_model(
                                 sin(M_PIE * sat_normalized_1[j] / alpha_1) / M_PIE);
       dHside_1_dS[j] =
           -0.5 * (1.0 / alpha_1 + cos(M_PIE * sat_normalized_1[j] / alpha_1) / alpha_1);
+#ifdef LAG_SAT_NORM
+      dHside_1_dS[j] = 0;
+#endif
       Hside_1_square[j] = Hside_1[j] * Hside_1[j];
       dHside_1_square_dS[j] = 2.0 * Hside_1[j] * dHside_1_dS[j];
     }
+#endif
   }
 
   /* Apply heaviside function to activate flux at S_2 > S_min*/
   for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_2]; j++) {
-    if (sat_nodes[1][j] >= sat_min_2) {
+#ifdef DISABLE_H2
+    Hside_2[j] = 1.0;
+    dHside_2_dS[j] = 0.0;
+#else
+    if (sat_nodes_old[1][j] >= sat_min_2) {
       Hside_2[j] = 1.0;
       dHside_2_dS[j] = 0.0;
-    } else if (sat_nodes[1][j] <= (sat_min_2 - width_2)) {
+    } else if (sat_nodes_old[1][j] <= (sat_min_2 - width_2)) {
       Hside_2[j] = 0.0;
       dHside_2_dS[j] = 0.0;
     } else {
       Hside_2[j] = 0.5 * (1. + sat_normalized_2[j] / alpha_2 +
                           sin(M_PIE * sat_normalized_2[j] / alpha_2) / M_PIE);
       dHside_2_dS[j] = 0.5 * (1.0 / alpha_2 + cos(M_PIE * sat_normalized_2[j] / alpha_2) / alpha_2);
+#ifdef LAG_SAT_NORM
+      dHside_2_dS[j] = 0;
+#endif
     }
+#endif
   }
 
   /* Apply heaviside function to deactivate flux at S_3 > 0.99*/
   if (pd->e[pg->imtrx][R_SHELL_SAT_3]) {
     for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_3]; j++) {
-      if (sat_nodes[2][j] >= sat_max_3) {
+#ifdef DISABLE_H3
+      Hside_3[j] = 1.0;
+      dHside_3_dS[j] = 0.0;
+      Hside_3_square[j] = 1.0;
+      dHside_3_square_dS[j] = 0.0;
+#else
+      if (sat_nodes_old[2][j] >= sat_max_3) {
         Hside_3[j] = 0.0;
         dHside_3_dS[j] = 0.0;
         Hside_3_square[j] = 0.0;
         dHside_3_square_dS[j] = 0.0;
-      } else if (sat_nodes[2][j] <= (sat_max_3 - width_3)) {
+      } else if (sat_nodes_old[2][j] <= (sat_max_3 - width_3)) {
         Hside_3[j] = 1.0;
         dHside_3_dS[j] = 0.0;
         Hside_3_square[j] = 1.0;
@@ -2073,22 +2130,48 @@ void porous_shell_open_source_model(
                                   sin(M_PIE * sat_normalized_3[j] / alpha_3) / M_PIE);
         dHside_3_dS[j] =
             -0.5 * (1.0 / alpha_3 + cos(M_PIE * sat_normalized_3[j] / alpha_3) / alpha_3);
+#ifdef LAG_SAT_NORM
+        dHside_3_dS[j] = 0;
+#endif
         Hside_3_square[j] = Hside_3[j] * Hside_3[j];
         dHside_3_square_dS[j] = 2.0 * Hside_3[j] * dHside_3_dS[j];
       }
+#endif
     }
   }
 
+// #define DIODE_1
+// #define DIODE_2
   /* Populate the interporous flux */
   for (j = 0; j < ei[pg->imtrx]->dof[SHELL_SAT_1]; j++) {
     j_1_2[j] = (kappa[0] / mu) * (cap_pres_nodes[0][j] - cap_pres_nodes[1][j]) / (2.0 * H[0]);
     j_1_2[j] += (kappa[1] / mu) * (cap_pres_nodes[0][j] - cap_pres_nodes[1][j]) / (2.0 * H[1]);
+#ifdef DIODE_1
+    if (j_1_2[j] > 0.0) {
+      j_1_2[j] *= Hside_1_square[j] * Hside_2[j];
+    }
+#elif defined DIODE_2
+    if (j_1_2[j] > 0.0) {
+      j_1_2[j] = 0;
+    }
+#else
     j_1_2[j] *= Hside_1_square[j] * Hside_2[j];
+#endif
 
     if (pd->e[pg->imtrx][R_SHELL_SAT_3]) {
       j_2_3[j] = (kappa[1] / mu) * (cap_pres_nodes[2][j] - cap_pres_nodes[1][j]) / (2.0 * H[1]);
       j_2_3[j] += (kappa[2] / mu) * (cap_pres_nodes[2][j] - cap_pres_nodes[1][j]) / (2.0 * H[2]);
+#ifdef DIODE_1
+      if (j_2_3[j] > 0.0) {
+        j_2_3[j] *= Hside_2[j] * Hside_3_square[j];
+      }
+#elif defined DIODE_2
+      if (j_2_3[j] > 0.0) {
+        j_2_3[j] = 0;
+      }
+#else
       j_2_3[j] *= Hside_2[j] * Hside_3_square[j];
+#endif
     }
   }
 
