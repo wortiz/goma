@@ -40,7 +40,9 @@
 #endif
 #endif
 
+#ifdef GOMA_ENABLE_AZTEC
 #include "az_aztec.h"
+#endif
 #include "sl_epetra_interface.h"
 
 /*
@@ -66,16 +68,18 @@ struct Matrix_Data {
 };
 
 struct GomaLinearSolverData {
+#ifdef GOMA_ENABLE_AZTEC
   int proc_config[AZ_PROC_SIZE];
 
   int options[AZ_OPTIONS_SIZE];
 
   double params[AZ_PARAMS_SIZE];
 
-  int *data_org;
 
   double status[AZ_STATUS_SIZE];
+#endif
 
+  int *data_org;
   int N;
   int N_update;
   int N_external;
@@ -124,7 +128,9 @@ struct GomaLinearSolverData {
 
   int solveSetup;
 
+#ifdef GOMA_ENABLE_EPETRA
   C_Epetra_RowMatrix_t *RowMatrix; /* This is a Epetra_RowMatrix object */
+#endif
   int *GlobalIDs;                  /* Pointer to global ids of DOFs (only available with epetra) */
 
   void *PetscMatrixData;

@@ -29,9 +29,6 @@
 #include <fenv.h>
 #endif
 
-#ifdef PARALLEL
-#include "az_aztec.h"
-#endif
 extern void handle_ieee(void);
 
 #ifdef USE_CHEMKIN

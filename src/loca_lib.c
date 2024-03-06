@@ -540,7 +540,7 @@ int con_lib(struct con_struct *con, Exo_DB *exo, struct GomaLinearSolverData *am
         }
 
         /* Check element quality */
-        int good_mesh = element_quality(exo, x, ams->proc_config);
+        int good_mesh = element_quality(exo, x, NULL);
         if (!good_mesh) {
           goto free_and_clear;
         }

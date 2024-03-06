@@ -29,7 +29,9 @@
 
 #include "ac_particles.h"
 #include "ac_stability_util.h"
+#ifdef GOMA_ENABLE_AZTEC
 #include "az_aztec.h"
+#endif
 #include "brkfix/fix.h"
 #include "decomp_interface.h"
 #include "dp_comm.h"
@@ -665,11 +667,13 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       ams[i] = alloc_struct_1(struct GomaLinearSolverData, 1);
     }
   }
+#if GOMA_ENABLE_AZTEC
 #ifdef MPI
   AZ_set_proc_config(ams[0]->proc_config, MPI_COMM_WORLD);
 #else  /* MPI */
   AZ_set_proc_config(ams[0]->proc_config, 0);
 #endif /* MPI */
+#endif
 
   /* Allocate solution arrays on first call only */
   if (callnum == 1) {

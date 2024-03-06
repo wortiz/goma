@@ -17,9 +17,10 @@
  */
 
 #include <math.h>
+#include <mpi.h>
+#include <petsclog.h>
 #include <stdio.h>
 
-#include "az_aztec.h"
 #include "el_elm.h"
 #include "el_elm_info.h"
 #include "el_geom.h"
@@ -78,7 +79,7 @@ static double sidelength(int,           /* One vertex */
                          int,           /* Other vertex */
                          double **);    /* Vertex coordinates */
 
-int element_quality(Exo_DB *exo, double *x, int *proc_config)
+int element_quality(Exo_DB *exo, double *x, int *unused)
 
 /*
  *   Function which computes measures of element quality
@@ -116,7 +117,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
 
   /* Compute each requested metric */
   if (eqm->do_jac) {
-    mavg = jacobian_metric(exo, x, proc_config);
+    mavg = jacobian_metric(exo, x, NULL);
     DPRINTF(stderr, "               Jacobian         %8g         %8g\n", mavg, eqm->eq_jac);
     tavg += eqm->wt_jac * mavg;
     wt_min += eqm->wt_jac * eqm->eq_jac;
@@ -125,7 +126,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
       qmin = eqm->eq_jac;
   }
   if (eqm->do_vol && !first_call) {
-    mavg = volume_metric(proc_config);
+    mavg = volume_metric(NULL);
     DPRINTF(stderr, "               Volume change    %8g         %8g\n", mavg, eqm->eq_vol);
     tavg += eqm->wt_vol * mavg;
     wt_min += eqm->wt_vol * eqm->eq_vol;
@@ -134,7 +135,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
       qmin = eqm->eq_vol;
   }
   if (eqm->do_ang) {
-    mavg = angle_metric(exo, x, proc_config);
+    mavg = angle_metric(exo, x, NULL);
     DPRINTF(stderr, "               Angle            %8g         %8g\n", mavg, eqm->eq_ang);
     tavg += eqm->wt_ang * mavg;
     wt_min += eqm->wt_ang * eqm->eq_ang;
@@ -143,7 +144,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
       qmin = eqm->eq_ang;
   }
   if (eqm->do_tri) {
-    mavg = triangle_metric(exo, x, proc_config);
+    mavg = triangle_metric(exo, x, NULL);
     DPRINTF(stderr, "               Triangle         %8g         %8g\n", mavg, eqm->eq_tri);
     tavg += eqm->wt_tri * mavg;
     wt_min += eqm->wt_tri * eqm->eq_tri;
@@ -189,7 +190,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
   }
 } /* End of function "element_quality" */
 
-static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
+static double jacobian_metric(Exo_DB *exo, double *x, int *unused) {
   int dofs, k;
   int ielem, e_start, e_end, igp, ngp, store_shape;
   double gwt, Jw, Jw_sum, Jw_min, els, eq, eqavg;
@@ -266,9 +267,9 @@ static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
   /* Return results */
   els = (double)(e_end - e_start);
   if (Num_Proc > 1) {
-    els = AZ_gsum_double(els, proc_config);
-    eqsum = AZ_gsum_double(eqsum, proc_config);
-    eqmin = AZ_gmin_double(eqmin, proc_config);
+    els = goma_parallel_sum_double(els);
+    eqsum = goma_parallel_sum_double(eqsum);
+    eqmin = goma_parallel_sum_double(eqmin);
   }
   eqavg = eqsum / els;
   eqm->eq_jac = eqmin;

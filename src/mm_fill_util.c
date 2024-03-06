@@ -2992,8 +2992,8 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
    *  processor.
    */
 
-  num_total_fill_unknowns = gsum_Int(internal_fill_unknowns + boundary_fill_unknowns);
-  num_total_unknowns = gsum_Int(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]);
+  num_total_fill_unknowns = goma_parallel_sum_int(internal_fill_unknowns + boundary_fill_unknowns);
+  num_total_unknowns = goma_parallel_sum_int(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]);
   dpi->num_dofs_global = num_total_unknowns;
 
   /*
@@ -3008,7 +3008,7 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
     local_value = (ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] -
                    num_external_dofs[pg->imtrx] - 1);
   }
-  nnz = gsum_Int(local_value);
+  nnz = goma_parallel_sum_int(local_value);
 #else
   dpi->num_dofs_global = num_total_unknowns;
   num_total_fill_unknowns = num_fill_unknowns;
@@ -3082,8 +3082,8 @@ void alloc_VBR_sparse_arrays(struct GomaLinearSolverData *ams, Exo_DB *exo, Dpi 
    *   calculate the total number of degrees of freedom in the problem
    *   by summing the contributions from each processor
    */
-  dpi->num_dofs_global = gsum_Int(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]);
-  nnz_tmp = gsum_Int(nnz);
+  dpi->num_dofs_global = goma_parallel_sum_int(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]);
+  nnz_tmp = goma_parallel_sum_int(nnz);
 
   DPRINTF(stdout, "\n%-30s= %d\n", "Number of unknowns", dpi->num_dofs_global);
   DPRINTF(stdout, "\n%-30s= %d\n", "Number of matrix nonzeroes", nnz_tmp);

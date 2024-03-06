@@ -204,12 +204,12 @@ static void load_element_indices(const Exo_DB *, /* exo - ptr to FE db          
 #endif
 
 void rotate_momentum_auto(int id,  /* Elemental stiffness matrix row index */
-                          int I,   /* Global node number                   */
+                          int gnn,   /* Global node number                   */
                           int dim, /* physical dim of problem              */
                           struct GomaLinearSolverData *ams);
 
 void rotate_mesh_auto(int id,  /* Elemental stiffness matrix row index */
-                      int I,   /* Global node number                   */
+                      int gnn,   /* Global node number                   */
                       int dim, /* physical dim of problem              */
                       struct GomaLinearSolverData *ams);
 

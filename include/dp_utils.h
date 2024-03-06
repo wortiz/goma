@@ -22,8 +22,9 @@
 #define GOMA_DP_UTILS_H
 
 #include <stddef.h>
-
+#ifdef GOMA_ENABLE_AZTEC
 #include "az_aztec.h"
+#endif
 #include "dp_map_comm_vec.h"
 #include "dp_types.h"
 #include "mpi.h"
@@ -46,12 +47,6 @@ EXTERN void ddd_add_member(DDD,           /* which collection? */
                            int,           /* how many of type? */
                            MPI_Datatype); /* what type? */
 
-EXTERN void ddd_add_member2(void *,  /* address */
-                            int,     /* blockcount */
-                            size_t); /* byte_size*/
-
-EXTERN void ddd_set_commit2(void);
-
 EXTERN void ddd_set_commit(DDD);
 
 EXTERN void ddd_free(DDD);
@@ -66,17 +61,22 @@ extern int gmaxloc_int(const int, const int, int *);
 extern int gminloc_int(const int, const int, int *);
 extern int gmax_int(int);
 extern int gmin_int(int);
-extern int gsum_Int(int);
 extern double gavg_double(double);
+double goma_parallel_sum_double(double value);
+int goma_parallel_sum_int(int value);
 extern void print_sync_start(int);
 extern void print_sync_end(int);
 extern void sync_processors(void);
 
 #ifdef PARALLEL
+#ifdef GOMA_ENABLE_AZTEC
 extern int Proc_Config[AZ_PROC_SIZE];
+#endif
 #else
 #ifdef TRILINOS
+#ifdef GOMA_ENABLE_AZTEC
 extern int Proc_Config[AZ_PROC_SIZE];
+#endif
 #endif
 #endif
 

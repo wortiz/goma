@@ -239,8 +239,8 @@ NETCDF_VERSION="c-4.9.0"
 NETCDF_VERSION_ONLY="4.9.0"
 NETCDF_MD5="26cfd1b2e32d511bd82477803976365d"
 
-TRILINOS_VERSION="14.4.0"
-TRILINOS_VERSION_DASH="14-4-0"
+TRILINOS_VERSION="15.1.0"
+TRILINOS_VERSION_DASH="15-1-0"
 TRILINOS_MD5="334f9c3700c72f6ed5658eaa783ffccd"
 
 MUMPS_VERSION="5.5.1"
@@ -3015,127 +3015,14 @@ HDF5_LIBS="-L${GOMA_LIB}/hdf5-${HDF5_VERSION}/lib -lhdf5_hl -lhdf5 -lz -ldl"
 # Install directory
 TRILINOS_INSTALL=$GOMA_LIB/trilinos-$TRILINOS_VERSION
 
-if [ -e $TRILINOS_INSTALL/bin/aprepro ]; then
+if [ -e $TRILINOS_INSTALL/lib/libbelos.a ]; then
     log_echo "Trilinos is already built!"
 else
-cd $GOMA_LIB/Trilinos-trilinos-release-$TRILINOS_VERSION_DASH/packages/aztecoo/src
-cat << "EOF" > az_aztec_h.patch 
-731c731
-<   extern char *AZ_allocate(unsigned int iii);
----
->   extern char *AZ_allocate(size_t iii);
-1024c1024
-<   extern double *AZ_manage_memory(unsigned int size, int action, int type,
----
->   extern double *AZ_manage_memory(size_t size, int action, int type,
-1198c1198
-<   extern char *AZ_realloc(void *ptr, unsigned int size);
----
->   extern char *AZ_realloc(void *ptr, size_t size);
-EOF
-patch -f az_aztec.h < az_aztec_h.patch
-rm az_aztec_h.patch
-
-cat << "EOF" > az_util_c.patch 
-843c843
-<   (void) AZ_manage_memory((unsigned int) 0, AZ_CLEAR, label, (char *) NULL,
----
->   (void) AZ_manage_memory((size_t) 0, AZ_CLEAR, label, (char *) NULL,
-851c851
-< double *AZ_manage_memory(unsigned int input_size, int action, int type,
----
-> double *AZ_manage_memory(size_t input_size, int action, int type,
-936c936
-<     int     size;
----
->     size_t  size;
-941c941
-<   long int size;
----
->   size_t                size, aligned_size;
-945,946c945,946
-<   long int aligned_str_mem, aligned_j, aligned_size;
-< double *dtmp;
----
->   unsigned int          aligned_str_mem, aligned_j;
->   double *dtmp;
-949c949
-<   size = (long int) input_size;
----
->   size = input_size;
-997,998c997
-<       dtmp = (double *) AZ_allocate((unsigned int) (aligned_str_mem+aligned_j+
-<                                                 aligned_size) );
----
->       dtmp = (double *) AZ_allocate(aligned_str_mem+aligned_j+aligned_size);
-1183,1184c1182
-<     dtmp    = (double *) AZ_realloc((char *) dtmp,(unsigned int)
-<                                     aligned_str_mem+aligned_j+aligned_size);
----
->     dtmp    = (double *) AZ_realloc((char *) dtmp, aligned_str_mem+aligned_j+aligned_size);
-1872c1870
-<    int size;
----
->    size_t size;
-1902c1900
-< char *AZ_allocate(unsigned int isize) {
----
-> char *AZ_allocate(size_t isize) {
-1917,1918c1915,1917
-<     int *size_ptr, i;
-<     unsigned int size;
----
->     int i;
->     size_t size;
->     size_t *size_ptr; 
-1952c1951
-<     size_ptr = (int *) ptr;
----
->     size_ptr = (size_t *) ptr;
-1992c1991
-<    int *iptr, size, i;
----
->    int i;
-1993a1993,1994
->    size_t size;
->    size_t* iptr;
-2023c2024
-<            iptr = (int *) ptr;
----
->            iptr = (size_t *) ptr;
-2073c2074
-< char *AZ_realloc(void *vptr, unsigned int new_size) {
----
-> char *AZ_realloc(void *vptr, size_t new_size) {
-2076c2077
-<    int i, *iptr, size, *new_size_ptr;
----
->    int i;
-2079d2079
-<    int newmsize, smaller;
-2080a2081,2082
->    size_t size, newmsize, smaller;
->    size_t *iptr, *new_size_ptr; 
-2108c2110
-<            iptr = (int *) ptr;
----
->            iptr = (size_t *) ptr;
-2128c2130
-<     new_size_ptr = (int *) new_ptr;
----
->     new_size_ptr = (size_t *) new_ptr;
-2175c2177
-< char *AZ_allocate(unsigned int size) {
----
-> char *AZ_allocate(size_t size) {
-2185c2187
-< char *AZ_realloc(void *ptr, unsigned int size) {
----
-> char *AZ_realloc(void *ptr, size_t size) {
-EOF
-patch -f az_util.c < az_util_c.patch
-rm az_util_c.patch 
+mkdir -p $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
 cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
+#-D Trilinos_ENABLE_Xpetra:BOOL=ON \
+#-D Trilinos_ENABLE_Ifpack:BOOL=OFF \
+#-D Trilinos_ENABLE_ML:BOOL=ON \
     cmake \
 -D CMAKE_AR=/usr/bin/ar \
 -D CMAKE_RANLIB=/usr/bin/ranlib \
@@ -3147,21 +3034,20 @@ cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
 -D BUILD_SHARED_LIBS:BOOL=OFF \
 -D TPL_ENABLE_Boost:BOOL=OFF \
 -D Trilinos_ENABLE_Triutils:BOOL=ON \
--D Trilinos_ENABLE_SEACAS:BOOL=ON \
--D Trilinos_GOMA_ENABLE_AMESOS:BOOL=ON \
--D Trilinos_ENABLE_Epetra:BOOL=ON \
--D Trilinos_ENABLE_Xpetra:BOOL=ON \
--D Trilinos_ENABLE_Ifpack:BOOL=ON \
+-D Trilinos_ENABLE_SEACAS:BOOL=OFF \
+-D Trilinos_ENABLE_Amesos:BOOL=OFF \
+-D Trilinos_ENABLE_Amesos2:BOOL=ON \
+-D Trilinos_ENABLE_Epetra:BOOL=OFF \
 -D Trilinos_ENABLE_Ifpack2:BOOL=ON \
 -D Trilinos_ENABLE_Teuchos:BOOL=ON \
--D Trilinos_ENABLE_ML:BOOL=ON \
 -D Trilinos_ENABLE_MueLu:BOOL=ON \
--D Trilinos_ENABLE_AztecOO:BOOL=ON \
+-D Trilinos_ENABLE_AztecOO:BOOL=OFF \
 -D Trilinos_ENABLE_Stratimikos:BOOL=ON \
 -D Trilinos_ENABLE_Teko:BOOL=ON \
+-D Trilinos_ENABLE_Sacado:BOOL=ON \
 -D Trilinos_GOMA_ENABLE_AMESOS2:BOOL=ON \
 -D Trilinos_ENABLE_Belos:BOOL=ON \
--D Trilinos_ENABLE_EpetraExt:BOOL=ON \
+-D Trilinos_ENABLE_EpetraExt:BOOL=OFF \
 -D Trilinos_ENABLE_Thyra:BOOL=ON \
 -D Trilinos_ENABLE_ThyraTpetraAdapters:BOOL=ON \
 -D Trilinos_ENABLE_Tpetra:BOOL=ON \
@@ -3169,12 +3055,12 @@ cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
 -D Trilinos_ENABLE_TESTS:BOOL=OFF \
 -D Trilinos_ENABLE_EXPLICIT_INSTANTIATION:BOOL=ON \
       -D HDF5_LIBRARY_DIRS:PATH="$GOMA_LIB/hdf5-${HDF5_VERSION}/lib" \
-      -D TPL_ENABLE_HDF5:BOOL=ON \
+      -D TPL_ENABLE_HDF5:BOOL=OFF \
       -D TPL_HDF5_INCLUDE_DIRS:PATH="$GOMA_LIB/hdf5-${HDF5_VERSION}/include" \
       -D HDF5_LIBRARY_DIRS:PATH="$GOMA_LIB/hdf5-${HDF5_VERSION}/lib" \
       -D HDF5_LIBRARY_NAMES:STRING="hdf5_hl;hdf5;z;dl" \
       -D Netcdf_LIBRARY_DIRS:PATH="$GOMA_LIB/netcdf-${NETCDF_VERSION}/lib" \
-      -D TPL_ENABLE_Netcdf:BOOL=ON \
+      -D TPL_ENABLE_Netcdf:BOOL=OFF \
       -D TPL_Netcdf_INCLUDE_DIRS:PATH="$GOMA_LIB/netcdf-${NETCDF_VERSION}/include" \
       -D Matio_LIBRARY_DIRS:PATH=$GOMA_LIB/matio-$MATIO_VERSION/lib \
       -D Matio_INCLUDE_DIRS:PATH=$GOMA_LIB/matio-$MATIO_VERSION/include \
@@ -3190,11 +3076,11 @@ cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
 -D BLAS_LIBRARY_NAMES="${BLAS_LIBRARY_NAME}" \
 -D CMAKE_INSTALL_PREFIX:PATH=$TRILINOS_INSTALL \
 -D Trilinos_EXTRA_LINK_FLAGS:STRING="$HDF5_LIBS $MPI_LIBS $LAPACK_LIBRARY_NAME_ARG $BLAS_LIBRARY_NAME_ARG $FORTRAN_LIBS -lrt -lm" \
--D TPL_ENABLE_UMFPACK:BOOL=ON \
+-D TPL_ENABLE_UMFPACK:BOOL=OFF \
   -D UMFPACK_LIBRARY_NAMES:STRING="umfpack;amd;suitesparseconfig;cholmod;colamd;ccolamd;camd" \
   -D UMFPACK_LIBRARY_DIRS:PATH="$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/UMFPACK/Lib;$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/CHOLMOD/Lib;$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/AMD/Lib;$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/SuiteSparse_config;$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/CAMD/Lib;$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/COLAMD/Lib;$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/CCOLAMD/Lib" \
   -D UMFPACK_INCLUDE_DIRS:PATH="$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/include" \
--D TPL_ENABLE_AMD:BOOL=ON \
+-D TPL_ENABLE_AMD:BOOL=OFF \
   -D AMD_LIBRARY_NAMES:STRING="amd;suitesparseconfig" \
   -D AMD_LIBRARY_DIRS:PATH="$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/AMD/Lib;$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/SuiteSparse_config" \
   -D AMD_INCLUDE_DIRS:PATH="$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/AMD/Include;$GOMA_LIB/SuiteSparse-$SUITESPARSE_VERSION/SuiteSparse_config" \
@@ -3206,7 +3092,7 @@ cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
   -D ParMETIS_LIBRARY_DIRS:PATH="$GOMA_LIB/parmetis-$PARMETIS_VERSION/lib;$GOMA_LIB/metis-$METIS_VERSION/lib" \
   -D ParMETIS_INCLUDE_DIRS:PATH="$GOMA_LIB/parmetis-$PARMETIS_VERSION/include;$GOMA_LIB/metis-$METIS_VERSION/include" \
   -D TPL_ParMETIS_INCLUDE_DIRS:PATH="$GOMA_LIB/parmetis-$PARMETIS_VERSION/include;$GOMA_LIB/metis-$METIS_VERSION/include" \
-  -D TPL_ENABLE_y12m:BOOL=ON \
+  -D TPL_ENABLE_y12m:BOOL=OFF \
   -D y12m_LIBRARY_NAMES:STRING="y12m" \
   -D y12m_LIBRARY_DIRS:PATH=$GOMA_LIB/y12m \
 -D TPL_ENABLE_MUMPS:BOOL=ON \
@@ -3223,18 +3109,12 @@ cd $GOMA_LIB/trilinos-$TRILINOS_VERSION-Temp
   -D MKL_LIBRARY_NAMES:STRING="${MKL_LIBRARY_NAME}" \
   -D MKL_LIBRARY_DIRS:PATH="${MKL_LIBRARY_DIR}" \
   -D MKL_INCLUDE_DIRS:PATH="${MKL_INCLUDE_DIR}" \
--D Amesos_ENABLE_SuperLUDist:BOOL=ON \
--D Amesos_ENABLE_ParMETIS:BOOL=ON \
--D Amesos_ENABLE_LAPACK:BOOL=ON \
--D Amesos_ENABLE_KLU:BOOL=ON \
--D Amesos_ENABLE_UMFPACK:BOOL=ON \
--D Amesos_ENABLE_MUMPS:BOOL=ON \
 $EXTRA_ARGS \
 $GOMA_LIB/Trilinos-trilinos-release-$TRILINOS_VERSION_DASH 2>&1 | tee -a $COMPILE_LOG
 
     make -j$MAKE_JOBS 2>&1 | tee -a $COMPILE_LOG
     make install 2>&1 | tee -a $COMPILE_LOG
-    if [ -e $TRILINOS_INSTALL/bin/aprepro ]; then
+    if [ -e $TRILINOS_INSTALL/lib/libbelos.a ]; then
         log_echo "Built Trilinos $TRILINOS_VERSION"
     else
         log_echo "Failed to build Trilinos $TRILINOS_VERSION"

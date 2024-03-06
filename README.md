@@ -9,6 +9,9 @@ Most of the documentation can be found at [https://www.gomafem.com/documentation
 
 ## License
 
+              GNU GENERAL PUBLIC LICENSE
+                       Version 2
+
 See [LICENSE](LICENSE) file. 
 and are noted at the top of the cmake file.
 
@@ -23,11 +26,11 @@ See licenses at https://gitlab.com/libeigen/eigen
 
 FindMETIS.cmake
 
-* @copyright (c) 2009-2014 The University of Tennessee and The University
-*                          of Tennessee Research Foundation.
-*                          All rights reserved.
-* @copyright (c) 2012-2014 Inria. All rights reserved.
-* @copyright (c) 2012-2014 Bordeaux INP, CNRS (LaBRI UMR 5800), Inria, Univ. Bordeaux. All rights reserved.
+    Copyright (c) 2009-2014 The University of Tennessee and The University
+                            of Tennessee Research Foundation.
+                            All rights reserved.
+    Copyright (c) 2012-2014 Inria. All rights reserved.
+    Copyright (c) 2012-2014 Bordeaux INP, CNRS (LaBRI UMR 5800), Inria, Univ. Bordeaux. All rights reserved.
 
 
 FindUMFPACK.cmake
@@ -35,9 +38,9 @@ FindUMFPACK.cmake
 
 #### nanoflann is included under the BSD license, please see `nanoflann.hpp`
 
- * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
- * Copyright 2008-2009  David G. Lowe (lowe@cs.ubc.ca). All rights reserved.
- * Copyright 2011-2022  Jose Luis Blanco (joseluisblancoc@gmail.com).
+     Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
+     Copyright 2008-2009  David G. Lowe (lowe@cs.ubc.ca). All rights reserved.
+     Copyright 2011-2022  Jose Luis Blanco (joseluisblancoc@gmail.com).
 
 ## Major Changes
 

@@ -43,9 +43,6 @@ static char mpistringbuffer[80];
 
 static Spfrtn sr;
 
-#include "az_aztec.h"
-
-int Proc_Config[AZ_PROC_SIZE];
 
 /************************************************************************/
 /************************************************************************/
@@ -82,91 +79,6 @@ void ddd_free(DDD p) {
 #ifdef PARALLEL
 static int ddd_internal_count = 0;
 #endif
-
-/**********************************************************************/
-/**********************************************************************/
-/**********************************************************************/
-
-void ddd_add_member2(void *address, int blockcount, size_t byte_size)
-
-/*****************************************************************
- *
- * ddd_add_member2:
- *
- *   Buffered broadcast routine. This routine will force an
- *   immediate exchange when the buffer gets larger than a fixed
- *   size (currently 8000 bytes). At this point, its worthwhile
- *   to exchange immediately, because further buffering won't yield
- *   speed improvements. Also, memory requirements for reallocs()
- *   in AZ_broadcast() are kept to a minimum.
- *
- *   This routine uses two static variables (listed below)
- *   and must be used in combination with the routine
- *   ddd_set_commit2() listed below. ddd_set_commit2() does
- *   the final broadcast, if needed.
- *
- *   Inbetween the calls to ddd_add_commit2() and
- *   ddd_set_commit2(), no other mp communication should be
- *   carried out that involves syncing processors.
- *   This is due to the fact that the send is carried out in
- *   Proc 0 in the ddd_set_commit2() routine, while the
- *   read is carried out on all other processors in the
- *   ddd_add_commit2() routine.
- *
- *   Note: Errors in the broadcast lead to immediate error exits.
- *
- *  Input
- * -------
- *   address    : base address of the item to be broadcast
- *   blockcount : Number of items in the object to be sent
- *   byte_size  : Number of bytes per item in the object to be
- *                sent.
- *
- *  Static Variables
- * ------------------
- *   dd_internal_count : Internal count of the buffer length
- *   Proc_Config[3] : MP configuration information, in a form
- *                    needed by Aztec.
- *****************************************************************/
-{
-#ifdef PARALLEL
-  int length;
-
-  if (byte_size <= 0) {
-    fprintf(stderr, " ddd_add_member2 ERROR: byte_size = %ld\n", (long int)byte_size);
-    GOMA_EH(GOMA_ERROR, "ddd_add_member2 parameter error");
-  }
-  length = blockcount * byte_size;
-  if (length > 0) {
-    AZ_broadcast(address, length, Proc_Config, AZ_PACK);
-    ddd_internal_count += length;
-    if (ddd_internal_count > 8000) {
-      AZ_broadcast(NULL, 0, Proc_Config, AZ_SEND);
-      ddd_internal_count = 0;
-    }
-  }
-#endif
-}
-/**********************************************************************/
-/**********************************************************************/
-/**********************************************************************/
-
-void ddd_set_commit2(void)
-
-/******************************************************************
- *
- * ddd_set_member2:
- *
- *   See description for ddd_add_member2 above().
- ******************************************************************/
-{
-#ifdef PARALLEL
-  if (ddd_internal_count > 0) {
-    AZ_broadcast(NULL, 0, Proc_Config, AZ_SEND);
-    ddd_internal_count = 0;
-  }
-#endif
-}
 /**********************************************************************/
 /**********************************************************************/
 /**********************************************************************/
@@ -509,36 +421,6 @@ int gmax_int(int value)
 /************************************************************************/
 /************************************************************************/
 
-int gsum_Int(int value)
-
-/********************************************************************
- *
- * gsum_Int
- *
- *   This routine will return the sum of a single integer
- *   distributed across the processors.
- *
- *
- *  Return
- *  -------
- *  Routine returns the sum.
- ********************************************************************/
-{
-#ifdef PARALLEL
-  int out_buf, err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  if (err != MPI_SUCCESS) {
-    GOMA_EH(GOMA_ERROR, "gsum_Int: MPI_Allreduce returned an error");
-  }
-  return out_buf;
-#else
-  return value;
-#endif
-}
-/************************************************************************/
-/************************************************************************/
-/************************************************************************/
-
 double gavg_double(double value)
 
 /********************************************************************
@@ -619,9 +501,33 @@ void sync_processors(void)
   fflush(stdout);
   fflush(stderr);
   if (Num_Proc > 1) {
-    AZ_sync(Proc_Config);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 }
 /************************************************************************/
 /************************************************************************/
 /************************************************************************/
+
+double goma_parallel_sum_double(double value) {
+#ifdef PARALLEL
+  if (Num_Proc > 1) {
+    int err = MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if (err != MPI_SUCCESS) {
+      GOMA_EH(GOMA_ERROR, "goma_parallel_sum_int: MPI_Allreduce returned an error");
+    }
+  }
+#endif
+  return value;
+}
+
+int goma_parallel_sum_int(int value) {
+#ifdef PARALLEL
+  if (Num_Proc > 1) {
+    int err = MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    if (err != MPI_SUCCESS) {
+      GOMA_EH(GOMA_ERROR, "goma_parallel_sum_int: MPI_Allreduce returned an error");
+    }
+  }
+#endif
+  return value;
+}

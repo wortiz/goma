@@ -398,7 +398,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
             } /* for (i = 0; i < exo->ns_num_nodes[ins]; i++) { */
           }   /* if (exo->ns_id[ins] == BC_Types[ibc].BC_ID) { */
         }     /* for (ins = 0; ins < exo->num_node_sets; ins++) { */
-        used_BC = gsum_Int(used_BC);
+        used_BC = goma_parallel_sum_int(used_BC);
         if (ProcID == 0) {
           matrix_used_BC[ibc] |= used_BC;
         }
@@ -581,7 +581,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
         /*
          */
 
-        used_BC = gsum_Int(used_BC);
+        used_BC = goma_parallel_sum_int(used_BC);
         if (ProcID == 0) {
           matrix_used_BC[ibc] |= used_BC;
         }
@@ -1694,7 +1694,7 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 
     divert = 1;
 
-    divert = gsum_Int(divert);
+    divert = goma_parallel_sum_int(divert);
 
     if (Debug_Flag > 0 || pd_glob[0]->Num_Dim < 3) {
       print_sync_start(TRUE);

@@ -87,7 +87,7 @@ EXTERN void apply_table_wic_bc(double[], /* func                                
 #endif
 
 int equation_index_auto_rotate(const ELEM_SIDE_BC_STRUCT *elem_side_bc,
-                               int I,
+                               int gnn,
                                int eqn,
                                int p,
                                int ldof_eqn,

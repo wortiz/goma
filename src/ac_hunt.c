@@ -20,11 +20,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef GOMA_ENABLE_AZTEC
+#include "az_aztec.h"
+#endif
 
 #define GOMA_AC_HUNT_C
 #include "ac_hunt.h"
 #include "ac_update_parameter.h"
-#include "az_aztec.h"
 #include "brkfix/fix.h"
 #include "decomp_interface.h"
 #include "dp_comm.h"
@@ -350,11 +352,13 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     ams[i] = alloc_struct_1(struct GomaLinearSolverData, 1);
   }
 
+#ifdef GOMA_ENABLE_AZTEC
 #ifdef MPI
   AZ_set_proc_config(ams[0]->proc_config, MPI_COMM_WORLD);
 #else  /* MPI */
   AZ_set_proc_config(ams[0]->proc_config, 0);
 #endif /* MPI */
+#endif
 
   /*
    * allocate space for and initialize solution arrays
@@ -539,6 +543,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
   /* Allocate sparse matrix */
 
+#ifdef GOMA_ENABLE_EPETRA
   if (strcmp(Matrix_Format, "epetra") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err,
@@ -547,9 +552,11 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     ams[JAC]->RowMatrix =
         EpetraCreateRowMatrix(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]);
     EpetraCreateGomaProblemGraph(ams[JAC], exo, dpi);
+  } else
+#endif
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
-  } else if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+  if (strcmp(Matrix_Format, "petsc_complex") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -558,8 +565,9 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
         ams[JAC], exo, dpi, x, x_old, xdot, xdot_old, num_internal_dofs[pg->imtrx],
         num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
+  } else
 #else
-  } else if (strcmp(Matrix_Format, "petsc") == 0) {
+  if (strcmp(Matrix_Format, "petsc") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -679,7 +687,9 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
   check_parallel_error("Solver initialization problems");
 #endif
 
+#ifdef GOMA_ENABLE_AZTEC
   ams[JAC]->options[AZ_keep_info] = 1;
+#endif
 
   DPRINTF(stdout, "\nINITIAL ELEMENT QUALITY CHECK---\n");
   good_mesh = element_quality(exo, x, ams[0]->proc_config);

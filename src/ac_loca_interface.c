@@ -89,7 +89,10 @@
  *     application code. Each has its own comments.
  */
 
+#ifdef GOMA_ENABLE_AZTEC
 #include <az_aztec.h>
+#endif
+
 #include <limits.h>
 #include <math.h>
 #include <mpi.h>

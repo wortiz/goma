@@ -4,6 +4,7 @@
  *  Created on: Oct 8, 2014
  *      Author: wortiz
  */
+ #ifdef GOMA_ENABLE_EPETRA
 
 #ifndef INCLUDE_SL_EPETRA_INTERFACE_H_
 #define INCLUDE_SL_EPETRA_INTERFACE_H_
@@ -47,3 +48,4 @@ void EpetraDeleteRowMatrix(C_Epetra_RowMatrix_t *AMatrix);
 #endif
 
 #endif /* INCLUDE_SL_EPETRA_INTERFACE_H_ */
+#endif

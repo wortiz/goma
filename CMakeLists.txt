@@ -85,8 +85,10 @@ set(GOMA_COMPILER_OVERRIDE
 # Trilinos required packages
 foreach(package Amesos AztecOO Epetra)
   list(FIND Trilinos_PACKAGE_LIST ${package} trilinos_package_index)
-  if(${trilinos_package_index} LESS 0)
-    message(FATAL_ERROR "Trilinos not built with ${package} a required package")
+  if(${trilinos_package_index} GREATER_EQUAL 0)
+    message(STATUS "TRILINOS: ${package} found, enabling in Goma")
+    string(TOUPPER ${package} package)
+    list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_${package})
   endif()
 endforeach()
 
