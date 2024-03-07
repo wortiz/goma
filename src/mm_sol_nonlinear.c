@@ -21,6 +21,7 @@
 #include "mm_eh.h"
 #include "mm_mp_const.h"
 #include "sl_util_structs.h"
+#include <az_aztec_defs.h>
 
 #define GOMA_MM_SOL_NONLINEAR_C
 /* Needed to declare POSIX function drand48 */
@@ -2073,17 +2074,135 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      *   UPDATE GOMA UNKNOWNS
      *
      *******************************************************************/
-    for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
-      x[i] -= damp_factor * var_damp[idv[pg->imtrx][i][0]] * delta_x[i];
-    }
-    exchange_dof(cx, dpi, x, pg->imtrx);
-    if (pd->TimeIntegration != STEADY) {
-      for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
-        xdot[i] -=
-            damp_factor * var_damp[idv[pg->imtrx][i][0]] * delta_x[i] * (1.0 + 2 * theta) / delta_t;
-      }
-      exchange_dof(cx, dpi, xdot, pg->imtrx);
+    if (Newton_Line_Search_Type == NLS_BACKTRACK) {
+      dbl damp = 1.0;
+      dbl reduction_factor = 0.5;
+      dbl min_damp = 1e-6;
+      dbl *w = alloc_dbl_1(numProcUnknowns, 0.0);
+      dbl *R = alloc_dbl_1(numProcUnknowns, 0.0);
+      dbl *x_save = alloc_dbl_1(numProcUnknowns, 0.0);
+      dcopy1(numProcUnknowns, x, x_save);
+      dbl *xdot_save = alloc_dbl_1(numProcUnknowns, 0.0);
+      dcopy1(numProcUnknowns, xdot, xdot_save);
 
+      int save_jacobian = af->Assemble_Jacobian;
+      int save_residual = af->Assemble_Residual;
+      af->Assemble_Jacobian = FALSE;
+      af->Assemble_Residual = TRUE;
+      err = matrix_fill_full(ams, x, R, x_old, x_older, xdot, xdot_old, x_update, &delta_t, &theta,
+                             First_Elem_Side_BC_Array[pg->imtrx], &time_value, exo, dpi,
+                             &num_total_nodes, &h_elem_avg, &U_norm, NULL);
+      for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+        x[i] -= damp * delta_x[i];
+      }
+      exchange_dof(cx, dpi, x, pg->imtrx);
+      if (pd->TimeIntegration != STEADY) {
+        for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+          xdot[i] -= damp * delta_x[i] * (1.0 + 2 * theta) / delta_t;
+        }
+        exchange_dof(cx, dpi, xdot, pg->imtrx);
+      }
+
+      exchange_dof(cx, dpi, R, pg->imtrx);
+
+      dbl r_check = L2_norm(R, NumUnknowns[pg->imtrx]);
+
+      dbl best_damp = damp;
+      dbl best_norm = r_check;
+      r_check = 0.5 * sqrt(r_check * r_check);
+      dbl slope = 0;
+      if (strcmp(Matrix_Format, "msr") == 0) {
+        AZ_MATRIX *Amat =
+            AZ_matrix_create(ams->data_org[AZ_N_internal] + ams->data_org[AZ_N_border]);
+        AZ_set_MSR(Amat, ams->bindx, ams->val, ams->data_org, 0, NULL, AZ_LOCAL);
+        AZ_MSR_matvec_mult(delta_x, w, Amat, ams->proc_config);
+        for (int i = 0; i < numProcUnknowns; i++) {
+          slope += w[i] * R[i];
+        }
+        MPI_Allreduce(MPI_IN_PLACE, &slope, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      }
+      if (slope > 0) {
+        slope = -slope;
+      } else if (slope == 0) {
+        slope = -1;
+      }
+      int skip = FALSE;
+      // Skip if converged
+      if (best_norm < Epsilon[pg->imtrx][0]) {
+        skip = TRUE;
+      }
+
+      while (!skip && (damp > min_damp)) {
+        damp *= reduction_factor;
+        init_vec_value(R, 0.0, numProcUnknowns);
+        for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+          x[i] = x_save[i] - damp * delta_x[i];
+        }
+        exchange_dof(cx, dpi, x, pg->imtrx);
+        if (pd->TimeIntegration != STEADY) {
+          for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+            xdot[i] = xdot_save[i] - damp * delta_x[i] * (1.0 + 2 * theta) / delta_t;
+          }
+          exchange_dof(cx, dpi, xdot, pg->imtrx);
+        }
+        err = matrix_fill_full(ams, x, R, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
+                               &theta, First_Elem_Side_BC_Array[pg->imtrx], &time_value, exo, dpi,
+                               &num_total_nodes, &h_elem_avg, &U_norm, NULL);
+        exchange_dof(cx, dpi, R, pg->imtrx);
+
+        dbl g_check = L2_norm(R, NumUnknowns[pg->imtrx]);
+        if (isnan(g_check)) {
+          break;
+        }
+
+        if (g_check < best_norm) {
+          best_damp = damp;
+          best_norm = g_check;
+        }
+        if (best_norm < Epsilon[pg->imtrx][0]) {
+          break;
+        }
+        g_check = 0.5 * sqrt(g_check * g_check);
+
+        if (g_check <= r_check + 0.5 * slope * damp) {
+          break;
+        }
+      }
+
+      P0PRINTF("Newton Line Search: best damping factor: %f\n", best_damp);
+      for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+        x[i] = x_save[i] - best_damp * delta_x[i];
+      }
+      exchange_dof(cx, dpi, x, pg->imtrx);
+      if (pd->TimeIntegration != STEADY) {
+        for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+          xdot[i] = xdot_save[i] - (best_damp * delta_x[i] * (1.0 + 2 * theta) / delta_t);
+        }
+        exchange_dof(cx, dpi, xdot, pg->imtrx);
+      }
+
+      af->Assemble_Jacobian = save_jacobian;
+      af->Assemble_Residual = save_residual;
+      free(w);
+      free(R);
+      free(x_save);
+      free(xdot_save);
+
+    } else if (Newton_Line_Search_Type == NLS_FULL_STEP) {
+      for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+        x[i] -= damp_factor * var_damp[idv[pg->imtrx][i][0]] * delta_x[i];
+      }
+      exchange_dof(cx, dpi, x, pg->imtrx);
+      if (pd->TimeIntegration != STEADY) {
+        for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
+          xdot[i] -= damp_factor * var_damp[idv[pg->imtrx][i][0]] * delta_x[i] * (1.0 + 2 * theta) /
+                     delta_t;
+        }
+        exchange_dof(cx, dpi, xdot, pg->imtrx);
+      }
+    }
+
+    if (pd->TimeIntegration != STEADY) {
       /* Now go back and correct all those dofs in solid regions undergoing newmark-beta
        * transient scheme */
       if (tran->solid_inertia) {
