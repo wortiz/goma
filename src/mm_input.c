@@ -6088,6 +6088,10 @@ void rd_solver_specs(FILE *ifp, char *input) {
     strcpy(Stratimikos_File[0], "stratimikos.xml");
     ECHO(echo_string, echo_file);
   }
+  // copy Stratimikos_File[0] to Stratimikos_File[*]
+  for (i = 1; i < MAX_NUM_MATRICES; i++) {
+    strcpy(Stratimikos_File[i], Stratimikos_File[0]);
+  }
 
   strcpy(search_string, "Preconditioner");
 
@@ -6486,6 +6490,35 @@ void rd_solver_specs(FILE *ifp, char *input) {
     }
   } else {
     Time_Jacobian_Reformation_stride = 0;
+  }
+
+  char ls_type[MAX_CHAR_IN_INPUT] = "FULL_STEP";;
+  Newton_Line_Search_Type = NLS_FULL_STEP;
+  int lsread = look_for_optional_string(ifp, "Newton line search type", ls_type, MAX_CHAR_IN_INPUT);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
+  if (lsread) {
+    if (strcmp("FULL_STEP", ls_type) == 0) {
+      Newton_Line_Search_Type = NLS_FULL_STEP;
+    } else if (strcmp("BACKTRACK", ls_type) == 0) {
+      Newton_Line_Search_Type = NLS_BACKTRACK;
+    } else {
+      GOMA_EH(GOMA_ERROR, "Unknown Newton line search type: %s", ls_type);
+    }
+  }
+
+  if (fscanf(ifp, "%le %le %le %le %le", &custom_tol1, &damp_factor2, &custom_tol2, &damp_factor3,
+             &custom_tol3) != 5) {
+    damp_factor2 = damp_factor3 = -1.;
+    custom_tol1 = custom_tol2 = custom_tol3 = -1;
+    rewind(ifp); /* Added to make ibm happy when single relaxation value input. dal/1-6-99 */
+  } else {
+    if ((damp_factor1 <= 1. && damp_factor1 >= 0.) && (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
+        (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
+      SPF(endofstring(echo_string), " %.4g %.4g %.4g %.4g %.4g", custom_tol1, damp_factor2,
+          custom_tol2, damp_factor3, custom_tol3);
+    } else {
+      GOMA_EH(GOMA_ERROR, "All damping factors must be in the range 0 <= fact <=1");
+    }
   }
 
   look_for(ifp, "Newton correction factor", input, '=');
@@ -8099,10 +8132,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Stratimikos file = %s for matrix %d", input,
                mtrx_index1);
       ECHO(echo_string, echo_file);
-    } else {
-      // Set stratimikos.xml as defualt stratimikos file
-      strcpy(Stratimikos_File[imtrx], "stratimikos.xml");
-    }
+    } 
 
     iread = look_forward_optional_until(ifp, "Normalized Residual Tolerance", "MATRIX", input, '=');
     if (iread == 1) {

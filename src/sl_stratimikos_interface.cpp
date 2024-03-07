@@ -9,6 +9,7 @@
 #include "Teuchos_ENull.hpp"
 #include "Teuchos_FancyOStream.hpp"
 #include "Teuchos_ParameterList.hpp"
+#include "Teuchos_YamlParameterListCoreHelpers.hpp"
 #include "Teuchos_ParameterListExceptions.hpp"
 #include "Teuchos_Ptr.hpp"
 #include "Teuchos_RCP.hpp"
@@ -77,7 +78,9 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
     // Get parameters from file
     if (!param_set[imtrx]) {
       param_set[imtrx] = true;
-      solverParams_static[imtrx] = Teuchos::getParametersFromXmlFile(stratimikos_file[imtrx]);
+//      solverParams_static[imtrx] = Teuchos::getParametersFromXmlFile(stratimikos_file[imtrx]);
+      printf("stratimikos_file[imtrx] = %s\n", stratimikos_file[imtrx]);
+      solverParams_static[imtrx] = Teuchos::getParametersFromYamlFile(stratimikos_file[imtrx]);
     }
 
     RCP<Teuchos::ParameterList> solverParams = solverParams_static[imtrx];
@@ -90,6 +93,9 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
 #endif
 
     linearSolverBuilder.setParameterList(solverParams);
+
+    auto valid_params = linearSolverBuilder.getValidParameters();
+    Teuchos::writeParameterListToYamlFile(*valid_params, "valid_params.yaml");
 
     // set up solver factory using base/params
     RCP<Thyra::LinearOpWithSolveFactoryBase<double>> solverFactory =
