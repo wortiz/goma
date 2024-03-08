@@ -2131,6 +2131,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (best_norm < Epsilon[pg->imtrx][0]) {
         skip = TRUE;
       }
+      P0PRINTF("\nNewton Line Search: %f %f\n", damp, best_norm);
 
       while (!skip && (damp > min_damp)) {
         damp *= reduction_factor;
@@ -2151,6 +2152,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         exchange_dof(cx, dpi, R, pg->imtrx);
 
         dbl g_check = L2_norm(R, NumUnknowns[pg->imtrx]);
+        P0PRINTF("\nNewton Line Search: %f %f\n", damp, g_check);
         if (isnan(g_check)) {
           break;
         }
@@ -2165,11 +2167,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         g_check = 0.5 * sqrt(g_check * g_check);
 
         if (g_check <= r_check + 0.5 * slope * damp) {
+          P0PRINTF("\nNewton Line Search: stop reached %f %f %f <= %f\n", slope, damp, g_check,
+                   r_check + 0.5 * slope * damp);
           break;
         }
       }
 
-      P0PRINTF("Newton Line Search: best damping factor: %f\n", best_damp);
+      P0PRINTF("\nNewton Line Search: best damping factor: %f\n", best_damp);
       for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
         x[i] = x_save[i] - best_damp * delta_x[i];
       }
