@@ -6531,10 +6531,10 @@ void rd_solver_specs(FILE *ifp, char *input) {
   }
 
   char ls_type[MAX_CHAR_IN_INPUT] = "FULL_STEP";;
-  Newton_Line_Search_Type = NLS_FULL_STEP;
+  Newton_Line_Search_Type = NLS_BACKTRACK;
   int lsread = look_for_optional_string(ifp, "Newton line search type", ls_type, MAX_CHAR_IN_INPUT);
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
-  if (lsread) {
+  if (lsread >= 1) {
     if (strcmp("FULL_STEP", ls_type) == 0) {
       Newton_Line_Search_Type = NLS_FULL_STEP;
     } else if (strcmp("BACKTRACK", ls_type) == 0) {
@@ -6543,6 +6543,8 @@ void rd_solver_specs(FILE *ifp, char *input) {
       GOMA_EH(GOMA_ERROR, "Unknown Newton line search type: %s", ls_type);
     }
   }
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
+  ECHO(echo_string, echo_file);
 
   if (fscanf(ifp, "%le %le %le %le %le", &custom_tol1, &damp_factor2, &custom_tol2, &damp_factor3,
              &custom_tol3) != 5) {

@@ -2077,7 +2077,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     if (Newton_Line_Search_Type == NLS_BACKTRACK) {
       dbl damp = 1.0;
       dbl reduction_factor = 0.5;
-      dbl min_damp = 1e-6;
+      dbl min_damp = 0.02;
       dbl *w = alloc_dbl_1(numProcUnknowns, 0.0);
       dbl *R = alloc_dbl_1(numProcUnknowns, 0.0);
       dbl *x_save = alloc_dbl_1(numProcUnknowns, 0.0);
@@ -2089,12 +2089,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       int save_residual = af->Assemble_Residual;
       af->Assemble_Jacobian = FALSE;
       af->Assemble_Residual = TRUE;
-      err = matrix_fill_full(ams, x, R, x_old, x_older, xdot, xdot_old, x_update, &delta_t, &theta,
-                             First_Elem_Side_BC_Array[pg->imtrx], &time_value, exo, dpi,
-                             &num_total_nodes, &h_elem_avg, &U_norm, NULL);
       for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
         x[i] -= damp * delta_x[i];
       }
+      dbl r_check = L2_norm(resid_vector, NumUnknowns[pg->imtrx]);
       exchange_dof(cx, dpi, x, pg->imtrx);
       if (pd->TimeIntegration != STEADY) {
         for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
@@ -2104,12 +2102,17 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
       exchange_dof(cx, dpi, R, pg->imtrx);
+      err = matrix_fill_full(ams, x, R, x_old, x_older, xdot, xdot_old, x_update, &delta_t, &theta,
+                             First_Elem_Side_BC_Array[pg->imtrx], &time_value, exo, dpi,
+                             &num_total_nodes, &h_elem_avg, &U_norm, NULL);
 
-      dbl r_check = L2_norm(R, NumUnknowns[pg->imtrx]);
 
+      
+      vector_scaling(NumUnknowns[pg->imtrx], R, scale);
+      dbl g_check = L2_norm(R, NumUnknowns[pg->imtrx]);
       dbl best_damp = damp;
-      dbl best_norm = r_check;
-      r_check = 0.5 * sqrt(r_check * r_check);
+      dbl best_norm = g_check;
+      r_check = 0.5 * (r_check * r_check);
       dbl slope = 0;
       if (strcmp(Matrix_Format, "msr") == 0) {
         AZ_MATRIX *Amat =
@@ -2131,10 +2134,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (best_norm < Epsilon[pg->imtrx][0]) {
         skip = TRUE;
       }
-      P0PRINTF("\nNewton Line Search: %f %f\n", damp, best_norm);
+      P0PRINTF("\nNewton Line Search: lambda=%f L2=%e\n", damp, best_norm);
 
-      while (!skip && (damp > min_damp)) {
+      while (!skip) {
         damp *= reduction_factor;
+        if (damp < min_damp) {
+          break;
+        }
         init_vec_value(R, 0.0, numProcUnknowns);
         for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
           x[i] = x_save[i] - damp * delta_x[i];
@@ -2150,9 +2156,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                                &theta, First_Elem_Side_BC_Array[pg->imtrx], &time_value, exo, dpi,
                                &num_total_nodes, &h_elem_avg, &U_norm, NULL);
         exchange_dof(cx, dpi, R, pg->imtrx);
+        vector_scaling(NumUnknowns[pg->imtrx], R, scale);
 
         dbl g_check = L2_norm(R, NumUnknowns[pg->imtrx]);
-        P0PRINTF("\nNewton Line Search: %f %f\n", damp, g_check);
+        P0PRINTF("Newton Line Search: lambda=%f L2=%e\n", damp, g_check);
         if (isnan(g_check)) {
           break;
         }
@@ -2164,16 +2171,17 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         if (best_norm < Epsilon[pg->imtrx][0]) {
           break;
         }
-        g_check = 0.5 * sqrt(g_check * g_check);
+        g_check = 0.5 * (g_check * g_check);
 
-        if (g_check <= r_check + 0.5 * slope * damp) {
-          P0PRINTF("\nNewton Line Search: stop reached %f %f %f <= %f\n", slope, damp, g_check,
+        if (g_check <= r_check +  0.5 * slope * damp) {
+          P0PRINTF("Newton Line Search: STOP reached lambda=%f, %e <= %e\n", damp, g_check,
                    r_check + 0.5 * slope * damp);
           break;
         }
       }
 
-      P0PRINTF("\nNewton Line Search: best damping factor: %f\n", best_damp);
+      P0PRINTF("Newton Line Search: best damping factor: lambda=%f L2=%e\n", best_damp, best_norm);
+      fflush(stdout);
       for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
         x[i] = x_save[i] - best_damp * delta_x[i];
       }
