@@ -190,7 +190,7 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
 
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      gamma[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+      gamma[i][j] = fv_old->grad_v[i][j] + fv_old->grad_v[j][i];
     }
   }
 
@@ -299,7 +299,7 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
   for (int a = 0; a < dim; a++) {
     for (int k = 0; k < ei[pg->imtrx]->dof[VELOCITY1]; k++) {
       tau_terms->d_tau_dv[a][k] =
-          inv_rho * -0.5 * (d_v_d_gv[a][k] + (d_diff_g_g_dmu * d_mu->v[a][k])) * supg_tau_cubed;
+          inv_rho * -0.5 * (d_v_d_gv[a][k] + (0 * d_diff_g_g_dmu * d_mu->v[a][k])) * supg_tau_cubed;
     }
   }
 
@@ -323,7 +323,7 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
           }
         }
         tau_terms->d_tau_dX[a][k] = inv_rho * -0.5 *
-                                    (v_d_gv_dx + diff_g_g_dx + d_mu->X[a][k] * d_diff_g_g_dmu) *
+                                    (v_d_gv_dx + diff_g_g_dx + 0* d_mu->X[a][k] * d_diff_g_g_dmu) *
                                     supg_tau_cubed;
       }
     }

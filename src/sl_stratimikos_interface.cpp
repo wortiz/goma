@@ -78,9 +78,9 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
     // Get parameters from file
     if (!param_set[imtrx]) {
       param_set[imtrx] = true;
-//      solverParams_static[imtrx] = Teuchos::getParametersFromXmlFile(stratimikos_file[imtrx]);
-      printf("stratimikos_file[imtrx] = %s\n", stratimikos_file[imtrx]);
-      solverParams_static[imtrx] = Teuchos::getParametersFromYamlFile(stratimikos_file[imtrx]);
+     solverParams_static[imtrx] = Teuchos::getParametersFromXmlFile(stratimikos_file[imtrx]);
+      // printf("stratimikos_file[imtrx] = %s\n", stratimikos_file[imtrx]);
+      // solverParams_static[imtrx] = Teuchos::getParametersFromYamlFile(stratimikos_file[imtrx]);
     }
 
     RCP<Teuchos::ParameterList> solverParams = solverParams_static[imtrx];
