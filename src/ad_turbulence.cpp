@@ -77,8 +77,8 @@ static int ad_calc_sa_S(scalar &S,                /* strain rate invariant */
   return 0;
 }
 
-static int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
-                             ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
+int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
+                      ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
   gammadot = 0.;
   /* get gamma_dot invariant for viscosity calculations */
   for (int a = 0; a < VIM; a++) {
@@ -399,6 +399,20 @@ int ad_load_bf_grad(void) {
   return (status);
 }
 
+static inline ADType set_ad_or_dbl(dbl val, int eqn, int dof) {
+  ADType tmp;
+  if (ad_fv->total_ad_variables > 0 && af->Assemble_Jacobian == TRUE) {
+    if (pd->gv[eqn]) {
+      tmp = ADType(ad_fv->total_ad_variables, ad_fv->offset[eqn] + dof, val);
+    } else {
+      tmp = val;
+    }
+  } else {
+    tmp = val;
+  }
+  return tmp;
+}
+
 extern "C" void fill_ad_field_variables() {
   if (ad_fv == NULL) {
     ad_fv = new AD_Field_Variables();
@@ -407,9 +421,11 @@ extern "C" void fill_ad_field_variables() {
   int num_ad_variables = 0;
   for (int i = V_FIRST; i < V_LAST; i++) {
     ad_fv->offset[i] = 0;
-    if (pd->gv[i]) {
-      ad_fv->offset[i] = num_ad_variables;
-      num_ad_variables += ei[upd->matrix_index[i]]->dof[i];
+    if (af->Assemble_Jacobian == TRUE) {
+      if (pd->gv[i]) {
+        ad_fv->offset[i] = num_ad_variables;
+        num_ad_variables += ei[upd->matrix_index[i]]->dof[i];
+      }
     }
   }
 
@@ -423,12 +439,13 @@ extern "C" void fill_ad_field_variables() {
   if (pd->gv[R_MESH1]) {
     for (int p = 0; p < WIM; p++) {
       for (int i = 0; i < ei[upd->matrix_index[R_MESH1 + p]]->dof[R_MESH1 + p]; i++) {
-        ad_fv->d[p] += ADType(num_ad_variables, ad_fv->offset[R_MESH1 + p] + i, *esp->d[p][i]) *
-                       bf[R_MESH1 + p]->phi[i];
+        ad_fv->d[p] += set_ad_or_dbl(*esp->d[p][i], R_MESH1 + p, i) * bf[R_MESH1 + p]->phi[i];
         if (pd->TimeIntegration != STEADY) {
-          ADType udot = ADType(num_ad_variables, ad_fv->offset[R_MESH1 + p] + i, *esp_dot->d[p][i]);
-          udot.fastAccessDx(ad_fv->offset[R_MESH1 + p] + i) =
-              (1. + 2. * tran->current_theta) / tran->delta_t;
+          ADType udot = set_ad_or_dbl(*esp_dot->d[p][i], R_MESH1 + p, i) * bf[R_MESH1 + p]->phi[i];
+          if (af->Assemble_Jacobian == TRUE) {
+            udot.fastAccessDx(ad_fv->offset[R_MESH1 + p] + i) =
+                (1. + 2. * tran->current_theta) / tran->delta_t;
+          }
           ad_fv->x_dot[p] += udot * bf[R_MESH1 + p]->phi[i];
         } else {
           ad_fv->x_dot[p] = 0;
@@ -442,13 +459,14 @@ extern "C" void fill_ad_field_variables() {
       ad_fv->v[p] = 0;
       ad_fv->v_dot[p] = 0;
       for (int i = 0; i < ei[upd->matrix_index[VELOCITY1 + p]]->dof[VELOCITY1 + p]; i++) {
-        ad_fv->v[p] += ADType(num_ad_variables, ad_fv->offset[VELOCITY1 + p] + i, *esp->v[p][i]) *
-                       bf[VELOCITY1 + p]->phi[i];
+        ad_fv->v[p] += set_ad_or_dbl(*esp->v[p][i], VELOCITY1 + p, i) * bf[VELOCITY1 + p]->phi[i];
         if (pd->TimeIntegration != STEADY) {
           ADType udot =
-              ADType(num_ad_variables, ad_fv->offset[VELOCITY1 + p] + i, *esp_dot->v[p][i]);
-          udot.fastAccessDx(ad_fv->offset[VELOCITY1 + p] + i) =
-              (1. + 2. * tran->current_theta) / tran->delta_t;
+              set_ad_or_dbl(*esp_dot->v[p][i], VELOCITY1 + p, i) * bf[VELOCITY1 + p]->phi[i];
+          if (af->Assemble_Jacobian == TRUE) {
+            udot.fastAccessDx(ad_fv->offset[VELOCITY1 + p] + i) =
+                (1. + 2. * tran->current_theta) / tran->delta_t;
+          }
           ad_fv->v_dot[p] += udot * bf[VELOCITY1 + p]->phi[i];
         } else {
           ad_fv->v_dot[p] = 0;
@@ -461,9 +479,8 @@ extern "C" void fill_ad_field_variables() {
 
         for (int r = 0; r < WIM; r++) {
           for (int i = 0; i < ei[upd->matrix_index[VELOCITY1 + r]]->dof[VELOCITY1 + r]; i++) {
-            ad_fv->grad_v[p][q] +=
-                ADType(num_ad_variables, ad_fv->offset[VELOCITY1 + r] + i, *esp->v[r][i]) *
-                ad_fv->basis[VELOCITY1 + r].grad_phi_e[i][r][p][q];
+            ad_fv->grad_v[p][q] += set_ad_or_dbl(*esp->v[r][i], VELOCITY1 + r, i) *
+                                   ad_fv->basis[VELOCITY1 + r].grad_phi_e[i][r][p][q];
           }
         }
       }
@@ -559,15 +576,14 @@ extern "C" void fill_ad_field_variables() {
   if (pd->gv[PRESSURE]) {
     ad_fv->P = 0;
     for (int i = 0; i < ei[upd->matrix_index[PRESSURE]]->dof[PRESSURE]; i++) {
-      ad_fv->P +=
-          ADType(num_ad_variables, ad_fv->offset[PRESSURE] + i, *esp->P[i]) * bf[PRESSURE]->phi[i];
+      ad_fv->P += set_ad_or_dbl(*esp->P[i], PRESSURE, i) * bf[PRESSURE]->phi[i];
     }
     for (int q = 0; q < pd->Num_Dim; q++) {
       ad_fv->grad_P[q] = 0;
 
       for (int i = 0; i < ei[upd->matrix_index[PRESSURE]]->dof[PRESSURE]; i++) {
-        ad_fv->grad_P[q] += ADType(num_ad_variables, ad_fv->offset[PRESSURE] + i, *esp->P[i]) *
-                            ad_fv->basis[PRESSURE].grad_phi[i][q];
+        ad_fv->grad_P[q] +=
+            set_ad_or_dbl(*esp->P[i], PRESSURE, i) * ad_fv->basis[PRESSURE].grad_phi[i][q];
       }
     }
   }

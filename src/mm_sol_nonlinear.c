@@ -2077,13 +2077,15 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     if (Newton_Line_Search_Type == NLS_BACKTRACK) {
       dbl damp = 1.0;
       dbl reduction_factor = 0.5;
-      dbl min_damp = 0.02;
+      dbl min_damp = 0.1;
       dbl *w = alloc_dbl_1(numProcUnknowns, 0.0);
       dbl *R = alloc_dbl_1(numProcUnknowns, 0.0);
       dbl *x_save = alloc_dbl_1(numProcUnknowns, 0.0);
       dcopy1(numProcUnknowns, x, x_save);
       dbl *xdot_save = alloc_dbl_1(numProcUnknowns, 0.0);
       dcopy1(numProcUnknowns, xdot, xdot_save);
+
+      double bt_st = MPI_Wtime();
 
       int save_jacobian = af->Assemble_Jacobian;
       int save_residual = af->Assemble_Residual;
@@ -2134,7 +2136,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (best_norm < Epsilon[pg->imtrx][0]) {
         skip = TRUE;
       }
-      P0PRINTF("\nNewton Line Search: lambda=%f L2=%e\n", damp, best_norm);
+      double last = bt_st;
+      double curr = MPI_Wtime();
+      P0PRINTF("\nNewton Line Search: lambda=%f L2=%e %g\n", damp, best_norm, curr-last);
 
       while (!skip) {
         damp *= reduction_factor;
@@ -2159,7 +2163,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         vector_scaling(NumUnknowns[pg->imtrx], R, scale);
 
         dbl g_check = L2_norm(R, NumUnknowns[pg->imtrx]);
-        P0PRINTF("Newton Line Search: lambda=%f L2=%e\n", damp, g_check);
+      last = curr;
+      curr = MPI_Wtime();
+        P0PRINTF("Newton Line Search: lambda=%f L2=%e %g\n", damp, g_check, curr - last);
         if (isnan(g_check)) {
           break;
         }
@@ -2180,7 +2186,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         }
       }
 
-      P0PRINTF("Newton Line Search: best damping factor: lambda=%f L2=%e\n", best_damp, best_norm);
+      curr = MPI_Wtime();
+      P0PRINTF("Newton Line Search: best damping factor: lambda=%f L2=%e %g\n", best_damp, best_norm, curr-bt_st);
       fflush(stdout);
       for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
         x[i] = x_save[i] - best_damp * delta_x[i];
