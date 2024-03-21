@@ -57,6 +57,7 @@ struct AD_Field_Variables {
 extern AD_Field_Variables *ad_fv;
 
 void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale);
+ADType ad_only_turb_k_omega_viscosity(void);
 extern "C" {
 #endif
 

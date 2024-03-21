@@ -1666,43 +1666,47 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
     peqn = upd->ep[pg->imtrx][eqn];
 
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (int var = V_FIRST; var < V_LAST; var++) {
 
-      /* Sensitivity w.r.t. k */
-      var = TURB_K;
-      if (pdv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
-
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
-        } /* End of loop over j */
-      }   /* End of if the variable is active */
-
-      /* Sensitivity w.r.t. omega */
-      var = TURB_OMEGA;
-      if (pdv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
-
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
-        } /* End of loop over j */
-      }   /* End of if the variable is active */
-
-      /* Sensitivity w.r.t. velocity */
-      for (b = 0; b < VIM; b++) {
-        var = VELOCITY1 + b;
+        /* Sensitivity w.r.t. velocity */
         if (pdv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
+          int pvar = upd->vp[pg->imtrx][var];
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
+
           } /* End of loop over j */
         }   /* End of if the variale is active */
-      }     /* End of loop over velocity components */
-
-    } /* End of loop over i */
-  }   /* End of if assemble Jacobian */
+      }
+    }
+  } /* End of if assemble Jacobian */
   return (status);
+}
+
+ADType ad_only_turb_k_omega_sst_viscosity(void) {
+  ADType mu = 0;
+  double mu_newt = mp->viscosity;
+  dbl rho;
+  rho = density(NULL, tran->time_value);
+  ADType F1 = 0;
+  ADType F2 = 0;
+  calc_blending_functions(rho, NULL, F1, F2);
+
+  ADType omega[DIM][DIM];
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      omega[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+    }
+  }
+  /* Vorticity */
+  ADType Omega = 0.0;
+  calc_vort_mag(Omega, omega);
+  dbl a1 = 0.31;
+  ADType mu_t = rho * a1 * ad_fv->turb_k / (std::max(a1 * ad_fv->turb_omega, Omega * F2) + 1e-16);
+
+  mu = mu_newt + mu_t;
+  return mu;
 }
 
 extern "C" dbl ad_turb_k_omega_sst_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
@@ -1921,40 +1925,288 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
     peqn = upd->ep[pg->imtrx][eqn];
 
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
-      /* Sensitivity w.r.t. k */
-      var = TURB_OMEGA;
-      if (pdv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
+      for (int var = V_FIRST; var < V_LAST; var++) {
 
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
-        } /* End of loop over j */
-      }   /* End of if the variable is active */
-
-      /* Sensitivity w.r.t. omega */
-      var = TURB_K;
-      if (pdv[var]) {
-        pvar = upd->vp[pg->imtrx][var];
-        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
-        } /* End of loop over j */
-      }   /* End of if the variable is active */
-
-      /* Sensitivity w.r.t. velocity */
-      for (b = 0; b < VIM; b++) {
-        var = VELOCITY1 + b;
+        /* Sensitivity w.r.t. velocity */
         if (pdv[var]) {
-          pvar = upd->vp[pg->imtrx][var];
+          int pvar = upd->vp[pg->imtrx][var];
 
-          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
             lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
 
           } /* End of loop over j */
         }   /* End of if the variale is active */
-      }     /* End of loop over velocity components */
+      }
+    }
+  } /* End of if assemble Jacobian */
+  return (status);
+}
 
-    } /* End of loop over i */
-  }   /* End of if assemble Jacobian */
+ADType clipping_func(ADType x, ADType x_s, ADType x_e) {
+  ADType psi = 0;
+  ADType theta = M_PI_2 * (2 * x - (x_s + x_e)) / (x_s - x_e);
+
+  if (x < x_s) {
+    psi = 0;
+  } else if (x > x_e) {
+    psi = 1;
+  } else {
+    psi = 0.5 * (1 + std::sin(theta));
+  }
+
+  return psi;
+}
+
+ADType ad_only_turb_k_omega_viscosity(void) {
+  ADType mu = 0;
+  double mu_newt = mp->viscosity;
+  dbl omega_inf = 1.0;
+  dbl k_inf = 1.0;
+  ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
+  ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
+  dbl rho = density(NULL, tran->time_value);
+
+  ADType mu_t = rho * psi * ad_fv->turb_k / (std::exp(ad_fv->turb_omega)) -
+                rho * psi_neg * ad_fv->turb_k / omega_inf;
+  mu = mu_newt + mu_t;
+  return mu;
+}
+
+extern "C" int
+ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
+                                  dbl tt,         /* parameter to vary time integration from
+                                                     explicit (tt = 1) to implicit (tt = 0)    */
+                                  dbl dt,         /* current time step size                    */
+                                  const PG_DATA *pg_data) {
+
+  //! WIM is the length of the velocity vector
+  int i, j, b;
+  int eqn, var, peqn, pvar;
+  int *pdv = pd->v[pg->imtrx];
+
+  int status = 0;
+
+  eqn = TURB_OMEGA;
+
+  dbl d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+
+  dbl omega_inf = 1.0;
+  dbl k_inf = 1.0;
+
+  // logarithmic formulation of k-omega model
+  ADType omega = std::exp(ad_fv->turb_omega);
+  ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
+  ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
+  ADType k = psi * ad_fv->turb_k;
+
+  dbl sigma_k = 0.5;
+  dbl sigma_omega = 0.5;
+  dbl beta_star = 9.0 / 100.0;
+  dbl beta = 3.0 / 40.;
+  dbl gamma = 5.0 / 9.0;
+
+  ADType SI;
+  ADType gamma_dot[DIM][DIM];
+  for (int i = 0; i < DIM; i++) {
+    for (int j = 0; j < DIM; j++) {
+      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
+    }
+  }
+
+  ADType Omega_tens[DIM][DIM];
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+    }
+  }
+  /* Vorticity */
+  ADType Omega = 0.0;
+  calc_vort_mag(Omega, Omega_tens);
+
+  ad_calc_shearrate(SI, gamma_dot);
+
+  dbl rho = density(NULL, time_value);
+
+  ADType mu_t = rho * k / (std::exp(ad_fv->turb_omega)) - rho * psi_neg * ad_fv->turb_k / omega_inf;
+  dbl mu = mp->viscosity;
+
+  ADType P = mu_t * Omega * SI;
+
+  dbl supg = 1.;
+  ADType supg_tau;
+  if (mp->SAwt_funcModel == GALERKIN) {
+    supg = 0.;
+  } else if (mp->SAwt_funcModel == SUPG || mp->SAwt_funcModel == SUPG_GP ||
+             mp->SAwt_funcModel == SUPG_SHAKIB) {
+    supg = mp->SAwt_func;
+    ad_supg_tau_shakib(supg_tau, pd->Num_Dim, dt, mu_t, TURB_OMEGA);
+  }
+
+  std::vector<std::vector<ADType>> resid(2);
+  resid[0].resize(ei[pg->imtrx]->dof[TURB_OMEGA]);
+  resid[1].resize(ei[pg->imtrx]->dof[TURB_K]);
+  for (int i = 0; i < ei[pg->imtrx]->dof[TURB_OMEGA]; i++) {
+    resid[0][i] = 0;
+  }
+  for (int i = 0; i < ei[pg->imtrx]->dof[TURB_K]; i++) {
+    resid[1][i] = 0;
+  }
+  /*
+   * Residuals_________________________________________________________________
+   */
+  if (af->Assemble_Residual) {
+    /*
+     * Assemble residual for eddy viscosity
+     */
+    eqn = TURB_OMEGA;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      ADType wt_func = bf[eqn]->phi[i];
+
+      if (supg > 0) {
+        if (supg != 0.0) {
+          for (int p = 0; p < VIM; p++) {
+            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
+          }
+        }
+      }
+
+      /* Assemble mass term */
+      ADType mass = 0.0;
+      if (pd->TimeIntegration != STEADY) {
+        if (pd->e[pg->imtrx][eqn] & T_MASS) {
+          mass += rho * ad_fv->turb_omega_dot * wt_func * d_area;
+          mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+        }
+      }
+
+      /* Assemble advection term */
+      ADType adv = 0;
+      for (int p = 0; p < VIM; p++) {
+        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_omega[p];
+      }
+      adv *= wt_func * d_area;
+      adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+
+      /* Assemble source terms */
+      ADType src1 = (gamma / k) * P - beta * rho * omega;
+
+      ADType src2 = 0;
+      for (int p = 0; p < pd->Num_Dim; p++) {
+        src2 += (mu + sigma_omega * mu_t) * ad_fv->grad_turb_omega[p] * fv_old->grad_turb_omega[p];
+      }
+      ADType src = src1 + src2;
+      src *= -wt_func * d_area;
+      src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+
+      /* Assemble diffusion terms */
+      ADType diff = 0.0;
+      for (int p = 0; p < VIM; p++) {
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) * ad_fv->grad_turb_omega[p];
+      }
+      diff *= d_area;
+      diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+
+      resid[0][i] += mass + adv + src + diff;
+      lec->R[LEC_R_INDEX(peqn, i)] += mass.val() + adv.val() + src.val() + diff.val();
+    } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+
+    eqn = TURB_K;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      ADType wt_func = bf[eqn]->phi[i];
+
+      if (supg > 0) {
+        if (supg != 0.0) {
+          for (int p = 0; p < VIM; p++) {
+            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
+          }
+        }
+      }
+
+      /* Assemble mass term */
+      ADType mass = 0.0;
+      if (pd->TimeIntegration != STEADY) {
+        if (pd->e[pg->imtrx][eqn] & T_MASS) {
+          mass += rho * ad_fv->turb_k * wt_func * d_area;
+          mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+        }
+      }
+
+      /* Assemble advection term */
+      ADType adv = 0;
+      for (int p = 0; p < VIM; p++) {
+        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_k[p];
+      }
+      adv *= wt_func * d_area;
+      adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+
+      /* Assemble source terms */
+      ADType src1 = P - beta_star * rho * omega * k;
+
+      ADType src2 = -beta_star * rho * omega_inf * psi_neg * ad_fv->turb_k;
+      ADType src = src1 + src2;
+      src *= -wt_func * d_area;
+      src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+
+      /* Assemble diffusion terms */
+      ADType diff = 0.0;
+      for (int p = 0; p < VIM; p++) {
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_k) * ad_fv->grad_turb_k[p];
+      }
+      diff *= d_area;
+      diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+
+      resid[1][i] += mass + adv + src + diff;
+      lec->R[LEC_R_INDEX(peqn, i)] += mass.val() + adv.val() + src.val() + diff.val();
+    } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+  }   /* end of if assemble residual */
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian) {
+    eqn = TURB_OMEGA;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (int var = V_FIRST; var < V_LAST; var++) {
+
+        /* Sensitivity w.r.t. velocity */
+        if (pdv[var]) {
+          int pvar = upd->vp[pg->imtrx][var];
+
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[0][i].dx(ad_fv->offset[var] + j);
+
+          } /* End of loop over j */
+        }   /* End of if the variale is active */
+      }
+    }
+    eqn = TURB_K;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (int var = V_FIRST; var < V_LAST; var++) {
+
+        /* Sensitivity w.r.t. velocity */
+        if (pdv[var]) {
+          int pvar = upd->vp[pg->imtrx][var];
+
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[1][i].dx(ad_fv->offset[var] + j);
+
+          } /* End of loop over j */
+        }   /* End of if the variale is active */
+      }
+    }
+  } /* End of if assemble Jacobian */
   return (status);
 }
 #endif
