@@ -22,6 +22,7 @@ extern "C" {
 #include "mm_fill_solid.h"
 #include "mm_fill_species.h"
 #include "mm_fill_stabilization.h"
+#include "polymer_time_const.h"
 #include "mm_fill_stress.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
@@ -35,7 +36,216 @@ extern "C" {
 #include "std.h"
 #include "user_mp.h"
 }
+ADType ad_ls_modulate_property(const ADType &p1,
+                            const ADType &p2,
+                            double width,
+                            double pm_minus,
+                            double pm_plus) {
+  ADType p_plus, p_minus, p;
 
+  p_minus = p1 * pm_plus + p2 * pm_minus;
+  p_plus = p1 * pm_minus + p2 * pm_plus;
+
+  /* Fetch the level set interfacial functions. */
+  load_lsi(width);
+
+  /* Calculate the material property. */
+  if (ls->Elem_Sign == -1)
+    p = p_minus;
+  else if (ls->Elem_Sign == 1)
+    p = p_plus;
+  else
+    p = p_minus + (p_plus - p_minus) * lsi->H;
+
+  return (p);
+}
+
+int ad_ls_modulate_viscosity(ADType &mu1,
+                          double mu2,
+                          double width,
+                          double pm_minus,
+                          double pm_plus,
+                          const int model) {
+  double factor, ratio = 0.0;
+  int i, a, w, var;
+
+  if (model == RATIO) {
+    GOMA_EH(GOMA_ERROR, "Invalid Viscosity Model ls_modulate");
+  }
+  mu1 = ad_ls_modulate_property(mu1, mu2, width, pm_minus, pm_plus);
+
+  return (1);
+}
+ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
+                         ADType gamma_dot[DIM][DIM]){ /* strain rate tensor */
+     
+
+  int a, b;
+  int var;
+  int mdofs = 0, vdofs;
+  int i, j;
+
+  ADType gammadot; /* strain rate invariant */
+
+  ADType val1;
+  ADType visc_cy;
+  ADType yield, shear;
+  ADType mu = 0.;
+  dbl mu0;
+  dbl muinf;
+  dbl dmudT;
+  dbl nexp;
+  dbl atexp;
+  dbl aexp;
+  dbl at_shift;
+  dbl lambda;
+  dbl tau_y = 0.0;
+  dbl fexp;
+  dbl d_at_s;
+  dbl temp;
+#if MELTING_BINGHAM
+  dbl tmelt;
+#endif
+
+  ad_calc_shearrate(gammadot, gamma_dot);
+
+  mu0 = gn_local->mu0;
+  nexp = gn_local->nexp;
+  muinf = gn_local->muinf;
+  aexp = gn_local->aexp;
+  atexp = gn_local->atexp;
+  lambda = gn_local->lam;
+  if (gn_local->tau_yModel == CONSTANT) {
+    tau_y = gn_local->tau_y;
+  } else {
+    GOMA_EH(GOMA_ERROR, "Invalid Yield Stress Model");
+  }
+  fexp = gn_local->fexp;
+
+  if (pd->gv[TEMPERATURE]) {
+    temp = fv->T;
+  } else {
+    temp = upd->Process_Temperature;
+  }
+
+#if MELTING_BINGHAM
+  tmelt = mp->melting_point_liquidus;
+#endif
+
+  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+
+  if (pd->e[pg->imtrx][R_MESH1]) {
+    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  }
+
+  var = TEMPERATURE;
+  if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(mp->reference[TEMPERATURE])) {
+#if MELTING_BINGHAM
+    /* melting version */
+    if (temp <= tmelt) {
+      at_shift = exp(-atexp * (mp->reference[TEMPERATURE] - temp) / (tmelt - temp) /
+                     (mp->reference[TEMPERATURE] - tmelt));
+      if (!isfinite(at_shift)) {
+        at_shift = DBL_MAX;
+      }
+
+      d_at_s = -at_shift * atexp / (tmelt - temp) / (tmelt - temp);
+    } else {
+      at_shift = 1.;
+      d_at_s = 0.;
+    }
+#else
+    /* normal, non-melting version */
+    at_shift = exp(atexp * (1. / temp - 1. / mp->reference[TEMPERATURE]));
+    if (!isfinite(at_shift)) {
+      at_shift = DBL_MAX;
+    }
+    d_at_s = -at_shift * atexp / (temp * temp);
+#endif
+  } else {
+    at_shift = 1.;
+    d_at_s = 0.;
+  }
+
+  if (DOUBLE_NONZERO(at_shift * lambda * gammadot)) {
+    shear = std::pow(at_shift * lambda * gammadot, aexp);
+    val1 = std::pow(at_shift * lambda * gammadot, aexp - 1.);
+  } else {
+    shear = 0.;
+  }
+
+  if (DOUBLE_NONZERO(gammadot) && DOUBLE_NONZERO(at_shift)) {
+    yield = tau_y * (1. - exp(-at_shift * fexp * gammadot)) / (at_shift * gammadot);
+  } else {
+    yield = tau_y * fexp;
+  }
+
+  visc_cy = pow(1. + shear, (nexp - 1.) / aexp);
+
+  mu = at_shift * (muinf + (mu0 - muinf + yield) * visc_cy);
+
+#if MELTING_BINGHAM
+  /* melting version */
+
+  mu = at_shift * (muinf + (mu0 - muinf + yield * at_shift) * visc_cy);
+
+  if (d_mu != NULL)
+    d_mu->gd = at_shift * (d_yield * at_shift * visc_cy +
+                           (mu0 - muinf + yield * at_shift) * d_visc_cy * d_shear);
+
+  if (mu <= 1.) {
+    mu = 1.;
+    d_at_s = 0.;
+    d_mu->gd = 0.;
+    at_shift = 1.;
+  }
+#endif
+  return (mu);
+}
+
+ADType ad_viscosity(struct Generalized_Newtonian *gn_local,
+                 ADType gamma_dot[DIM][DIM]) {
+  int err;
+  int a;
+
+  int var, var_offset;
+  int v, w, w1;
+
+  int vdofs;
+
+  int i, j;
+
+  int species;    /* Species number of particle phase. */
+  dbl p_vol_frac; /* local particle volume fraction. */
+  ADType mu = 0.;
+  int dim = ei[pg->imtrx]->ielem_dim;
+
+  struct Level_Set_Data *ls_old;
+
+  /* Zero out sensitivities */
+
+  /* this section is for all Newtonian models */
+
+  if (gn_local->ConstitutiveEquation == CONSTANT) {
+    mu = gn_local->mu0;
+    mp_old->viscosity = mu.val();
+    /*Sensitivities were already set to zero */
+  } else if (gn_local->ConstitutiveEquation == BINGHAM) {
+    mu = ad_bingham_viscosity(gn_local, gamma_dot);
+  } else {
+    GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for non-Newtonian fluid");
+  }
+
+  if (ls != NULL && gn_local->ConstitutiveEquation != VE_LEVEL_SET &&
+      mp->ViscosityModel != LEVEL_SET && mp->ViscosityModel != LS_QUADRATIC && mp->mp2nd != NULL &&
+      (mp->mp2nd->ViscosityModel == CONSTANT || mp->mp2nd->ViscosityModel == RATIO)) {
+    err = ad_ls_modulate_viscosity(
+        mu, mp->mp2nd->viscosity, ls->Length_Scale, (double)mp->mp2nd->viscositymask[0],
+        (double)mp->mp2nd->viscositymask[1], mp->mp2nd->ViscosityModel);
+    GOMA_EH(err, "ls_modulate_viscosity");
+  }
+  return (mu);
+}
 /* ad_assemble_momentum -- assemble terms (Residual &| Jacobian) for momentum eqns
  *
  * in:
@@ -440,8 +650,8 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
   case SQRT_CONF: {
     for (int mode = 0; mode < vn->modes; mode++) {
       /* get polymer viscosity */
-      dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
-      dbl lambda = ve[mode]->time_const;
+      ADType mup = ad_viscosity(ve[mode]->gn, gamma);
+      dbl lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
 
       ADType bdotb[DIM][DIM];
       ADType b[DIM][DIM];
@@ -564,9 +774,9 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   }
 
   // TODO AD
-  mu = viscosity(gn, dgamma, NULL);
+  mu = ad_viscosity(gn, gamma);
   if (pd->gv[POLYMER_STRESS11]) {
-    mus = viscosity(gn, dgamma, NULL);
+    mus = ad_viscosity(gn, gamma);
 
     /* This is the adaptive viscosity from Sun et al., 1999.
      * The term multiplies the continuous and discontinuous
@@ -592,7 +802,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
     for (int mode = 0; mode < vn->modes; mode++) {
       /* get polymer viscosity */
       // TODO AD
-      mup = viscosity(ve[mode]->gn, dgamma, NULL);
+      mup = ad_viscosity(ve[mode]->gn, gamma);
 
       mu += Heaviside * mu_num * at * mup;
 
@@ -669,6 +879,14 @@ int ad_momentum_source_term(ADType f[DIM], /* Body force. */
       if (pd->e[upd->matrix_index[eqn]][eqn] & T_SOURCE) {
         f[a] = mp->momentum_source[a];
       }
+    }
+  } else if (mp->MomentumSourceModel == LEVEL_SET && pd->gv[FILL]) {
+    DENSITY_DEPENDENCE_STRUCT d_rho_struct; /* density dependence */
+    DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
+    double rho = density(d_rho, time);
+
+    for (a = 0; a < pd->Num_Dim; a++) {
+      f[a] = mp->momentum_source[a] * rho;
     }
   } else if (mp->MomentumSourceModel == VARIABLE_DENSITY) {
     if (mp->DensityModel == SOLVENT_POLYMER) {
@@ -896,9 +1114,7 @@ int ad_calc_pspg(ADType pspg[DIM],
         vn->evssModel == LOG_CONF_TRANSIENT || vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
       for (mode = 0; mode < vn->modes; mode++) {
         dbl lambda = 0.0;
-        if (ve[mode]->time_constModel == CONSTANT) {
-          lambda = ve[mode]->time_const;
-        }
+          lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
         dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
         int dofs = ei[upd->matrix_index[v_s[mode][0][0]]]->dof[v_s[mode][0][0]];
         dbl grad_S[DIM][DIM][DIM] = {{{0.0}}};
@@ -960,10 +1176,7 @@ int ad_calc_pspg(ADType pspg[DIM],
     } else if (vn->evssModel == SQRT_CONF) {
       for (mode = 0; mode < vn->modes; mode++) {
         int dofs = ei[upd->matrix_index[v_s[mode][0][0]]]->dof[v_s[mode][0][0]];
-        dbl lambda = 0.0;
-        if (ve[mode]->time_constModel == CONSTANT) {
-          lambda = ve[mode]->time_const;
-        }
+        dbl lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
         dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
         ADType b[MDE][DIM][DIM];
         ADType bdotb[MDE][DIM][DIM];
@@ -1938,17 +2151,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
     }
 
     /* get time constant */
-    if (ve[mode]->time_constModel == CONSTANT) {
-      lambda = ve[mode]->time_const;
-    } else if (ve[mode]->time_constModel == CARREAU || ve[mode]->time_constModel == POWER_LAW) {
-      lambda = mup / ve[mode]->time_const;
-    } else if (ls != NULL && ve[mode]->time_constModel == VE_LEVEL_SET) {
-      double pos_lambda = ve[mode]->pos_ls.time_const;
-      double neg_lambda = ve[mode]->time_const;
-      double width = ls->Length_Scale;
-      err = level_set_property(neg_lambda, pos_lambda, width, &lambda, d_lambda_dF);
-      GOMA_EH(err, "level_set_property() failed for polymer time constant.");
-    }
+   lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
 
     xi = 0;
     if (ve[mode]->xiModel == CONSTANT) {

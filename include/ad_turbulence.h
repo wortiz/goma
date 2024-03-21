@@ -55,6 +55,8 @@ struct AD_Field_Variables {
 };
 
 extern AD_Field_Variables *ad_fv;
+int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
+                             ADType gamma_dot[DIM][DIM]) ; /* strain rate tensor */
 
 void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale);
 extern "C" {
@@ -78,6 +80,7 @@ int ad_assemble_turb_k(dbl time_value, /* current time */
 void ad_sa_wall_func(double func[DIM],
                                  double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE]);
 dbl ad_turb_k_omega_sst_viscosity(VISCOSITY_DEPENDENCE_STRUCT *d_mu);
+
 
 int ad_assemble_turb_omega(dbl time_value, /* current time */
                                    dbl tt,         /* parameter to vary time integration from
