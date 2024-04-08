@@ -836,6 +836,22 @@ int load_fv(void)
     stateVector[TURB_OMEGA] = fv->turb_omega;
   }
 
+  if (pdgv[TURB_K]) {
+    v = TURB_K;
+    scalar_fv_fill(esp->turb_k, esp_dot->turb_k, esp_old->turb_k, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_k), &(fv_dot->turb_k),
+                   &(fv_old->turb_k));
+    stateVector[TURB_K] = fv->turb_k;
+  }
+
+  if (pdgv[TURB_OMEGA]) {
+    v = TURB_OMEGA;
+    scalar_fv_fill(esp->turb_omega, esp_dot->turb_omega, esp_old->turb_omega, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_omega), &(fv_dot->turb_omega),
+                   &(fv_old->turb_omega));
+    stateVector[TURB_OMEGA] = fv->turb_omega;
+  }
+
   if (pdgv[LIGHT_INTP]) {
     v = LIGHT_INTP;
     scalar_fv_fill(esp->poynt[0], esp_dot->poynt[0], esp_old->poynt[0], bf[v]->phi,
@@ -1769,6 +1785,7 @@ int load_fv(void)
   if (upd->turbulent_info->use_internal_wall_distance) {
     fv->wall_distance = 0.;
     if (pdgv[pd->ShapeVar]) {
+      dofs = ei[upd->matrix_index[pd->ShapeVar]]->dof[pd->ShapeVar];
       dofs = ei[upd->matrix_index[pd->ShapeVar]]->dof[pd->ShapeVar];
       for (i = 0; i < dofs; i++) {
         fv->wall_distance +=

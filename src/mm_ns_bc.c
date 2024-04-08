@@ -62,6 +62,7 @@
 #include "mm_viscosity.h"
 #include "mpi.h"
 #include "polymer_time_const.h"
+#include "polymer_time_const.h"
 #include "rd_mesh.h"
 #include "rf_allo.h"
 #include "rf_bc.h"
