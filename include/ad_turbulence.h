@@ -11,7 +11,7 @@ extern "C" {
     #include "mm_mp_const.h"
 }
 using ADType = Sacado::Fad::DFad<double>;
-void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int interp_eqn);
+void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, ADType diffusivity, int interp_eqn);
 struct AD_Basis {
   ADType d_phi[MDE][DIM];    /* d_phi[i][a]    = d(phi_i)/d(q_a) */
   ADType grad_phi[MDE][DIM]; /* grad_phi[i][a] = e_a . grad(phi_i) */
@@ -59,6 +59,7 @@ int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
                              ADType gamma_dot[DIM][DIM]) ; /* strain rate tensor */
 
 void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale);
+ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local) ;
 ADType ad_only_turb_k_omega_viscosity(void);
 extern "C" {
 #endif
@@ -96,6 +97,21 @@ int ad_assemble_spalart_allmaras(dbl time_value, /* current time */
                                                  explicit (tt = 1) to implicit (tt = 0)    */
                               dbl dt,         /* current time step size                    */
                               const PG_DATA *pg_data);
+int ad_assemble_turb_k_modified(dbl time_value, /* current time */
+                                  dbl tt,         /* parameter to vary time integration from
+                                                     explicit (tt = 1) to implicit (tt = 0)    */
+                                  dbl dt,         /* current time step size                    */
+                                  const PG_DATA *pg_data);
+int ad_assemble_turb_omega_modified(dbl time_value, /* current time */
+                                  dbl tt,         /* parameter to vary time integration from
+                                                     explicit (tt = 1) to implicit (tt = 0)    */
+                                  dbl dt,         /* current time step size                    */
+                                  const PG_DATA *pg_data);
+int ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
+                                  dbl tt,         /* parameter to vary time integration from
+                                                     explicit (tt = 1) to implicit (tt = 0)    */
+                                  dbl dt,         /* current time step size                    */
+                                  const PG_DATA *pg_data);
 #ifdef __cplusplus
 }
 #endif

@@ -818,6 +818,8 @@ typedef struct turbulent_information {
   int num_side_sets;
   int num_node_sets;
   int use_internal_wall_distance;
+  double omega_inf;
+  double k_inf;
 } turbulent_information;
 
 /*

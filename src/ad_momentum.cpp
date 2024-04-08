@@ -203,6 +203,17 @@ ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
   return (mu);
 }
 
+extern "C" dbl ad_viscosity_wrap(struct Generalized_Newtonian *gn_local) {
+  ADType gamma[DIM][DIM];
+  for (int i = 0; i < DIM; i++) {
+    for (int j = 0; j < DIM; j++) {
+      gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+    }
+  }
+
+  auto mu = ad_viscosity(gn, gamma);
+  return mu.val();
+}
 ADType ad_viscosity(struct Generalized_Newtonian *gn_local,
                  ADType gamma_dot[DIM][DIM]) {
   int err;
@@ -225,11 +236,26 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local,
   /* Zero out sensitivities */
 
   /* this section is for all Newtonian models */
-
-  if (gn_local->ConstitutiveEquation == CONSTANT) {
+  if (gn_local->ConstitutiveEquation == NEWTONIAN) {
+     if (mp->ViscosityModel == CONSTANT) {
+      /*  mu   = gn_local->mu0; corrected for auto continuation 3/01 */
+      if (gn_local->ConstitutiveEquation == CONSTANT) {
+        mu = gn_local->mu0;
+      } else {
+        mu = mp->viscosity;
+      }
+      mp_old->viscosity = mu.val();
+     } else {
+      GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for Newtonian fluid");
+     }
+  } else if (gn_local->ConstitutiveEquation == CONSTANT) {
     mu = gn_local->mu0;
     mp_old->viscosity = mu.val();
     /*Sensitivities were already set to zero */
+  } else if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA) {
+    mu = ad_only_turb_k_omega_viscosity();
+  } else if (gn_local->ConstitutiveEquation == TURBULENT_SA || gn_local->ConstitutiveEquation== TURBULENT_SA_DYNAMIC) {
+    mu = ad_sa_viscosity(gn_local);
   } else if (gn_local->ConstitutiveEquation == BINGHAM) {
     mu = ad_bingham_viscosity(gn_local, gamma_dot);
   } else {
@@ -939,7 +965,7 @@ int ad_calc_pspg(ADType pspg[DIM],
   /*
    * Variables for vicosity and derivative
    */
-  dbl mu;
+  ADType mu;
   VISCOSITY_DEPENDENCE_STRUCT d_mu_struct; /* viscosity dependence */
   VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
 
@@ -1088,7 +1114,7 @@ int ad_calc_pspg(ADType pspg[DIM],
    * get viscosity for velocity second derivative/diffusion
    * term in PSPG stuff
    */
-  mu = viscosity(gn, dgamma, NULL);
+  mu = ad_viscosity(gn, gamma);
 
   /* get variables we will need for momentum residual */
 

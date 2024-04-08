@@ -18,6 +18,7 @@
 
 /* Standard include files */
 
+#include "ad_turbulence.h"
 #include "load_field_variables.h"
 #include "mm_fill_em.h"
 #include "rf_solve.h"
@@ -76,6 +77,8 @@
 #include "rf_bc.h"
 #include "rf_bc_const.h"
 #include "rf_element_storage_struct.h"
+#include "ad_turbulence.h"
+#include "ad_momentum.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "rf_io.h"
@@ -954,6 +957,37 @@ static int calc_standard_fields(double **post_proc_vect,
     local_lumped[DIV_TOTAL] = 1.0;
   }
 
+#if 1
+  if (PP_Viscosity != -1 && pd->e[pg->imtrx][R_MOMENTUM1]) {
+    mu = ad_viscosity_wrap(gn);
+
+    if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
+      /*  shift factor  */
+      if (pd->e[pg->imtrx][TEMPERATURE]) {
+        if (vn->shiftModel == CONSTANT) {
+          at = vn->shift[0];
+        } else if (vn->shiftModel == MODIFIED_WLF) {
+          wlf_denom = vn->shift[1] + fv->T - mp->reference[TEMPERATURE];
+          if (wlf_denom != 0.) {
+            at = exp(vn->shift[0] * (mp->reference[TEMPERATURE] - fv->T) / wlf_denom);
+          } else {
+            at = 1.;
+          }
+        }
+      } else {
+        at = 1.;
+      }
+      for (mode = 0; mode < vn->modes; mode++) {
+        /* get polymer viscosity */
+        mup = ad_viscosity_wrap(ve[mode]->gn);
+        mu += at * mup;
+      }
+    }
+
+    local_post[PP_Viscosity] = mu;
+    local_lumped[PP_Viscosity] = 1.;
+  }
+#else
   if (PP_Viscosity != -1 && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (b = 0; b < VIM; b++) {
@@ -1006,6 +1040,7 @@ static int calc_standard_fields(double **post_proc_vect,
     local_post[PP_Viscosity] = mu;
     local_lumped[PP_Viscosity] = 1.;
   }
+#endif
 
   if (PP_Viscosity != -1 &&
       (pd->e[pg->imtrx][R_LUBP] || pd->e[pg->imtrx][R_SHELL_FILMP] || pd->e[pg->imtrx][R_LUBP_2])) {
@@ -3777,6 +3812,7 @@ void post_process_average(double x[],            /* Solution vector for the curr
       err = load_bf_grad();
       GOMA_EH(err, "load_bf_grad");
 
+
       err = load_fv_vector();
 
       if (ei[pg->imtrx]->deforming_mesh &&
@@ -3790,6 +3826,8 @@ void post_process_average(double x[],            /* Solution vector for the curr
 
       err = load_fv_grads();
       GOMA_EH(err, "load_fv_grads");
+
+      fill_ad_field_variables();
 
       if (ei[pg->imtrx]->deforming_mesh &&
           (pd->e[pg->imtrx][R_MESH1] || pd->v[pg->imtrx][R_MESH1])) {

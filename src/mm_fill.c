@@ -750,7 +750,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
   }
 
-  if ((PSPG || (mp->Mwt_funcModel == SUPG)) && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
+  if ((PSPG == 1 || PSPG == 2) && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
     xi[0] = 0.0;
     xi[1] = 0.0;
     xi[2] = 0.0;
@@ -2431,10 +2431,9 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     }
-
     if (pde[R_TURB_K]) {
 #ifdef GOMA_ENABLE_SACADO      
-      err = ad_assemble_turb_k(time_value, theta, delta_t, &pg_data);
+      err = ad_assemble_turb_k_modified(time_value, theta, delta_t, &pg_data);
 #else
       GOMA_EH(-1, "TURB_K requires Sacado for assembly");
 #endif
@@ -2448,7 +2447,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 
     if (pde[R_TURB_OMEGA]) {
 #ifdef GOMA_ENABLE_SACADO      
-      err = ad_assemble_turb_omega(time_value, theta, delta_t, &pg_data);
+      err = ad_assemble_turb_omega_modified(time_value, theta, delta_t, &pg_data);
 #else
       GOMA_EH(-1, "TURB_OMEGA requires Sacado for assembly");
 #endif
@@ -2459,6 +2458,41 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     }
+
+//     if (pde[R_TURB_K] && pde[R_TURB_OMEGA]) {
+// #ifdef GOMA_ENABLE_SACADO      
+//       err = ad_assemble_turb_k_omega_modified(time_value, theta, delta_t, &pg_data);
+// #else
+//       GOMA_EH(-1, "TURB_K requires Sacado for assembly");
+// #endif
+//     }
+//    if (pde[R_TURB_K]) {
+//#ifdef GOMA_ENABLE_SACADO      
+//      err = ad_assemble_turb_k(time_value, theta, delta_t, &pg_data);
+//#else
+//      GOMA_EH(-1, "TURB_K requires Sacado for assembly");
+//#endif
+//      GOMA_EH(err, "assemble_turb_k");
+//#ifdef CHECK_FINITE
+//      err = CHECKFINITE("assemble_spalart_allmaras");
+//      if (err)
+//        return -1;
+//#endif
+//    }
+//
+//    if (pde[R_TURB_OMEGA]) {
+//#ifdef GOMA_ENABLE_SACADO      
+//      err = ad_assemble_turb_omega(time_value, theta, delta_t, &pg_data);
+//#else
+//      GOMA_EH(-1, "TURB_OMEGA requires Sacado for assembly");
+//#endif
+//      GOMA_EH(err, "assemble_turb_omega");
+//#ifdef CHECK_FINITE
+//      err = CHECKFINITE("assemble_spalart_allmaras");
+//      if (err)
+//        return -1;
+//#endif
+//    }
 
     if (pde[R_MOMENT0] || pde[R_MOMENT1] || pde[R_MOMENT2] || pde[R_MOMENT3]) {
       err = assemble_moments(time_value, theta, delta_t, &pg_data);

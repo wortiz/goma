@@ -3336,6 +3336,33 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
                           "nodesets were specified");
     }
   }
+
+  iread = look_for_optional(ifp, "Turbulent k infinity", input, '=');
+  if (iread == 1) {
+
+    if (fscanf(ifp, "%lf", &(upd->turbulent_info->k_inf)) != 1) {
+      GOMA_EH(GOMA_ERROR, "Error reading Turbulence k infinity");
+    }
+
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %f", "Turbulence k infinity",
+             upd->turbulent_info->k_inf);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->turbulent_info->k_inf = 0.0;
+  }
+  iread = look_for_optional(ifp, "Turbulent omega infinity", input, '=');
+  if (iread == 1) {
+
+    if (fscanf(ifp, "%lf", &(upd->turbulent_info->omega_inf)) != 1) {
+      GOMA_EH(GOMA_ERROR, "Error reading Turbulence omega infinity");
+    }
+
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %lf", "Turbulence omega infinity",
+             upd->turbulent_info->omega_inf);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->turbulent_info->omega_inf = 0.0;
+  }
 }
 /*
  * rd_elem_quality_specs -- read input file for element quality specifications
@@ -6531,7 +6558,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
   }
 
   char ls_type[MAX_CHAR_IN_INPUT] = "FULL_STEP";;
-  Newton_Line_Search_Type = NLS_BACKTRACK;
+  Newton_Line_Search_Type = NLS_FULL_STEP;
   int lsread = look_for_optional_string(ifp, "Newton line search type", ls_type, MAX_CHAR_IN_INPUT);
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
   if (lsread >= 1) {

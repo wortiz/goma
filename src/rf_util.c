@@ -1541,7 +1541,7 @@ void init_vec(
     /* Some Special Cases */
 
     /* Structural shell variables */
-    if (upd->vp[pg->imtrx][SHELL_X] && upd->vp[pg->imtrx][SHELL_Y]) {
+    if (upd->vp[pg->imtrx][SHELL_X] >= 0 && upd->vp[pg->imtrx][SHELL_Y] >= 0) {
       init_structural_shell_coord(u);
     }
 

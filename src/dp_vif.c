@@ -1024,6 +1024,8 @@ void noahs_ark(void) {
   ddd_add_member(n, &(upd->turbulent_info->use_internal_wall_distance), 1, MPI_INT);
   ddd_add_member(n, &(upd->turbulent_info->num_node_sets), 1, MPI_INT);
   ddd_add_member(n, &(upd->turbulent_info->num_side_sets), 1, MPI_INT);
+  ddd_add_member(n, &(upd->turbulent_info->k_inf), 1, MPI_DOUBLE);
+  ddd_add_member(n, &(upd->turbulent_info->omega_inf), 1, MPI_DOUBLE);
 
   for (i = 0; i < upd->Num_Mat; i++) {
     int imtrx;

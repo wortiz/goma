@@ -41,6 +41,8 @@ extern "C" {
 #include "std.h"
 }
 
+extern ADType ad_viscosity(struct Generalized_Newtonian *gn_local,
+                 ADType gamma_dot[DIM][DIM]);
 AD_Field_Variables *ad_fv = NULL;
 
 ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local);
@@ -421,12 +423,12 @@ extern "C" void fill_ad_field_variables() {
   int num_ad_variables = 0;
   for (int i = V_FIRST; i < V_LAST; i++) {
     ad_fv->offset[i] = 0;
-    if (af->Assemble_Jacobian == TRUE) {
+    // if (af->Assemble_Jacobian == TRUE) {
       if (pd->gv[i]) {
         ad_fv->offset[i] = num_ad_variables;
         num_ad_variables += ei[upd->matrix_index[i]]->dof[i];
       }
-    }
+    // }
   }
 
   ad_fv->total_ad_variables = num_ad_variables;
@@ -441,7 +443,7 @@ extern "C" void fill_ad_field_variables() {
       for (int i = 0; i < ei[upd->matrix_index[R_MESH1 + p]]->dof[R_MESH1 + p]; i++) {
         ad_fv->d[p] += set_ad_or_dbl(*esp->d[p][i], R_MESH1 + p, i) * bf[R_MESH1 + p]->phi[i];
         if (pd->TimeIntegration != STEADY) {
-          ADType udot = set_ad_or_dbl(*esp_dot->d[p][i], R_MESH1 + p, i) * bf[R_MESH1 + p]->phi[i];
+          ADType udot = set_ad_or_dbl(*esp_dot->d[p][i], R_MESH1 + p, i);
           if (af->Assemble_Jacobian == TRUE) {
             udot.fastAccessDx(ad_fv->offset[R_MESH1 + p] + i) =
                 (1. + 2. * tran->current_theta) / tran->delta_t;
@@ -462,7 +464,7 @@ extern "C" void fill_ad_field_variables() {
         ad_fv->v[p] += set_ad_or_dbl(*esp->v[p][i], VELOCITY1 + p, i) * bf[VELOCITY1 + p]->phi[i];
         if (pd->TimeIntegration != STEADY) {
           ADType udot =
-              set_ad_or_dbl(*esp_dot->v[p][i], VELOCITY1 + p, i) * bf[VELOCITY1 + p]->phi[i];
+              set_ad_or_dbl(*esp_dot->v[p][i], VELOCITY1 + p, i);
           if (af->Assemble_Jacobian == TRUE) {
             udot.fastAccessDx(ad_fv->offset[VELOCITY1 + p] + i) =
                 (1. + 2. * tran->current_theta) / tran->delta_t;
@@ -727,7 +729,7 @@ extern "C" void fill_ad_field_variables() {
 #endif
 }
 
-void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, dbl diffusivity, int interp_eqn) {
+void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, ADType diffusivity, int interp_eqn) {
   ADType h_e = 0;
   for (int i = 0; i < ei[upd->matrix_index[interp_eqn]]->dof[interp_eqn]; i++) {
     ADType tmp = 0;
@@ -831,10 +833,10 @@ void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
   dbl inv_rho = 1.0;
   DENSITY_DEPENDENCE_STRUCT d_rho_struct;
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
-  dbl dgamma[DIM][DIM];
+  ADType gamma[DIM][DIM];
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      dgamma[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+      gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
     }
   }
 
@@ -855,9 +857,9 @@ void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
     }
   }
 
-  ADType mu = viscosity(gn, dgamma, NULL);
+  ADType mu = ad_viscosity(gn, gamma);
   for (int mode = 0; mode < vn->modes; mode++) {
-    ADType mup = viscosity(ve[mode]->gn, dgamma, NULL);
+    ADType mup = ad_viscosity(ve[mode]->gn, gamma);
     mu += mup;
   }
 
@@ -898,8 +900,14 @@ ad_tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int pspg_
       v_d_gv += fabs(ad_fv->v[i] * G[i][j] * ad_fv->v[j]);
     }
   }
+  ADType gamma[DIM][DIM];
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+    }
+  }
 
-  ADType mu = ad_sa_viscosity(gn);
+  ADType mu = ad_viscosity(gn, gamma);
 
   ADType coeff = (12.0 * mu * mu);
 
@@ -1977,20 +1985,182 @@ ADType clipping_func(ADType x, ADType x_s, ADType x_e) {
 ADType ad_only_turb_k_omega_viscosity(void) {
   ADType mu = 0;
   double mu_newt = mp->viscosity;
-  dbl omega_inf = 1.0;
-  dbl k_inf = 1.0;
+  dbl k_inf = upd->turbulent_info->k_inf;
   ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
   ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
   dbl rho = density(NULL, tran->time_value);
 
-  ADType mu_t = rho * psi * ad_fv->turb_k / (std::exp(ad_fv->turb_omega)) -
-                rho * psi_neg * ad_fv->turb_k / omega_inf;
+  ADType mu_t = rho * psi * ad_fv->turb_k / (std::exp(ad_fv->turb_omega) + 1e-16);
   mu = mu_newt + mu_t;
   return mu;
 }
 
 extern "C" int
-ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
+ad_assemble_turb_k_modified(dbl time_value, /* current time */
+                                  dbl tt,         /* parameter to vary time integration from
+                                                     explicit (tt = 1) to implicit (tt = 0)    */
+                                  dbl dt,         /* current time step size                    */
+                                  const PG_DATA *pg_data) {
+
+  //! WIM is the length of the velocity vector
+  int i, j, b;
+  int eqn, var, peqn, pvar;
+  int *pdv = pd->v[pg->imtrx];
+
+  int status = 0;
+
+  eqn = TURB_K;
+
+  dbl d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+
+  dbl omega_inf = std::exp(upd->turbulent_info->omega_inf);
+  dbl k_inf = upd->turbulent_info->k_inf;
+
+  // logarithmic formulation of k-omega model
+  ADType omega = std::exp(ad_fv->turb_omega);
+  ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
+  ADType psi_neg = clipping_func(-fv_old->turb_k, 0, 10*k_inf);
+  ADType k = psi * ad_fv->turb_k;
+  // ADType k = psi * fv_old->turb_k;
+
+  dbl sigma_k = 0.5;
+  dbl sigma_omega = 0.5;
+  dbl beta_star = 9.0 / 100.0;
+  dbl beta = 3.0 / 40.;
+  dbl gamma = 5.0 / 9.0;
+
+  ADType SI;
+  ADType gamma_dot[DIM][DIM];
+  for (int i = 0; i < DIM; i++) {
+    for (int j = 0; j < DIM; j++) {
+      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
+    }
+  }
+
+  ADType Omega_tens[DIM][DIM];
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+    }
+  }
+  /* Vorticity */
+  ADType Omega = 0.0;
+  calc_vort_mag(Omega, Omega_tens);
+
+  ad_calc_shearrate(SI, gamma_dot);
+
+  dbl rho = density(NULL, time_value);
+
+  ADType mu_t = rho * k / (omega + 1e-16);
+  // ADType mu_t_kdiff = rho * k / (omega + 1e-16) - rho * psi_neg * ad_fv->turb_k / omega_inf;
+  ADType mu_t_kdiff = rho * k / (omega + 1e-16) - rho * psi_neg * fv_old->turb_k / omega_inf;
+  dbl mu = mp->viscosity;
+
+  ADType P = mu_t * Omega * Omega;
+
+  P = std::min(P, 10 * beta_star * rho * omega * k);
+
+
+  dbl supg = 1.;
+  ADType supg_tau;
+  if (mp->SAwt_funcModel == GALERKIN) {
+    supg = 0.;
+  } else if (mp->SAwt_funcModel == SUPG || mp->SAwt_funcModel == SUPG_GP ||
+             mp->SAwt_funcModel == SUPG_SHAKIB) {
+    supg = mp->SAwt_func;
+    ad_supg_tau_shakib(supg_tau, pd->Num_Dim, dt, mu_t, TURB_OMEGA);
+  }
+
+  std::vector<ADType> resid(ei[pg->imtrx]->dof[TURB_K]);
+  for (int i = 0; i < ei[pg->imtrx]->dof[TURB_K]; i++) {
+    resid[i] = 0;
+  }
+  /*
+   * Residuals_________________________________________________________________
+   */
+  if (af->Assemble_Residual) {
+    eqn = TURB_K;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      ADType wt_func = bf[eqn]->phi[i];
+
+      if (supg > 0) {
+        if (supg != 0.0) {
+          for (int p = 0; p < VIM; p++) {
+            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
+          }
+        }
+      }
+
+      /* Assemble mass term */
+      ADType mass = 0.0;
+      if (pd->TimeIntegration != STEADY) {
+        if (pd->e[pg->imtrx][eqn] & T_MASS) {
+          mass += rho * ad_fv->turb_k * wt_func * d_area;
+          mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+        }
+      }
+
+      /* Assemble advection term */
+      ADType adv = 0;
+      for (int p = 0; p < VIM; p++) {
+        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_k[p];
+      }
+      adv *= wt_func * d_area;
+      adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+
+      /* Assemble source terms */
+      ADType src1 = P - beta_star * rho * omega * k;
+
+      ADType src2 = -beta_star * rho * omega_inf * psi_neg * ad_fv->turb_k;
+      // ADType src2 = -beta_star * rho * omega_inf * psi_neg * ad_fv->turb_k;
+      ADType src = (src1 + src2);
+      // src = src1;
+      src *= -wt_func * d_area;
+      src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+
+      /* Assemble diffusion terms */
+      ADType diff = 0.0;
+      for (int p = 0; p < VIM; p++) {
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t_kdiff * sigma_k) * ad_fv->grad_turb_k[p];
+      }
+      diff *= d_area;
+      diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+
+      resid[i] -= mass + adv + src + diff;
+      lec->R[LEC_R_INDEX(peqn, i)] -= mass.val() + adv.val() + src.val() + diff.val();
+    } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+  }   /* end of if assemble residual */
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian) {
+    eqn = TURB_K;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (int var = V_FIRST; var < V_LAST; var++) {
+
+        /* Sensitivity w.r.t. velocity */
+        if (pdv[var]) {
+          int pvar = upd->vp[pg->imtrx][var];
+
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
+
+          } /* End of loop over j */
+        }   /* End of if the variale is active */
+      }
+    }
+  } /* End of if assemble Jacobian */
+  return (status);
+}
+extern "C" int
+ad_assemble_turb_omega_modified(dbl time_value, /* current time */
                                   dbl tt,         /* parameter to vary time integration from
                                                      explicit (tt = 1) to implicit (tt = 0)    */
                                   dbl dt,         /* current time step size                    */
@@ -2007,8 +2177,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
   dbl d_area = fv->wt * bf[eqn]->detJ * fv->h3;
 
-  dbl omega_inf = 1.0;
-  dbl k_inf = 1.0;
+  dbl omega_inf = std::exp(upd->turbulent_info->omega_inf);
+  dbl k_inf = upd->turbulent_info->k_inf;
 
   // logarithmic formulation of k-omega model
   ADType omega = std::exp(ad_fv->turb_omega);
@@ -2044,10 +2214,14 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
   dbl rho = density(NULL, time_value);
 
-  ADType mu_t = rho * k / (std::exp(ad_fv->turb_omega)) - rho * psi_neg * ad_fv->turb_k / omega_inf;
+  ADType mu_t = rho * k / (omega + 1e-16);
+  ADType mu_t_kdiff = rho * k / (omega + 1e-16) - rho * psi_neg * ad_fv->turb_k / omega_inf;
   dbl mu = mp->viscosity;
 
-  ADType P = mu_t * Omega * SI;
+  // ADType P = mu_t * SI * SI;
+  ADType P = mu_t * Omega * Omega;
+  P = std::min(P, 10 * beta_star * rho * omega * k);
+
 
   dbl supg = 1.;
   ADType supg_tau;
@@ -2056,7 +2230,172 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
   } else if (mp->SAwt_funcModel == SUPG || mp->SAwt_funcModel == SUPG_GP ||
              mp->SAwt_funcModel == SUPG_SHAKIB) {
     supg = mp->SAwt_func;
-    ad_supg_tau_shakib(supg_tau, pd->Num_Dim, dt, mu_t, TURB_OMEGA);
+    ad_supg_tau_shakib(supg_tau, pd->Num_Dim, dt, mu, TURB_OMEGA);
+  }
+
+  std::vector<ADType> resid(ei[pg->imtrx]->dof[TURB_OMEGA]);
+  for (int i = 0; i < ei[pg->imtrx]->dof[TURB_OMEGA]; i++) {
+    resid[i] = 0;
+  }
+  /*
+   * Residuals_________________________________________________________________
+   */
+  if (af->Assemble_Residual) {
+    /*
+     * Assemble residual for eddy viscosity
+     */
+    eqn = TURB_OMEGA;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      ADType wt_func = bf[eqn]->phi[i];
+
+      if (supg > 0) {
+        if (supg != 0.0) {
+          for (int p = 0; p < VIM; p++) {
+            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
+          }
+        }
+      }
+
+      /* Assemble mass term */
+      ADType mass = 0.0;
+      if (pd->TimeIntegration != STEADY) {
+        if (pd->e[pg->imtrx][eqn] & T_MASS) {
+          mass += rho * ad_fv->turb_omega_dot * wt_func * d_area;
+          mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+        }
+      }
+
+      /* Assemble advection term */
+      ADType adv = 0;
+      for (int p = 0; p < VIM; p++) {
+        adv += rho * (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_turb_omega[p];
+      }
+      adv *= wt_func * d_area;
+      adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+
+      /* Assemble source terms */
+      ADType src1 = (gamma / (k+1e-16)) * P - beta * rho * omega;
+
+      ADType src2 = 0;
+      for (int p = 0; p < pd->Num_Dim; p++) {
+        src2 += (mu + sigma_omega * mu_t) * ad_fv->grad_turb_omega[p] * ad_fv->grad_turb_omega[p];
+      }
+      ADType src = src1 + src2;
+      src *= -wt_func * d_area;
+      src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+
+      /* Assemble diffusion terms */
+      ADType diff = 0.0;
+      for (int p = 0; p < VIM; p++) {
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) * ad_fv->grad_turb_omega[p];
+      }
+      diff *= d_area;
+      diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+
+      resid[i] -= mass + adv + src + diff;
+      lec->R[LEC_R_INDEX(peqn, i)] -= mass.val() + adv.val() + src.val() + diff.val();
+    } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+
+  }   /* end of if assemble residual */
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian) {
+    eqn = TURB_OMEGA;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (int var = V_FIRST; var < V_LAST; var++) {
+
+        /* Sensitivity w.r.t. velocity */
+        if (pdv[var]) {
+          int pvar = upd->vp[pg->imtrx][var];
+
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
+
+          } /* End of loop over j */
+        }   /* End of if the variale is active */
+      }
+    }
+  } /* End of if assemble Jacobian */
+  return (status);
+}
+extern "C" int
+ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
+                                  dbl tt,         /* parameter to vary time integration from
+                                                     explicit (tt = 1) to implicit (tt = 0)    */
+                                  dbl dt,         /* current time step size                    */
+                                  const PG_DATA *pg_data) {
+
+  //! WIM is the length of the velocity vector
+  int i, j, b;
+  int eqn, var, peqn, pvar;
+  int *pdv = pd->v[pg->imtrx];
+
+  int status = 0;
+
+  eqn = TURB_OMEGA;
+
+  dbl d_area = fv->wt * bf[eqn]->detJ * fv->h3;
+
+  dbl omega_inf = upd->turbulent_info->omega_inf;
+  dbl k_inf = upd->turbulent_info->k_inf;
+
+  // logarithmic formulation of k-omega model
+  ADType omega = std::exp(ad_fv->turb_omega);
+  ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
+  ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
+  ADType k = psi * ad_fv->turb_k;
+
+  dbl sigma_k = 0.5;
+  dbl sigma_omega = 0.5;
+  dbl beta_star = 9.0 / 100.0;
+  dbl beta = 3.0 / 40.;
+  dbl gamma = 5.0 / 9.0;
+
+  ADType SI;
+  ADType gamma_dot[DIM][DIM];
+  for (int i = 0; i < DIM; i++) {
+    for (int j = 0; j < DIM; j++) {
+      gamma_dot[i][j] = (ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i]);
+    }
+  }
+
+  ADType Omega_tens[DIM][DIM];
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      Omega_tens[a][b] = (ad_fv->grad_v[a][b] - ad_fv->grad_v[b][a]);
+    }
+  }
+  /* Vorticity */
+  ADType Omega = 0.0;
+  calc_vort_mag(Omega, Omega_tens);
+
+  ad_calc_shearrate(SI, gamma_dot);
+
+  dbl rho = density(NULL, time_value);
+
+  ADType mu_t = rho * k / (omega + 1e-16);
+  ADType mu_t_kdiff = rho * k / (omega + 1e-16) - rho * psi_neg * ad_fv->turb_k / omega_inf;
+  dbl mu = mp->viscosity;
+
+  ADType P = mu_t * SI * SI;
+
+
+  dbl supg = 1.;
+  ADType supg_tau;
+  if (mp->SAwt_funcModel == GALERKIN) {
+    supg = 0.;
+  } else if (mp->SAwt_funcModel == SUPG || mp->SAwt_funcModel == SUPG_GP ||
+             mp->SAwt_funcModel == SUPG_SHAKIB) {
+    supg = mp->SAwt_func;
+    ad_supg_tau_shakib(supg_tau, pd->Num_Dim, dt, mu, TURB_OMEGA);
   }
 
   std::vector<std::vector<ADType>> resid(2);
@@ -2107,11 +2446,11 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      ADType src1 = (gamma / k) * P - beta * rho * omega;
+      ADType src1 = (gamma / (k+1e-16)) * P - beta * rho * omega;
 
       ADType src2 = 0;
       for (int p = 0; p < pd->Num_Dim; p++) {
-        src2 += (mu + sigma_omega * mu_t) * ad_fv->grad_turb_omega[p] * fv_old->grad_turb_omega[p];
+        src2 += (mu + sigma_omega * mu_t) * ad_fv->grad_turb_omega[p] * ad_fv->grad_turb_omega[p];
       }
       ADType src = src1 + src2;
       src *= -wt_func * d_area;
@@ -2125,8 +2464,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       diff *= d_area;
       diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-      resid[0][i] += mass + adv + src + diff;
-      lec->R[LEC_R_INDEX(peqn, i)] += mass.val() + adv.val() + src.val() + diff.val();
+      resid[0][i] -= mass + adv + src + diff;
+      lec->R[LEC_R_INDEX(peqn, i)] -= mass.val() + adv.val() + src.val() + diff.val();
     } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
 
     eqn = TURB_K;
@@ -2171,13 +2510,13 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       /* Assemble diffusion terms */
       ADType diff = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_k) * ad_fv->grad_turb_k[p];
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t_kdiff * sigma_k) * ad_fv->grad_turb_k[p];
       }
       diff *= d_area;
       diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
 
-      resid[1][i] += mass + adv + src + diff;
-      lec->R[LEC_R_INDEX(peqn, i)] += mass.val() + adv.val() + src.val() + diff.val();
+      resid[1][i] -= mass + adv + src + diff;
+      lec->R[LEC_R_INDEX(peqn, i)] -= mass.val() + adv.val() + src.val() + diff.val();
     } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
   }   /* end of if assemble residual */
 
