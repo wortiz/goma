@@ -1772,7 +1772,8 @@ int load_fv(void)
       dofs = ei[upd->matrix_index[pd->ShapeVar]]->dof[pd->ShapeVar];
       for (i = 0; i < dofs; i++) {
         fv->wall_distance +=
-            upd->turbulent_info->wall_distances[ei[upd->matrix_index[pd->ShapeVar]]->gnn_list[pd->ShapeVar][i]] *
+            upd->turbulent_info
+                ->wall_distances[ei[upd->matrix_index[pd->ShapeVar]]->gnn_list[pd->ShapeVar][i]] *
             bf[pd->ShapeVar]->phi[i];
       }
     }

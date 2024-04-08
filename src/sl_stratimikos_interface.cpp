@@ -13,7 +13,6 @@
 #include "Teuchos_ENull.hpp"
 #include "Teuchos_FancyOStream.hpp"
 #include "Teuchos_ParameterList.hpp"
-#include "Teuchos_YamlParameterListCoreHelpers.hpp"
 #include "Teuchos_ParameterListExceptions.hpp"
 #include "Teuchos_Ptr.hpp"
 #include "Teuchos_RCP.hpp"

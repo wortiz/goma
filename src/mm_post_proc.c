@@ -33,6 +33,8 @@
 #include "mm_post_proc.h"
 /* GOMA include files */
 #include "ac_particles.h"
+#include "ad_momentum.h"
+#include "ad_turbulence.h"
 #include "bc/rotate.h"
 #include "bc_contact.h"
 #include "density.h"
@@ -77,8 +79,6 @@
 #include "rf_bc.h"
 #include "rf_bc_const.h"
 #include "rf_element_storage_struct.h"
-#include "ad_turbulence.h"
-#include "ad_momentum.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "rf_io.h"
@@ -3811,7 +3811,6 @@ void post_process_average(double x[],            /* Solution vector for the curr
 
       err = load_bf_grad();
       GOMA_EH(err, "load_bf_grad");
-
 
       err = load_fv_vector();
 

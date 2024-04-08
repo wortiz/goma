@@ -41,8 +41,7 @@ extern "C" {
 #include "std.h"
 }
 
-extern ADType ad_viscosity(struct Generalized_Newtonian *gn_local,
-                 ADType gamma_dot[DIM][DIM]);
+extern ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]);
 AD_Field_Variables *ad_fv = NULL;
 
 ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local);
@@ -424,10 +423,10 @@ extern "C" void fill_ad_field_variables() {
   for (int i = V_FIRST; i < V_LAST; i++) {
     ad_fv->offset[i] = 0;
     // if (af->Assemble_Jacobian == TRUE) {
-      if (pd->gv[i]) {
-        ad_fv->offset[i] = num_ad_variables;
-        num_ad_variables += ei[upd->matrix_index[i]]->dof[i];
-      }
+    if (pd->gv[i]) {
+      ad_fv->offset[i] = num_ad_variables;
+      num_ad_variables += ei[upd->matrix_index[i]]->dof[i];
+    }
     // }
   }
 
@@ -463,8 +462,7 @@ extern "C" void fill_ad_field_variables() {
       for (int i = 0; i < ei[upd->matrix_index[VELOCITY1 + p]]->dof[VELOCITY1 + p]; i++) {
         ad_fv->v[p] += set_ad_or_dbl(*esp->v[p][i], VELOCITY1 + p, i) * bf[VELOCITY1 + p]->phi[i];
         if (pd->TimeIntegration != STEADY) {
-          ADType udot =
-              set_ad_or_dbl(*esp_dot->v[p][i], VELOCITY1 + p, i);
+          ADType udot = set_ad_or_dbl(*esp_dot->v[p][i], VELOCITY1 + p, i);
           if (af->Assemble_Jacobian == TRUE) {
             udot.fastAccessDx(ad_fv->offset[VELOCITY1 + p] + i) =
                 (1. + 2. * tran->current_theta) / tran->delta_t;
@@ -1995,12 +1993,11 @@ ADType ad_only_turb_k_omega_viscosity(void) {
   return mu;
 }
 
-extern "C" int
-ad_assemble_turb_k_modified(dbl time_value, /* current time */
-                                  dbl tt,         /* parameter to vary time integration from
-                                                     explicit (tt = 1) to implicit (tt = 0)    */
-                                  dbl dt,         /* current time step size                    */
-                                  const PG_DATA *pg_data) {
+extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
+                                           dbl tt, /* parameter to vary time integration from
+                                                      explicit (tt = 1) to implicit (tt = 0)    */
+                                           dbl dt, /* current time step size                    */
+                                           const PG_DATA *pg_data) {
 
   //! WIM is the length of the velocity vector
   int i, j, b;
@@ -2019,7 +2016,7 @@ ad_assemble_turb_k_modified(dbl time_value, /* current time */
   // logarithmic formulation of k-omega model
   ADType omega = std::exp(ad_fv->turb_omega);
   ADType psi = clipping_func(ad_fv->turb_k, 0, 10 * k_inf);
-  ADType psi_neg = clipping_func(-fv_old->turb_k, 0, 10*k_inf);
+  ADType psi_neg = clipping_func(-fv_old->turb_k, 0, 10 * k_inf);
   ADType k = psi * ad_fv->turb_k;
   // ADType k = psi * fv_old->turb_k;
 
@@ -2059,7 +2056,6 @@ ad_assemble_turb_k_modified(dbl time_value, /* current time */
   ADType P = mu_t * Omega * Omega;
 
   P = std::min(P, 10 * beta_star * rho * omega * k);
-
 
   dbl supg = 1.;
   ADType supg_tau;
@@ -2159,12 +2155,11 @@ ad_assemble_turb_k_modified(dbl time_value, /* current time */
   } /* End of if assemble Jacobian */
   return (status);
 }
-extern "C" int
-ad_assemble_turb_omega_modified(dbl time_value, /* current time */
-                                  dbl tt,         /* parameter to vary time integration from
-                                                     explicit (tt = 1) to implicit (tt = 0)    */
-                                  dbl dt,         /* current time step size                    */
-                                  const PG_DATA *pg_data) {
+extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time */
+                                               dbl tt, /* parameter to vary time integration from
+                                                          explicit (tt = 1) to implicit (tt = 0) */
+                                               dbl dt, /* current time step size */
+                                               const PG_DATA *pg_data) {
 
   //! WIM is the length of the velocity vector
   int i, j, b;
@@ -2222,7 +2217,6 @@ ad_assemble_turb_omega_modified(dbl time_value, /* current time */
   ADType P = mu_t * Omega * Omega;
   P = std::min(P, 10 * beta_star * rho * omega * k);
 
-
   dbl supg = 1.;
   ADType supg_tau;
   if (mp->SAwt_funcModel == GALERKIN) {
@@ -2276,7 +2270,7 @@ ad_assemble_turb_omega_modified(dbl time_value, /* current time */
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      ADType src1 = (gamma / (k+1e-16)) * P - beta * rho * omega;
+      ADType src1 = (gamma / (k + 1e-16)) * P - beta * rho * omega;
 
       ADType src2 = 0;
       for (int p = 0; p < pd->Num_Dim; p++) {
@@ -2298,7 +2292,7 @@ ad_assemble_turb_omega_modified(dbl time_value, /* current time */
       lec->R[LEC_R_INDEX(peqn, i)] -= mass.val() + adv.val() + src.val() + diff.val();
     } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
 
-  }   /* end of if assemble residual */
+  } /* end of if assemble residual */
 
   /*
    * Jacobian terms...
@@ -2387,7 +2381,6 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
   ADType P = mu_t * SI * SI;
 
-
   dbl supg = 1.;
   ADType supg_tau;
   if (mp->SAwt_funcModel == GALERKIN) {
@@ -2446,7 +2439,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      ADType src1 = (gamma / (k+1e-16)) * P - beta * rho * omega;
+      ADType src1 = (gamma / (k + 1e-16)) * P - beta * rho * omega;
 
       ADType src2 = 0;
       for (int p = 0; p < pd->Num_Dim; p++) {

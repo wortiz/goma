@@ -309,9 +309,9 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     /* Calculate contribution from turbulent viscosity */
     if ((gn_local->ConstitutiveEquation == TURBULENT_SA) ||
         (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
-          #ifdef GOMA_ENABLE_SACADO
-          mu = ad_sa_viscosity(gn_local, d_mu);
-          #else
+#ifdef GOMA_ENABLE_SACADO
+      mu = ad_sa_viscosity(gn_local, d_mu);
+#else
       dbl scale = 1.0;
       DENSITY_DEPENDENCE_STRUCT d_rho;
       if (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
@@ -344,7 +344,7 @@ double viscosity(struct Generalized_Newtonian *gn_local,
           }
         }
       }
-      #endif
+#endif
     }
 
     if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA) {

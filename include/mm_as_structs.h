@@ -569,8 +569,8 @@ struct Element_Variable_Pointers {
   dbl *sh_sat_2[MDE];   /* Porous shell saturation layer 2 */
   dbl *sh_sat_3[MDE];   /* Porous shell saturation layer 3 */
 
-  dbl *eddy_nu[MDE]; /* Eddy viscosity for turbulent flow */
-  dbl *turb_k[MDE]; /* Eddy viscosity for turbulent flow */
+  dbl *eddy_nu[MDE];    /* Eddy viscosity for turbulent flow */
+  dbl *turb_k[MDE];     /* Eddy viscosity for turbulent flow */
   dbl *turb_omega[MDE]; /* Eddy viscosity for turbulent flow */
 };
 
@@ -698,8 +698,8 @@ struct Element_Stiffness_Pointers {
   dbl **sh_sat_2; /* Porous shell saturation layer 2 */
   dbl **sh_sat_3; /* Porous shell saturation layer 3 */
 
-  dbl **eddy_nu; /* Eddy viscosity for turbulent flow */
-  dbl **turb_k; /* Eddy viscosity for turbulent flow */
+  dbl **eddy_nu;    /* Eddy viscosity for turbulent flow */
+  dbl **turb_k;     /* Eddy viscosity for turbulent flow */
   dbl **turb_omega; /* Eddy viscosity for turbulent flow */
 
   /*
@@ -1112,20 +1112,20 @@ struct Transient_Information {
   int step;
   int MaxSteadyStateSteps;
   int MaxTimeSteps;
-  int Fill_Weight_Fcn;                  /* Weight function to use on the transient fill equation
-                                         */
-  int Fill_Equation;                    /* Equation for fill-level set */
-  dbl Delta_t0;                         /* initial time step */
-  dbl Delta_t_min;                      /* minimum time step size */
-  dbl Delta_t_max;                      /* maximum time step size */
-  dbl time_step_decelerator;            /* factor used to make time step smaller when a
-                                           time step fails to converge */
-  dbl resolved_delta_t_min;             /* if dt < resolved_delta_t_min, accept any
-                                           converged soln  regardless of time step error */
-  dbl TimeMax;                          /* time at which to end integration */
-  dbl theta;                            /* time step parameter: theta = 0. => Backward Euler
-                                                                theta = 1. => Forward Euler
-                                                                theta = .5 => Crack-Nicholson  */
+  int Fill_Weight_Fcn;       /* Weight function to use on the transient fill equation
+                              */
+  int Fill_Equation;         /* Equation for fill-level set */
+  dbl Delta_t0;              /* initial time step */
+  dbl Delta_t_min;           /* minimum time step size */
+  dbl Delta_t_max;           /* maximum time step size */
+  dbl time_step_decelerator; /* factor used to make time step smaller when a
+                                time step fails to converge */
+  dbl resolved_delta_t_min;  /* if dt < resolved_delta_t_min, accept any
+                                converged soln  regardless of time step error */
+  dbl TimeMax;               /* time at which to end integration */
+  dbl theta;                 /* time step parameter: theta = 0. => Backward Euler
+                                                     theta = 1. => Forward Euler
+                                                     theta = .5 => Crack-Nicholson  */
   dbl current_theta;
   dbl eps;                              /* time step error  */
   int use_var_norm[MAX_VARIABLE_TYPES]; /* Booleans used for time step
@@ -1737,8 +1737,8 @@ struct Field_Variables {
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
   dbl eddy_nu;                     /* Eddy viscosity for turbulent flow */
-  dbl turb_k;       /* Eddy viscosity for turbulent flow */
-  dbl turb_omega;       /* Eddy viscosity for turbulent flow */
+  dbl turb_k;                      /* Eddy viscosity for turbulent flow */
+  dbl turb_omega;                  /* Eddy viscosity for turbulent flow */
   dbl wall_distance;               /* Distance to nearest wall */
   dbl multi_contact_line_distance; /* Distance to multi contact line points */
 
@@ -1790,8 +1790,8 @@ struct Field_Variables {
   dbl grad_sh_sat_3[DIM];  /* Gradient of porous shell saturation layer 3 */
 
   dbl grad_eddy_nu[DIM];       /* Gradient of Eddy viscosity */
-  dbl grad_turb_k[DIM];       /* Gradient of Eddy viscosity */
-  dbl grad_turb_omega[DIM];       /* Gradient of Eddy viscosity */
+  dbl grad_turb_k[DIM];        /* Gradient of Eddy viscosity */
+  dbl grad_turb_omega[DIM];    /* Gradient of Eddy viscosity */
   dbl grad_wall_distance[DIM]; /* Distance to nearest wall */
 
   /*
@@ -2131,8 +2131,8 @@ struct Diet_Field_Variables {
   dbl sh_sat_2;   /* Porous shell saturation layer 2 */
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
-  dbl eddy_nu; /* Eddy viscosity for turbulent flow */
-  dbl turb_k; /* Eddy viscosity for turbulent flow */
+  dbl eddy_nu;    /* Eddy viscosity for turbulent flow */
+  dbl turb_k;     /* Eddy viscosity for turbulent flow */
   dbl turb_omega; /* Eddy viscosity for turbulent flow */
 
   dbl grad_em_er[DIM][DIM]; /* EM wave Fields */
@@ -2163,7 +2163,7 @@ struct Diet_Field_Variables {
 
   dbl grad_n[DIM][DIM]; /* Normal to level set function OR shell normal */
   dbl grad_turb_omega[DIM];
-  dbl div_n;            /* Divergence of LS normal field */
+  dbl div_n; /* Divergence of LS normal field */
 
   /* Material tensors used at old time values */
   dbl strain[DIM][DIM]; /* Strain tensor */
@@ -3096,8 +3096,8 @@ struct viscosity_dependence {
   double pf[MAX_PHASE_FUNC][MDE]; /* phase function */
   double degrade[MDE];            /* amount of degradation */
   double eddy_nu[MDE];            /* Turbulent viscosity */
-  double turb_k[MDE];            /* Turbulent k */
-  double turb_omega[MDE];            /* Turbulent omega */
+  double turb_k[MDE];             /* Turbulent k */
+  double turb_omega[MDE];         /* Turbulent omega */
 };
 typedef struct viscosity_dependence VISCOSITY_DEPENDENCE_STRUCT;
 typedef struct polymer_time_const_dependence {
