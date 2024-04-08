@@ -7895,8 +7895,8 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
   int evss_gradv = 0;
 
   int i, j, mode;
-  dbl v[DIM];      /* Velocity field. */
-  dbl x_dot[DIM];  /* current position field derivative wrt time. */
+  dbl v[DIM];     /* Velocity field. */
+  dbl x_dot[DIM]; /* current position field derivative wrt time. */
 
   dbl grad_v[DIM][DIM];
   dbl gamma[DIM][DIM]; /* Shear-rate tensor based on velocity */
@@ -8531,7 +8531,7 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
 
                       source = source_a + source_b + source_c;
 
-                      source *=  pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                      source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
                     }
 
                     d_func[mode][k][var][j] += mass + advection + diffusion + source;
@@ -8560,8 +8560,7 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
                             advection += -d_a_dot_b_dG[p][q][ii][jj];
                             advection *= phi_j;
 
-                            advection *=
-                                at * lambda * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                            advection *= at * lambda * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
                           }
                         }
 
@@ -8668,9 +8667,7 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
                             }
                             advection -= phi_j * d_a_dot_b_db[p][q][ii][jj];
 
-
-                            advection *=
-                                at * lambda * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+                            advection *= at * lambda * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
                           }
                         }
 
@@ -8692,8 +8689,7 @@ void stress_no_v_dot_gradS_sqrt(double func[MAX_MODES][6],
 
                         if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
                           source = d_source_term_db[ii][jj][p][q];
-                          source *=
-                              phi_j * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+                          source *= phi_j * pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
                         }
 
                         d_func[mode][k][var][j] += mass + advection + diffusion + source;

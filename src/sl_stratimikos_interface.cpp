@@ -9,7 +9,6 @@
 #include "Teuchos_ENull.hpp"
 #include "Teuchos_FancyOStream.hpp"
 #include "Teuchos_ParameterList.hpp"
-#include "Teuchos_YamlParameterListCoreHelpers.hpp"
 #include "Teuchos_ParameterListExceptions.hpp"
 #include "Teuchos_Ptr.hpp"
 #include "Teuchos_RCP.hpp"
@@ -18,6 +17,7 @@
 #include "Teuchos_VerboseObject.hpp"
 #include "Teuchos_VerbosityLevel.hpp"
 #include "Teuchos_XMLParameterListCoreHelpers.hpp"
+#include "Teuchos_YamlParameterListCoreHelpers.hpp"
 #include "Teuchos_config.h"
 #include "Thyra_EpetraLinearOp.hpp"
 #include "Thyra_EpetraThyraWrappers.hpp"
@@ -78,7 +78,7 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
     // Get parameters from file
     if (!param_set[imtrx]) {
       param_set[imtrx] = true;
-     solverParams_static[imtrx] = Teuchos::getParametersFromXmlFile(stratimikos_file[imtrx]);
+      solverParams_static[imtrx] = Teuchos::getParametersFromXmlFile(stratimikos_file[imtrx]);
       // printf("stratimikos_file[imtrx] = %s\n", stratimikos_file[imtrx]);
       // solverParams_static[imtrx] = Teuchos::getParametersFromYamlFile(stratimikos_file[imtrx]);
     }

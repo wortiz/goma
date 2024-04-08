@@ -7842,8 +7842,8 @@ struct Equation_Names Var_Name[] = {
     {"USTAR", "USX", USTAR},
     {"VSTAR", "USY", VSTAR},
     {"WSTAR", "USZ", WSTAR},
-    {"EDDY_NU", "EDDY_NU", EDDY_NU}, // 214
-    {"TURB_K", "TURB_K", TURB_K}, // 215
+    {"EDDY_NU", "EDDY_NU", EDDY_NU},          // 214
+    {"TURB_K", "TURB_K", TURB_K},             // 215
     {"TURB_OMEGA", "TURB_OMEGA", TURB_OMEGA}, // 215
 
     {"MESH_POSITION1", "X", MESH_POSITION1},

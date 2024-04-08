@@ -26,9 +26,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "ad_turbulence.h"
 #include "ac_stability.h"
 #include "ac_stability_util.h"
+#include "ad_turbulence.h"
 #include "bc/rotate_coordinates.h"
 #include "bc_colloc.h"
 #include "bc_integ.h"

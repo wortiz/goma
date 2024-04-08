@@ -5,9 +5,8 @@
 
 /* GOMA include files */
 #define GOMA_MM_FILL_MOMENTUM_C
-#include "mm_fill_momentum.h"
-#include "ad_turbulence.h"
 #include "ac_particles.h"
+#include "ad_turbulence.h"
 #include "az_aztec.h"
 #include "bc_colloc.h"
 #include "bc_contact.h"
@@ -28,6 +27,7 @@
 #include "mm_fill_fill.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_ls_capillary_bcs.h"
+#include "mm_fill_momentum.h"
 #include "mm_fill_population.h"
 #include "mm_fill_ptrs.h"
 #include "mm_fill_rs.h"

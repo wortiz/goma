@@ -2044,8 +2044,6 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                              First_Elem_Side_BC_Array[pg->imtrx], &time_value, exo, dpi,
                              &num_total_nodes, &h_elem_avg, &U_norm, NULL);
 
-
-      
       vector_scaling(NumUnknowns[pg->imtrx], R, scale);
       dbl g_check = L2_norm(R, NumUnknowns[pg->imtrx]);
       dbl best_damp = damp;
@@ -2074,7 +2072,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
       double last = bt_st;
       double curr = MPI_Wtime();
-      P0PRINTF("\nNewton Line Search: lambda=%f L2=%e %g\n", damp, best_norm, curr-last);
+      P0PRINTF("\nNewton Line Search: lambda=%f L2=%e %g\n", damp, best_norm, curr - last);
 
       while (!skip) {
         damp *= reduction_factor;
@@ -2099,8 +2097,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         vector_scaling(NumUnknowns[pg->imtrx], R, scale);
 
         dbl g_check = L2_norm(R, NumUnknowns[pg->imtrx]);
-      last = curr;
-      curr = MPI_Wtime();
+        last = curr;
+        curr = MPI_Wtime();
         P0PRINTF("Newton Line Search: lambda=%f L2=%e %g\n", damp, g_check, curr - last);
         if (isnan(g_check)) {
           break;
@@ -2115,7 +2113,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         }
         g_check = 0.5 * (g_check * g_check);
 
-        if (g_check <= r_check +  0.5 * slope * damp) {
+        if (g_check <= r_check + 0.5 * slope * damp) {
           P0PRINTF("Newton Line Search: STOP reached lambda=%f, %e <= %e\n", damp, g_check,
                    r_check + 0.5 * slope * damp);
           break;
@@ -2123,7 +2121,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
       curr = MPI_Wtime();
-      P0PRINTF("Newton Line Search: best damping factor: lambda=%f L2=%e %g\n", best_damp, best_norm, curr-bt_st);
+      P0PRINTF("Newton Line Search: best damping factor: lambda=%f L2=%e %g\n", best_damp,
+               best_norm, curr - bt_st);
       fflush(stdout);
       for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
         x[i] = x_save[i] - best_damp * delta_x[i];

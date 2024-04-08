@@ -22,13 +22,13 @@ extern "C" {
 #include "mm_fill_solid.h"
 #include "mm_fill_species.h"
 #include "mm_fill_stabilization.h"
-#include "polymer_time_const.h"
 #include "mm_fill_stress.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "mm_qtensor_model.h"
 #include "mm_viscosity.h"
+#include "polymer_time_const.h"
 #include "rf_allo.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
@@ -36,11 +36,8 @@ extern "C" {
 #include "std.h"
 #include "user_mp.h"
 }
-ADType ad_ls_modulate_property(const ADType &p1,
-                            const ADType &p2,
-                            double width,
-                            double pm_minus,
-                            double pm_plus) {
+ADType ad_ls_modulate_property(
+    const ADType &p1, const ADType &p2, double width, double pm_minus, double pm_plus) {
   ADType p_plus, p_minus, p;
 
   p_minus = p1 * pm_plus + p2 * pm_minus;
@@ -60,12 +57,8 @@ ADType ad_ls_modulate_property(const ADType &p1,
   return (p);
 }
 
-int ad_ls_modulate_viscosity(ADType &mu1,
-                          double mu2,
-                          double width,
-                          double pm_minus,
-                          double pm_plus,
-                          const int model) {
+int ad_ls_modulate_viscosity(
+    ADType &mu1, double mu2, double width, double pm_minus, double pm_plus, const int model) {
   double factor, ratio = 0.0;
   int i, a, w, var;
 
@@ -77,8 +70,7 @@ int ad_ls_modulate_viscosity(ADType &mu1,
   return (1);
 }
 ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
-                         ADType gamma_dot[DIM][DIM]){ /* strain rate tensor */
-     
+                            ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
 
   int a, b;
   int var;
@@ -203,8 +195,7 @@ ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
   return (mu);
 }
 
-ADType ad_viscosity(struct Generalized_Newtonian *gn_local,
-                 ADType gamma_dot[DIM][DIM]) {
+ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]) {
   int err;
   int a;
 
@@ -239,9 +230,9 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local,
   if (ls != NULL && gn_local->ConstitutiveEquation != VE_LEVEL_SET &&
       mp->ViscosityModel != LEVEL_SET && mp->ViscosityModel != LS_QUADRATIC && mp->mp2nd != NULL &&
       (mp->mp2nd->ViscosityModel == CONSTANT || mp->mp2nd->ViscosityModel == RATIO)) {
-    err = ad_ls_modulate_viscosity(
-        mu, mp->mp2nd->viscosity, ls->Length_Scale, (double)mp->mp2nd->viscositymask[0],
-        (double)mp->mp2nd->viscositymask[1], mp->mp2nd->ViscosityModel);
+    err = ad_ls_modulate_viscosity(mu, mp->mp2nd->viscosity, ls->Length_Scale,
+                                   (double)mp->mp2nd->viscositymask[0],
+                                   (double)mp->mp2nd->viscositymask[1], mp->mp2nd->ViscosityModel);
     GOMA_EH(err, "ls_modulate_viscosity");
   }
   return (mu);
@@ -373,7 +364,6 @@ int ad_assemble_momentum(dbl time,       /* current time */
   dim = pd->Num_Dim;
 
   wt = fv->wt;
-
 
   h3 = fv->h3; /* Differential volume element (scales). */
 
@@ -1114,7 +1104,7 @@ int ad_calc_pspg(ADType pspg[DIM],
         vn->evssModel == LOG_CONF_TRANSIENT || vn->evssModel == LOG_CONF_TRANSIENT_GRADV) {
       for (mode = 0; mode < vn->modes; mode++) {
         dbl lambda = 0.0;
-          lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
+        lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
         dbl mup = viscosity(ve[mode]->gn, dgamma, NULL);
         int dofs = ei[upd->matrix_index[v_s[mode][0][0]]]->dof[v_s[mode][0][0]];
         dbl grad_S[DIM][DIM][DIM] = {{{0.0}}};
@@ -2151,7 +2141,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
     }
 
     /* get time constant */
-   lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
+    lambda = polymer_time_const(ve[mode]->time_const_st, dgamma, NULL);
 
     xi = 0;
     if (ve[mode]->xiModel == CONSTANT) {

@@ -25,10 +25,10 @@
 
 /* GOMA include files */
 
-#include "ad_momentum.h"
-#include "ad_turbulence.h"
 #include "ac_stability.h"
 #include "ac_stability_util.h"
+#include "ad_momentum.h"
+#include "ad_turbulence.h"
 #include "bc/rotate.h"
 #include "bc/rotate_coordinates.h"
 #include "bc_colloc.h"
@@ -1131,8 +1131,8 @@ Revised:         Summer 1998, SY Tam (UNM)
       err = load_fv_grads();
       GOMA_EH(err, "load_fv_grads");
 
-#ifdef GOMA_ENABLE_SACADO      
-  fill_ad_field_variables();
+#ifdef GOMA_ENABLE_SACADO
+      fill_ad_field_variables();
 #endif
 
       if (pd->gv[R_MESH1]) {
@@ -1399,8 +1399,8 @@ Revised:         Summer 1998, SY Tam (UNM)
     err = load_fv_grads();
     GOMA_EH(err, "load_fv_grads");
 
-#ifdef GOMA_ENABLE_SACADO      
-  fill_ad_field_variables();
+#ifdef GOMA_ENABLE_SACADO
+    fill_ad_field_variables();
 #endif
     if (pd->gv[R_MESH1]) {
       err = load_fv_mesh_derivs(1);
@@ -2419,7 +2419,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_EDDY_NU]) {
-#ifdef GOMA_ENABLE_SACADO      
+#ifdef GOMA_ENABLE_SACADO
       err = ad_assemble_spalart_allmaras(time_value, theta, delta_t, &pg_data);
 #else
       err = assemble_spalart_allmaras(time_value, theta, delta_t, &pg_data);
@@ -2433,7 +2433,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_TURB_K]) {
-#ifdef GOMA_ENABLE_SACADO      
+#ifdef GOMA_ENABLE_SACADO
       err = ad_assemble_turb_k(time_value, theta, delta_t, &pg_data);
 #else
       GOMA_EH(-1, "TURB_K requires Sacado for assembly");
@@ -2447,7 +2447,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_TURB_OMEGA]) {
-#ifdef GOMA_ENABLE_SACADO      
+#ifdef GOMA_ENABLE_SACADO
       err = ad_assemble_turb_omega(time_value, theta, delta_t, &pg_data);
 #else
       GOMA_EH(-1, "TURB_OMEGA requires Sacado for assembly");
@@ -4130,8 +4130,8 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
       GOMA_EH(err, "load_fv_mesh_derivs");
     }
 
-#ifdef GOMA_ENABLE_SACADO      
-  fill_ad_field_variables();
+#ifdef GOMA_ENABLE_SACADO
+    fill_ad_field_variables();
 #endif
 
     computeCommonMaterialProps_gp(time_value);
@@ -5177,8 +5177,8 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                             {
                               if (fabs(lec->J[LEC_J_INDEX(pe, pv, i, j)]) > DBL_SMALL ||
                                   Print_Zeroes) {
-                                fprintf(llll, "%9d %9d %9d %9d -  %12d - %.10f\n", pe, pv, i, j,
-                                        ja, lec->J[LEC_J_INDEX(pe, pv, i, j)]);
+                                fprintf(llll, "%9d %9d %9d %9d -  %12d - %.10f\n", pe, pv, i, j, ja,
+                                        lec->J[LEC_J_INDEX(pe, pv, i, j)]);
                               }
                             }
 #endif
@@ -5257,8 +5257,8 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                             {
                               if (fabs(lec->J[LEC_J_INDEX(pe, pv, i, j)]) > DBL_SMALL ||
                                   Print_Zeroes) {
-                                fprintf(llll, "%9d %9d %9d %9d -  %12d - %.10f\n", pe, pv, i, j,
-                                        ja, lec->J[LEC_J_INDEX(pe, pv, i, j)]);
+                                fprintf(llll, "%9d %9d %9d %9d -  %12d - %.10f\n", pe, pv, i, j, ja,
+                                        lec->J[LEC_J_INDEX(pe, pv, i, j)]);
                               }
                             }
 #endif

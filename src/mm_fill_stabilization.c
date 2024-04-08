@@ -323,7 +323,7 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
           }
         }
         tau_terms->d_tau_dX[a][k] = inv_rho * -0.5 *
-                                    (v_d_gv_dx + diff_g_g_dx + 0* d_mu->X[a][k] * d_diff_g_g_dmu) *
+                                    (v_d_gv_dx + diff_g_g_dx + 0 * d_mu->X[a][k] * d_diff_g_g_dmu) *
                                     supg_tau_cubed;
       }
     }

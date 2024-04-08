@@ -6492,7 +6492,8 @@ void rd_solver_specs(FILE *ifp, char *input) {
     Time_Jacobian_Reformation_stride = 0;
   }
 
-  char ls_type[MAX_CHAR_IN_INPUT] = "FULL_STEP";;
+  char ls_type[MAX_CHAR_IN_INPUT] = "FULL_STEP";
+  ;
   Newton_Line_Search_Type = NLS_BACKTRACK;
   int lsread = look_for_optional_string(ifp, "Newton line search type", ls_type, MAX_CHAR_IN_INPUT);
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
@@ -8134,7 +8135,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Stratimikos file = %s for matrix %d", input,
                mtrx_index1);
       ECHO(echo_string, echo_file);
-    } 
+    }
 
     iread = look_forward_optional_until(ifp, "Normalized Residual Tolerance", "MATRIX", input, '=');
     if (iread == 1) {

@@ -315,7 +315,6 @@ int main(int argc, char **argv)
 
   /********************** BEGIN EXECUTION ***************************************/
 
-
   /* assume number of commands is less than or equal to the number of
    * arguments in the command line minus 1 (1st is program name) */
 
