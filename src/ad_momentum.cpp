@@ -1,3 +1,4 @@
+#include "rf_bc_const.h"
 #define GOMA_AD_MOMENTUM_CPP
 #include <Sacado.hpp>
 
@@ -244,7 +245,23 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
     mp_old->viscosity = mu.val();
     /*Sensitivities were already set to zero */
   } else if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA) {
-    mu = ad_only_turb_k_omega_viscosity();
+    ADType W[DIM][DIM];
+    for (int i = 0; i < DIM; i++) {
+      for (int j = 0; j < DIM; j++) {
+        W[i][j] = 0.5 * (ad_fv->grad_v[i][j] - ad_fv->grad_v[j][i]);
+      }
+    }
+
+    ADType Omega = 0.0;
+    for (int i = 0; i < DIM; i++) {
+      for (int j = 0; j < DIM; j++) {
+        Omega += W[i][j] * W[i][j];
+      }
+    }
+    Omega = sqrt(std::max(Omega,1e-20));
+    ADType F1, F2;
+    compute_sst_blending(F1, F2);
+    mu = sst_viscosity(Omega, F2);
   } else if (gn_local->ConstitutiveEquation == TURBULENT_SA ||
              gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
     mu = ad_sa_viscosity(gn_local);
@@ -554,6 +571,26 @@ int ad_assemble_momentum(dbl time,       /* current time */
             diffusion *= diffusion_etm;
           }
 
+              ADType graddiv = 0;
+              if (0) {
+                ADType gamma[DIM][DIM];
+                for (int i = 0; i < DIM; i++) {
+                  for (int j = 0; j < DIM; j++) {
+                    gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+                  }
+                }
+                ADType mu = ad_viscosity(gn, gamma);
+                ADType div_grad_phi = 0;
+                ADType div_v = 0;
+                for (int w = 0; w < dim; w++) {
+                  div_grad_phi +=  ad_fv->basis[eqn].grad_phi_e[i][a][w][w] * ad_fv->basis[eqn].grad_phi_e[i][a][w][w];
+                  div_v += ad_fv->grad_v[w][w] * ad_fv->grad_v[w][w];
+                }
+                graddiv = mu * div_grad_phi * mu * div_v;
+                graddiv *= -d_area * h3 * wt;
+              }
+
+
           /*
            * Source term...
            */
@@ -570,8 +607,8 @@ int ad_assemble_momentum(dbl time,       /* current time */
            */
 
           /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
-          R[ii] += mass.val() + advection.val() + diffusion.val() + source.val();
-          resid[a][ii] += mass + advection + diffusion + source;
+          R[ii] += mass.val() + advection.val() + diffusion.val() + source.val() + graddiv.val();
+          resid[a][ii] += mass + advection + diffusion + source + graddiv;
           // if (ei[pg->imtrx]->ielem == 418) {
           //   printf("diff = %.15f\n", diffusion.val());
           // }

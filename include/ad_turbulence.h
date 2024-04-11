@@ -61,6 +61,8 @@ int ad_calc_shearrate(ADType &gammadot,            /* strain rate invariant */
 void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale);
 ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local);
 ADType ad_only_turb_k_omega_viscosity(void);
+void compute_sst_blending(ADType &F1, ADType &F2);
+ADType sst_viscosity(const ADType &Omega, const ADType &F2);
 extern "C" {
 #endif
 
@@ -107,6 +109,11 @@ int ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
                                                          explicit (tt = 1) to implicit (tt = 0)    */
                                       dbl dt, /* current time step size                    */
                                       const PG_DATA *pg_data);
+int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time */
+                                  dbl tt,         /* parameter to vary time integration from
+                                                     explicit (tt = 1) to implicit (tt = 0)    */
+                                  dbl dt,         /* current time step size                    */
+                                  const PG_DATA *pg_data);
 #ifdef __cplusplus
 }
 #endif

@@ -2163,6 +2163,7 @@ struct Diet_Field_Variables {
 
   dbl grad_n[DIM][DIM]; /* Normal to level set function OR shell normal */
   dbl grad_turb_omega[DIM];
+  dbl grad_turb_k[DIM];
   dbl div_n; /* Divergence of LS normal field */
 
   /* Material tensors used at old time values */
