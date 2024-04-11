@@ -3099,6 +3099,7 @@ struct viscosity_dependence {
   double eddy_nu[MDE];            /* Turbulent viscosity */
   double turb_k[MDE];             /* Turbulent k */
   double turb_omega[MDE];         /* Turbulent omega */
+  double sh_t[MDE];               /* shell temperature */
 };
 typedef struct viscosity_dependence VISCOSITY_DEPENDENCE_STRUCT;
 typedef struct polymer_time_const_dependence {

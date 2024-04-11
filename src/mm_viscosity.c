@@ -88,7 +88,7 @@
  * -----
  *
  *   mu		= viscosity
- *   d_mu       = dependence of viscosity on the indendent unknowns in the
+ *   d_mu       = dependence of viscosity on the independent unknowns in the
  *                local element stiffness matrix, where:
  *
  *   d_mu->gd	= derivative of viscosity wrt to strain rate invariant variables
@@ -140,6 +140,13 @@ double viscosity(struct Generalized_Newtonian *gn_local,
       if (d_mu != NULL && pd->v[pg->imtrx][var]) {
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+        }
+      }
+
+      var = SHELL_TEMPERATURE;
+      if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          d_mu->sh_t[j] = mp->d_viscosity[var] * bf[var]->phi[j];
         }
       }
 
@@ -297,6 +304,11 @@ double viscosity(struct Generalized_Newtonian *gn_local,
               }
             }
             break;
+          case SHELL_TEMPERATURE:
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              d_mu->sh_t[j] = table_local->slope[i];
+            }
+            break;
           default:
             GOMA_EH(GOMA_ERROR, "Variable function not yet implemented in material property table");
           }
@@ -434,6 +446,14 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     {
       for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+      }
+    }
+    var = SHELL_TEMPERATURE;
+    if (d_mu != NULL && pd->v[pg->imtrx][var])
+
+    {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        d_mu->sh_t[j] = mp->d_viscosity[var] * bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == BOND) {
@@ -2659,13 +2679,17 @@ int thermal_viscosity(dbl mu0,  /* reference temperature fluid viscosity */
 
   dbl T; /* Convenient local variables */
   int status = 1;
+  int var = TEMPERATURE;
 
-  if (!pd->v[pg->imtrx][TEMPERATURE]) {
+  if (!pd->v[pg->imtrx][TEMPERATURE] && !pd->v[pg->imtrx][SHELL_TEMPERATURE]) {
     return (0);
   }
 
   if (pd->gv[TEMPERATURE]) {
     T = fv->T;
+  } else if (pd->gv[SHELL_TEMPERATURE]) {
+    T = fv->sh_t;
+    var = SHELL_TEMPERATURE;
   } else {
     T = upd->Process_Temperature;
   }
@@ -2673,11 +2697,11 @@ int thermal_viscosity(dbl mu0,  /* reference temperature fluid viscosity */
   if (T <= 0.3) {
     mu = mu0 * exp(Aexp / 0.3);
     mp->viscosity = mu;
-    mp->d_viscosity[TEMPERATURE] = 0.;
+    mp->d_viscosity[var] = 0.;
   } else {
     mu = mu0 * exp(Aexp / T);
     mp->viscosity = mu;
-    mp->d_viscosity[TEMPERATURE] = -mu0 * Aexp / (T * T);
+    mp->d_viscosity[var] = -mu0 * Aexp / (T * T);
   }
 
   return (status);
