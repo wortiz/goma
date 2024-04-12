@@ -258,7 +258,7 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
         Omega += W[i][j] * W[i][j];
       }
     }
-    Omega = sqrt(std::max(Omega,1e-20));
+    Omega = sqrt(std::max(Omega, 1e-20));
     ADType F1, F2;
     compute_sst_blending(F1, F2);
     mu = sst_viscosity(Omega, F2);
@@ -571,25 +571,25 @@ int ad_assemble_momentum(dbl time,       /* current time */
             diffusion *= diffusion_etm;
           }
 
-              ADType graddiv = 0;
-              if (0) {
-                ADType gamma[DIM][DIM];
-                for (int i = 0; i < DIM; i++) {
-                  for (int j = 0; j < DIM; j++) {
-                    gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
-                  }
-                }
-                ADType mu = ad_viscosity(gn, gamma);
-                ADType div_grad_phi = 0;
-                ADType div_v = 0;
-                for (int w = 0; w < dim; w++) {
-                  div_grad_phi +=  ad_fv->basis[eqn].grad_phi_e[i][a][w][w] * ad_fv->basis[eqn].grad_phi_e[i][a][w][w];
-                  div_v += ad_fv->grad_v[w][w] * ad_fv->grad_v[w][w];
-                }
-                graddiv = mu * div_grad_phi * mu * div_v;
-                graddiv *= -d_area * h3 * wt;
+          ADType graddiv = 0;
+          if (1) {
+            ADType gamma[DIM][DIM];
+            for (int i = 0; i < DIM; i++) {
+              for (int j = 0; j < DIM; j++) {
+                gamma[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
               }
-
+            }
+            ADType mu = ad_viscosity(gn, gamma);
+            ADType div_grad_phi = 0;
+            ADType div_v = 0;
+            for (int w = 0; w < dim; w++) {
+              div_grad_phi += ad_fv->basis[eqn].grad_phi_e[i][a][w][w] *
+                              ad_fv->basis[eqn].grad_phi_e[i][a][w][w];
+              div_v += ad_fv->grad_v[w][w] * ad_fv->grad_v[w][w];
+            }
+            graddiv = (2.0/3.0) * mu * div_grad_phi * mu * div_v;
+            graddiv *= -d_area * h3 * wt;
+          }
 
           /*
            * Source term...

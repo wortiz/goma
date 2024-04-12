@@ -1943,6 +1943,30 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
             P0PRINTF("Floored %d moment values\n", global_floored);
           }
+          if (upd->ep[pg->imtrx][TURB_K] >= 0 || upd->ep[pg->imtrx][TURB_OMEGA] >= 0) {
+            /*     Floor values to 0 */
+            int floored_values = 0;
+            for (int var = TURB_K; var <= TURB_OMEGA; var++) {
+              for (int mn = 0; mn < upd->Num_Mat; mn++) {
+                if (pd_glob[mn]->v[pg->imtrx][var]) {
+                  for (i = 0; i < num_total_nodes; i++) {
+                    int j = Index_Solution(i, var, 0, 0, mn, pg->imtrx);
+
+                    if (j != -1 && x[pg->imtrx][j] < 0) {
+                    x[pg->imtrx][j] = 0.0;
+                      floored_values++;
+                    }
+                  }
+                }
+              }
+            }
+
+            int global_floored = 0;
+            MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+            if (global_floored > 0)
+              P0PRINTF("Floored %d values\n", global_floored);
+          }
 
           /*
             err = solve_linear_segregated(ams[pg->imtrx], x[pg->imtrx],

@@ -2815,7 +2815,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     for (int i = 0; i < pd->Num_Dim; i++) {
       Z_k += rho * ad_fv->v[i] * ad_fv->grad_turb_k[i];
     }
-    ADType coeff = 12 * (mu + mu_turb * sigma_k);
+    ADType coeff = 12 * (mu + mu_turb * sigma_k) * (mu + mu_turb * sigma_k);
 
     ADType diff_g_g = 0;
     for (int i = 0; i < pd->Num_Dim; i++) {
@@ -2827,14 +2827,14 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     ADType tau_supg_k =
         1.0 / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
 
-    // ADType vshock_k =
-    //     ad_yzbeta(pd->Num_Dim, TURB_K, upd->turbulent_info->k_inf, Z_k, ad_fv->grad_turb_k);
+    ADType vshock_k =
+        ad_yzbeta(pd->Num_Dim, TURB_K, upd->turbulent_info->k_inf, Z_k, ad_fv->grad_turb_k);
 
-    ADType gs_inner_dot[DIM];
-    ADType vshock_k = ad_dcdd(pd->Num_Dim, TURB_K, ad_fv->grad_turb_k,
-                       gs_inner_dot);
+    // ADType gs_inner_dot[DIM];
+    // ADType vshock_k = ad_dcdd(pd->Num_Dim, TURB_K, ad_fv->grad_turb_k,
+                      //  gs_inner_dot);
 
-    vshock_k = std::min(tau_supg_k, vshock_k);
+    vshock_k = std::min(100*tau_supg_k, vshock_k);
 
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
       ADType wt_func = bf[eqn]->phi[i];
@@ -2875,8 +2875,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
       ADType diff = 0.0;
       for (int p = 0; p < VIM; p++) {
         diff +=
-            bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_k) * ad_fv->grad_turb_k[p]
-            + bf[eqn]->grad_phi[i][p] * vshock_k * gs_inner_dot[p];
+            bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_k + vshock_k) * ad_fv->grad_turb_k[p];
+            // + bf[eqn]->grad_phi[i][p] * vshock_k * gs_inner_dot[p];
       }
       diff *= d_area;
       diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -2892,7 +2892,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
       Z_w += rho * ad_fv->v[i] * ad_fv->grad_turb_omega[i];
     }
 
-    coeff = 12 * (mu + mu_turb * sigma_omega);
+    coeff = 12 * (mu + mu_turb * sigma_omega) * (mu + mu_turb * sigma_omega);
 
     diff_g_g = 0;
     for (int i = 0; i < pd->Num_Dim; i++) {
@@ -2904,13 +2904,13 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     ADType tau_supg_w =
         1.0 / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
 
-    // ADType vshock_w = ad_yzbeta(pd->Num_Dim, TURB_OMEGA, upd->turbulent_info->omega_inf, Z_w,
-    //                             ad_fv->grad_turb_omega);
+    ADType vshock_w = ad_yzbeta(pd->Num_Dim, TURB_OMEGA, upd->turbulent_info->omega_inf, Z_w,
+                                ad_fv->grad_turb_omega);
 
-    ADType vshock_w = ad_dcdd(pd->Num_Dim, TURB_OMEGA, ad_fv->grad_turb_omega,
-                       gs_inner_dot);
+    // ADType vshock_w = ad_dcdd(pd->Num_Dim, TURB_OMEGA, ad_fv->grad_turb_omega,
+                      //  gs_inner_dot);
 
-    vshock_w = std::min(tau_supg_w, vshock_w);
+    vshock_w = std::min(100*tau_supg_w, vshock_w);
 
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
       ADType wt_func = bf[eqn]->phi[i];
@@ -2959,9 +2959,9 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
       /* Assemble diffusion terms */
       ADType diff = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_omega ) *
-                ad_fv->grad_turb_omega[p]
-            + bf[eqn]->grad_phi[i][p] * vshock_w * gs_inner_dot[p];
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_turb * sigma_omega + vshock_w ) *
+                ad_fv->grad_turb_omega[p];
+            // + bf[eqn]->grad_phi[i][p] * vshock_w * gs_inner_dot[p];
       }
       diff *= d_area;
       diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
