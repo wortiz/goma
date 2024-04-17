@@ -1550,7 +1550,16 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
     }
 
-    if (pde[R_SHEAR_RATE]) {
+    if (pde[R_SHEAR_RATE] && pd->gv[R_TURB_OMEGA]) {
+      err = ad_assemble_invariant(theta, delta_t);
+
+      GOMA_EH(err, "assemble_invariant");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_invariant");
+      if (err)
+        return -1;
+#endif
+    } else if (pde[R_SHEAR_RATE]) {
       err = assemble_invariant(theta, delta_t);
 
       GOMA_EH(err, "assemble_invariant");

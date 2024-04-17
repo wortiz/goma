@@ -38,7 +38,9 @@ struct AD_Field_Variables {
   ADType S_dot[MAX_MODES][DIM][DIM];
   ADType grad_S[MAX_MODES][DIM][DIM][DIM];
   ADType div_S[MAX_MODES][DIM];
+  ADType grad_SH[DIM];
   ADType P;
+  ADType SH;
   ADType grad_P[DIM];
   ADType eddy_nu;
   ADType eddy_nu_dot;
@@ -114,6 +116,9 @@ int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time */
                                                      explicit (tt = 1) to implicit (tt = 0)    */
                                   dbl dt,         /* current time step size                    */
                                   const PG_DATA *pg_data);
+int ad_assemble_invariant(double tt, /* parameter to vary time integration from
+                                   * explicit (tt = 1) to implicit (tt = 0)    */
+                       double dt);/*  time step size                          */
 #ifdef __cplusplus
 }
 #endif

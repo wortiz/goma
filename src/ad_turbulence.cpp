@@ -489,6 +489,25 @@ extern "C" void fill_ad_field_variables() {
     }
   }
 
+  if (pd->gv[SHEAR_RATE]) {
+    ad_fv->SH = 0;
+    for (int i = 0; i < ei[upd->matrix_index[SHEAR_RATE]]->dof[SHEAR_RATE]; i++) {
+      ad_fv->SH += ADType(num_ad_variables, ad_fv->offset[SHEAR_RATE] + i, *esp->SH[i]) *
+                        bf[SHEAR_RATE]->phi[i];
+
+    }
+
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      ad_fv->grad_eddy_nu[q] = 0;
+
+      for (int i = 0; i < ei[upd->matrix_index[SHEAR_RATE]]->dof[SHEAR_RATE]; i++) {
+        ad_fv->grad_eddy_nu[q] +=
+            ADType(num_ad_variables, ad_fv->offset[SHEAR_RATE] + i, *esp->SH[i]) *
+            ad_fv->basis[SHEAR_RATE].grad_phi[i][q];
+      }
+    }
+  }
+
   if (pd->gv[EDDY_NU]) {
     ad_fv->eddy_nu = 0;
     ad_fv->eddy_nu_dot = 0;
@@ -2827,12 +2846,12 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     ADType tau_supg_k =
         1.0 / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
 
-    ADType vshock_k =
-        ad_yzbeta(pd->Num_Dim, TURB_K, upd->turbulent_info->k_inf, Z_k, ad_fv->grad_turb_k);
+    // ADType vshock_k =
+        // ad_yzbeta(pd->Num_Dim, TURB_K, upd->turbulent_info->k_inf, Z_k, ad_fv->grad_turb_k);
 
-    // ADType gs_inner_dot[DIM];
-    // ADType vshock_k = ad_dcdd(pd->Num_Dim, TURB_K, ad_fv->grad_turb_k,
-                      //  gs_inner_dot);
+    ADType gs_inner_dot[DIM];
+    ADType vshock_k = ad_dcdd(pd->Num_Dim, TURB_K, ad_fv->grad_turb_k,
+                       gs_inner_dot);
 
     vshock_k = std::min(100*tau_supg_k, vshock_k);
 
@@ -2904,11 +2923,11 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     ADType tau_supg_w =
         1.0 / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
 
-    ADType vshock_w = ad_yzbeta(pd->Num_Dim, TURB_OMEGA, upd->turbulent_info->omega_inf, Z_w,
-                                ad_fv->grad_turb_omega);
+    // ADType vshock_w = ad_yzbeta(pd->Num_Dim, TURB_OMEGA, upd->turbulent_info->omega_inf, Z_w,
+                                // ad_fv->grad_turb_omega);
 
-    // ADType vshock_w = ad_dcdd(pd->Num_Dim, TURB_OMEGA, ad_fv->grad_turb_omega,
-                      //  gs_inner_dot);
+    ADType vshock_w = ad_dcdd(pd->Num_Dim, TURB_OMEGA, ad_fv->grad_turb_omega,
+                       gs_inner_dot);
 
     vshock_w = std::min(100*tau_supg_w, vshock_w);
 
@@ -3015,5 +3034,164 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
   } /* End of if assemble Jacobian */
   return (status);
 }
+int ad_assemble_invariant(double tt, /* parameter to vary time integration from
+                                   * explicit (tt = 1) to implicit (tt = 0)    */
+                       double dt) /*  time step size                          */
+{
+  int dim;
+  int p;
+
+  int eqn;
+  int peqn;
+  int i;
+  int status;
+
+
+  dbl h3 = fv->h3;          /* Volume element (scale factors). */
+  /*
+   * Galerkin weighting functions for i-th and a-th momentum residuals
+   * and some of their derivatives...
+   */
+
+  ADType wt_func;
+
+  /*
+   * Interpolation functions for variables and some of their derivatives.
+   */
+
+
+  dbl wt;
+
+  status = 0;
+
+  /*
+   * Unpack variables from structures for local convenience...
+   */
+
+  dim = pd->Num_Dim;
+
+  /*
+   * Bail out fast if there's nothing to do...
+   */
+
+  if (!pd->e[pg->imtrx][eqn = R_SHEAR_RATE]) {
+    return (status);
+  }
+
+  peqn = upd->ep[pg->imtrx][eqn];
+
+  wt = fv->wt; /* Numerical integration weight */
+
+  ADType det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
+
+  ADType omega[DIM][DIM];
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      omega[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
+    }
+  }
+
+  ADType S = 0.;
+  /* get gamma_dot invariant for viscosity calculations */
+  for (int a = 0; a < VIM; a++) {
+    for (int b = 0; b < VIM; b++) {
+      S += omega[a][b] * omega[a][b];
+    }
+  }
+
+  if (S > 1e-20) {
+    S = sqrt(0.5 * S);
+  }
+
+  /*
+   * Residuals_________________________________________________________________
+   */
+
+  std::vector<ADType> resid(ei[pg->imtrx]->dof[eqn]);
+  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    resid[i] = 0;
+  }
+  if (af->Assemble_Residual) {
+    /*
+     * Assemble the second_invariant equation
+     */
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+
+      wt_func = bf[eqn]->phi[i];
+
+      ADType advection = 0.;
+
+      if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+        advection = -S;
+        advection *= wt_func * det_J * wt * h3;
+        advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+      }
+
+      /*
+       * Diffusion Term..
+       */
+
+      /* OK this really isn't a diffusion term.  Its really a
+       * filtering term.  But it looks like a diffusion operator.No?
+       */
+
+      ADType diffusion = 0.;
+
+      if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+        for (p = 0; p < dim; p++) {
+          diffusion += ad_fv->basis[eqn].grad_phi[i][p] * ad_fv->grad_SH[p];
+        }
+
+        diffusion *= det_J * wt * h3;
+        diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      }
+
+      /*
+       * Source term...
+       */
+
+      ADType source = 0;
+
+      if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+        source += ad_fv->SH;
+        source *= wt_func * det_J * h3 * wt;
+        source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+      }
+
+      resid[i] += advection + source + diffusion;
+      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + source.val() + diffusion.val();
+    }
+  }
+
+  /*
+   * Jacobian terms_________________________________________________________________
+   */
+
+  if (af->Assemble_Jacobian) {
+
+    eqn = SHEAR_RATE;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+      for (int var = V_FIRST; var < V_LAST; var++) {
+
+        /* Sensitivity w.r.t. velocity */
+        if (pd->v[pg->imtrx][var]) {
+          int pvar = upd->vp[pg->imtrx][var];
+
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
+
+          } /* End of loop over j */
+        }   /* End of if the variale is active */
+      }
+    }
+  }   /* end of if(af,, */
+
+  return (status);
+
+} /* END of assemble_invariant */
 #endif
 #endif
