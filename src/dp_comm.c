@@ -196,6 +196,61 @@ void exchange_dof_int(Comm_Ex *cx, Dpi *dpi, int *x, int imtrx)
 /********************************************************************/
 /********************************************************************/
 /********************************************************************/
+void exchange_node_int(Comm_Ex *cx, Dpi *dpi, int *x)
+
+/************************************************************
+ *
+ *  exchange_dof_int():
+ *
+ *  send/recv appropriate pieces of a node-based int array
+ ************************************************************/
+{
+  COMM_NP_STRUCT *np_base, *np_ptr;
+  int *ptr_send_list, *ptr_recv_list;
+  register int *ptrd;
+  register int *ptr_int, i;
+  int p;
+  int num_neighbors = dpi->num_neighbors;
+  int total_num_send_unknowns;
+
+  if (num_neighbors == 0)
+    return;
+
+#ifdef PARALLEL
+  total_num_send_unknowns = ptr_node_send[dpi->num_neighbors];
+  np_base = alloc_struct_1(COMM_NP_STRUCT, dpi->num_neighbors);
+  ptrd = (int *)alloc_int_1(total_num_send_unknowns, INT_NOINIT);
+  ptr_send_list = ptrd;
+
+  /*
+   * gather up the list of send unknowns
+   */
+  ptr_int = list_node_send;
+  for (i = total_num_send_unknowns; i > 0; i--) {
+    *ptrd++ = x[*ptr_int++];
+  }
+
+  /*
+   * store base address for the start of the entries corresponding
+   * to external nodes in this vector
+   */
+  ptr_recv_list = x + dpi->num_internal_nodes + dpi->num_boundary_nodes;
+
+  np_ptr = np_base;
+  for (p = 0; p < dpi->num_neighbors; p++) {
+    np_ptr->neighbor_ProcID = cx[p].neighbor_name;
+    np_ptr->send_message_buf = (void *)(ptr_send_list + ptr_node_send[p]);
+    np_ptr->send_message_length = sizeof(int) * cx[p].num_nodes_send;
+    np_ptr->recv_message_buf = (void *)ptr_recv_list;
+    np_ptr->recv_message_length = sizeof(int) * cx[p].num_nodes_recv;
+    ptr_recv_list += cx[p].num_nodes_recv;
+    np_ptr++;
+  }
+  exchange_neighbor_proc_info(dpi->num_neighbors, np_base);
+  safer_free((void **)&np_base);
+  safer_free((void **)&ptr_send_list);
+#endif
+}
 
 void exchange_node(Comm_Ex *cx, Dpi *dpi, double *x)
 

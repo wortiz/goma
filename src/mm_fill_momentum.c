@@ -2986,9 +2986,17 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   if (evss_f) {
-    for (a = 0; a < VIM; a++) {
-      for (b = 0; b < VIM; b++) {
-        gamma_cont[a][b] = fv->G[a][b] + fv->G[b][a];
+    if (pd->gv[VELOCITY_GRADIENT11]) {
+      for (a = 0; a < VIM; a++) {
+        for (b = 0; b < VIM; b++) {
+          gamma_cont[a][b] = fv->G[a][b] + fv->G[b][a];
+        }
+      }
+    } else {
+      for (a = 0; a < VIM; a++) {
+        for (b = 0; b < VIM; b++) {
+          gamma_cont[a][b] = fv_lagged->G[a][b] + fv_lagged->G[b][a];
+        }
       }
     }
   } else {

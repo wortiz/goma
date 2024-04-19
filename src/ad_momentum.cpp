@@ -808,7 +808,8 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   if (evss_f) {
     for (int a = 0; a < VIM; a++) {
       for (int b = 0; b < VIM; b++) {
-        gamma_cont[a][b] = ad_fv->G[a][b] + ad_fv->G[b][a];
+        //gamma_cont[a][b] = ad_fv->G[a][b] + ad_fv->G[b][a];
+        gamma_cont[a][b] = fv_lagged->G[a][b] + fv_lagged->G[b][a];
       }
     }
   } else {
@@ -1330,7 +1331,7 @@ int ad_calc_pspg(ADType pspg[DIM],
     }
   } else {
     for (p = 0; p < WIM; p++) {
-      div_G[p] = 0.;
+      div_G[p] = fv_lagged->div_G[p];
     }
   }
 
@@ -1924,7 +1925,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
   int eqn, var;
   int peqn, pvar;
-  int evss_gradv = 0;
+  int evss_gradv = 1;
 
   int i, j, status, mode;
   ADType v[DIM];     /* Velocity field. */
@@ -2110,7 +2111,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
         g[a][b] = ad_fv->grad_v[a][b];
         gt[a][b] = ad_fv->grad_v[b][a];
       } else {
-        g[a][b] = ad_fv->G[a][b];
+        g[a][b] = fv_lagged->G[a][b];
         gt[b][a] = g[a][b];
       }
     }

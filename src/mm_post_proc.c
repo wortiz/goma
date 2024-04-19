@@ -3903,6 +3903,33 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
       }
     } else {
       switch (pp_average[i]->type) {
+      case AVG_LAGGED_G11:
+        avg_sum[i][global_node] += fv_lagged->G[0][0];
+        break;
+      case AVG_LAGGED_G12:
+        avg_sum[i][global_node] += fv_lagged->G[0][1];
+        break;
+      case AVG_LAGGED_G13:
+        avg_sum[i][global_node] += fv_lagged->G[0][2];
+        break;
+      case AVG_LAGGED_G21:
+        avg_sum[i][global_node] += fv_lagged->G[1][0];
+        break;
+      case AVG_LAGGED_G22:
+        avg_sum[i][global_node] += fv_lagged->G[1][1];
+        break;
+      case AVG_LAGGED_G23:
+        avg_sum[i][global_node] += fv_lagged->G[1][2];
+        break;
+      case AVG_LAGGED_G31:
+        avg_sum[i][global_node] += fv_lagged->G[2][0];
+        break;
+      case AVG_LAGGED_G32:
+        avg_sum[i][global_node] += fv_lagged->G[2][1];
+        break;
+      case AVG_LAGGED_G33:
+        avg_sum[i][global_node] += fv_lagged->G[2][2];
+        break;
       case AVG_DENSITY: {
         double rho = density(NULL, time);
         avg_sum[i][global_node] += rho;
@@ -7701,7 +7728,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
   char filename[MAX_FNL];
   char second_string[MAX_CHAR_IN_INPUT];
   char ts[MAX_CHAR_IN_INPUT];
-  int i, k, nargs, sz, sens_vec_ct, j;
+  int i, k, nargs, sz, sens_vec_ct, j=0;
   long save_position;
   int pbits[5];
 
@@ -9081,7 +9108,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
         if (!strncasecmp(variable_name, "DENSITY_AVG", strlen(variable_name))) {
           strcpy(pp_average[i]->type_name, "DENSITY_AVG");
           pp_average[i]->non_variable_type = 1;
-          pp_average[i]->type = AVG_HEAVISIDE;
+          pp_average[i]->type = AVG_DENSITY;
         } else if (!strncasecmp(variable_name, "HEAVISIDE", strlen(variable_name))) {
           strcpy(pp_average[i]->type_name, "HEAVISIDE_AVG");
           pp_average[i]->non_variable_type = 1;
@@ -9106,6 +9133,60 @@ void rd_post_process_specs(FILE *ifp, char *input) {
           strcpy(pp_average[i]->type_name, "EM_INC_MAG");
           pp_average[i]->non_variable_type = 1;
           pp_average[i]->type = AVG_EM_INC_MAG;
+        } else if (!strncasecmp(variable_name, "LAGGED_G2D", strlen(variable_name))) {
+          int vim = 2;
+          int new_items = vim*vim-1;
+          pp_Average **pp_average_tmp = pp_average;
+          sz = sizeof(pp_Average *);
+          pp_average = (pp_Average **)array_alloc(1, nn_average + new_items, sz);
+          for (int k = 0; k < nn_average; k++) {
+            pp_average[k] = pp_average_tmp[k];
+          }
+          free(pp_average_tmp);
+          sz = sizeof(pp_Average);
+          for (int k = nn_average; k < (new_items + nn_average); k++) {
+            pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
+          }
+          nn_average += new_items;
+          for (int a = 0; a < vim; a++) {
+            for (int b = 0; b < vim; b++) {
+              char type_name[MAX_VAR_NAME_LNGTH];
+              snprintf(type_name, MAX_VAR_NAME_LNGTH, "L_G%d%d", a+1, b+1);
+              strcpy(pp_average[i]->type_name, type_name);
+              pp_average[i]->non_variable_type = 1;
+              pp_average[i]->type = AVG_LAGGED_G11 + a * DIM + b;
+              pp_average[i]->species_index = 0;
+              i++;
+            }
+          }
+          i-=1;
+        } else if (!strncasecmp(variable_name, "LAGGED_G3D", strlen(variable_name))) {
+          int vim = 3;
+          int new_items = vim*vim-1;
+          pp_Average **pp_average_tmp = pp_average;
+          sz = sizeof(pp_Average *);
+          pp_average = (pp_Average **)array_alloc(1, nn_average + new_items, sz);
+          for (int k = 0; k < nn_average; k++) {
+            pp_average[k] = pp_average_tmp[k];
+          }
+          free(pp_average_tmp);
+          sz = sizeof(pp_Average);
+          for (int k = nn_average; k < (new_items + nn_average); k++) {
+            pp_average[k] = (pp_Average *)array_alloc(1, 1, sz);
+          }
+          nn_average += new_items;
+          for (int a = 0; a < vim; a++) {
+            for (int b = 0; b < vim; b++) {
+              char type_name[MAX_VAR_NAME_LNGTH];
+              snprintf(type_name, MAX_VAR_NAME_LNGTH, "L_G%d%d", a+1, b+1);
+              strcpy(pp_average[i]->type_name, type_name);
+              pp_average[i]->non_variable_type = 1;
+              pp_average[i]->type = AVG_LAGGED_G11 + a * DIM + b;
+              pp_average[i]->species_index = 0;
+              i++;
+            }
+          }
+          i-=1;
         } else if (!strncasecmp(variable_name, "EM", strlen(variable_name))) {
           int new_items = 6 - 1;
           pp_Average **pp_average_tmp = pp_average;

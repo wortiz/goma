@@ -192,17 +192,15 @@ int load_fv(void)
     status = stress_eqn_pointer(v_s);
     GOMA_EH(status, "stress_eqn_pointer(v_s)");
   }
-  if (pdgv[VELOCITY_GRADIENT11]) {
-    v_g[0][0] = VELOCITY_GRADIENT11;
-    v_g[0][1] = VELOCITY_GRADIENT12;
-    v_g[1][0] = VELOCITY_GRADIENT21;
-    v_g[1][1] = VELOCITY_GRADIENT22;
-    v_g[0][2] = VELOCITY_GRADIENT13;
-    v_g[1][2] = VELOCITY_GRADIENT23;
-    v_g[2][0] = VELOCITY_GRADIENT31;
-    v_g[2][1] = VELOCITY_GRADIENT32;
-    v_g[2][2] = VELOCITY_GRADIENT33;
-  }
+  v_g[0][0] = VELOCITY_GRADIENT11;
+  v_g[0][1] = VELOCITY_GRADIENT12;
+  v_g[1][0] = VELOCITY_GRADIENT21;
+  v_g[1][1] = VELOCITY_GRADIENT22;
+  v_g[0][2] = VELOCITY_GRADIENT13;
+  v_g[1][2] = VELOCITY_GRADIENT23;
+  v_g[2][0] = VELOCITY_GRADIENT31;
+  v_g[2][1] = VELOCITY_GRADIENT32;
+  v_g[2][2] = VELOCITY_GRADIENT33;
 
   /*
    * Since it is possible to have a 1D element in a 2D problem,
@@ -1265,6 +1263,20 @@ int load_fv(void)
   /*
    * Velocity Gradient (tensor)...
    */
+  // compute lagged variables for velocity gradient
+  for (p = 0; p < VIM; p++) {
+    for (q = 0; q < VIM; q++) {
+      int v = R_STRESS11;
+
+      fv_lagged->G[p][q] = 0.;
+      dofs = ei[upd->matrix_index[v]]->dof[v];
+      for (i = 0; i < dofs; i++) {
+        int lvi = upd->lv->local_node_to_lagged[ei[upd->matrix_index[v]]->gnn_list[v][i]];
+        int peqn = upd->lv->index[v_g[p][q]];
+        fv_lagged->G[p][q] += upd->lv->lagged_variables[peqn][lvi] * bf[v]->phi[i];
+      }
+    }
+  }
 
   for (p = 0; pdgv[VELOCITY_GRADIENT11] && p < VIM; p++) {
     if (gn->ConstitutiveEquation == BINGHAM_MIXED) {
@@ -1297,8 +1309,12 @@ int load_fv(void)
         v = v_g[p][q];
         if (pdgv[v]) {
           fv->G[p][q] = fv_old->G[p][q] = fv_dot->G[p][q] = 0.0;
+          fv_lagged->G[p][q] = 0.;
           dofs = ei[upd->matrix_index[v]]->dof[v];
           for (i = 0; i < dofs; i++) {
+            int lvi = upd->lv->local_node_to_lagged[ei[upd->matrix_index[v]]->gnn_list[v][i]];
+            int peqn = upd->ep[upd->matrix_index[v]][v];
+            fv_lagged->G[p][q] += upd->lv->lagged_variables[peqn][lvi] * bf[v]->phi[i];
             fv->G[p][q] += *esp->G[p][q][i] * bf[v]->phi[i];
             if (pd->TimeIntegration != STEADY) {
               fv_old->G[p][q] += *esp_old->G[p][q][i] * bf[v]->phi[i];
@@ -2953,6 +2969,37 @@ int load_fv_grads(void)
   /*
    * grad(G)
    */
+  int v_g[DIM][DIM];
+  v_g[0][0] = VELOCITY_GRADIENT11;
+  v_g[0][1] = VELOCITY_GRADIENT12;
+  v_g[1][0] = VELOCITY_GRADIENT21;
+  v_g[1][1] = VELOCITY_GRADIENT22;
+  v_g[0][2] = VELOCITY_GRADIENT13;
+  v_g[1][2] = VELOCITY_GRADIENT23;
+  v_g[2][0] = VELOCITY_GRADIENT31;
+  v_g[2][1] = VELOCITY_GRADIENT32;
+  v_g[2][2] = VELOCITY_GRADIENT33;
+  for (p = 0; p < VIM; p++) {
+    for (q = 0; q < VIM; q++) {
+      for (r = 0; r < VIM; r++) {
+        int v = R_STRESS11;
+        fv_lagged->grad_G[r][p][q] = 0.0;
+
+        for (i = 0; i < dofs; i++) {
+          int lvi = upd->lv->local_node_to_lagged[ei[upd->matrix_index[v]]->gnn_list[v][i]];
+          int peqn = upd->lv->index[v_g[p][q]];
+          fv_lagged->grad_G[r][p][q] +=
+              upd->lv->lagged_variables[peqn][lvi] * bf[v]->grad_phi[i][r];
+        }
+      }
+    }
+  }
+  for (r = 0; r < dim; r++) {
+    fv->div_G[r] = 0.0;
+    for (q = 0; q < dim; q++) {
+      fv_lagged->div_G[r] += fv_lagged->grad_G[q][q][r];
+    }
+  }
 
   if (pd->gv[VELOCITY_GRADIENT11]) {
     v = VELOCITY_GRADIENT11;

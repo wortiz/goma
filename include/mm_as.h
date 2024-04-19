@@ -52,7 +52,7 @@ extern BASIS_FUNCTIONS_STRUCT **bfd;
 extern BASIS_FUNCTIONS_STRUCT **bfi;
 extern BASIS_FUNCTIONS_STRUCT **bfex;
 extern struct Shell_Block **shell_blocks;
-extern struct Field_Variables *fv, *fv_sens;
+extern struct Field_Variables *fv, *fv_sens, *fv_lagged;
 extern struct Diet_Field_Variables *fv_dot_dot, *fv_dot_dot_old;
 extern struct Diet_Field_Variables *fv_old, *fv_dot, *fv_dot_old;
 extern struct External_Field_Variables *efv;

@@ -4720,7 +4720,9 @@ int assemble_gradient(dbl tt, /* parameter to vary time integration from
 
   for (a = 0; a < VIM; a++) {
     for (b = 0; b < VIM; b++) {
-      grad_v[a][b] = fv->grad_v[a][b];
+      // grad_v[a][b] = fv->grad_v[a][b];
+      // grad_v[a][b] = fv_lagged->G[a][b];
+      grad_v[a][b] = 0;
     }
   }
 
@@ -4800,7 +4802,7 @@ int assemble_gradient(dbl tt, /* parameter to vary time integration from
           /*
            * J_G_v
            */
-          for (p = 0; p < WIM; p++) {
+          for (p = WIM; p < WIM; p++) {
             var = VELOCITY1 + p;
             if (pd->v[pg->imtrx][var]) {
               pvar = upd->vp[pg->imtrx][var];
@@ -4838,7 +4840,7 @@ int assemble_gradient(dbl tt, /* parameter to vary time integration from
           /*
            * J_G_d
            */
-          for (p = 0; p < dim; p++) {
+          for (p = dim; p < dim; p++) {
             var = MESH_DISPLACEMENT1 + p;
             if (pd->v[pg->imtrx][var]) {
               pvar = upd->vp[pg->imtrx][var];

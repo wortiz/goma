@@ -72,7 +72,7 @@ BASIS_FUNCTIONS_STRUCT **bfd = NULL;
 BASIS_FUNCTIONS_STRUCT **bfi = NULL;
 BASIS_FUNCTIONS_STRUCT **bfex = NULL;
 struct Shell_Block **shell_blocks = NULL;
-struct Field_Variables *fv = NULL, *fv_sens = NULL;
+struct Field_Variables *fv = NULL, *fv_sens = NULL, *fv_lagged;
 struct Diet_Field_Variables *fv_dot_dot = NULL, *fv_dot_dot_old = NULL;
 struct Diet_Field_Variables *fv_old = NULL, *fv_dot = NULL;
 struct Diet_Field_Variables *fv_dot_old = NULL;
@@ -1364,6 +1364,9 @@ int assembly_alloc(Exo_DB *exo)
     GOMA_EH(status, "Problem getting memory for Field_Variables");
   }
   memset(fv, 0, sizeof(struct Field_Variables));
+
+  fv_lagged = alloc_struct_1(struct Field_Variables, 1);
+  memset(fv_lagged, 0, sizeof(struct Field_Variables));
 
   fv_sens = alloc_struct_1(struct Field_Variables, 1);
   if (Debug_Flag) {

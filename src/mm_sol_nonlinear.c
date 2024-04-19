@@ -86,6 +86,7 @@
 #include "util/distance_helpers.h"
 #include "wr_exo.h"
 #include "wr_side_data.h"
+#include "compute_lagged_variables.h"
 
 /*
  * EDW: The prototype for function "mf_sol_lineqn" has been moved
@@ -497,6 +498,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   struct con_struct *con = con_ptr;
   struct Level_Set_Data *ls_old;
 
+  static struct Lagged_Variables *lv = NULL;
+
   /* Had to add these for newmark-beta updates based on material */
   UMI_LIST_STRUCT *curr_mat_list;
   NODE_INFO_STRUCT *node_ptr;
@@ -571,6 +574,11 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   asdv(&delta_x, numProcUnknowns);
   asdv(&res_p, numProcUnknowns);
   asdv(&res_m, numProcUnknowns);
+
+  if (upd->lv == NULL) {
+    upd->lv = (struct Lagged_Variables *)calloc(1,sizeof(struct Lagged_Variables));
+    setup_lagged_variables(exo, dpi, upd->lv);
+  }
 
   /*
    * Initialize augmenting condition arrays if needed
@@ -776,6 +784,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       init_vec_value(a, 0.0, ams->nnz);
     }
     get_time(ctod);
+
+    compute_lagged_variables(exo,dpi, x, x_old, x_older, xdot, xdot_old, upd->lv);
 
     /*
      * Mark the CPU time for combined assembly and solve purposes...

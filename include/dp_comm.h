@@ -49,4 +49,5 @@ EXTERN void exchange_node(Comm_Ex *cx, /* cx - ptr to communications exchange in
                           Dpi *d,      /* dpi - distributed processing info */
                           double *a);  /* x - local processor node-based vector */
 
+EXTERN void exchange_node_int(Comm_Ex *cx, Dpi *dpi, int *x);
 #endif /* GOMA_DP_COMM_H */

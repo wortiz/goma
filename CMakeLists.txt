@@ -621,6 +621,7 @@ set(GOMA_INCLUDES
     include/wr_exo.h
     include/wr_side_data.h
     include/wr_soln.h
+    include/compute_lagged_variables.h
     include/brkfix/bbb.h
     include/brkfix/exo_utils.h
     include/brkfix/fix.h
@@ -784,6 +785,7 @@ set(GOMA_SOURCES
     src/wr_exo.c
     src/wr_side_data.c
     src/wr_soln.c
+    src/compute_lagged_variables.cpp
     src/brkfix/bbb.c
     src/brkfix/setup_fix_data.cpp
     src/brkfix/fix_exo_file.c)

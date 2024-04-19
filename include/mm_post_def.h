@@ -416,6 +416,15 @@ typedef struct Post_Processing_Averages {
 } pp_Average;
 
 enum AverageExtraTypes {
+  AVG_LAGGED_G11,
+  AVG_LAGGED_G12,
+  AVG_LAGGED_G13,
+  AVG_LAGGED_G21,
+  AVG_LAGGED_G22,
+  AVG_LAGGED_G23,
+  AVG_LAGGED_G31,
+  AVG_LAGGED_G32,
+  AVG_LAGGED_G33,
   AVG_DENSITY,
   AVG_HEAVISIDE,
   AVG_VISCOSITY,

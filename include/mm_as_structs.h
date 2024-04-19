@@ -31,6 +31,7 @@
 #ifndef GOMA_MM_AS_STRUCTS_H
 #define GOMA_MM_AS_STRUCTS_H
 
+#include "compute_lagged_variables.h"
 #include "el_elm.h"
 #include "mm_elem_block_structs.h"
 #include "mm_mp_const.h"
@@ -912,6 +913,7 @@ struct Uniform_Problem_Description {
   turbulent_information *turbulent_info;
   int strong_bc_replace;
   dbl strong_penalty;
+  struct Lagged_Variables *lv;
 };
 typedef struct Uniform_Problem_Description UPD_STRUCT;
 /*____________________________________________________________________________*/
