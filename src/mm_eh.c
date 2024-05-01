@@ -172,6 +172,29 @@ void goma_wh(
   }
 }
 
+void goma_wh_allproc(
+    const int error_flag, const char *const file, const int line, const char *format, ...) {
+  if (error_flag == -1) {
+    bool print_color = false;
+#ifndef DISABLE_COLOR_ERROR_PRINT
+    if (isatty(fileno(stderr))) {
+      print_color = true;
+    }
+#endif
+    va_list args;
+    va_start(args, format);
+    char message[MAX_CHAR_ERR_MSG];
+    vsnprintf(message, MAX_CHAR_ERR_MSG, format, args);
+    va_end(args);
+    if (print_color) {
+      fprintf(stderr, "\033[0;33mWARNING: %s \033[0m(%s:%d)\n", message, file, line);
+    } else {
+      fprintf(stderr, "WARNING: %s (%s:%d)\n", message, file, line);
+    }
+  }
+}
+
+
 /* save_place() -- record the current filename, linenumber, routinename
  *
  * Notes: This saves local information about where a problem is occurring

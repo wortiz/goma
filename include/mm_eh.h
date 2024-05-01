@@ -59,6 +59,9 @@ goma_eh(const int error_flag, const char *file, const int line, const char *form
 EXTERN void
 goma_wh(const int error_flag, const char *const file, const int line, const char *format, ...);
 
+EXTERN void
+goma_wh_allproc(const int error_flag, const char *const file, const int line, const char *format, ...);
+
 EXTERN void save_place  /* mm_eh.c                                   */
     (const int,         /* severity                                  */
      const char *const, /* routine_name                              */
@@ -110,6 +113,15 @@ EXTERN void smooth_stop_with_msg(const char *msg);
     static bool print = true;                                   \
     if (print) {                                                \
       goma_wh(IERR, __FILE__, __LINE__, FORMAT, ##__VA_ARGS__); \
+      print = false;                                            \
+    }                                                           \
+  } while (0)
+
+#define GOMA_WH_ALLPROC(IERR, FORMAT, ...)                      \
+  do {                                                          \
+    static bool print = true;                                   \
+    if (print) {                                                \
+      goma_wh_allproc(IERR, __FILE__, __LINE__, FORMAT, ##__VA_ARGS__); \
       print = false;                                            \
     }                                                           \
   } while (0)

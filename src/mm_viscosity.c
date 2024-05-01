@@ -322,7 +322,7 @@ double viscosity(struct Generalized_Newtonian *gn_local,
         (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
       dbl scale = 1.0;
       DENSITY_DEPENDENCE_STRUCT d_rho;
-      if (TURBULENT_SA_DYNAMIC) {
+      if (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
         scale = density(&d_rho, tran->time_value);
       }
       int negative_mu_e = FALSE;
@@ -330,7 +330,7 @@ double viscosity(struct Generalized_Newtonian *gn_local,
         negative_mu_e = TRUE;
       }
 
-      double mu_newt = mp->viscosity;
+      double mu_newt = mp->viscosity * scale;
       if (negative_mu_e) {
         mu = mu_newt;
       } else {
@@ -340,7 +340,7 @@ double viscosity(struct Generalized_Newtonian *gn_local,
         double chi = mu_e / mu_newt;
         double fv1 = pow(chi, 3) / (pow(chi, 3) + pow(cv1, 3));
 
-        mu = scale * (mu_newt + (mu_e * fv1));
+        mu = mu_newt + scale * ((mu_e * fv1));
 
         double dchi_dmu_e = 1.0 / mu_newt;
         double dfv1_dchi = 3 * pow(cv1, 3) * pow(chi, 2) / (pow((pow(chi, 3) + pow(cv1, 3)), 2));

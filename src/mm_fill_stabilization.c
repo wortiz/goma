@@ -149,10 +149,15 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
   DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
   VISCOSITY_DEPENDENCE_STRUCT d_mu_struct;
   VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
+  dbl mup;
+  VISCOSITY_DEPENDENCE_STRUCT d_mup_struct; /* viscosity dependence */
+  VISCOSITY_DEPENDENCE_STRUCT *d_mup = &d_mup_struct;
 
   if (pspg_scale) {
     dbl rho = density(d_rho, dt);
+    if (rho > 0) {
     inv_rho = 1.0 / rho;
+    }
   }
 
   int interp_eqn = VELOCITY1;
@@ -172,6 +177,73 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
   }
 
   mu = viscosity(gn, gamma, d_mu);
+  for (int mode = 0; mode < vn->modes; mode++) {
+    /* get polymer viscosity */
+    mup = viscosity(ve[mode]->gn, gamma, d_mup);
+    mu += mup;
+    int var = VELOCITY1;
+    int a, j;
+    if (pd->v[pg->imtrx][var]) {
+      for (a = 0; a < WIM; a++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          d_mu->v[a][j] += d_mup->v[a][j];
+        }
+      }
+    }
+
+    var = MESH_DISPLACEMENT1;
+    if (pd->v[pg->imtrx][var]) {
+      for (a = 0; a < dim; a++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          d_mu->X[a][j] += d_mup->X[a][j];
+        }
+      }
+    }
+
+    var = TEMPERATURE;
+    if (pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        d_mu->T[j] += d_mup->T[j];
+      }
+    }
+
+    var = BOND_EVOLUTION;
+    if (pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        d_mu->nn[j] += d_mup->nn[j];
+      }
+    }
+
+    var = RESTIME;
+    if (pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        d_mu->degrade[j] += d_mup->degrade[j];
+      }
+    }
+
+    var = FILL;
+    if (pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        d_mu->F[j] += d_mup->F[j];
+      }
+    }
+
+    var = PRESSURE;
+    if (pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        d_mu->P[j] += d_mup->P[j];
+      }
+    }
+
+    var = MASS_FRACTION;
+    if (pd->v[pg->imtrx][var]) {
+      for (int w = 0; w < pd->Num_Species_Eqn; w++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          d_mu->C[w][j] += d_mup->C[w][j];
+        }
+      }
+    }
+  }
 
   dbl coeff = (12.0 * mu * mu);
   dbl diff_g_g = 0;

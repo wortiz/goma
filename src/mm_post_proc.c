@@ -11865,7 +11865,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
           pd_glob[i]->i[pg->imtrx][var] == I_Q2_D || pd_glob[i]->i[pg->imtrx][var] == I_Q1_D ||
           pd_glob[i]->i[pg->imtrx][var] == I_SP || pd_glob[i]->i[pg->imtrx][var] == I_Q2_LSA ||
           pd_glob[i]->i[pg->imtrx][var] == I_Q2_D_LSA) {
-        if (vn_glob[i]->modes > 1) {
+        if (vn_glob[i]->modes > 1 && !CONF_MAP) {
           post_flag = 1;
         }
       }
