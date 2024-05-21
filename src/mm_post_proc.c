@@ -10668,13 +10668,14 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
 
   if (CONF_MAP != -1 && Num_Var_In_Type[pg->imtrx][POLYMER_STRESS11]) {
     CONF_MAP = index_post;
+    char strings[3][2] = {"x", "y", "z"};
     // Loop over any additional viscoelastic modes
     for (mode = 0; mode < MAX_MODES; mode++) {
       for (a = 0; a < VIM; a++) {
         for (b = 0; b < VIM; b++) {
           if (a <= b) {
             if (Num_Var_In_Type[pg->imtrx][v_s[mode][a][b]]) {
-              sprintf(species_name, "MS%d%d_%d", a + 1, b + 1, mode);
+              sprintf(species_name, "MS%d_%d%d", mode, a+1,b+1);
               sprintf(species_desc, "log conf stress %d%d_%d", a + 1, b + 1, mode);
               set_nv_tkud(rd, index, 0, 0, -2, species_name, "[1]", species_desc, FALSE);
               index++;
@@ -11902,7 +11903,7 @@ int load_nodal_tkn(struct Results_Description *rd, int *tnv, int *tnv_post) {
           pd_glob[i]->i[pg->imtrx][var] == I_Q2_D || pd_glob[i]->i[pg->imtrx][var] == I_Q1_D ||
           pd_glob[i]->i[pg->imtrx][var] == I_SP || pd_glob[i]->i[pg->imtrx][var] == I_Q2_LSA ||
           pd_glob[i]->i[pg->imtrx][var] == I_Q2_D_LSA) {
-        if (vn_glob[i]->modes > 1) {
+        if (vn_glob[i]->modes > 1 && vn->evssModel != SQRT_CONF && vn->evssModel != LOG_CONF) {
           post_flag = 1;
         }
       }

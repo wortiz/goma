@@ -801,6 +801,7 @@
 #define FEATURE_ROLLON_BC          961223400
 #define ROLL_FLUID_BC              961124500
 #define SA_WALL_FUNC_BC            961124501
+#define OMEGA_WALL_FUNC_BC            961124502
 #define TENSION_SHEET_BC           96210200
 #define MOVING_PLANE_BC            96110000
 #define MOVING_PLANE_ETCH_BC       96115000

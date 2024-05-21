@@ -521,6 +521,7 @@ int ad_assemble_momentum(dbl time,       /* current time */
           ADType wt_func = phi_i;
 
           /* add Petrov-Galerkin terms as necessary */
+          ADType wt_func_supg = phi_i;
           if (supg != 0.) {
             for (p = 0; p < dim; p++) {
               wt_func += supg * tau * ad_fv->v[p] * bfm->grad_phi[i][p];

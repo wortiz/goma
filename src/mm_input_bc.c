@@ -342,6 +342,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
       overlap_bc = TRUE;
       /* fall through */
     case SA_WALL_FUNC_BC:
+    case OMEGA_WALL_FUNC_BC:
     case PSPG_BC:
     case KIN_ELECTRODEPOSITION_BC:   /*  RSL 5/27/02  */
     case VNORM_ELECTRODEPOSITION_BC: /*  RSL 5/30/02  */

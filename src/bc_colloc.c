@@ -372,6 +372,12 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               func = kfunc[0];
               d_func[EDDY_NU] = 1.0;
               break;
+            case OMEGA_WALL_FUNC_BC:
+              memset(kfunc, 0, DIM * sizeof(double));
+              ad_omega_wall_func(kfunc, d_kfunc);
+              func = kfunc[0];
+              d_func[TURB_OMEGA] = 1.0;
+              break;
 
             case PLANEX_BC:
             case PLANEY_BC:

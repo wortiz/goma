@@ -1509,8 +1509,8 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     } else if (vn->evssModel == SQRT_CONF) {
-      // err = assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
-      err = ad_assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
+      err = assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
+      // err = ad_assemble_stress_sqrt_conf(theta, delta_t, &pg_data);
 
       GOMA_EH(err, "assemble_stress_sqrt_conf");
       if (err)
@@ -2409,7 +2409,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
       } else {
         err = ad_assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
-        // err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+        //err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
         GOMA_EH(err, "assemble_momentum");
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_momentum");
@@ -2428,8 +2428,9 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_EDDY_NU]) {
+      err = assemble_spalart_allmaras(time_value, theta, delta_t, &pg_data);
 #ifdef GOMA_ENABLE_SACADO
-      err = ad_assemble_spalart_allmaras(time_value, theta, delta_t, &pg_data);
+      // err = ad_assemble_spalart_allmaras(time_value, theta, delta_t, &pg_data);
 #else
       err = assemble_spalart_allmaras(time_value, theta, delta_t, &pg_data);
 #endif
@@ -2601,6 +2602,7 @@ Revised:         Summer 1998, SY Tam (UNM)
           return -1;
       } else {
         err = ad_assemble_continuity(time_value, theta, delta_t, &pg_data);
+        //err = assemble_continuity(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_continuity");
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_continuity");
