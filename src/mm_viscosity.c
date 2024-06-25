@@ -23,7 +23,7 @@
 #include <stdlib.h>
 
 /* GOMA include files */
-
+#include "ad_turbulence.h"
 #include "density.h"
 #include "el_elm.h"
 #include "mm_as.h"
@@ -130,7 +130,8 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 
   if ((gn_local->ConstitutiveEquation == NEWTONIAN) ||
       (gn_local->ConstitutiveEquation == TURBULENT_SA) ||
-      (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
+      (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) ||
+      (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA)) {
     if (mp->ViscosityModel == USER) {
       err = usr_viscosity(mp->u_viscosity);
       mu = mp->viscosity;
@@ -320,9 +321,12 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     /* Calculate contribution from turbulent viscosity */
     if ((gn_local->ConstitutiveEquation == TURBULENT_SA) ||
         (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
+#ifdef GOMA_ENABLE_SACADO
+      mu = ad_sa_viscosity(gn_local, d_mu);
+#else
       dbl scale = 1.0;
       DENSITY_DEPENDENCE_STRUCT d_rho;
-      if (TURBULENT_SA_DYNAMIC) {
+      if (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
         scale = density(&d_rho, tran->time_value);
       }
       int negative_mu_e = FALSE;
@@ -352,6 +356,15 @@ double viscosity(struct Generalized_Newtonian *gn_local,
           }
         }
       }
+#endif
+    }
+
+    if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA) {
+#ifdef GOMA_ENABLE_SACADO
+      mu = ad_turb_k_omega_sst_viscosity(d_mu);
+#else
+      GOMA_EH(GOMA_ERROR, "TURBULENT_K_OMEGA requires Sacado");
+#endif
     }
 
   } /* end Newtonian section */

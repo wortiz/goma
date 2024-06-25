@@ -564,9 +564,10 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
       PRS_mat_ielem = ielem - exo->eb_ptr[ebn];
 
       int err =
-          matrix_fill_stress(ams, x_1, resid_vector_1, x_old, x_older, xdot, xdot_old, x_update,
-                             &delta_t, &theta, first_elem_side_BC_array, &time_value, exo, dpi,
-                             &ielem, &num_total_nodes, h_elem_avg, U_norm, NULL, zeroCA);
+          // matrix_fill_stress(ams, x_1, resid_vector_1, x_old, x_older, xdot, xdot_old, x_update,
+          matrix_fill(ams, x_1, resid_vector_1, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
+                      &theta, first_elem_side_BC_array, &time_value, exo, dpi, &ielem,
+                      &num_total_nodes, h_elem_avg, U_norm, NULL, zeroCA);
       if (err)
         retval = -1;
       zeroCA = -1;
@@ -613,33 +614,33 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
             }
           }
 
-          for (mode = 0; mode < vn->modes; mode++) {
-            /* Only for stress terms */
-            //        if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
-            //            idv[pg->imtrx][i][0] <= v_s[mode][2][2]) ||
-            if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
-                 idv[pg->imtrx][i][0] <= v_s[mode][2][2])) {
-              //
-              if (Inter_Mask[pg->imtrx][var_i][var_j]) {
+          // for (mode = 0; mode < vn->modes; mode++) {
+          /* Only for stress terms */
+          //        if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
+          //            idv[pg->imtrx][i][0] <= v_s[mode][2][2]) ||
+          // if ((idv[pg->imtrx][i][0] >= v_s[mode][0][0] &&
+          //      idv[pg->imtrx][i][0] <= v_s[mode][2][2])) {
+          //
+          if (Inter_Mask[pg->imtrx][var_i][var_j]) {
 
-                int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i + 1], ams->bindx);
-                if (ja == -1) {
-                  sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j,
-                          idv[pg->imtrx][i][0], idv[pg->imtrx][j][0]);
-                  GOMA_EH(ja, errstring);
-                }
-                if (Nodes[gnode]->DBC[pg->imtrx] && Nodes[gnode]->DBC[pg->imtrx][i_offset] != -1 &&
-                    i == j) {
-                  nj[ja] = 1.0;
-                } else if (Nodes[gnode]->DBC[pg->imtrx] &&
-                           Nodes[gnode]->DBC[pg->imtrx][i_offset] != -1) {
-                  nj[ja] = 0.0;
-                } else {
-                  nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx_col[j]);
-                }
-              }
+            int ja = (i == j) ? j : in_list(j, ams->bindx[i], ams->bindx[i + 1], ams->bindx);
+            if (ja == -1) {
+              sprintf(errstring, "Index not found (%d, %d) for interaction (%d, %d)", i, j,
+                      idv[pg->imtrx][i][0], idv[pg->imtrx][j][0]);
+              GOMA_EH(ja, errstring);
             }
-          } // Loop over modes
+            if (Nodes[gnode]->DBC[pg->imtrx] && Nodes[gnode]->DBC[pg->imtrx][i_offset] != -1 &&
+                i == j) {
+              nj[ja] = 1.0;
+            } else if (Nodes[gnode]->DBC[pg->imtrx] &&
+                       Nodes[gnode]->DBC[pg->imtrx][i_offset] != -1) {
+              nj[ja] = 0.0;
+            } else {
+              nj[ja] = (resid_vector_1[i] - resid_vector[i]) / (dx_col[j]);
+            }
+          }
+          //   }
+          // } // Loop over modes
         }
       }
     }
@@ -909,7 +910,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
   af->Assemble_LSA_Jacobian_Matrix = FALSE;
   af->Assemble_LSA_Mass_Matrix = FALSE;
 
-  DPRINTF(stderr, "Computing analytic entries ...");
+  DPRINTF(stderr, "Computing analytic entries ...\n");
   (void)matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update, &delta_t,
                          &theta, first_elem_side_BC_array, &time_value, exo, dpi, &num_total_nodes,
                          h_elem_avg, U_norm, NULL);
@@ -1339,8 +1340,10 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
         } else {
           DPRINTF(stderr,
                   "Eq%-32.32s Var%-32.32s x=%-10.2g dx=%-10.2g aj=%-10.4g nj=%-10.4g aj_1=%-10.2g "
+                  "r=%.15f r1=%.15f rd=%.15f"
                   "d_aj=%-10.2g conf=%-10.2g\n",
                   resname[pg->imtrx][i], dofname[pg->imtrx][j], x[j], dx, aj[i], nj, aj_1[i],
+                  resid_vector[i], resid_vector_1[i], resid_vector_1[i] - resid_vector[i],
                   delta_aj_percentage, confidence);
         }
 
