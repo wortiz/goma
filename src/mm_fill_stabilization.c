@@ -184,7 +184,7 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
   dbl v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      v_d_gv += fabs(fv->v[i] * G[i][j] * fv->v[j]);
+      v_d_gv += fabs(fv_old->v[i] * G[i][j] * fv_old->v[j]);
     }
   }
 
@@ -194,12 +194,12 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
     }
   }
 
-  mu = viscosity(gn, gamma, d_mu);
+  mu = viscosity(gn, gamma, NULL);
   dbl mup = 0.0;
   if (pd->gv[POLYMER_STRESS11] && is_evss_f_model(vn->evssModel)) {
     for (int mode = 0; mode < vn->modes; mode++) {
       /* get polymer viscosity */
-      mup = viscosity(ve[mode]->gn, gamma, d_mup);
+      mup = viscosity(ve[mode]->gn, gamma, NULL);
       mu += mup;
 
       int var = VELOCITY1;
@@ -280,8 +280,8 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
       d_v_d_gv[a][k] = 0.0;
       for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
-          d_v_d_gv[a][k] += delta(a, i) * bf[VELOCITY1 + a]->phi[k] * G[i][j] * fv->v[j] +
-                            delta(a, j) * fv->v[i] * G[i][j] * bf[VELOCITY1 + a]->phi[k];
+          d_v_d_gv[a][k] += 0; //delta(a, i) * bf[VELOCITY1 + a]->phi[k] * G[i][j] * fv->v[j] +
+                            // delta(a, j) * fv->v[i] * G[i][j] * bf[VELOCITY1 + a]->phi[k];
         }
       }
     }
@@ -293,7 +293,7 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
     tau_terms->tau = inv_rho / (sqrt(v_d_gv + diff_g_g) + 1e-14);
   }
 
-  dbl d_diff_g_g_dmu = 2.0 * diff_g_g / mu;
+  dbl d_diff_g_g_dmu = 0 * 2.0 * diff_g_g / mu;
   dbl supg_tau_cubed = tau_terms->tau * tau_terms->tau * tau_terms->tau;
 
   for (int a = 0; a < dim; a++) {
@@ -312,14 +312,14 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
         dbl v_d_gv_dx = 0;
         for (int i = 0; i < dim; i++) {
           for (int j = 0; j < dim; j++) {
-            v_d_gv_dx += fv->v[i] * dG[i][j][a][k] * fv->v[j];
+            // v_d_gv_dx += fv->v[i] * dG[i][j][a][k] * fv->v[j];
           }
         }
 
         dbl diff_g_g_dx = 0;
         for (int i = 0; i < dim; i++) {
           for (int j = 0; j < dim; j++) {
-            diff_g_g_dx += 2 * coeff * dG[i][j][a][k] * G[i][j];
+            // diff_g_g_dx += 2 * coeff * dG[i][j][a][k] * G[i][j];
           }
         }
         tau_terms->d_tau_dX[a][k] = inv_rho * -0.5 *
@@ -356,13 +356,13 @@ void tau_momentum_shakib(momentum_tau_terms *tau_terms, int dim, dbl dt, int psp
   }
   if (pd->e[pg->imtrx][TURB_K]) {
     for (int k = 0; k < ei[pg->imtrx]->dof[TURB_K]; k++) {
-      tau_terms->d_tau_dturb_k[k] =
+      tau_terms->d_tau_dturb_k[k] = 0 *
           inv_rho * -0.5 * (d_mu->turb_k[k] * d_diff_g_g_dmu) * supg_tau_cubed;
     }
   }
   if (pd->e[pg->imtrx][TURB_OMEGA]) {
     for (int k = 0; k < ei[pg->imtrx]->dof[TURB_OMEGA]; k++) {
-      tau_terms->d_tau_dturb_omega[k] =
+      tau_terms->d_tau_dturb_omega[k] = 0 *
           inv_rho * -0.5 * (d_mu->turb_omega[k] * d_diff_g_g_dmu) * supg_tau_cubed;
     }
   }

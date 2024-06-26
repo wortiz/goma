@@ -13,11 +13,9 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
-#include "rf_bc_const.h"
 #include <cstddef>
 #ifdef GOMA_ENABLE_SACADO
 #include "Sacado.hpp"
-#include "Sacado_Fad_DFad.hpp"
 
 #include "ad_turbulence.h"
 extern "C" {
@@ -28,16 +26,13 @@ extern "C" {
 #define GOMA_AD_TURBULENCE_CPP
 #include "density.h"
 #include "el_elm.h"
+#include "el_elm_info.h"
 #include "el_geom.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
-#include "mm_fill_terms.h"
-#include "mm_fill_turbulent.h"
-#include "mm_fill_util.h"
 #include "mm_mp.h"
 #include "mm_mp_structs.h"
-#include "mm_viscosity.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "std.h"
@@ -62,6 +57,84 @@ static int calc_vort_mag(ADType &vort_mag, ADType omega[DIM][DIM]) {
 
   vort_mag = sqrt(0.5 * (vort_mag) + 1e-14);
   return 0;
+}
+
+ADType ad_dcdd(int dim, int eqn, const ADType grad_U[DIM], ADType gs_inner_dot[DIM]) {
+  ADType tmp = 0.0;
+  ADType s[DIM] = {0.0};
+  ADType r[DIM] = {0.0};
+  for (int w = 0; w < dim; w++) {
+    tmp += (ad_fv->v[w] - ad_fv->x_dot[w]) * (ad_fv->v[w] - ad_fv->x_dot[w]);
+  }
+  tmp = 1.0 / (sqrt(tmp + 1e-32));
+  for (int w = 0; w < dim; w++) {
+    s[w] = (ad_fv->v[w] - ad_fv->x_dot[w]) * tmp;
+  }
+  ADType mags = 0;
+  for (int w = 0; w < dim; w++) {
+    mags += (grad_U[w] * grad_U[w]);
+  }
+  mags = 1.0 / (sqrt(mags + 1e-32));
+  for (int w = 0; w < dim; w++) {
+    r[w] = grad_U[w] * mags;
+  }
+
+  ADType he = 0.0;
+  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
+    ADType tmp = 0;
+    for (int w = 0; w < dim; w++) {
+      tmp += ad_fv->basis[eqn].grad_phi[q][w] * ad_fv->basis[eqn].grad_phi[q][w];
+    }
+    he += 1.0 / sqrt(std::max(tmp, 1e-20));
+  }
+
+  tmp = 0;
+  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
+    for (int w = 0; w < dim; w++) {
+      tmp += fabs(r[w] * ad_fv->basis[eqn].grad_phi[q][w]);
+    }
+  }
+  ADType hrgn = 1.0 / (tmp + 1e-14);
+
+  ADType magv = 0.0;
+  for (int q = 0; q < VIM; q++) {
+    magv += ad_fv->v[q] * ad_fv->v[q];
+  }
+  magv = sqrt(magv + 1e-32);
+
+  ADType tau_dcdd = 0.5 * he * (1.0 / (mags + 1e-16)) * hrgn * hrgn;
+  // ADType tau_dcdd = he * (1.0 / mags) * hrgn * hrgn / lambda;
+  // printf("%g %g ", supg_tau.val(), tau_dcdd.val());
+  // tau_dcdd = 1 / sqrt(1.0 / (supg_tau * supg_tau + 1e-32) +
+  //                     1.0 / (tau_dcdd * tau_dcdd + 1e-32));
+  // printf("%g \n ", tau_dcdd.val());
+  ADType ss[DIM][DIM] = {{0.0}};
+  ADType rr[DIM][DIM] = {{0.0}};
+  ADType rdots = 0.0;
+  for (int w = 0; w < dim; w++) {
+    for (int z = 0; z < dim; z++) {
+      ss[w][z] = s[w] * s[z];
+      rr[w][z] = r[w] * r[z];
+    }
+    rdots += r[w] * s[w];
+  }
+
+  ADType inner_tensor[DIM][DIM] = {{0.0}};
+  for (int w = 0; w < dim; w++) {
+    for (int z = 0; z < dim; z++) {
+      inner_tensor[w][z] = rr[w][z] - rdots * rdots * ss[w][z];
+    }
+  }
+
+  for (int w = 0; w < dim; w++) {
+    ADType tmp = 0.;
+    for (int z = 0; z < dim; z++) {
+      tmp += grad_U[w] * inner_tensor[w][z];
+    }
+    gs_inner_dot[w] = tmp;
+    // gs_inner_dot[w] = grad_s[w][ii][jj];
+  }
+  return tau_dcdd;
 }
 
 template <typename scalar>
@@ -98,10 +171,9 @@ int ad_beer_belly(void) {
   if (ad_fv == NULL) {
     ad_fv = new AD_Field_Variables();
   }
-  int status = 0, i, j, k, n, t, dim, pdim, mdof, index, node, si;
+  int status = 0, i, j, k, dim, pdim, mdof, index, node, si;
   int DeformingMesh, ShapeVar;
   struct Basis_Functions *MapBf;
-  size_t v_length;
   int imtrx = upd->matrix_index[pd->ShapeVar];
 
   static int is_initialized = FALSE;
@@ -291,7 +363,7 @@ int ad_beer_belly(void) {
 }
 
 int ad_load_bf_grad(void) {
-  int i, k, a, b, p, dofs = 0, v, vi, status, siz;
+  int i, a, p, dofs = 0, status;
   struct Basis_Functions *bfv;
 
 #ifdef DO_NOT_UNROLL
@@ -323,7 +395,6 @@ int ad_load_bf_grad(void) {
       }
 
       /* initialize variables */
-      siz = pd->Num_Dim * MDE * sizeof(double);
       /* memset(&(bfv->d_phi[0][0]),0,siz); */
 
       /*
@@ -746,7 +817,35 @@ extern "C" void fill_ad_field_variables() {
   }
 #endif
 }
+#if 1
+void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, ADType diffusivity, int interp_eqn) {
+  dbl G[DIM][DIM];
 
+  get_metric_tensor(bf[interp_eqn]->B, dim, ei[pg->imtrx]->ielem_type, G);
+
+  ADType v_d_gv = 0;
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      v_d_gv += fabs(ad_fv->v[i] * G[i][j] * ad_fv->v[j]);
+    }
+  }
+
+  ADType diff_g_g = 0;
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      diff_g_g += G[i][j] * G[i][j];
+    }
+  }
+  diff_g_g *= 9 * diffusivity * diffusivity;
+
+
+  if (dt > 0) {
+    supg_tau = 1.0 / (sqrt(4 / (dt * dt) + v_d_gv + diff_g_g));
+  } else {
+    supg_tau = 1.0 / (sqrt(v_d_gv + diff_g_g) + 1e-14);
+  }
+}
+#else
 void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, ADType diffusivity, int interp_eqn) {
   ADType h_e = 0;
   for (int i = 0; i < ei[upd->matrix_index[interp_eqn]]->dof[interp_eqn]; i++) {
@@ -802,6 +901,7 @@ void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, ADType diffusivity, i
     supg_tau = h_ugn / u_e;
   }
 }
+#endif
 
 void ad_get_metric_tensor(ADType B[DIM][DIM], int dim, int element_type, ADType G[DIM][DIM]) {
   dbl adjustment[DIM][DIM] = {{0}};
@@ -866,7 +966,6 @@ void ad_only_tau_momentum_shakib(ADType &tau, int dim, dbl dt, int pspg_scale) {
     }
   }
 
-  int interp_eqn = VELOCITY1;
   ad_get_metric_tensor(ad_fv->B, dim, ei[pg->imtrx]->ielem_type, G);
 
   ADType v_d_gv = 0;
@@ -1219,6 +1318,7 @@ extern "C" void ad_omega_wall_func(double func[DIM],
     d_func[0][TURB_OMEGA][j] = r.dx(ad_fv->offset[TURB_OMEGA]+j);
   }
 }
+
 
 ADType ad_sa_viscosity(struct Generalized_Newtonian *gn_local) {
   ADType mu = 0;
@@ -1663,8 +1763,8 @@ extern "C" int ad_assemble_turb_k(dbl time_value, /* current time */
                                   const PG_DATA *pg_data) {
 
   //! WIM is the length of the velocity vector
-  int i, j, b;
-  int eqn, var, peqn, pvar;
+  int i;
+  int eqn,peqn;
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
@@ -1907,8 +2007,8 @@ extern "C" int ad_assemble_turb_omega(dbl time_value, /* current time */
                                       const PG_DATA *pg_data) {
 
   //! WIM is the length of the velocity vector
-  int i, j, b;
-  int eqn, var, peqn, pvar;
+  int i;
+  int eqn, peqn;
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
@@ -2100,7 +2200,7 @@ ADType ad_only_turb_k_omega_viscosity(void) {
   ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
   dbl rho = density(NULL, tran->time_value);
 
-  ADType mu_t = rho * psi * ad_fv->turb_k / (std::exp(ad_fv->turb_omega) + 1e-16);
+  ADType mu_t = rho * psi * ad_fv->turb_k / (std::exp(ad_fv->turb_omega));
   mu = mu_newt + mu_t;
   return mu;
 }
@@ -2112,8 +2212,8 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
                                            const PG_DATA *pg_data) {
 
   //! WIM is the length of the velocity vector
-  int i, j, b;
-  int eqn, var, peqn, pvar;
+  int i;
+  int eqn, peqn;
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
@@ -2133,10 +2233,7 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
   // ADType k = psi * fv_old->turb_k;
 
   dbl sigma_k = 0.5;
-  dbl sigma_omega = 0.5;
   dbl beta_star = 9.0 / 100.0;
-  dbl beta = 3.0 / 40.;
-  dbl gamma = 5.0 / 9.0;
 
   ADType SI;
   ADType gamma_dot[DIM][DIM];
@@ -2220,8 +2317,9 @@ extern "C" int ad_assemble_turb_k_modified(dbl time_value, /* current time */
 
       /* Assemble source terms */
       ADType src1 = P - beta_star * rho * omega * std::max(k, 0);
+      ADType src2 = 0;
 
-      ADType src2 = -beta_star * rho * omega_inf * psi_neg * ad_fv->turb_k;
+      // ADType src2 = -beta_star * rho * omega_inf * psi_neg * ad_fv->turb_k;
       // ADType src2 = -beta_star * rho * omega_inf * psi_neg * ad_fv->turb_k;
       ADType src = (src1 + src2);
       // src = src1;
@@ -2274,8 +2372,8 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
                                                const PG_DATA *pg_data) {
 
   //! WIM is the length of the velocity vector
-  int i, j, b;
-  int eqn, var, peqn, pvar;
+  int i;
+  int eqn ,peqn;
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
@@ -2293,7 +2391,6 @@ extern "C" int ad_assemble_turb_omega_modified(dbl time_value, /* current time *
   ADType psi_neg = clipping_func(-ad_fv->turb_k, 0, 10 * k_inf);
   ADType k = psi * ad_fv->turb_k;
 
-  dbl sigma_k = 0.5;
   dbl sigma_omega = 0.5;
   dbl beta_star = 9.0 / 100.0;
   dbl beta = 3.0 / 40.;
@@ -2440,8 +2537,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
                                   const PG_DATA *pg_data) {
 
   //! WIM is the length of the velocity vector
-  int i, j, b;
-  int eqn, var, peqn, pvar;
+  int i;
+  int eqn,  peqn;
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
@@ -2487,21 +2584,20 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
 
   dbl rho = density(NULL, time_value);
 
-  ADType mu_t = rho * k / (omega + 1e-16);
-  ADType mu_t_kdiff = rho * k / (omega + 1e-16) - rho * psi_neg * ad_fv->turb_k / omega_inf;
+  ADType mu_t = rho * k / (omega);
+  // ADType mu_t_kdiff = rho * k / (omega);// - rho * psi_neg * ad_fv->turb_k / omega_inf;
+  ADType mu_t_kdiff = rho * k / (omega) - rho * psi_neg * ad_fv->turb_k / omega_inf;
   dbl mu = mp->viscosity;
 
   ADType P = mu_t * Omega * Omega;
 
   dbl supg = 1.;
-  ADType supg_tau;
-  if (mp->SAwt_funcModel == GALERKIN) {
-    supg = 0.;
-  } else if (mp->SAwt_funcModel == SUPG || mp->SAwt_funcModel == SUPG_GP ||
-             mp->SAwt_funcModel == SUPG_SHAKIB) {
-    supg = mp->SAwt_func;
-    ad_supg_tau_shakib(supg_tau, pd->Num_Dim, dt, mu + sigma_k * mu_t, TURB_OMEGA);
-  }
+  // if (mp->SAwt_funcModel == GALERKIN) {
+    // supg = 0.;
+  // } else if (mp->SAwt_funcModel == SUPG || mp->SAwt_funcModel == SUPG_GP ||
+            //  mp->SAwt_funcModel == SUPG_SHAKIB) {
+    // supg = mp->SAwt_func;
+  // }
 
   std::vector<std::vector<ADType>> resid(2);
   resid[0].resize(ei[pg->imtrx]->dof[TURB_OMEGA]);
@@ -2516,6 +2612,14 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
    * Residuals_________________________________________________________________
    */
   if (af->Assemble_Residual) {
+    ADType gs_inner_dot[DIM];
+    ADType supg_tau_w, supg_tau_k;
+    ad_supg_tau_shakib(supg_tau_w, pd->Num_Dim, dt, mu + sigma_omega * mu_t, TURB_OMEGA);
+    ad_supg_tau_shakib(supg_tau_k, pd->Num_Dim, dt, mu + sigma_k * mu_t, TURB_K);
+    ADType vshock_k =  ad_dcdd(pd->Num_Dim, TURB_K, ad_fv->grad_turb_k, gs_inner_dot);
+    vshock_k = std::min(supg_tau_k, vshock_k);
+    ADType vshock_w =  ad_dcdd(pd->Num_Dim, TURB_OMEGA, ad_fv->grad_turb_omega, gs_inner_dot);
+    vshock_k = std::min(supg_tau_w, vshock_w);
     /*
      * Assemble residual for eddy viscosity
      */
@@ -2528,7 +2632,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_tau_w * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -2551,7 +2655,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      ADType src1 = (gamma / (k + 1e-16)) * P - beta * rho * omega;
+      ADType src1 = (gamma / (k + 1e-16)) * std::min(P, 10 * beta_star * rho * omega * k) - beta * rho * omega;
 
       ADType src2 = 0;
       for (int p = 0; p < pd->Num_Dim; p++) {
@@ -2564,7 +2668,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       /* Assemble diffusion terms */
       ADType diff = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega) * ad_fv->grad_turb_omega[p];
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t * sigma_omega+vshock_w) * ad_fv->grad_turb_omega[p];
       }
       diff *= d_area;
       diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -2582,7 +2686,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       if (supg > 0) {
         if (supg != 0.0) {
           for (int p = 0; p < VIM; p++) {
-            wt_func += supg * supg_tau * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
+            wt_func += supg * supg_tau_k * ad_fv->v[p] * bf[eqn]->grad_phi[i][p];
           }
         }
       }
@@ -2605,7 +2709,8 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       adv *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
       /* Assemble source terms */
-      ADType src1 = std::min(P, 20 * beta_star * rho * omega * k) - beta_star * rho * omega * k;
+      ADType src1 = std::min(P, 10 * beta_star * rho * omega * k) - beta_star * rho * omega * k;
+      // ADType src2 = 0;
 
       ADType src2 = -beta_star * rho * omega_inf * psi_neg * ad_fv->turb_k;
       ADType src = src1 + src2;
@@ -2615,7 +2720,7 @@ ad_assemble_turb_k_omega_modified(dbl time_value, /* current time */
       /* Assemble diffusion terms */
       ADType diff = 0.0;
       for (int p = 0; p < VIM; p++) {
-        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t_kdiff * sigma_k) * ad_fv->grad_turb_k[p];
+        diff += bf[eqn]->grad_phi[i][p] * (mu + mu_t_kdiff * sigma_k+vshock_k) * ad_fv->grad_turb_k[p];
       }
       diff *= d_area;
       diff *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
@@ -2736,83 +2841,6 @@ ADType ad_yzbeta(int dim, int eqn, ADType Y, ADType Z, const ADType grad_U[DIM])
   ADType yzbeta2 = std::abs(invY * Z) * std::pow(hdc / 2.0, 2.0);
   return 0.5 * (yzbeta1 + yzbeta2);
 }
-ADType ad_dcdd(int dim, int eqn, const ADType grad_U[DIM], ADType gs_inner_dot[DIM]) {
-  ADType tmp = 0.0;
-  ADType s[DIM] = {0.0};
-  ADType r[DIM] = {0.0};
-  for (int w = 0; w < dim; w++) {
-    tmp += (ad_fv->v[w] - ad_fv->x_dot[w]) * (ad_fv->v[w] - ad_fv->x_dot[w]);
-  }
-  tmp = 1.0 / (sqrt(tmp + 1e-32));
-  for (int w = 0; w < dim; w++) {
-    s[w] = (ad_fv->v[w] - ad_fv->x_dot[w]) * tmp;
-  }
-  ADType mags = 0;
-  for (int w = 0; w < dim; w++) {
-    mags += (grad_U[w] * grad_U[w]);
-  }
-  mags = 1.0 / (sqrt(mags + 1e-32));
-  for (int w = 0; w < dim; w++) {
-    r[w] = grad_U[w] * mags;
-  }
-
-  ADType he = 0.0;
-  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
-    ADType tmp = 0;
-    for (int w = 0; w < dim; w++) {
-      tmp += ad_fv->basis[eqn].grad_phi[q][w] * ad_fv->basis[eqn].grad_phi[q][w];
-    }
-    he += 1.0 / sqrt(std::max(tmp, 1e-20));
-  }
-
-  tmp = 0;
-  for (int q = 0; q < ei[pg->imtrx]->dof[eqn]; q++) {
-    for (int w = 0; w < dim; w++) {
-      tmp += fabs(r[w] * ad_fv->basis[eqn].grad_phi[q][w]);
-    }
-  }
-  ADType hrgn = 1.0 / (tmp + 1e-14);
-
-  ADType magv = 0.0;
-  for (int q = 0; q < VIM; q++) {
-    magv += ad_fv->v[q] * ad_fv->v[q];
-  }
-  magv = sqrt(magv + 1e-32);
-
-  ADType tau_dcdd = 0.5 * he * (1.0 / (mags + 1e-16)) * hrgn * hrgn;
-  // ADType tau_dcdd = he * (1.0 / mags) * hrgn * hrgn / lambda;
-  // printf("%g %g ", supg_tau.val(), tau_dcdd.val());
-  // tau_dcdd = 1 / sqrt(1.0 / (supg_tau * supg_tau + 1e-32) +
-  //                     1.0 / (tau_dcdd * tau_dcdd + 1e-32));
-  // printf("%g \n ", tau_dcdd.val());
-  ADType ss[DIM][DIM] = {{0.0}};
-  ADType rr[DIM][DIM] = {{0.0}};
-  ADType rdots = 0.0;
-  for (int w = 0; w < dim; w++) {
-    for (int z = 0; z < dim; z++) {
-      ss[w][z] = s[w] * s[z];
-      rr[w][z] = r[w] * r[z];
-    }
-    rdots += r[w] * s[w];
-  }
-
-  ADType inner_tensor[DIM][DIM] = {{0.0}};
-  for (int w = 0; w < dim; w++) {
-    for (int z = 0; z < dim; z++) {
-      inner_tensor[w][z] = rr[w][z] - rdots * rdots * ss[w][z];
-    }
-  }
-
-  for (int w = 0; w < dim; w++) {
-    ADType tmp = 0.;
-    for (int z = 0; z < dim; z++) {
-      tmp += grad_U[w] * inner_tensor[w][z];
-    }
-    gs_inner_dot[w] = tmp;
-    // gs_inner_dot[w] = grad_s[w][ii][jj];
-  }
-  return tau_dcdd;
-}
 
 #if 1
 extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time */
@@ -2822,8 +2850,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
                                                 const PG_DATA *pg_data) {
 
   //! WIM is the length of the velocity vector
-  int i, j, b;
-  int eqn, var, peqn, pvar;
+  int i;
+  int eqn, peqn;
   int *pdv = pd->v[pg->imtrx];
 
   int status = 0;
@@ -2833,9 +2861,6 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
   dbl supg = 1.0;
 
   ADType G[DIM][DIM];
-  dbl inv_rho = 1.0;
-  DENSITY_DEPENDENCE_STRUCT d_rho_struct;
-  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
 
   ad_get_metric_tensor(ad_fv->B, pd->Num_Dim, ei[pg->imtrx]->ielem_type, G);
 
@@ -2866,10 +2891,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
   dbl mu = mp->viscosity;
 
   ADType grad_k_dot_grad_omega = 0.;
-  dbl grad_k_dot_grad_omega_old = 0.;
   for (int i = 0; i < pd->Num_Dim; i++) {
     grad_k_dot_grad_omega += ad_fv->grad_turb_k[i] * ad_fv->grad_turb_omega[i];
-    grad_k_dot_grad_omega_old += fv_old->grad_turb_k[i] * fv_old->grad_turb_omega[i];
   }
 
   ADType omega = std::max(1e-20, ad_fv->turb_omega);
@@ -2971,7 +2994,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
     // ad_yzbeta(pd->Num_Dim, TURB_K, upd->turbulent_info->k_inf, Z_k, ad_fv->grad_turb_k);
 
     ADType gs_inner_dot[DIM];
-    ADType vshock_k = 1 * ad_dcdd(pd->Num_Dim, TURB_K, ad_fv->grad_turb_k, gs_inner_dot);
+    ADType grad_turb_k[DIM] = {fv_old->grad_turb_k[0], fv_old->grad_turb_k[1], fv_old->grad_turb_k[2]};
+    ADType vshock_k = 0 * ad_dcdd(pd->Num_Dim, TURB_K, grad_turb_k, gs_inner_dot);
 
     vshock_k = std::min(tau_supg_k, vshock_k);
       // if (fv->wall_distance < 1) {
@@ -3010,7 +3034,7 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
 
       /* Assemble source terms */
       // Production - Destruction
-      ADType src = Plim - beta_star * rho * omega * k;
+      ADType src = Plim - beta_star * rho * omega * fv_old->turb_k;
       src *= -wt_func * d_area;
       src *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
@@ -3111,7 +3135,8 @@ extern "C" int ad_assemble_k_omega_sst_modified(dbl time_value, /* current time 
       // ADType vshock_w = ad_yzbeta(pd->Num_Dim, TURB_OMEGA, upd->turbulent_info->omega_inf, Z_w,
       // ad_fv->grad_turb_omega);
 
-      ADType vshock_w = 1 * ad_dcdd(pd->Num_Dim, TURB_OMEGA, ad_fv->grad_turb_omega, gs_inner_dot);
+    ADType grad_turb_w[DIM] = {fv_old->grad_turb_omega[0], fv_old->grad_turb_omega[1], fv_old->grad_turb_omega[2]};
+      ADType vshock_w = 1 * ad_dcdd(pd->Num_Dim, TURB_OMEGA, grad_turb_w, gs_inner_dot);
 
       vshock_w = std::min(tau_supg_w, vshock_w);
 

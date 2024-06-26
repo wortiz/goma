@@ -2408,8 +2408,8 @@ Revised:         Summer 1998, SY Tam (UNM)
         CHECKFINITE("assemble_momentum");
 #endif
       } else {
-        err = ad_assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
-        //err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+        // err = ad_assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
+        err = assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
         GOMA_EH(err, "assemble_momentum");
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_momentum");
@@ -2442,8 +2442,10 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
     }
     if (pde[R_TURB_K] || pde[R_TURB_OMEGA]) {
+      err = assemble_k_omega_sst_modified(time_value, theta, delta_t, &pg_data);
+      // err = ad_assemble_turb_k_omega_modified(time_value, theta, delta_t, &pg_data);
 #ifdef GOMA_ENABLE_SACADO
-      err = ad_assemble_k_omega_sst_modified(time_value, theta, delta_t, &pg_data);
+      // err = ad_assemble_k_omega_sst_modified(time_value, theta, delta_t, &pg_data);
 #else
       GOMA_EH(-1, "TURB_K requires Sacado for assembly");
 #endif
@@ -2601,8 +2603,8 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (neg_elem_volume)
           return -1;
       } else {
-        err = ad_assemble_continuity(time_value, theta, delta_t, &pg_data);
-        //err = assemble_continuity(time_value, theta, delta_t, &pg_data);
+        // err = ad_assemble_continuity(time_value, theta, delta_t, &pg_data);
+        err = assemble_continuity(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_continuity");
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_continuity");

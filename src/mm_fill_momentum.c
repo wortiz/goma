@@ -292,7 +292,7 @@ int assemble_momentum(dbl time,       /* current time */
   rho = density(d_rho, time);
 
   if (supg != 0.) {
-    ad_tau_momentum_shakib(&supg_terms, dim, dt, FALSE);
+    tau_momentum_shakib(&supg_terms, dim, dt, FALSE);
   }
   /* end Petrov-Galerkin addition */
 

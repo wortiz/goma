@@ -319,6 +319,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   int GNumUnknowns; /* Global number of unknowns in the */
                     /* system    */
   int inewton;      /* Newton iteration counter */
+  dbl Initial_Norm = 1e-100;
 
   int return_value; /* nonzero if things screw up ...  */
 
@@ -1199,6 +1200,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      *************************************************************************/
     s_start = ut();
     s_end = s_start;
+
+    if (inewton > 0) {
+      dbl RelTol = 1e-6;
+      *converged = (*converged && ((Norm[0][2] / Initial_Norm) < RelTol));
+    } else if (inewton == 0) {
+      Initial_Norm = Norm[0][2];
+    }
 
     if (*converged) {
       /*  If we're going to skip the Solve step, compute and save some useful
@@ -2380,6 +2388,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
          (Norm_r[0][2] < Epsilon[pg->imtrx][2]) && (Norm_r[1][2] < Epsilon[pg->imtrx][2]) &&
          (Norm_r[0][0] < Epsilon[pg->imtrx][2]) && (Norm_r[1][0] < Epsilon[pg->imtrx][2]) &&
          (continuation_converged));
+
+
+
 
     /*******************************************************************
      *

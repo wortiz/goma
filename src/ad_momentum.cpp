@@ -1,4 +1,3 @@
-#include "rf_bc_const.h"
 #define GOMA_AD_MOMENTUM_CPP
 #include <Sacado.hpp>
 
@@ -60,8 +59,6 @@ ADType ad_ls_modulate_property(
 
 int ad_ls_modulate_viscosity(
     ADType &mu1, double mu2, double width, double pm_minus, double pm_plus, const int model) {
-  double factor, ratio = 0.0;
-  int i, a, w, var;
 
   if (model == RATIO) {
     GOMA_EH(GOMA_ERROR, "Invalid Viscosity Model ls_modulate");
@@ -70,13 +67,9 @@ int ad_ls_modulate_viscosity(
 
   return (1);
 }
+
 ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
                             ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
-
-  int a, b;
-  int var;
-  int mdofs = 0, vdofs;
-  int i, j;
 
   ADType gammadot; /* strain rate invariant */
 
@@ -86,7 +79,6 @@ ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
   ADType mu = 0.;
   dbl mu0;
   dbl muinf;
-  dbl dmudT;
   dbl nexp;
   dbl atexp;
   dbl aexp;
@@ -94,7 +86,6 @@ ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
   dbl lambda;
   dbl tau_y = 0.0;
   dbl fexp;
-  dbl d_at_s;
   dbl temp;
 #if MELTING_BINGHAM
   dbl tmelt;
@@ -121,43 +112,14 @@ ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
     temp = upd->Process_Temperature;
   }
 
-#if MELTING_BINGHAM
-  tmelt = mp->melting_point_liquidus;
-#endif
-
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
-
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
-  }
-
-  var = TEMPERATURE;
   if (DOUBLE_NONZERO(temp) && DOUBLE_NONZERO(mp->reference[TEMPERATURE])) {
-#if MELTING_BINGHAM
-    /* melting version */
-    if (temp <= tmelt) {
-      at_shift = exp(-atexp * (mp->reference[TEMPERATURE] - temp) / (tmelt - temp) /
-                     (mp->reference[TEMPERATURE] - tmelt));
-      if (!isfinite(at_shift)) {
-        at_shift = DBL_MAX;
-      }
-
-      d_at_s = -at_shift * atexp / (tmelt - temp) / (tmelt - temp);
-    } else {
-      at_shift = 1.;
-      d_at_s = 0.;
-    }
-#else
     /* normal, non-melting version */
     at_shift = exp(atexp * (1. / temp - 1. / mp->reference[TEMPERATURE]));
     if (!isfinite(at_shift)) {
       at_shift = DBL_MAX;
     }
-    d_at_s = -at_shift * atexp / (temp * temp);
-#endif
   } else {
     at_shift = 1.;
-    d_at_s = 0.;
   }
 
   if (DOUBLE_NONZERO(at_shift * lambda * gammadot)) {
@@ -177,22 +139,6 @@ ADType ad_bingham_viscosity(struct Generalized_Newtonian *gn_local,
 
   mu = at_shift * (muinf + (mu0 - muinf + yield) * visc_cy);
 
-#if MELTING_BINGHAM
-  /* melting version */
-
-  mu = at_shift * (muinf + (mu0 - muinf + yield * at_shift) * visc_cy);
-
-  if (d_mu != NULL)
-    d_mu->gd = at_shift * (d_yield * at_shift * visc_cy +
-                           (mu0 - muinf + yield * at_shift) * d_visc_cy * d_shear);
-
-  if (mu <= 1.) {
-    mu = 1.;
-    d_at_s = 0.;
-    d_mu->gd = 0.;
-    at_shift = 1.;
-  }
-#endif
   return (mu);
 }
 
@@ -209,23 +155,8 @@ extern "C" dbl ad_viscosity_wrap(struct Generalized_Newtonian *gn_local) {
 }
 ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]) {
   int err;
-  int a;
-
-  int var, var_offset;
-  int v, w, w1;
-
-  int vdofs;
-
-  int i, j;
-
-  int species;    /* Species number of particle phase. */
-  dbl p_vol_frac; /* local particle volume fraction. */
   ADType mu = 0.;
-  int dim = ei[pg->imtrx]->ielem_dim;
 
-  struct Level_Set_Data *ls_old;
-
-  /* Zero out sensitivities */
 
   /* this section is for all Newtonian models */
   if (gn_local->ConstitutiveEquation == NEWTONIAN) {
@@ -262,6 +193,7 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
     ADType F1, F2;
     compute_sst_blending(F1, F2);
     mu = sst_viscosity(Omega, F2);
+    // mu = ad_only_turb_k_omega_viscosity();
   } else if (gn_local->ConstitutiveEquation == TURBULENT_SA ||
              gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
     mu = ad_sa_viscosity(gn_local);
@@ -361,7 +293,6 @@ int ad_assemble_momentum(dbl time,       /* current time */
    * and some of their derivatives...
    */
   dbl phi_i;
-  dbl(*grad_phi_i_e_a)[DIM] = NULL;
   /*
    * Interpolation functions for variables and some of their derivatives.
    */
@@ -369,9 +300,6 @@ int ad_assemble_momentum(dbl time,       /* current time */
   ADType Pi[DIM][DIM];
 
   dbl wt;
-
-  int v_g[DIM][DIM];
-  int v_s[MAX_MODES][DIM][DIM];
 
   int transient_run = pd->TimeIntegration != STEADY;
   int mass_on;
@@ -430,22 +358,6 @@ int ad_assemble_momentum(dbl time,       /* current time */
     ad_only_tau_momentum_shakib(tau, dim, dt, FALSE);
   }
   /* end Petrov-Galerkin addition */
-
-  if (pd->gv[POLYMER_STRESS11]) {
-    (void)stress_eqn_pointer(v_s);
-  }
-
-  if (pd->gv[VELOCITY_GRADIENT11]) {
-    v_g[0][0] = VELOCITY_GRADIENT11;
-    v_g[0][1] = VELOCITY_GRADIENT12;
-    v_g[1][0] = VELOCITY_GRADIENT21;
-    v_g[1][1] = VELOCITY_GRADIENT22;
-    v_g[0][2] = VELOCITY_GRADIENT13;
-    v_g[1][2] = VELOCITY_GRADIENT23;
-    v_g[2][0] = VELOCITY_GRADIENT31;
-    v_g[2][1] = VELOCITY_GRADIENT32;
-    v_g[2][2] = VELOCITY_GRADIENT33;
-  }
 
   /*
    * Material property constants, etc. Any variations for this
@@ -527,7 +439,6 @@ int ad_assemble_momentum(dbl time,       /* current time */
               wt_func += supg * tau * ad_fv->v[p] * bfm->grad_phi[i][p];
             }
           }
-          grad_phi_i_e_a = bfm->grad_phi_e[i][a];
 
           /* this is an optimization for xfem */
           if (xfem != NULL) {
@@ -805,7 +716,6 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
 
   ADType gamma_cont[DIM][DIM];
   ADType gamma[DIM][DIM];
-  dbl dgamma[DIM][DIM];
   if (evss_f) {
     for (int a = 0; a < VIM; a++) {
       for (int b = 0; b < VIM; b++) {
@@ -823,7 +733,6 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
   /* load up shear rate tensor based on velocity */
   for (int a = 0; a < VIM; a++) {
     for (int b = 0; b < VIM; b++) {
-      dgamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
       gamma[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
     }
   }
@@ -974,16 +883,9 @@ int ad_calc_pspg(ADType pspg[DIM],
                  dbl dt,         /* current time step size                    */
                  const PG_DATA *pg_data) {
   const dbl h_elem_avg = pg_data->h_elem_avg;
-  const dbl *hsquared = pg_data->hsquared; /* element size information for PSPG         */
-  const dbl U_norm = pg_data->U_norm;      /* global velocity norm for PSPG calcs       */
-  const dbl mu_avg = pg_data->mu_avg;      /* element viscosity for PSPG calculations   */
-  const dbl rho_avg = pg_data->rho_avg;    /* element density for PSPG calculations   */
-  const dbl *v_avg = pg_data->v_avg;       /* element velocity for PSPG calculations   */
 
   int dim;
-  int p, a, b, c;
-  int var;
-  int w, j;
+  int p, a, b;
 
   int pspg_global;
   int pspg_local;
@@ -995,33 +897,24 @@ int ad_calc_pspg(ADType pspg[DIM],
    * Variables for vicosity and derivative
    */
   ADType mu;
-  VISCOSITY_DEPENDENCE_STRUCT d_mu_struct; /* viscosity dependence */
-  VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
 
   /*
    * density and sensitivity terms
    */
   dbl rho;
   dbl rho_t;
-  DENSITY_DEPENDENCE_STRUCT d_rho_struct; /* density dependence */
-  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
 
   ADType f[DIM];                               /* Body force. */
-  MOMENTUM_SOURCE_DEPENDENCE_STRUCT df_struct; /* Body force dependence */
-  MOMENTUM_SOURCE_DEPENDENCE_STRUCT *df = &df_struct;
 
   /*
    * Interpolation functions...
    */
 
-  dbl phi_j;
 
   /*
    * Variables for Pressure Stabilization Petrov-Galerkin...
    */
   int meqn, meqn1;
-  int r;
-  int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
 
   ADType mass, advection, diffusion, source, porous;
 
@@ -1045,17 +938,12 @@ int ad_calc_pspg(ADType pspg[DIM],
   ADType gamma[DIM][DIM]; /* shrearrate tensor based on velocity */
   dbl dgamma[DIM][DIM];   /* shrearrate tensor based on velocity */
 
-  int w0 = 0;
-
   int mode;
 
   /* For particle momentum model.
    */
   int species;              /* species number for particle phase,  */
   dbl ompvf;                /* 1 - partical volume fraction */
-  int particle_momentum_on; /* boolean. */
-  /* particle stress for suspension balance model*/
-  static int is_initialized = FALSE;
 
   dim = pd->Num_Dim;
 
@@ -1079,35 +967,19 @@ int ad_calc_pspg(ADType pspg[DIM],
     return 0;
   }
 
+  int v_s[MAX_MODES][DIM][DIM];
+
   if (pd->gv[POLYMER_STRESS11]) {
     stress_eqn_pointer(v_s);
-
-    v_g[0][0] = VELOCITY_GRADIENT11;
-    v_g[0][1] = VELOCITY_GRADIENT12;
-    v_g[1][0] = VELOCITY_GRADIENT21;
-    v_g[1][1] = VELOCITY_GRADIENT22;
-    v_g[0][2] = VELOCITY_GRADIENT13;
-    v_g[1][2] = VELOCITY_GRADIENT23;
-    v_g[2][0] = VELOCITY_GRADIENT31;
-    v_g[2][1] = VELOCITY_GRADIENT32;
-    v_g[2][2] = VELOCITY_GRADIENT33;
   }
 
   /* initialize dependencies */
 
-  if (cr->MassFluxModel == DM_SUSPENSION_BALANCE && PSPG) {
-    w0 = gn->sus_species_no;
-    /* This is the divergence of the particle stress  */
-    /* divergence_particle_stress(div_tau_p, d_div_tau_p_dgd, d_div_tau_p_dy,
-         d_div_tau_p_dv, d_div_tau_p_dX, w0); */
-  }
 
   if (pd->e[pg->imtrx][R_PMOMENTUM1]) {
-    particle_momentum_on = 1;
     species = (int)mp->u_density[0];
     ompvf = 1.0 - fv->c[species];
   } else {
-    particle_momentum_on = 0;
     species = -1;
     ompvf = 1.0;
   }
@@ -1410,101 +1282,51 @@ int ad_assemble_continuity(dbl time_value, /* current time */
                                               explicit (tt = 1) to implicit (tt = 0)    */
                            dbl dt,         /* current time step size                    */
                            const PG_DATA *pg_data) {
-  int dim;
-  int p, q, a, b;
+  int a;
 
-  int eqn, var;
+  int eqn;
   int peqn, pvar;
-  int w;
 
   int i, j;
   int status, err;
 
   dbl time = 0.0; /*  RSL 6/6/02  */
 
-  dbl epsilon = 0.0, derivative, sum; /*  RSL 7/24/00  */
-  dbl sum1, sum2;                     /*  RSL 8/15/00  */
-  dbl sum_a, sum_b;                   /*  RSL 9/28/01  */
-  int jj;                             /*  RSL 7/25/00  */
-
-  dbl advection;
-  dbl source;
-  dbl pressure_stabilization;
-
-  dbl volsolvent = 0;         /* volume fraction of solvent                */
-  dbl initial_volsolvent = 0; /* initial solvent volume fraction
-                               * (in stress-free state) input as source
-                               * constant from input file                  */
 
   ADType det_J;
   dbl h3;
   dbl wt;
   ADType d_area;
 
-  dbl d_h3detJ_dmesh_bj; /* for specific (b,j) mesh dof */
-
   /*
    * Galerkin weighting functions...
    */
 
   dbl phi_i;
-  dbl phi_j;
-  dbl div_phi_j_e_b;
-  dbl(*grad_phi)[DIM]; /* weight-function for PSPG term */
-
-  dbl div_v_dmesh; /* for specific (b,j) mesh dof */
 
   /*
    * Variables for Pressure Stabilization Petrov-Galerkin...
    */
   int meqn;
-  int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
-  int mode;
+  int v_s[MAX_MODES][DIM][DIM];
 
   int *pdv = pd->v[pg->imtrx];
 
   ADType pspg[DIM];
 
-  dbl mass, mass_a;
-  dbl source_a;
-  dbl sourceBase = 0.0;
-
-  dbl rho = 0;
-  DENSITY_DEPENDENCE_STRUCT d_rho_struct; /* density dependence */
-  DENSITY_DEPENDENCE_STRUCT *d_rho = &d_rho_struct;
 
   struct Species_Conservation_Terms s_terms;
-  dbl rhos = 0, rhof = 0;
-  dbl h_flux = 0;
   int w0 = 0;
 
   /* For particle momentum model.
    */
-  int species;              /* species number for particle phase,  */
-  dbl ompvf;                /* 1 - partical volume fraction */
-  int particle_momentum_on; /* boolean. */
-
-  /* Foaming model TAB */
-  double dFVS_dv[DIM][MDE];
-  double dFVS_dT[MDE];
-  double dFVS_dx[DIM][MDE];
-  double dFVS_dC[MAX_CONC][MDE];
-  double dFVS_dF[MDE];
-  double dFVS_drho[MDE];
-  double dFVS_dMOM[MAX_MOMENTS][MDE];
-
-  int transient_run = pd->TimeIntegration != STEADY;
   int advection_on = 0;
-  int source_on = 0;
   int ion_reactions_on = 0, electrode_kinetics_on = 0;
   int lagrangian_mesh_motion = 0, total_ale_on = 0;
   int hydromassflux_on = 0, suspensionsource_on = 0;
-  int foam_volume_source_on = 0;
   int total_ale_and_velo_off = 0;
 
-  dbl advection_etm, source_etm;
-
-  double *J;
+  dbl advection_etm;
 
   status = 0;
 
@@ -1529,20 +1351,10 @@ int ad_assemble_continuity(dbl time_value, /* current time */
     return (status);
   }
 
-  dim = pd->Num_Dim;
 
   if (pd->gv[POLYMER_STRESS11]) {
     err = stress_eqn_pointer(v_s);
 
-    v_g[0][0] = VELOCITY_GRADIENT11;
-    v_g[0][1] = VELOCITY_GRADIENT12;
-    v_g[1][0] = VELOCITY_GRADIENT21;
-    v_g[1][1] = VELOCITY_GRADIENT22;
-    v_g[0][2] = VELOCITY_GRADIENT13;
-    v_g[1][2] = VELOCITY_GRADIENT23;
-    v_g[2][0] = VELOCITY_GRADIENT31;
-    v_g[2][1] = VELOCITY_GRADIENT32;
-    v_g[2][2] = VELOCITY_GRADIENT33;
   }
 
   wt = fv->wt;
@@ -1551,7 +1363,6 @@ int ad_assemble_continuity(dbl time_value, /* current time */
 
   d_area = wt * det_J * h3;
 
-  grad_phi = bf[eqn]->grad_phi;
 
   /*
    * Get the deformation gradients and tensors if needed
@@ -1582,37 +1393,8 @@ int ad_assemble_continuity(dbl time_value, /* current time */
       return (err);
   }
 
-  particle_momentum_on = 0;
-  species = -1;
-  ompvf = 1.0;
-
-  if (pd->gv[R_PMOMENTUM1]) {
-    particle_momentum_on = 1;
-    species = (int)mp->u_density[0];
-    ompvf = 1.0 - fv->c[species];
-  }
-
   if (PSPG) {
     ad_calc_pspg(pspg, time_value, tt, dt, pg_data);
-  }
-
-  if ((lagrangian_mesh_motion || total_ale_and_velo_off) && (mp->PorousMediaType == CONTINUOUS)) {
-    initial_volsolvent = elc->Strss_fr_sol_vol_frac;
-    volsolvent = 0.;
-    for (w = 0; w < pd->Num_Species_Eqn; w++)
-      volsolvent += fv->c[w];
-    if (particle_momentum_on)
-      volsolvent -= fv->c[species];
-  }
-
-  if (electrode_kinetics_on || ion_reactions_on) {
-    if (mp->PorosityModel == CONSTANT) {
-      epsilon = mp->porosity;
-    } else if (mp->PorosityModel == THERMAL_BATTERY) {
-      epsilon = mp->u_porosity[0];
-    } else {
-      GOMA_EH(GOMA_ERROR, "invalid porosity model");
-    }
   }
 
   if (mp->MomentumSourceModel == SUSPENSION_PM || electrode_kinetics_on) /*  RSL 7/25/00  */
@@ -1638,16 +1420,11 @@ int ad_assemble_continuity(dbl time_value, /* current time */
 
     hydro_flux(&s_terms, w0, tt, dt, pg_data->hsquared);
 
-    rhof = mp->u_density[1];
-    rhos = mp->u_density[2];
   }
-  rho = density(d_rho, time_value);
 
   advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
-  source_on = pd->e[pg->imtrx][eqn] & T_SOURCE;
 
   advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-  source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
   dbl ls_disable_pspg = 1;
 
@@ -1663,7 +1440,6 @@ int ad_assemble_continuity(dbl time_value, /* current time */
       /*
        *  Mass Terms: drhodt terms (usually though problem dependent)
        */
-      mass = 0.0;
 
       /*
        *  Advection:
@@ -1690,7 +1466,6 @@ int ad_assemble_continuity(dbl time_value, /* current time */
         }
       }
 
-      source = 0.0;
       ADType pressure_stabilization = 0.0;
       if (PSPG) {
         for (a = 0; a < WIM; a++) {
@@ -1921,9 +1696,9 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                                           * explicit (tt = 1) to implicit (tt = 0) */
                                  dbl dt, /* current time step size */
                                  PG_DATA *pg_data) {
-  int dim, p, q, r, w;
+  int dim, q, w;
 
-  int eqn, var;
+  int eqn;
   int peqn, pvar;
   int evss_gradv = 0;
 
@@ -1931,26 +1706,15 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   ADType v[DIM];     /* Velocity field. */
   ADType x_dot[DIM]; /* current position field derivative wrt time. */
   dbl h3;            /* Volume element (scale factors). */
-  dbl dh3dmesh_pj;   /* Sensitivity to (p,j) mesh dof. */
 
   ADType grad_v[DIM][DIM];
   ADType gamma[DIM][DIM]; /* Shear-rate tensor based on velocity */
   dbl dgamma[DIM][DIM];   /* Shear-rate tensor based on velocity */
   ADType det_J;           /* determinant of element Jacobian */
 
-  dbl d_det_J_dmesh_pj; /* for specific (p,j) mesh dof */
-
-  dbl mass; /* For terms and their derivatives */
-  dbl mass_a, mass_b;
-  dbl advection;
-  dbl advection_a, advection_b, advection_c, advection_d;
-  dbl diffusion;
-  dbl source;
-  dbl source_a = 0, source_b = 0, source_c = 0;
   int err;
   dbl alpha = 0;  /* This is the Geisekus mobility parameter */
   dbl lambda = 0; /* polymer relaxation constant */
-  dbl d_lambda_dF[MDE];
   double xi;
   double d_xi_dF[MDE];
   dbl eps = 0; /* This is the PTT elongation parameter */
@@ -1974,20 +1738,16 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
    * and some of their derivatives...
    */
 
-  dbl wt_func;
-
   /*
    * Interpolation functions for variables and some of their derivatives.
    */
 
-  dbl phi_j;
   dbl wt;
 
   /* Variables for stress */
 
   int R_s[MAX_MODES][DIM][DIM];
   int v_s[MAX_MODES][DIM][DIM];
-  int v_g[DIM][DIM];
 
   ADType b[DIM][DIM];     /* stress tensor */
   ADType b_dot[DIM][DIM]; /* stress tensor from last time step */
@@ -2000,8 +1760,6 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
   ADType b_dot_g[DIM][DIM];
 
-  /* polymer viscosity and derivatives */
-  dbl mup;
 
   const bool saramitoEnabled =
       (vn->ConstitutiveEquation == SARAMITO_OLDROYDB || vn->ConstitutiveEquation == SARAMITO_PTT ||
@@ -2013,16 +1771,11 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 
   /*  shift function */
   dbl at = 0.0;
-  dbl d_at_dT[MDE];
   dbl wlf_denom;
 
   /* advective terms are precalculated */
   ADType v_dot_del_b[DIM][DIM];
   ADType x_dot_del_b[DIM][DIM];
-
-  dbl d_xdotdels_dm;
-
-  dbl d_vdotdels_dm;
 
   /* SUPG variables */
   dbl supg = 0;
@@ -2058,16 +1811,6 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   /* load eqn and variable number in tensor form */
   (void)stress_eqn_pointer(v_s);
   (void)stress_eqn_pointer(R_s);
-
-  v_g[0][0] = VELOCITY_GRADIENT11;
-  v_g[0][1] = VELOCITY_GRADIENT12;
-  v_g[1][0] = VELOCITY_GRADIENT21;
-  v_g[1][1] = VELOCITY_GRADIENT22;
-  v_g[0][2] = VELOCITY_GRADIENT13;
-  v_g[1][2] = VELOCITY_GRADIENT23;
-  v_g[2][0] = VELOCITY_GRADIENT31;
-  v_g[2][1] = VELOCITY_GRADIENT32;
-  v_g[2][2] = VELOCITY_GRADIENT33;
 
   /*
    * Field variables...
@@ -2141,22 +1884,12 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
   if (pd->gv[TEMPERATURE]) {
     if (vn->shiftModel == CONSTANT) {
       at = vn->shift[0];
-      for (j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-        d_at_dT[j] = 0.;
-      }
     } else if (vn->shiftModel == MODIFIED_WLF) {
       wlf_denom = vn->shift[1] + fv->T - mp->reference[TEMPERATURE];
       if (wlf_denom != 0.) {
         at = exp(vn->shift[0] * (mp->reference[TEMPERATURE] - fv->T) / wlf_denom);
-        for (j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-          d_at_dT[j] =
-              -at * vn->shift[0] * vn->shift[1] / (wlf_denom * wlf_denom) * bf[TEMPERATURE]->phi[j];
-        }
       } else {
         at = 1.;
-      }
-      for (j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-        d_at_dT[j] = 0.;
       }
     }
   } else {
@@ -2183,9 +1916,6 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
         }
       }
     }
-
-    /* get polymer viscosity */
-    mup = viscosity(ve[mode]->gn, dgamma, NULL);
 
     if (saramitoEnabled == TRUE) {
       GOMA_EH(GOMA_ERROR, "Saramito not enabled sqrt");

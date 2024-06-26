@@ -3244,7 +3244,7 @@ int load_fv_grads(void)
     dofs = ei[upd->matrix_index[v]]->dof[v];
     for (p = 0; p < VIM; p++) {
       fv->grad_turb_k[p] = 0.0;
-      fv_old->grad_turb_omega[p] = 0.0;
+      fv_old->grad_turb_k[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         fv->grad_turb_k[p] += *esp->turb_k[i] * bfn->grad_phi[i][p];
         fv_old->grad_turb_k[p] += *esp_old->turb_k[i] * bfn->grad_phi[i][p];
