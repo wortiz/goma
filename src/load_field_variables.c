@@ -819,6 +819,21 @@ int load_fv(void)
                    &(fv_old->eddy_nu));
     stateVector[EDDY_NU] = fv->eddy_nu;
   }
+  if (pdgv[TURB_K]) {
+    v = TURB_K;
+    scalar_fv_fill(esp->turb_k, esp_dot->turb_k, esp_old->turb_k, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_k), &(fv_dot->turb_k),
+                   &(fv_old->turb_k));
+    stateVector[TURB_K] = fv->turb_k;
+  }
+
+  if (pdgv[TURB_DISS]) {
+    v = TURB_DISS;
+    scalar_fv_fill(esp->turb_diss, esp_dot->turb_diss, esp_old->turb_diss, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_diss), &(fv_dot->turb_diss),
+                   &(fv_old->turb_diss));
+    stateVector[TURB_DISS] = fv->turb_diss;
+  }
 
   if (pdgv[LIGHT_INTP]) {
     v = LIGHT_INTP;
@@ -1753,10 +1768,10 @@ int load_fv(void)
   if (upd->turbulent_info->use_internal_wall_distance) {
     fv->wall_distance = 0.;
     if (pdgv[pd->ShapeVar]) {
-      dofs = ei[pg->imtrx]->dof[pd->ShapeVar];
+      dofs = ei[upd->matrix_index[pd->ShapeVar]]->dof[pd->ShapeVar];
       for (i = 0; i < dofs; i++) {
         fv->wall_distance +=
-            upd->turbulent_info->wall_distances[ei[pg->imtrx]->gnn_list[pd->ShapeVar][i]] *
+            upd->turbulent_info->wall_distances[ei[upd->matrix_index[pd->ShapeVar]]->gnn_list[pd->ShapeVar][i]] *
             bf[pd->ShapeVar]->phi[i];
       }
     }
@@ -3203,6 +3218,48 @@ int load_fv_grads(void)
       fv->grad_eddy_nu[p] = 0.0;
     }
   }
+  /* grad(TURB_K)
+   *
+   */
+  if (pd->gv[TURB_K]) {
+    v = TURB_K;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_k[p] = 0.0;
+      fv_old->grad_turb_k[p] = 0.0;
+      for (i = 0; i < dofs; i++) {
+        fv->grad_turb_k[p] += *esp->turb_k[i] * bfn->grad_phi[i][p];
+        fv_old->grad_turb_k[p] += *esp_old->turb_k[i] * bfn->grad_phi[i][p];
+      }
+    }
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TURB_K] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_k[p] = 0.0;
+      fv_old->grad_turb_k[p] = 0.0;
+    }
+  }
+  /* grad(TURB_DISS)
+   *
+   */
+  if (pd->gv[TURB_DISS]) {
+    v = TURB_DISS;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_diss[p] = 0.0;
+      fv_old->grad_turb_diss[p] = 0.0;
+      for (i = 0; i < dofs; i++) {
+        fv->grad_turb_diss[p] += *esp->turb_diss[i] * bfn->grad_phi[i][p];
+        fv_old->grad_turb_diss[p] += *esp_old->turb_diss[i] * bfn->grad_phi[i][p];
+      }
+    }
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TURB_DISS] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_diss[p] = 0.0;
+    }
+  }
+
 
   /*
    * grad(APR)

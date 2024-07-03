@@ -1865,6 +1865,16 @@ int load_elem_dofptr(const int ielem,
     load_varType_Interpolation_ptrs(eqn, esp->eddy_nu, esp_old->eddy_nu, esp_dot->eddy_nu);
   }
 
+  eqn = R_TURB_K;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->turb_k, esp_old->turb_k, esp_dot->turb_k);
+  }
+
+  eqn = R_TURB_DISS;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->turb_diss, esp_old->turb_diss, esp_dot->turb_diss);
+  }
+
   eqn = R_STRESS11;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
     /* This should loop through all the stress variables
@@ -2755,6 +2765,16 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
     if (upd->ep[imtrx][eqn] >= 0) {
       load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->eddy_nu, esp_old->eddy_nu,
                                           esp_dot->eddy_nu);
+    }
+    eqn = R_TURB_K;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->turb_k, esp_old->turb_k,
+                                          esp_dot->turb_k);
+    }
+    eqn = R_TURB_DISS;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->turb_diss, esp_old->turb_diss,
+                                          esp_dot->turb_diss);
     }
 
     eqn = R_STRESS11;

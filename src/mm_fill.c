@@ -2416,6 +2416,25 @@ Revised:         Summer 1998, SY Tam (UNM)
         return -1;
 #endif
     }
+    if (pde[R_TURB_K]) {
+      err = assemble_turbulent_kinetic_energy_sst(time_value, theta, delta_t, &pg_data);
+      GOMA_EH(err, "assemble_spalart_allmaras");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_spalart_allmaras");
+      if (err)
+        return -1;
+#endif
+    }
+    if (pde[R_TURB_DISS]) {
+      err = assemble_turbulent_dissipation_sst(time_value, theta, delta_t, &pg_data);
+      GOMA_EH(err, "assemble_spalart_allmaras");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_spalart_allmaras");
+      if (err)
+        return -1;
+#endif
+    }
+
 
     if (pde[R_MOMENT0] || pde[R_MOMENT1] || pde[R_MOMENT2] || pde[R_MOMENT3]) {
       err = assemble_moments(time_value, theta, delta_t, &pg_data);

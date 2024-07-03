@@ -7393,6 +7393,25 @@ static int load_fv_sens(void) {
       fv_sens->eddy_nu += *esp_old->eddy_nu[i] * bf[v]->phi[i];
     }
   }
+  
+  v = TURB_K;
+  fv_sens->turb_k = 0.;
+  if (pd->v[pg->imtrx][v]) {
+    dofs = ei[pg->imtrx]->dof[v];
+    for (i = 0; i < dofs; i++) {
+      fv_sens->turb_k += *esp_old->turb_k[i] * bf[v]->phi[i];
+    }
+  }
+
+  v = TURB_DISS;
+  fv_sens->turb_diss = 0.;
+  if (pd->v[pg->imtrx][v]) {
+    dofs = ei[pg->imtrx]->dof[v];
+    for (i = 0; i < dofs; i++) {
+      fv_sens->turb_diss += *esp_old->turb_diss[i] * bf[v]->phi[i];
+    }
+  }
+
 
   /*
    * Acoustic Pressure

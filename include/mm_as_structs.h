@@ -571,6 +571,8 @@ struct Element_Variable_Pointers {
   dbl *sh_sat_3[MDE];   /* Porous shell saturation layer 3 */
 
   dbl *eddy_nu[MDE]; /* Eddy viscosity for turbulent flow */
+  dbl *turb_k[MDE]; /* Turbulent Kinetic Energy */
+  dbl *turb_diss[MDE]; /* Turbulent Dissipation */
 };
 
 /*___________________________________________________________________________*/
@@ -698,6 +700,8 @@ struct Element_Stiffness_Pointers {
   dbl **sh_sat_3; /* Porous shell saturation layer 3 */
 
   dbl **eddy_nu; /* Eddy viscosity for turbulent flow */
+  dbl **turb_k; /* Turbulent kinetic energy */
+  dbl **turb_diss; /* Turbulent dissipation */
 
   /*
    * These are for debugging purposes...
@@ -1733,6 +1737,8 @@ struct Field_Variables {
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
   dbl eddy_nu;                     /* Eddy viscosity for turbulent flow */
+  dbl turb_k; /* Turbulent kinetic energy */
+  dbl turb_diss; /* Turbulent dissipation */
   dbl wall_distance;               /* Distance to nearest wall */
   dbl multi_contact_line_distance; /* Distance to multi contact line points */
 
@@ -1784,6 +1790,8 @@ struct Field_Variables {
   dbl grad_sh_sat_3[DIM];  /* Gradient of porous shell saturation layer 3 */
 
   dbl grad_eddy_nu[DIM];       /* Gradient of Eddy viscosity */
+  dbl grad_turb_k[DIM];       /* Gradient of turbulent kinetic energy */
+  dbl grad_turb_diss[DIM];       /* Gradient of turbulent dissipation */
   dbl grad_wall_distance[DIM]; /* Distance to nearest wall */
 
   /*
@@ -2122,6 +2130,8 @@ struct Diet_Field_Variables {
   dbl sh_sat_3;   /* Porous shell saturation layer 3 */
 
   dbl eddy_nu; /* Eddy viscosity for turbulent flow */
+  dbl turb_k;
+  dbl turb_diss;
 
   dbl grad_em_er[DIM][DIM]; /* EM wave Fields */
   dbl grad_em_ei[DIM][DIM]; /* EM wave Fields */
@@ -2166,6 +2176,8 @@ struct Diet_Field_Variables {
   dbl grad_restime[DIM]; /* Gradient of the Residence time field */
 
   dbl grad_moment[MAX_MOMENTS][DIM];
+  dbl grad_turb_k[DIM];
+  dbl grad_turb_diss[DIM];
 };
 
 struct Rotation_Vectors {
@@ -3032,6 +3044,8 @@ struct stress_dependence {
   double pf[DIM][DIM][MAX_PHASE_FUNC][MDE];
   double degrade[DIM][DIM][MDE];
   double eddy_nu[DIM][DIM][MDE];
+  double turb_k[DIM][DIM][MDE];
+  double turb_diss[DIM][DIM][MDE];
 };
 typedef struct stress_dependence STRESS_DEPENDENCE_STRUCT;
 
@@ -3081,6 +3095,8 @@ struct viscosity_dependence {
   double pf[MAX_PHASE_FUNC][MDE]; /* phase function */
   double degrade[MDE];            /* amount of degradation */
   double eddy_nu[MDE];            /* Turbulent viscosity */
+  double turb_k[MDE];            /* Turbulent viscosity */
+  double turb_diss[MDE];            /* Turbulent viscosity */
   double sh_t[MDE];               /* shell temperature */
 };
 typedef struct viscosity_dependence VISCOSITY_DEPENDENCE_STRUCT;
@@ -3150,6 +3166,8 @@ struct pspg_dependence {
   double v[DIM][DIM][MDE]; /* velocity dependence. */
   double T[DIM][MDE];      /* temperature dependence. */
   double eddy_nu[DIM][MDE];
+  double turb_k[DIM][MDE];
+  double turb_diss[DIM][MDE];
   double P[DIM][MDE];           /* pressure dependence. */
   double C[DIM][MAX_CONC][MDE]; /* conc dependence. */
   double X[DIM][DIM][MDE];      /* mesh dependence. */

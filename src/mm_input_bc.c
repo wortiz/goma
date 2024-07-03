@@ -719,6 +719,8 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case EM_CONT_IMAG_BC:
     case SHELL_TFMP_SAT_BC:
     case EDDY_NU_BC:
+    case TURB_K_BC:
+    case TURB_DISS_BC:
 
       if (fscanf(ifp, "%lf", &BC_Types[ibc].BC_Data_Float[0]) != 1) {
         sprintf(err_msg, "%s: Expected 1 flt for %s.", yo, BC_Types[ibc].desc->name1);

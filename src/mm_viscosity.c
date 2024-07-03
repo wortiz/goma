@@ -31,6 +31,7 @@
 #include "mm_eh.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_terms.h"
+#include "mm_fill_turbulent.h"
 #include "mm_fill_util.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
@@ -129,6 +130,7 @@ double viscosity(struct Generalized_Newtonian *gn_local,
   /* this section is for all Newtonian models */
 
   if ((gn_local->ConstitutiveEquation == NEWTONIAN) ||
+      (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA_SST) ||
       (gn_local->ConstitutiveEquation == TURBULENT_SA) ||
       (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
     if (mp->ViscosityModel == USER) {
@@ -317,8 +319,31 @@ double viscosity(struct Generalized_Newtonian *gn_local,
       GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for Newtonian fluid");
     }
 
+    if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA_SST) {
+      struct k_omega_sst_const constants;
+      set_k_omega_sst_const_2003(&constants);
+      dbl mu_turb;
+      struct turb_dependence d_mu_turb;
+      sst_viscosity(&constants, &mu_turb, &d_mu_turb);
+
+      mu = mp->viscosity + mu_turb;
+      if (d_mu != NULL) {
+      for (int j = 0; j < ei[pg->imtrx]->dof[TURB_K]; j++) {
+        d_mu->turb_k[j] = d_mu_turb.d_k[j];
+      }
+      for (int j = 0; j < ei[pg->imtrx]->dof[TURB_DISS]; j++) {
+        d_mu->turb_diss[j] = d_mu_turb.d_diss[j];
+      }
+
+      for (int p = 0; p < WIM; p++) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[VELOCITY1 + p]; j++) {
+          d_mu->v[p][j] = d_mu_turb.d_v[p][j];
+        }
+      }
+      }
+    }
     /* Calculate contribution from turbulent viscosity */
-    if ((gn_local->ConstitutiveEquation == TURBULENT_SA) ||
+    else if ((gn_local->ConstitutiveEquation == TURBULENT_SA) ||
         (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
       dbl scale = 1.0;
       DENSITY_DEPENDENCE_STRUCT d_rho;

@@ -2587,6 +2587,16 @@ int load_variable(double *x_var,       /* variable value */
     var = EDDY_NU;
     *d_x_var = 1.;
     break;
+  case TURB_K:
+    *x_var = fv->turb_k;
+    var = TURB_K;
+    *d_x_var = 1.;
+    break;
+  case TURB_DISS:
+    *x_var = fv->turb_diss;
+    var = TURB_DISS;
+    *d_x_var = 1.;
+    break;
   case LIGHT_INTP:
     *x_var = fv->poynt[0];
     var = LIGHT_INTP;

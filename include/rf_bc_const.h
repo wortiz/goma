@@ -903,6 +903,8 @@
 #define VELO_SLIP_ROT_FLUID_BC 964910000
 
 #define EDDY_NU_BC 966666666
+#define TURB_K_BC 966666667
+#define TURB_DISS_BC 966666668
 
 /* Structural Shells */
 #define SH_K_BC             970000000
