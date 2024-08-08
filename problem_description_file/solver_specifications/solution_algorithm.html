@@ -243,6 +243,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../general_specifications.html">General Specifications</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-3"><i class="fa-solid fa-chevron-down"></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../general_specifications/output_level.html"><strong>Output Level</strong></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../general_specifications/debug.html"><strong>Debug</strong></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../general_specifications/print_3d_bc_dup.html">Print 3D BC Dup</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../general_specifications/number_of_jacobian_file_dumps.html"><strong>Number of Jacobian File Dumps</strong></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../general_specifications/initial_guess.html"><strong>Initial Guess</strong></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../general_specifications/initialize.html"><strong>Initialize</strong></a></li>
@@ -527,6 +528,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../post_processing/supg_velocity_in_porous_media.html"><strong>SUPG Velocity in Porous Media</strong></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../post_processing/vorticity_vector.html"><strong>Vorticity Vector</strong></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../post_processing/map_conf_stress.html">Map Conf Stress</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../post_processing/viscous_stress.html">Viscous Stress</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../post_processing/fluid_stress.html">Fluid Stress</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../post_processing_fluxes.html">Post Processing Fluxes and Data</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-14"><i class="fa-solid fa-chevron-down"></i></label><ul>
@@ -872,9 +875,23 @@ add an additional input card to specify the parallel direct solvers:</p>
 <p>Of these four options, we currently recommend <strong>mumps</strong>.
 All options can be run in parallel.</p>
 </dd>
+<dt>amesos2</dt><dd><p>Allows access to direct solver options implemented in parallel. Please see
+the user-notes below for Goma build options that must be exercised.  With
+this option, you must add an additional input card to specify the parallel
+direct solvers:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Amesos2</span> <span class="n">Solver</span> <span class="n">Package</span> <span class="o">=</span> <span class="p">{</span><span class="n">SuperLUDist</span> <span class="o">|</span> <span class="n">Mumps</span> <span class="o">|</span> <span class="n">KLU2</span><span class="p">}</span>
+<span class="c1"># Optional Amesos2 File to set parameters for the solver</span>
+<span class="c1"># xml or yaml supported through Trilinos</span>
+<span class="c1"># Amesos2 File = params_file.(xml | yaml)</span>
+</pre></div>
+</div>
+<p>Of these four options, we currently recommend <strong>Mumps</strong>.
+All options can be run in parallel.</p>
+</dd>
 <dt>stratimikos</dt><dd><p>Interface to Trilino’s Stratimikos package
 requires:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Matrix</span> <span class="n">storage</span> <span class="nb">format</span> <span class="o">=</span> <span class="n">epetra</span>
+<span class="c1"># Or tpetra</span>
 </pre></div>
 </div>
 <p>Allows block solvers, see also ref:<cite>Stratimikos File</cite></p>
