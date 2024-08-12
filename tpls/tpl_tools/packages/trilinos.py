@@ -99,42 +99,63 @@ class Package(packages.CMakePackage):
             + builder.env["SUITESPARSE_DIR"]
             + "/include/suitesparse"
         )
-        builder.add_option("-DTPL_ENABLE_SuperLUDist:BOOL=ON ")
-        builder.add_option("-DSuperLUDist_LIBRARY_NAMES:STRING=superlu_dist")
-        builder.add_option(
-            "-DSuperLUDist_LIBRARY_DIRS:PATH="
-            + builder.env["SUPERLU_DIST_DIR"]
-            + "/lib"
-        )
-        builder.add_option(
-            "-DSuperLUDist_INCLUDE_DIRS:PATH="
-            + builder.env["SUPERLU_DIST_DIR"]
-            + "/include"
-        )
-        builder.add_option("-DTPL_ENABLE_ParMETIS:BOOL=ON ")
-        builder.add_option(
-            "-DParMETIS_LIBRARY_DIRS:PATH="
-            + builder.env["PARMETIS_DIR"]
-            + "/lib;"
-            + builder.env["METIS_DIR"]
-            + "/lib"
-        )
-        builder.add_option(
-            "-DTPL_ParMETIS_INCLUDE_DIRS:PATH="
-            + builder.env["PARMETIS_DIR"]
-            + "/include;"
-            + builder.env["METIS_DIR"]
-            + "/include"
-        )
+        if "SUPERLU_DIST_DIR" in builder.env:
+            builder.add_option("-D Amesos_ENABLE_SuperLUDist:BOOL=ON ")
+            builder.add_option("-DTPL_ENABLE_SuperLUDist:BOOL=ON ")
+            builder.add_option("-DSuperLUDist_LIBRARY_NAMES:STRING=superlu_dist")
+            builder.add_option(
+                "-DSuperLUDist_LIBRARY_DIRS:PATH="
+                + builder.env["SUPERLU_DIST_DIR"]
+                + "/lib"
+            )
+            builder.add_option(
+                "-DSuperLUDist_INCLUDE_DIRS:PATH="
+                + builder.env["SUPERLU_DIST_DIR"]
+                + "/include"
+            )
+        ext = ".a"
+        if builder.build_shared:
+            ext = ".so"
+        if "PARMETIS_DIR" in builder.env:
+            builder.add_option("-DTPL_ENABLE_ParMETIS:BOOL=ON ")
+            builder.add_option("-D Amesos_ENABLE_ParMETIS:BOOL=ON ")
+            builder.add_option(
+                "-DParMETIS_LIBRARY_DIRS:PATH="
+                + builder.env["PARMETIS_DIR"]
+                + "/lib;"
+                + builder.env["METIS_DIR"]
+                + "/lib"
+            )
+            builder.add_option(
+                "-DTPL_ParMETIS_INCLUDE_DIRS:PATH="
+                + builder.env["PARMETIS_DIR"]
+                + "/include;"
+                + builder.env["METIS_DIR"]
+                + "/include"
+            )
+            builder.add_option(
+               "-DTPL_ParMETIS_LIBRARIES="
+               + builder.env["PARMETIS_DIR"]
+               + "/lib/libparmetis"
+               + ext
+               + ";"
+               + builder.env["METIS_DIR"]
+               + "/lib/libmetis"
+               + ext
+            )
+        else:
+            builder.add_option("-DTPL_ENABLE_ParMETIS:BOOL=OFF")
         builder.add_option("-DTPL_ENABLE_MUMPS:BOOL=ON ")
         builder.add_option(
-            "-DMUMPS_LIBRARY_NAMES:STRING=dmumps;mumps_common;pord;scalapack"
+            "-DMUMPS_LIBRARY_NAMES:STRING=dmumps;mumps_common;pord;scalapack;ptesmumps;ptscotch;ptscotcherr;scotch;scotcherr"
         )
         builder.add_option(
             "-DMUMPS_LIBRARY_DIRS:PATH="
             + builder.env["MUMPS_DIR"]
             + "/lib;"
             + builder.env["SCALAPACK_DIR"]
+            + "/lib;"
+            + builder.env["SCOTCH_DIR"]
             + "/lib"
         )
         builder.add_option(
@@ -146,8 +167,6 @@ class Package(packages.CMakePackage):
             "-DSCALAPACK_LIBRARY_DIRS:FILEPATH=" + builder.env["SCALAPACK_DIR"] + "/lib"
         )
         builder.add_option("-DSCALAPACK_LIBRARY_NAMES:STRING=scalapack")
-        builder.add_option("-D Amesos_ENABLE_SuperLUDist:BOOL=ON ")
-        builder.add_option("-D Amesos_ENABLE_ParMETIS:BOOL=ON ")
         builder.add_option("-D Amesos_ENABLE_LAPACK:BOOL=ON ")
         builder.add_option("-D Amesos_ENABLE_KLU:BOOL=ON ")
         builder.add_option("-D Amesos_ENABLE_UMFPACK:BOOL=ON ")
