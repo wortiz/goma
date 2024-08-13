@@ -4,8 +4,8 @@ from tpl_tools.packages import packages
 class Package(packages.CMakePackage):
     def __init__(self):
         self.name = "trilinos"
-        self.version = "15.1.0"
-        self.sha256 = "91940c8677b03ec06b3368f7ff8b835ba94dfa6551c6fb168faf10195f32b421"
+        self.version = "16.0.0"
+        self.sha256 = "46bfc40419ed2aa2db38c144fb8e61d4aa8170eaa654a88d833ba6b92903f309"
         self.filename = "trilinos-" + self.version + ".tar.gz"
         self.url = (
             "https://github.com/trilinos/Trilinos/archive/refs/tags/trilinos-release-"
@@ -44,6 +44,7 @@ class Package(packages.CMakePackage):
         builder.add_option("-DTrilinos_SHOW_DEPRECATED_WARNINGS=OFF")
         builder.add_option("-DCMAKE_VERBOSE_MAKEFILE:BOOL=TRUE")
         builder.add_option("-DTPL_ENABLE_Boost:BOOL=OFF")
+        builder.add_option("-DTrilinos_SHOW_DEPRECATED_WARNINGS:BOOL=OFF")
         builder.add_option("-DTrilinos_ENABLE_Triutils:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_SEACAS:BOOL=OFF")
         builder.add_option("-DTrilinos_ENABLE_Epetra:BOOL=ON")

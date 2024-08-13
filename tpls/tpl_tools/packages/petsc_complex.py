@@ -18,6 +18,7 @@ class Package(packages.AutotoolsPackage):
 
     def set_environment(self, builder):
         builder.env = builder._registry.get_environment().copy()
+        builder.env["PETSC_ARCH"] = "arch-c-complex"
         builder.env["PETSC_DIR"] = os.path.join(
             builder._extract_dir, builder._extracted_folder
         )

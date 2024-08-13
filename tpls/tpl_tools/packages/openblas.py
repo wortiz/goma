@@ -5,8 +5,8 @@ import os
 class Package(packages.GenericPackage):
     def __init__(self):
         self.name = "openblas"
-        self.version = "0.3.21"
-        self.sha256 = "f36ba3d7a60e7c8bcc54cd9aaa9b1223dd42eaf02c811791c37e8ca707c241ca"
+        self.version = "0.3.28"
+        self.sha256 = "f1003466ad074e9b0c8d421a204121100b0751c96fc6fcf3d1456bd12f8a00a1"
         self.filename = "OpenBLAS" + self.version + ".tar.gz"
         self.compression = "gz"
         self.url = (

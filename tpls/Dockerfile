@@ -11,7 +11,6 @@ RUN PYTHONUNBUFFERED=1 /opt/goma/tpls/install-tpls.py --cc=gcc --cxx=g++ --fc=gf
 RUN rm -r /opt/goma
 RUN rm -r /tmp/downloads
 RUN rm -r /tmp/extract
-RUN rm -r /opt/goma-libs/sources
 RUN rm -r /opt/goma-libs/logs
 
 RUN { \
@@ -21,21 +20,10 @@ RUN { \
     } > /entrypoint.sh \
 && chmod a+x /entrypoint.sh
 
-
-ARG USER=goma
-RUN adduser -m $USER
-RUN groupadd sudo
-RUN usermod -a -G sudo $USER
-RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-# make sure everything is in place
-USER $USER
-ENV HOME /home/$USER
-ENV USER $USER
 ENV OMPI_MCA_btl_base_warn_component_unuse "0"
 ENV OMPI_ALLOW_RUN_AS_ROOT 1
 ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM 1
-WORKDIR $HOME
+WORKDIR /opt/workdir
 
 ENTRYPOINT [ "/entrypoint.sh" ]
 CMD [ "/bin/bash" ]
