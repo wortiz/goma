@@ -71,7 +71,9 @@
 
 #include "sl_util.h" /* Variables of interest */
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "dp_types.h"
 #include "mm_as.h"
 #include "mm_as_structs.h"

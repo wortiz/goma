@@ -24,7 +24,9 @@
 #define GOMA_AC_HUNT_C
 #include "ac_hunt.h"
 #include "ac_update_parameter.h"
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "brkfix/fix.h"
 #include "decomp_interface.h"
 #include "dp_comm.h"

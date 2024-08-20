@@ -89,7 +89,9 @@
  *     application code. Each has its own comments.
  */
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include <az_aztec.h>
+#endif
 #include <limits.h>
 #include <math.h>
 #include <mpi.h>
@@ -100,7 +102,9 @@
 /* Put include statements for your code here. */
 
 #include "ac_stability_util.h"
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "dp_comm.h"
 #include "dp_types.h"
 #include "dp_utils.h"
@@ -1520,6 +1524,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
     strcpy(stringer, " 1 ");
     break;
 
+#ifdef GOMA_ENABLE_AZTECOO
   case AZTEC:
 
     /* Set option of preconditioner reuse */
@@ -1600,7 +1605,9 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
     passdown.num_linear_its += linear_solver_itns;
 
     break;
+#endif
 
+#ifdef GOMA_ENABLE_AMESOS
   case AMESOS:
 
     if ((strcmp(Matrix_Format, "msr") != 0) && (strcmp(Matrix_Format, "epetra") != 0)) {
@@ -1610,6 +1617,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
     amesos_solve(Amesos_Package, ams, x, xr, 1, pg->imtrx);
     strcpy(stringer, " 1 ");
     break;
+#endif
 
   case MA28:
     /*
@@ -1626,7 +1634,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
     break;
 
   default:
-    GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented.");
+    GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented or enabled.");
     break;
   }
 

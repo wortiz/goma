@@ -40,7 +40,9 @@
 #endif
 #endif
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 
 /*
  * NUM_ALSS - Number of Aztec Linear Solver Systems. Here we have one.
@@ -51,15 +53,15 @@
 #define NUM_ALSS 1
 
 struct GomaLinearSolverData {
+#ifdef GOMA_ENABLE_AZTECOO
   int proc_config[AZ_PROC_SIZE];
-
   int options[AZ_OPTIONS_SIZE];
-
   double params[AZ_PARAMS_SIZE];
+  double status[AZ_STATUS_SIZE];
+#endif
 
   int *data_org;
 
-  double status[AZ_STATUS_SIZE];
 
   int N;
   int N_update;

@@ -23,7 +23,9 @@
 
 #include <stddef.h>
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "dp_map_comm_vec.h"
 #include "dp_types.h"
 #include "mpi.h"
@@ -72,12 +74,8 @@ extern void print_sync_start(int);
 extern void print_sync_end(int);
 extern void sync_processors(void);
 
-#ifdef PARALLEL
+#ifdef GOMA_ENABLE_AZTECOO
 extern int Proc_Config[AZ_PROC_SIZE];
-#else
-#ifdef TRILINOS
-extern int Proc_Config[AZ_PROC_SIZE];
-#endif
 #endif
 
 #endif

@@ -29,7 +29,9 @@
 
 /* GOMA include files */
 #include "ac_stability.h"
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "bc_colloc.h"
 #include "density.h"
 #include "el_elm.h"

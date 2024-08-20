@@ -17,9 +17,12 @@
  */
 
 #include <math.h>
+#include <mpi.h>
 #include <stdio.h>
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "el_elm.h"
 #include "el_elm_info.h"
 #include "el_geom.h"
@@ -56,15 +59,15 @@
 
 /* Local function prototypes */
 static double jacobian_metric(Exo_DB *, /* Exodus database structure */
-                              double *, /* Solution vector */
-                              int *);   /* proc_config array */
-static double volume_metric(int *);     /* proc_config array */
+                              double * /* Solution vector */
+                              );   
+static double volume_metric(void);     
 static double angle_metric(Exo_DB *,    /* Exodus database structure */
-                           double *,    /* Solution vector */
-                           int *);      /* proc_config array */
+                           double *    /* Solution vector */
+                           );      
 static double triangle_metric(Exo_DB *, /* Exodus database structure */
-                              double *, /* Solution vector */
-                              int *);   /* proc_config array */
+                              double * /* Solution vector */
+                              );
 static void load_vertex_xy(Exo_DB *,    /* Exodus database structure */
                            int,         /* Element number */
                            int,         /* Number of nodes to process */
@@ -78,7 +81,7 @@ static double sidelength(int,           /* One vertex */
                          int,           /* Other vertex */
                          double **);    /* Vertex coordinates */
 
-int element_quality(Exo_DB *exo, double *x, int *proc_config)
+int element_quality(Exo_DB *exo, double *x)
 
 /*
  *   Function which computes measures of element quality
@@ -116,7 +119,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
 
   /* Compute each requested metric */
   if (eqm->do_jac) {
-    mavg = jacobian_metric(exo, x, proc_config);
+    mavg = jacobian_metric(exo, x);
     DPRINTF(stderr, "               Jacobian         %8g         %8g\n", mavg, eqm->eq_jac);
     tavg += eqm->wt_jac * mavg;
     wt_min += eqm->wt_jac * eqm->eq_jac;
@@ -125,7 +128,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
       qmin = eqm->eq_jac;
   }
   if (eqm->do_vol && !first_call) {
-    mavg = volume_metric(proc_config);
+    mavg = volume_metric();
     DPRINTF(stderr, "               Volume change    %8g         %8g\n", mavg, eqm->eq_vol);
     tavg += eqm->wt_vol * mavg;
     wt_min += eqm->wt_vol * eqm->eq_vol;
@@ -134,7 +137,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
       qmin = eqm->eq_vol;
   }
   if (eqm->do_ang) {
-    mavg = angle_metric(exo, x, proc_config);
+    mavg = angle_metric(exo, x);
     DPRINTF(stderr, "               Angle            %8g         %8g\n", mavg, eqm->eq_ang);
     tavg += eqm->wt_ang * mavg;
     wt_min += eqm->wt_ang * eqm->eq_ang;
@@ -143,7 +146,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
       qmin = eqm->eq_ang;
   }
   if (eqm->do_tri) {
-    mavg = triangle_metric(exo, x, proc_config);
+    mavg = triangle_metric(exo, x);
     DPRINTF(stderr, "               Triangle         %8g         %8g\n", mavg, eqm->eq_tri);
     tavg += eqm->wt_tri * mavg;
     wt_min += eqm->wt_tri * eqm->eq_tri;
@@ -189,7 +192,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
   }
 } /* End of function "element_quality" */
 
-static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
+static double jacobian_metric(Exo_DB *exo, double *x) {
   int dofs, k;
   int ielem, e_start, e_end, igp, ngp, store_shape;
   double gwt, Jw, Jw_sum, Jw_min, els, eq, eqavg;
@@ -266,16 +269,16 @@ static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
   /* Return results */
   els = (double)(e_end - e_start);
   if (Num_Proc > 1) {
-    els = AZ_gsum_double(els, proc_config);
-    eqsum = AZ_gsum_double(eqsum, proc_config);
-    eqmin = AZ_gmin_double(eqmin, proc_config);
+    MPI_Allreduce(MPI_IN_PLACE, &els, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &eqsum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &eqmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
   }
   eqavg = eqsum / els;
   eqm->eq_jac = eqmin;
   return eqavg;
 } /* End of function jacobian_metric */
 
-static double volume_metric(int *proc_config)
+static double volume_metric(void)
 /*
  * Volume change data, if requested, were collected during mesh assembly.
  * Now, just do parallel processing and report back.
@@ -286,9 +289,9 @@ static double volume_metric(int *proc_config)
   double low = eqm->vol_low;
 
   if (Num_Proc > 1) {
-    points = (int)AZ_gsum_int(eqm->vol_count, proc_config);
-    sum = AZ_gsum_double(eqm->vol_sum, proc_config);
-    low = AZ_gmin_double(eqm->vol_low, proc_config);
+    MPI_Allreduce(MPI_IN_PLACE, &points, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &low, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
   }
 
   eqm->eq_vol = low;
@@ -300,7 +303,7 @@ static double volume_metric(int *proc_config)
   }
 } /* End of function volume_metric */
 
-static double angle_metric(Exo_DB *exo, double *x, int *proc_config) {
+static double angle_metric(Exo_DB *exo, double *x) {
   int i, ielem, e_start, e_end, sense;
   /* int e_sens */
   int bad_elem = FALSE;
@@ -371,9 +374,9 @@ static double angle_metric(Exo_DB *exo, double *x, int *proc_config) {
   /* Return results */
   els = (double)(e_end - e_start);
   if (Num_Proc > 1) {
-    els = AZ_gsum_double(els, proc_config);
-    eqsum = AZ_gsum_double(eqsum, proc_config);
-    eqmin = AZ_gmin_double(eqmin, proc_config);
+    MPI_Allreduce(MPI_IN_PLACE, &els, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &eqsum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &eqmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
   }
   eqavg = eqsum / els;
   if (!bad_elem)
@@ -383,7 +386,7 @@ static double angle_metric(Exo_DB *exo, double *x, int *proc_config) {
   return eqavg;
 } /* End of function angle_metric */
 
-static double triangle_metric(Exo_DB *exo, double *x, int *proc_config) {
+static double triangle_metric(Exo_DB *exo, double *x) {
   int i, ielem, e_start, e_end, sense;
   /* e_sens */
   int v1, v2, v3;
@@ -476,9 +479,9 @@ static double triangle_metric(Exo_DB *exo, double *x, int *proc_config) {
   /* Return results */
   els = (double)(e_end - e_start);
   if (Num_Proc > 1) {
-    els = AZ_gsum_double(els, proc_config);
-    eqsum = AZ_gsum_double(eqsum, proc_config);
-    eqmin = AZ_gmin_double(eqmin, proc_config);
+    MPI_Allreduce(MPI_IN_PLACE, &els, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &eqsum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &eqmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
   }
   eqavg = eqsum / els;
   if (!bad_elem)

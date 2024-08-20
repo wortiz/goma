@@ -17,7 +17,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "brkfix/fix.h"
 #include "dp_comm.h"
 #include "dp_utils.h"

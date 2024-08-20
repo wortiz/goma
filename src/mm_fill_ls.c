@@ -65,7 +65,9 @@
 #endif
 #endif
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 
 /* goma include files (of course!) */
 

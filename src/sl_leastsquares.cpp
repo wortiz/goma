@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string>
 
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
 #include "Epetra_ConfigDefs.h"
 #include "Epetra_DataAccess.h"
 #include "Epetra_Object.h"
@@ -23,7 +24,6 @@
 #endif
 
 /* This removes the entire file if Amesos & Trilinos are not defined */
-#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
 
 #if defined(PARALLEL) && !defined(EPETRA_MPI)
 #define EPETRA_MPI

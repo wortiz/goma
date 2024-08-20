@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <vector>
+#include <cstring>
 
 #include "linalg/sparse_matrix.h"
 #ifdef GOMA_ENABLE_TPETRA

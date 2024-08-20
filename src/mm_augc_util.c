@@ -17,7 +17,9 @@
 #include <stdlib.h>
 
 #include "ac_update_parameter.h"
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "bc_contact.h"
 #include "dp_types.h"
 #include "dpi.h"

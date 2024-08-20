@@ -8,7 +8,10 @@
 #include <string>
 #include <utility>
 
+#ifdef GOMA_ENABLE_EPETRA
+#include "Thyra_EpetraLinearOp.hpp"
 #include "Epetra_DataAccess.h"
+#endif
 #include "Stratimikos_DefaultLinearSolverBuilder.hpp"
 #include "Teuchos_ENull.hpp"
 #include "Teuchos_FancyOStream.hpp"
@@ -23,7 +26,6 @@
 #include "Teuchos_XMLParameterListCoreHelpers.hpp"
 #include "Teuchos_YamlParameterListCoreHelpers.hpp"
 #include "Teuchos_config.h"
-#include "Thyra_EpetraLinearOp.hpp"
 #include "Thyra_EpetraThyraWrappers.hpp"
 #include "Thyra_LinearOpBase_decl.hpp"
 #include "Thyra_LinearOpWithSolveBase_decl.hpp"
@@ -44,8 +46,10 @@
 #include "linalg/sparse_matrix_tpetra.h"
 #endif
 
+#ifdef GOMA_ENABLE_EPETRA
 #include "EpetraExt_RowMatrixOut.h"
 #include "EpetraExt_VectorOut.h"
+#endif
 
 #ifdef GOMA_ENABLE_TEKO
 // Teko-Package includes
@@ -57,9 +61,11 @@
 #include "Epetra_SerialComm.h"
 #endif
 
+#ifdef GOMA_ENABLE_EPETRA
 #include "Epetra_Map.h"
 #include "Epetra_RowMatrix.h"
 #include "Epetra_Vector.h"
+#endif
 #include "linalg/sparse_matrix.h"
 #include "linalg/sparse_matrix_epetra.h"
 #include "sl_stratimikos_interface.h"
@@ -261,6 +267,7 @@ int stratimikos_solve_tpetra(struct GomaLinearSolverData *ams,
 }
 #endif /* GOMA_ENABLE_TPETRA */
 
+#ifdef GOMA_ENABLE_EPETRA
 int stratimikos_solve(struct GomaLinearSolverData *ams,
                       double *x_,
                       double *b_,
@@ -337,6 +344,17 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
     return -1;
   }
 }
+#else /* GOMA_ENABLE_EPETRA */
+int stratimikos_solve(struct GomaLinearSolverData *ams,
+                      double *x_,
+                      double *b_,
+                      int *iterations,
+                      char stratimikos_file[MAX_NUM_MATRICES][MAX_CHAR_IN_INPUT],
+                      int imtrx) {
+  GOMA_EH(GOMA_ERROR, "Not built with stratimikos support!");
+  return -1;
+}
+#endif /* GOMA_ENABLE_EPETRA */
 
 } /* End extern "C" */
 
@@ -367,5 +385,6 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
   GOMA_EH(GOMA_ERROR, "Not built with stratimikos support!");
   return -1;
 }
+
 }
 #endif /* GOMA_ENABLE_STRATIMIKOS */

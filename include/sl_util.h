@@ -152,7 +152,7 @@ extern void solve_NxN_system(dbl *,      /* A */
 #if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
 /* Use prototype in sl_amesos_interface.h */
 #else
-extern void amesos_solve_msr(char *, struct Aztec_Linear_Solver_System *, double *, double *, int);
+extern void amesos_solve_msr(char *, struct GomaLGomaLinearSolverData *, double *, double *, int);
 #endif
 
 /*****************************************************************************/

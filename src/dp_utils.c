@@ -43,9 +43,11 @@ static char mpistringbuffer[80];
 
 static Spfrtn sr;
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
 
 int Proc_Config[AZ_PROC_SIZE];
+#endif
 
 /************************************************************************/
 /************************************************************************/

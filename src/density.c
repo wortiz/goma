@@ -14,7 +14,6 @@
 
 #include "density.h"
 #include "ac_particles.h"
-#include "az_aztec.h"
 #include "bc_colloc.h"
 #include "bc_contact.h"
 #include "el_elm.h"

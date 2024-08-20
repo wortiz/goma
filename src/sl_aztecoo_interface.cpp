@@ -12,6 +12,7 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 #include "linalg/sparse_matrix.h"
+#ifdef GOMA_ENABLE_AZTECOO
 #include "linalg/sparse_matrix_epetra.h"
 #if defined(PARALLEL) && !defined(EPETRA_MPI)
 #define EPETRA_MPI
@@ -95,3 +96,10 @@ void aztecoo_solve_epetra(struct GomaLinearSolverData *ams, double *x_, double *
 }
 
 } /* extern "C" */
+#else
+extern "C" {
+void aztecoo_solve_epetra(struct GomaLinearSolverData *ams, double *x_, double *b_) {
+  GOMA_EH(GOMA_ERROR, "Goma not compiled with AztecOO support");
+}
+} /* extern "C" */
+#endif

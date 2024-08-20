@@ -21,7 +21,9 @@
 #include "mm_eh.h"
 #include "mm_mp_const.h"
 #include "sl_util_structs.h"
+#ifdef GOMA_ENABLE_AZTECOO
 #include <az_aztec_defs.h>
+#endif
 
 #define GOMA_MM_SOL_NONLINEAR_C
 /* Needed to declare POSIX function drand48 */

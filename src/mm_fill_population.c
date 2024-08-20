@@ -3,7 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "density.h"
 #include "el_elm.h"
 #include "mm_as.h"

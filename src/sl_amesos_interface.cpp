@@ -11,6 +11,8 @@
 * This software is distributed under the GNU General Public License.      *
 * See LICENSE file.                                                       *
 \************************************************************************/
+/* This removes the entire file if Amesos & Trilinos are not defined */
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
 
 #include <Amesos_config.h>
 #include <stdlib.h>
@@ -26,8 +28,6 @@
 #define GOMA_SL_AMESOS_INTERFACE_CC
 #endif
 
-/* This removes the entire file if Amesos & Trilinos are not defined */
-#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
 
 #if defined(PARALLEL) && !defined(EPETRA_MPI)
 #define EPETRA_MPI

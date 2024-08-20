@@ -29,7 +29,9 @@
 
 #include "ac_particles.h"
 #include "ac_stability_util.h"
+#ifdef GOMA_ENABLE_AZTECOO
 #include "az_aztec.h"
+#endif
 #include "brkfix/fix.h"
 #include "decomp_interface.h"
 #include "dp_comm.h"
