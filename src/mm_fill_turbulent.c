@@ -571,7 +571,8 @@ int assemble_spalart_allmaras(dbl time_value, /* current time */
       }     /* End of loop over velocity components */
 
       /* Sensistivity w.r.t. mesh */
-      for (b = 0; b < pd->Num_Dim; b++) {
+      // Disable mesh sensitivies for now since they seem broken.
+      for (b = pd->Num_Dim; b < pd->Num_Dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
         if (pdv[var]) {
           pvar = upd->vp[pg->imtrx][var];
