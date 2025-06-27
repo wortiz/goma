@@ -3684,8 +3684,7 @@ static int soln_sens(double lambda,  /*  parameter */
 <<<<<<< HEAD
 =======
 #endif
->>>>>>> origin/main
-  case MUMPS:
+  >>>>>>> origin/main case MUMPS:
 
     if ((strcmp(Matrix_Format, "msr") != 0)) {
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR matrix format is currently supported with "

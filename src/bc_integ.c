@@ -2095,7 +2095,8 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
                       phi_i = bf[eqn]->dphidxi[ldof_eqn][i_basis];
                       weight *= phi_i;
                     } else if (bc->BC_Name == ELLIPTIC_XI_REGULARIZATION_BC ||
-                               bc->BC_Name == ELLIPTIC_ETA_REGULARIZATION_BC || bc->BC_Name == ELLIPTIC_ZETA_REGULARIZATION_BC) {
+                               bc->BC_Name == ELLIPTIC_ETA_REGULARIZATION_BC ||
+                               bc->BC_Name == ELLIPTIC_ZETA_REGULARIZATION_BC) {
                       i_basis = (bc->BC_Name - ELLIPTIC_XI_REGULARIZATION_BC);
                       phi_i = bf[eqn]->dphidxi[ldof_eqn][i_basis];
                       weight *= phi_i;

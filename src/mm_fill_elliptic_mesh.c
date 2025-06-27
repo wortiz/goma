@@ -113,10 +113,10 @@ int assemble_elliptic_mesh(void) {
         d_T_dmesh[1][b][m] = dSden / Sden;
       }
     }
-} else {
-  GOMA_EH(GOMA_ERROR, "Unknown mesh dimension for elliptic mesh");
-}
-// } else if (dim == 3) {
+  } else {
+    GOMA_EH(GOMA_ERROR, "Unknown mesh dimension for elliptic mesh");
+  }
+  // } else if (dim == 3) {
   //   dbl Snum = (SQUARE(bf[eqn]->J[0][0]) + SQUARE(bf[eqn]->J[0][1]));
   //   dbl Sden = (SQUARE(bf[eqn]->J[1][0]) + SQUARE(bf[eqn]->J[1][1]));
   //   dbl Sxy = sqrt(Snum / Sden);
