@@ -87,14 +87,6 @@ set(GOMA_COMPILER_OVERRIDE
       "allow goma to compile with different compilers than TPLs, use with caution"
 )
 
-# Trilinos required packages
-foreach(package Amesos AztecOO Epetra)
-  list(FIND Trilinos_PACKAGE_LIST ${package} trilinos_package_index)
-  if(${trilinos_package_index} LESS 0)
-    message(FATAL_ERROR "Trilinos not built with ${package} a required package")
-  endif()
-endforeach()
-
 # stratimikos and teko
 list(FIND Trilinos_PACKAGE_LIST Stratimikos stratimikos_package_index)
 if(${stratimikos_package_index} GREATER_EQUAL 0)
@@ -119,6 +111,33 @@ if(${sacado_package_index} GREATER_EQUAL 0)
   if(ENABLE_SACADO)
     message(STATUS "TRILINOS: Sacado found, enabling in Goma")
     list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_SACADO)
+  endif()
+endif()
+
+list(FIND Trilinos_PACKAGE_LIST Epetra epetra_package_index)
+if(${epetra_package_index} GREATER_EQUAL 0)
+  option(ENABLE_EPETRA "ENABLE_EPETRA" ON)
+  if(ENABLE_EPETRA)
+    message(STATUS "TRILINOS: Epetra found, enabling in Goma")
+    list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_EPETRA)
+  endif()
+endif()
+
+list(FIND Trilinos_PACKAGE_LIST AztecOO aztecoo_package_index)
+if(${aztecoo_package_index} GREATER_EQUAL 0)
+  option(ENABLE_AZTEC "ENABLE_AZTEC" ON)
+  if(ENABLE_AZTEC)
+    message(STATUS "TRILINOS: AztecOO found, enabling in Goma")
+    list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_AZTEC)
+  endif()
+endif()
+
+list(FIND Trilinos_PACKAGE_LIST Amesos amesos_package_index)
+if(${amesos_package_index} GREATER_EQUAL 0)
+  option(ENABLE_AMESOS "ENABLE_AMESOS" ON)
+  if(ENABLE_AMESOS)
+    message(STATUS "TRILINOS: Amesos found, enabling in Goma")
+    list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_AMESOS)
   endif()
 endif()
 
@@ -448,7 +467,6 @@ endif()
 
 option_definition(DISABLE_COLOR_ERROR_PRINT OFF)
 option_definition(COMPILER_64BIT ON)
-option_definition(GOMA_ENABLE_AMESOS ON)
 option_definition(TRILINOS ON)
 option_definition(CHECK_FINITE OFF)
 option_definition(NO_CHEBYSHEV_PLEASE ON)
@@ -490,6 +508,7 @@ set(GOMA_INCLUDES
     include/ac_stability_util.h
     include/ac_update_parameter.h
     include/ad_turbulence.h
+    include/ad_porous.h
     include/ad_momentum.h
     include/ad_stress.h
     include/bc_colloc.h
@@ -518,7 +537,9 @@ set(GOMA_INCLUDES
     include/linalg/sparse_matrix.h
     include/linalg/sparse_matrix_tpetra.h
     include/linalg/sparse_matrix_epetra.h
-    include/ls/facet_based_reinit.h
+    include/ls/create_facets.hpp
+    include/ls/facet_reinitialization.h
+    include/ls/marching_cubes.hpp
     include/load_field_variables.h
     include/loca_const.h
     include/loca_util_const.h
@@ -654,6 +675,7 @@ set(GOMA_SOURCES
     src/ac_stability_util.c
     src/ac_update_parameter.c
     src/ad_turbulence.cpp
+    src/ad_porous.cpp
     src/ad_momentum.cpp
     src/ad_stress.cpp
     src/bc_colloc.c
@@ -678,7 +700,8 @@ set(GOMA_SOURCES
     src/linalg/sparse_matrix.cpp
     src/linalg/sparse_matrix_tpetra.cpp
     src/linalg/sparse_matrix_epetra.cpp
-    src/ls/facet_based_reinit.cpp
+    src/ls/create_facets.cpp
+    src/ls/facet_reinitialization.cpp
     src/load_field_variables.c
     src/loca_bord.c
     src/loca_eigen_c2f.F
@@ -832,12 +855,12 @@ set(GOMA_USER_SOURCES
 
 set(GOMA_UTIL_INCLUDES
     include/bc/rotate_util.h include/mm_eh.h include/util/goma_normal.h
-    include/util/facet_helper.hpp include/util/aprepro_helper.h
+    include/util/aprepro_helper.h
     include/util/distance_helpers.h)
 
 set(GOMA_UTIL_SOURCES
     src/bc/rotate_util.c src/util/goma_normal.c src/mm_eh.c
-    src/util/facet_helper.cpp src/util/aprepro_helper.cpp
+    src/util/aprepro_helper.cpp
     src/util/distance_helpers.cpp)
 
 set(GDS_INCLUDES include/gds/gds_vector.h)
