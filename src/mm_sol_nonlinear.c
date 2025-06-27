@@ -3681,10 +3681,7 @@ static int soln_sens(double lambda,  /*  parameter */
     amesos_solve(Amesos_Package, ams, x_sens, resid_vector_sens, 0, pg->imtrx);
     strcpy(stringer, " 1 ");
     break;
-<<<<<<< HEAD
-=======
 #endif
-  >>>>>>> origin/main case MUMPS:
 
     if ((strcmp(Matrix_Format, "msr") != 0)) {
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR matrix format is currently supported with "
