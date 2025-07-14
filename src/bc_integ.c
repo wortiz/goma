@@ -485,6 +485,12 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
          */
 
         switch (bc->BC_Name) {
+        case PRESSURE_DEPENDENT_LEAK_BC:
+          fvelo_pressure_leak_bc(func, d_func, BC_Types[bc_input_id].BC_Data_Float[0],
+                                 BC_Types[bc_input_id].BC_Data_Float[1],
+                                 BC_Types[bc_input_id].BC_Data_Float[2]);
+          break;
+
         case KINEMATIC_PETROV_BC:
         case KINEMATIC_BC:
         case KINEMATIC_XI_BC:

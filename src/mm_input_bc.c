@@ -831,6 +831,7 @@ void rd_bc_specs(FILE *ifp, char *input) {
     case LS_ADC_BC:
       srand((long)ut()); /* Seed the random number generator  when LS_ADC is used */
       FALLTHROUGH;
+    case PRESSURE_DEPENDENT_LEAK_BC:
     case FORCE_BC:
     case FORCE_SIC_BC:
     case FORCE_RS_BC:

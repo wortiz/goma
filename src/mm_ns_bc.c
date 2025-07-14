@@ -355,6 +355,92 @@ void ls_attach_bc(double func[DIM],
   return;
 }
 
+void fvelo_pressure_leak_bc(double func[DIM],
+                     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                     const double ref_pressure,
+                     const double H,
+                     const double permeability)
+{
+  dbl gamma[DIM][DIM];
+  dbl mu;
+  VISCOSITY_DEPENDENCE_STRUCT d_mu_struct; /* viscosity dependence */
+  VISCOSITY_DEPENDENCE_STRUCT *d_mu = &d_mu_struct;
+
+
+  /**
+        compute gammadot, viscosity
+   **/
+  for (int i = 0; i < VIM; i++) {
+    for (int j = 0; j < VIM; j++) {
+      gamma[i][j] = fv->grad_v[i][j] + fv->grad_v[j][i];
+    }
+  }
+
+  mu = viscosity(gn, gamma, d_mu);
+
+  if (af->Assemble_LSA_Mass_Matrix) {
+    for (int kdir = 0; kdir < pd->Num_Dim; kdir++) {
+      int var = MESH_DISPLACEMENT1 + kdir;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          dbl phi_j = bf[var]->phi[j];
+          d_func[0][var][j] -= phi_j * fv->snormal[kdir];
+        }
+      }
+    }
+    return;
+  }
+
+  dbl grad_p = (fv->P - ref_pressure) / H;
+
+  /* Calculate the residual contribution	*/
+  func[0] = -grad_p * permeability / mu;
+  // printf("Pressure Dependent Leak BC: func[0] = %e\n", func[0]);
+  for (int kdir = 0; kdir < pd->Num_Dim; kdir++) {
+    func[0] += (fv->v[kdir] - fv_dot->x[kdir]) * fv->snormal[kdir];
+  }
+
+  if (af->Assemble_Jacobian) {
+    dbl tt = tran->current_theta;
+    dbl dt = tran->delta_t;
+
+      int var = PRESSURE;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          dbl phi_j = bf[var]->phi[j];
+          d_func[0][var][j] +=  -phi_j * (permeability / mu) / H;
+        }
+      }
+    for (int kdir = 0; kdir < pd->Num_Dim; kdir++) {
+
+      for (int p = 0; p < pd->Num_Dim; p++) {
+        int var = MESH_DISPLACEMENT1 + p;
+        if (pd->v[pg->imtrx][var]) {
+          for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+         dbl  phi_j = bf[var]->phi[j];
+            d_func[0][var][j] +=
+                (fv->v[kdir] - fv_dot->x[kdir]) * fv->dsnormal_dx[kdir][p][j];
+            if (TimeIntegration != 0 && p == kdir) {
+              d_func[0][var][j] +=
+                   (-(1. + 2. * tt) * phi_j / dt) * fv->snormal[kdir] * delta(p, kdir);
+            }
+          }
+        }
+      }
+
+      var = VELOCITY1 + kdir;
+      if (pd->v[pg->imtrx][var]) {
+        for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          dbl phi_j = bf[var]->phi[j];
+          d_func[0][var][j] +=  phi_j * fv->snormal[kdir];
+        }
+      }
+
+    } /* for: kdir */
+  } /* end of if Assemble_Jacobian */
+
+} /* END of routine fvelo_normal_bc  */
+
 /*****************************************************************************/
 /****************************************************************************/
 void fvelo_normal_bc(double func[DIM],
@@ -3087,6 +3173,7 @@ void fvelo_slip_bc(double func[MAX_PDIM],
   double d_betainv_dF[MDE];
   double sign;
   int tang_slip_only;
+
 #define PRESSURE_DEPENDENT_SLIP 0
 #if PRESSURE_DEPENDENT_SLIP
   double vslip_mag;

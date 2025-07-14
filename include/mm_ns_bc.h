@@ -993,4 +993,10 @@ void shear_stress_applied(double func[DIM],
                           const int iconnect_ptr,
                           dbl *xi, /* Natural coordinates of the integration point */
                           const Exo_DB *exo);
+
+void fvelo_pressure_leak_bc(double func[DIM],
+                     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
+                     const double ref_pressure,
+                     const double H,
+                     const double permeability);
 #endif /* GOMA_MM_NS_BC_H */

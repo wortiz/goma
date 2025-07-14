@@ -625,7 +625,6 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               doFullJac = 1;
               func = kfunc[0];
               break;
-
             case VELO_TANG1_COLLOC_BC:
               GOMA_EH(GOMA_ERROR, "VELO_TANG1_COLLOC_BC not implemented");
               // fzero_velo_tangent_3d(kfunc, d_kfunc, elem_side_bc->id_side, I);
