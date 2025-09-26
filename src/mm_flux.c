@@ -4945,6 +4945,222 @@ int compute_volume_integrand(const int quantity,
     double rho = density(NULL, time);
     *sum += weight * det * rho;
   } break;
+  case I_CONV_HEAT_FLUX_LS: {
+    if (ls != NULL) {
+      load_lsi(ls->Length_Scale);
+    } else {
+      GOMA_EH(GOMA_ERROR, "Level set required for HEAT_FLUX_LS volume integral.");
+    }
+    double rho;
+    DENSITY_DEPENDENCE_STRUCT d_rho_struct;
+    DENSITY_DEPENDENCE_STRUCT *d_rho = NULL;
+
+    if (J_AC == NULL) {
+      rho = density(NULL, time);
+    } else {
+      d_rho = &d_rho_struct;
+      rho = density(d_rho, time);
+    }
+
+    HEAT_CAPACITY_DEPENDENCE_STRUCT d_cp_struct;
+    HEAT_CAPACITY_DEPENDENCE_STRUCT *d_cp = &d_cp_struct;
+    dbl Cp = heat_capacity(d_cp,time);
+
+    dbl hf = 0;
+    for (int a = 0; a < pd->Num_Dim; a++) {
+      hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * rho * Cp * fv->T;
+    }
+
+    *sum += hf * lsi->delta * weight * det;
+
+    if (J_AC != NULL) {
+      for (b = 0; b < dim; b++) {
+        var = MESH_DISPLACEMENT1 + b;
+
+        if (pd->v[pg->imtrx][var]) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+            dbl d_hf = 0;
+            for (int a = 0; a < pd->Num_Dim; a++) {
+              d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->d_normal_dmesh[a][b][j] * rho * Cp * fv->T;
+              d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * rho * d_cp->X[b][j] * fv->T;
+              d_hf += (-bf[var]->phi[j]*(1 + 2 * tran->theta)/tran->delta_t) * lsi->normal[a] * rho * Cp * fv->T;
+            }
+
+            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+                weight * ((h3 * bf[pd->ShapeVar]->d_det_J_dm[b][j] +
+                           fv->dh3dq[b] * bf[var]->phi[j] * det_J) *
+                              hf +
+                          det * (lsi->delta * d_hf + lsi->d_delta_dmesh[b][j] * hf));
+          }
+        }
+      }
+
+      var = TEMPERATURE;
+
+      if (pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+          dbl d_hf = 0;
+          for (int a = 0; a < pd->Num_Dim; a++) {
+            d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * rho * d_cp->T[j] * fv->T;
+            d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * rho * Cp * bf[var]->phi[j];
+            d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * d_rho->T[j] * Cp * fv->T;
+          }
+
+          J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+              d_hf * lsi->delta * weight * det;
+        }
+      }
+
+      var = FILL;
+      if (pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          dbl d_hf = 0;
+          for (int a = 0; a < pd->Num_Dim; a++) {
+            d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * rho * d_cp->F[j] * fv->T;
+            d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->d_normal_dF[a][j] * rho * Cp * fv->T;
+            d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * d_rho->F[j] * Cp * fv->T;
+          }
+
+          J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+              (d_hf * lsi->delta + hf * lsi->d_delta_dF[j]) * weight * det;
+        }
+      }
+
+      var = MASS_FRACTION;
+      if (pd->v[pg->imtrx][var]) {
+        int w;
+        for (w = 0; w < pd->Num_Species; w++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            /*
+             * Find the material index for the current
+             * local variable degree of freedom
+             * (can't just query gun_list for MASS_FRACTION
+             *  unknowns -> have to do a lookup)
+             */
+            gnn = ei[pg->imtrx]->gnn_list[var][j];
+            ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
+            matIndex = ei[pg->imtrx]->matID_ledof[ledof];
+            c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+
+          dbl d_hf = 0;
+          for (int a = 0; a < pd->Num_Dim; a++) {
+            d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * rho * d_cp->C[w][j] * fv->T;
+            d_hf += (fv->v[a]-fv_dot->x[a]) * lsi->normal[a] * d_rho->C[w][j] * Cp * fv->T;
+          }
+
+            J_AC[c] += d_hf * lsi->delta * weight * det;
+          }
+        }
+      }
+    }
+  } break;
+  case I_HEAT_FLUX_LS: {
+    if (ls != NULL) {
+      load_lsi(ls->Length_Scale);
+    } else {
+      GOMA_EH(GOMA_ERROR, "Level set required for HEAT_FLUX_LS volume integral.");
+    }
+
+    CONDUCTIVITY_DEPENDENCE_STRUCT d_k_struct;
+    CONDUCTIVITY_DEPENDENCE_STRUCT *d_k = &d_k_struct;
+
+    dbl k = conductivity(d_k, time);
+
+    dbl q[DIM];
+    HEAT_FLUX_DEPENDENCE_STRUCT d_q_struct;
+    HEAT_FLUX_DEPENDENCE_STRUCT *d_q = &d_q_struct;
+
+    heat_flux(q, d_q, time);
+    dbl hf = 0;
+    for (int a = 0; a < pd->Num_Dim; a++) {
+      hf += q[a] * lsi->normal[a];
+    }
+
+    *sum += k * hf * lsi->delta * weight * det;
+
+    if (J_AC != NULL) {
+      for (a = 0; a < dim; a++) {
+        var = MESH_DISPLACEMENT1 + a;
+
+        if (pd->v[pg->imtrx][var]) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+            dbl k_portion = d_k->X[a][j] * hf;
+            dbl q_portion = 0.0;
+            for (int b = 0; b < pd->Num_Dim; b++) {
+              q_portion +=
+                  k * (d_q->X[b][a][j] * lsi->normal[b] + q[b] * lsi->d_normal_dmesh[b][a][j]);
+            }
+
+            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+                weight * ((h3 * bf[pd->ShapeVar]->d_det_J_dm[a][j] +
+                           fv->dh3dq[a] * bf[var]->phi[j] * det_J) *
+                              hf*lsi->delta + 
+                          det * (k_portion + q_portion) * lsi->delta);
+          }
+        }
+      }
+
+      var = TEMPERATURE;
+
+      if (pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+          dbl k_portion = d_k->T[j] * hf;
+          dbl q_portion = 0.0;
+          for (int a = 0; a < pd->Num_Dim; a++) {
+            q_portion += k * d_q->T[a][j] * lsi->normal[a];
+          }
+
+          J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+              (k_portion + q_portion) * lsi->delta * weight * det;
+        }
+      }
+
+      var = FILL;
+      if (pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          dbl k_portion = d_k->F[j] * hf;
+          dbl q_portion = 0.0;
+          for (int a = 0; a < pd->Num_Dim; a++) {
+            q_portion += k * (d_q->F[a][j] * lsi->normal[a] + q[a] * lsi->d_normal_dF[a][j]);
+          }
+
+          J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+              ((k_portion + q_portion) * lsi->delta + hf * lsi->d_delta_dF[j]) * weight * det;
+        }
+      }
+
+      var = MASS_FRACTION;
+      if (pd->v[pg->imtrx][var]) {
+        int w;
+        for (w = 0; w < pd->Num_Species; w++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            /*
+             * Find the material index for the current
+             * local variable degree of freedom
+             * (can't just query gun_list for MASS_FRACTION
+             *  unknowns -> have to do a lookup)
+             */
+            gnn = ei[pg->imtrx]->gnn_list[var][j];
+            ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
+            matIndex = ei[pg->imtrx]->matID_ledof[ledof];
+            c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+
+            dbl k_portion = d_k->C[w][j] * hf;
+            dbl q_portion = 0.0;
+            for (int a = 0; a < pd->Num_Dim; a++) {
+              q_portion += k * (d_q->C[w][a][j] * lsi->normal[a]);
+            }
+
+            J_AC[c] += (k_portion + q_portion) * lsi->delta * weight * det;
+          }
+        }
+      }
+    }
+  } break;
 
   case I_SPECIES_SOURCE: {
     struct Species_Conservation_Terms s_terms;

@@ -139,6 +139,8 @@
 #define I_HEAT_ENERGY_NEG         52
 #define I_HEAT_ENERGY_POS         53
 #define I_TOTAL_MASS              54
+#define I_HEAT_FLUX_LS            55
+#define I_CONV_HEAT_FLUX_LS       56
 #ifdef GOMA_MM_POST_PROC_C
 struct Post_Processing_Flux_Names {
   char *name; /* flux string */
@@ -269,7 +271,9 @@ VOL_NAME_STRUCT pp_vol_names[] = {{"VOLUME", I_VOLUME},
                                   {"Q_FCN", I_Q_FCN},
                                   {"ABSORPTION_CROSS_SECTION", I_EM_ABSORB_CROSS_SECTION},
                                   {"HEAT_ENERGY_NEG", I_HEAT_ENERGY_NEG},
-                                  {"HEAT_ENERGY_POS", I_HEAT_ENERGY_POS}};
+                                  {"HEAT_ENERGY_POS", I_HEAT_ENERGY_POS},
+                                  {"HEAT_FLUX_LS", I_HEAT_FLUX_LS},
+                                  {"CONV_HEAT_FLUX_LS", I_CONV_HEAT_FLUX_LS}};
 
 int Num_Vol_Names = sizeof(pp_vol_names) / sizeof(VOL_NAME_STRUCT);
 
