@@ -7,10 +7,11 @@ class Package(packages.AutotoolsPackage):
         self.name = "bison"
         self.version = "3.8.2"
         self.sha256 = "06c9e13bdf7eb24d4ceb6b59205a4f67c2c7e7213119644430fe82fbd14a0abb"
-        self.filename = "bison-" + self.version + "tar.bz2"
+        self.filename = "bison-" + self.version + ".tar.gz"
         self.url = (
             "http://ftpmirror.gnu.org/gnu/bison/bison-" + self.version + ".tar.gz"
         )
+        self.mirror = "http://ftp.gnu.org/gnu/bison/bison-" + self.version + ".tar.gz"
         self.executables = ["bison"]
         self.dependencies = []
 

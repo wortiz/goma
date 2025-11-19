@@ -67,11 +67,23 @@ class Builder(object):
     def download(self):
         mkdir_p(self._download_dir)
         url = self._package.url
+        mirror = getattr(self._package, "mirror", None)
         sha256 = self._package.sha256
         filename = os.path.join(self._download_dir, self._package.filename)
         self.logger.log("Downloading file: {}".format(filename))
         verify = not self.skip_ssl_verify
-        success = utils.download_file(url, filename, sha256, verify)
+        try:
+            success = utils.download_file(url, filename, sha256, verify)
+        except Exception as e:
+            if mirror:
+                self.logger.log(
+                    "Download failed with exception: {}. Trying mirror: {}".format(
+                        str(e), mirror
+                    )
+                )
+                success = utils.download_file(mirror, filename, sha256, verify)
+            else:
+                raise e
         if success:
             self.logger.log("Successfully downloaded: {}".format(filename))
         return success
