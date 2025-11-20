@@ -510,6 +510,8 @@ set(GOMA_INCLUDES
     include/ad/field_variables.h
     include/ad/beer_belly.h
     include/ad/structs.h
+    include/ad/level_set.h
+    include/ad/lubrication.h
     include/ad/turbulence.h
     include/ad/porous.h
     include/ad/momentum.h
@@ -680,6 +682,8 @@ set(GOMA_SOURCES
     src/ad/globals.cpp
     src/ad/field_variables.cpp
     src/ad/beer_belly.cpp
+    src/ad/level_set.cpp
+    src/ad/lubrication.cpp
     src/ad/turbulence.cpp
     src/ad/porous.cpp
     src/ad/momentum.cpp
