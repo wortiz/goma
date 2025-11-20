@@ -2,9 +2,10 @@
 #ifdef GOMA_ENABLE_SACADO
 #include <Sacado.hpp>
 
-#include "ad_momentum.h"
-#include "ad_stress.h"
-#include "ad_turbulence.h"
+#include "ad/momentum.h"
+#include "ad/stress.h"
+#include "ad/structs.h"
+#include "ad/turbulence.h"
 
 extern "C" {
 

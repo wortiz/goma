@@ -1,11 +1,11 @@
-#include "ad_turbulence.h"
+#include "ad/turbulence.h"
 #ifdef GOMA_ENABLE_SACADO
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "exo_struct.h"
+#include "std.h"
 
 int ad_assemble_momentum(dbl time,       /* current time */
                          dbl tt,         /* parameter to vary time integration from
@@ -33,9 +33,12 @@ dbl ad_viscosity_wrap(struct Generalized_Newtonian *gn_local);
 #endif
 
 #ifdef __cplusplus
-void ad_fluid_stress(ADType Pi[DIM][DIM]);
-int ad_momentum_source_term(ADType f[DIM], /* Body force. */
-                            dbl time);
+void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]);
 ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]);
+ADType ad_vec_dot(const int n1, ADType *v1, ADType *v2);
+int ad_tensor_dot(ADType t1[DIM][DIM],
+                  ADType t2[DIM][DIM],
+                  ADType t1_dot_t2[DIM][DIM],
+                  const int dim);
 #endif
 #endif

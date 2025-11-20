@@ -5512,7 +5512,7 @@ double load_saturation(double porosity, double cap_pres, double d_cap_pres[2])
   /**********************************************************************
    *                   TANH MODEL FOR SATURATION
    **********************************************************************/
-  else if (mp->SaturationModel == TANH) {
+  else if (mp->SaturationModel == SAT_TANH) {
     /*
      * FOR TANH EQUATION
      *  mp->u_saturation[0] is the irreduceable water saturation
@@ -6217,11 +6217,11 @@ double load_cap_pres(int ipore, int ilnode, int ignode, double saturation)
    */
 
   /**********************************************************************
-   *                   ATANH MODEL FOR CAPILLARY PRESSURE
+   *                   CAP_ATANH MODEL FOR CAPILLARY PRESSURE
    **********************************************************************/
-  if (mp->PorousShellCapPresModel[ipore] == ATANH) {
+  if (mp->PorousShellCapPresModel[ipore] == CAP_ATANH) {
     /*
-     * FOR ATANH EQUATION
+     * FOR CAP_ATANH EQUATION
      *  mp->u_saturation[0] is the irreduceable water saturation
      *  mp->u_saturation[1] is the irreduceable air saturation
      *  mp->u_saturation[2] is shift factor
@@ -6294,9 +6294,9 @@ double load_cap_pres(int ipore, int ilnode, int ignode, double saturation)
       GOMA_EH(GOMA_ERROR, "Not valid porous shell index");
       break;
     }
-  } else if (mp->PorousShellCapPresModel[ipore] == SINH) {
+  } else if (mp->PorousShellCapPresModel[ipore] == CAP_SINH) {
     /*
-     * FOR SINH EQUATION
+     * FOR CAP_SINH EQUATION
      *  mp->u_saturation[0] is the irreducable water saturation
      *  mp->u_saturation[1] is the irreduceable air saturation
      *  mp->u_saturation[2] is shift factor

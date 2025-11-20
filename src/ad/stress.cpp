@@ -1,13 +1,13 @@
 #ifdef GOMA_ENABLE_SACADO
 #include <Sacado.hpp>
 
-#include "ad_momentum.h"
-#include "ad_turbulence.h"
+#include "ad/momentum.h"
+#include "ad/turbulence.h"
 
 extern "C" {
 
 /* GOMA include files */
-#include "ad_turbulence.h"
+#include "ad/turbulence.h"
 #include "density.h"
 #include "el_elm.h"
 #include "exo_struct.h"

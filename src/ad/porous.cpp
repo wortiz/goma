@@ -1,8 +1,7 @@
 #ifdef GOMA_ENABLE_SACADO
 
-#include <ad_turbulence.h>
-
-#include <ad_porous.h>
+#include "ad/porous.h"
+#include "ad/turbulence.h"
 
 extern "C" {
 #include "mm_as.h"
@@ -81,11 +80,11 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
    */
 
   /**********************************************************************
-   *                   ATANH MODEL FOR CAPILLARY PRESSURE
+   *                   CAP_ATANH MODEL FOR CAPILLARY PRESSURE
    **********************************************************************/
-  if (mp->PorousShellCapPresModel[ipore] == ATANH) {
+  if (mp->PorousShellCapPresModel[ipore] == CAP_ATANH) {
     /*
-     * FOR ATANH EQUATION
+     * FOR CAP_ATANH EQUATION
      *  mp->u_saturation[0] is the irreduceable water saturation
      *  mp->u_saturation[1] is the irreduceable air saturation
      *  mp->u_saturation[2] is shift factor
@@ -120,9 +119,9 @@ ADType ad_load_cap_pres(int ipore, int ilnode, int ignode, ADType saturation)
     cap_pres = con_d / (con_c - atanh(sat_clip));
     mp->cap_pres = cap_pres.val();
 
-  } else if (mp->PorousShellCapPresModel[ipore] == SINH) {
+  } else if (mp->PorousShellCapPresModel[ipore] == CAP_SINH) {
     /*
-     * FOR SINH EQUATION
+     * FOR CAP_SINH EQUATION
      *  mp->u_saturation[0] is the irreducable water saturation
      *  mp->u_saturation[1] is the irreduceable air saturation
      *  mp->u_saturation[2] is shift factor
