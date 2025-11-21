@@ -1,5 +1,6 @@
 #include "ad/level_set.h"
 #include "ad/structs.h"
+#include <memory>
 
 extern "C" {
 #include "exo_struct.h"
@@ -14,6 +15,8 @@ extern "C" {
 #include "rf_fem.h"
 #include "std.h" /* This needs to be here. */
 }
+
+std::unique_ptr<AD_Level_Set_Interface> ad_lsi = nullptr;
 
 extern "C" int ad_assemble_fill(double tt,
                                 double dt,
@@ -1312,3 +1315,132 @@ extern "C" int ad_assemble_fill(double tt,
   return (status);
 
 } /* end of assemble_fill */
+
+int ad_load_lsi(const double width) {
+  if (!ad_lsi) {
+    ad_lsi = std::make_unique<AD_Level_Set_Interface>();
+  }
+  ADType F = ad_fv->F, alpha;
+  int a;
+  int i, j;
+
+  /* Check if we're in the mushy zone. */
+  ad_lsi->alpha = 0.5 * width;
+  alpha = lsi->alpha;
+
+  ad_lsi->near = ls->on_sharp_surf || fabs(F) < alpha;
+
+  /* Calculate the interfacial functions we want to know even if not in mushy
+   * zone. */
+
+  ad_lsi->gfmag = 0.0;
+  for (a = 0; a < VIM; a++) {
+    ad_lsi->normal[a] = ad_fv->grad_F[a];
+    ad_lsi->gfmag += ad_fv->grad_F[a] * ad_fv->grad_F[a];
+  }
+  ad_lsi->gfmag = sqrt(ad_lsi->gfmag);
+  if (ad_lsi->gfmag.val() == 0.0) {
+    ad_lsi->gfmaginv = 1.0;
+  } else {
+    ad_lsi->gfmaginv = 1.0 / ad_lsi->gfmag;
+  }
+
+  for (a = 0; a < VIM; a++) {
+    ad_lsi->normal[a] *= ad_lsi->gfmaginv;
+  }
+
+  /* If we're not in the mushy zone: */
+  if (ls->on_sharp_surf) {
+    /*ad_lsi->H = ( F < 0.0) ? 0.0 : 1.0 ;*/
+    ad_lsi->H = (ls->Elem_Sign < 0) ? 0.0 : 1.0;
+    ad_lsi->delta = 1.;
+  } else if (!ad_lsi->near) {
+    ad_lsi->H = (F < 0.0) ? 0.0 : 1.0;
+    ad_lsi->delta = 0.;
+  } else {
+    ad_lsi->H = 0.5 * (1. + F / alpha + sin(M_PIE * F / alpha) / M_PIE);
+    ad_lsi->delta = 0.5 * (1. + cos(M_PIE * F / alpha)) * ad_lsi->gfmag / alpha;
+  }
+
+  /**** Shield the operations below since they are very expensive relative to
+     the previous operations in the load_lsi routine. Add your variables as
+     needed  ********/
+
+  if (pd->gv[LUBP] || pd->gv[LUBP_2] || pd->gv[SHELL_SAT_CLOSED] || pd->gv[SHELL_PRESS_OPEN] ||
+      pd->gv[SHELL_PRESS_OPEN_2] || pd->gv[SHELL_SAT_GASN]) {
+
+    /* Evaluate heaviside using FEM basis functions */
+    ADType Hni, d_Hni_dF, Fi;
+    ADType Hni_old, Fi_old;
+    int eqn = R_FILL;
+    ad_lsi->Hn = 0.0;
+    ad_lsi->Hn_old = 0.0;
+    for (a = 0; a < DIM; a++) {
+      ad_lsi->gradHn[a] = 0.0;
+      ad_lsi->gradHn_old[a] = 0.0;
+    }
+    if (pd->gv[LUBP] || pd->gv[SHELL_SAT_CLOSED] || pd->gv[SHELL_PRESS_OPEN] ||
+        pd->gv[SHELL_SAT_GASN]) {
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        Fi = *esp->F[i];
+        if (fabs(Fi) > ad_lsi->alpha) {
+          Hni = (Fi < 0.0) ? 0.0 : 1.0;
+        } else {
+          Hni = 0.5 * (1.0 + Fi / ad_lsi->alpha + sin(M_PIE * Fi / ad_lsi->alpha) / M_PIE);
+        }
+        ad_lsi->Hn += Hni * bf[eqn]->phi[i];
+        for (j = 0; j < VIM; j++) {
+          ad_lsi->gradHn[j] += Hni * bf[eqn]->grad_phi[i][j];
+        }
+
+        Fi_old = *esp_old->F[i];
+        if (fabs(Fi_old) > ad_lsi->alpha) {
+          Hni_old = (Fi_old < 0.0) ? 0.0 : 1.0;
+        } else {
+          Hni_old = 0.5 * (1.0 + Fi_old / ad_lsi->alpha + sin(M_PIE * Fi_old / ad_lsi->alpha) / M_PIE);
+        }
+        ad_lsi->Hn_old += Hni_old * bf[eqn]->phi[i];
+        for (j = 0; j < VIM; j++) {
+          ad_lsi->gradHn_old[j] += Hni_old * bf[eqn]->grad_phi[i][j];
+        }
+      }
+    } else if (pd->gv[LUBP_2] || pd->gv[SHELL_PRESS_OPEN_2]) {
+      eqn = R_PHASE1;
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        Fi = *esp->pF[0][i];
+        if (fabs(Fi) > ad_lsi->alpha) {
+          Hni = (Fi < 0.0) ? 0.0 : 1.0;
+          d_Hni_dF = 0.0;
+        } else {
+          Hni = 0.5 * (1.0 + Fi / ad_lsi->alpha + sin(M_PIE * Fi / ad_lsi->alpha) / M_PIE);
+          d_Hni_dF = 0.5 * (1 / ad_lsi->alpha + cos(M_PIE * Fi / ad_lsi->alpha) / ad_lsi->alpha);
+        }
+        ad_lsi->Hn += Hni * bf[eqn]->phi[i];
+        for (j = 0; j < VIM; j++) {
+          ad_lsi->gradHn[j] += Hni * bf[eqn]->grad_phi[i][j];
+        }
+
+        Fi_old = *esp_old->pF[0][i];
+        if (fabs(Fi_old) > ad_lsi->alpha) {
+          Hni_old = (Fi_old < 0.0) ? 0.0 : 1.0;
+        } else {
+          Hni_old = 0.5 * (1.0 + Fi_old / ad_lsi->alpha + sin(M_PIE * Fi_old / ad_lsi->alpha) / M_PIE);
+        }
+        ad_lsi->Hn_old += Hni_old * bf[eqn]->phi[i];
+        for (j = 0; j < VIM; j++) {
+          ad_lsi->gradHn_old[j] += Hni_old * bf[eqn]->grad_phi[i][j];
+        }
+      }
+    }
+
+  } /* end of if pd->v[LUBP] || ... etc */
+
+  /************ End of shielding **************************/
+
+  if (fabs(alpha) < 1e-32) {
+    alpha = 1e-32;
+  }
+  ad_lsi->delta_max = ad_lsi->gfmag / alpha;
+
+  return (0);
+}

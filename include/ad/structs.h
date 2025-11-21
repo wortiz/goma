@@ -42,8 +42,14 @@ struct AD_Field_Variables {
   ADType div_S[MAX_MODES][DIM];
   ADType grad_SH[DIM];
   ADType P;
+  ADType sdet;
+  ADType snormal[DIM];
+  ADType F;
+  ADType lubp;
   ADType SH;
   ADType grad_P[DIM];
+  ADType grad_F[DIM];
+  ADType grad_lubp[DIM];
   ADType eddy_nu;
   ADType eddy_nu_dot;
   ADType grad_eddy_nu[DIM];

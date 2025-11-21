@@ -385,6 +385,36 @@ extern "C" void fill_ad_field_variables() {
     }
   }
 
+  if (pd->gv[FILL]) {
+    ad_fv->F = 0;
+    for (int i = 0; i < ei[upd->matrix_index[FILL]]->dof[FILL]; i++) {
+      ad_fv->F += set_ad_or_dbl(*esp->F[i], FILL, i) * bf[FILL]->phi[i];
+    }
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      ad_fv->grad_F[q] = 0;
+
+      for (int i = 0; i < ei[upd->matrix_index[FILL]]->dof[FILL]; i++) {
+        ad_fv->grad_F[q] +=
+            set_ad_or_dbl(*esp->F[i], FILL, i) * ad_fv->basis[FILL].grad_phi[i][q];
+      }
+    }
+  }
+
+  if (pd->gv[LUBP]) {
+    ad_fv->lubp = 0;
+    for (int i = 0; i < ei[upd->matrix_index[LUBP]]->dof[LUBP]; i++) {
+      ad_fv->lubp += set_ad_or_dbl(*esp->lubp[i], LUBP, i) * bf[LUBP]->phi[i];
+    }
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      ad_fv->grad_lubp[q] = 0;
+
+      for (int i = 0; i < ei[upd->matrix_index[LUBP]]->dof[LUBP]; i++) {
+        ad_fv->grad_lubp[q] +=
+            set_ad_or_dbl(*esp->lubp[i], LUBP, i) * ad_fv->basis[LUBP].grad_phi[i][q];
+      }
+    }
+  }
+
   if (pd->gv[POLYMER_STRESS11]) {
     int v_s[MAX_MODES][DIM][DIM];
     stress_eqn_pointer(v_s);
