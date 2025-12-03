@@ -19,6 +19,15 @@ def sha256sum(filename, buffer_size=65536):
             sha256.update(data)
     return sha256.hexdigest()
 
+def get_version_major_minor_patch(version):
+    match = re.match(r"(\d+)\.(\d+)\.(\d+)", version)
+    if match:
+        major = int(match.group(1))
+        minor = int(match.group(2))
+        patch = int(match.group(3))
+        return major, minor, patch
+    else:
+        raise ValueError("Invalid version format: {}".format(version))
 
 def check_gcc_clang_version(cc):
     version = subprocess.check_output([cc, "--version"]).decode("utf-8")

@@ -5,21 +5,27 @@ from tpl_tools import utils
 class Package(packages.CMakePackage):
     def __init__(self):
         self.name = "trilinos"
-        self.version = "16.1.0"
-        self.sha256 = "e9651c88f581049457036cfc01b527a9d3903c257338eeeab942befd7452f23a"
+        self.version = "17.0.0rc0"
+        self.sha256 = "953a17cfc3c7d00728be8ecf9f96b5cee1ae1674bac1bc8024c9bb80452dd452"
         self.filename = "trilinos-" + self.version + ".tar.gz"
-        self.url = (
-            "https://github.com/trilinos/Trilinos/archive/refs/tags/trilinos-release-"
-            + self.version.replace(".", "-")
-            + ".tar.gz"
-        )
-        self.libraries = ["amesos2", "belos", "aztecoo", "amesos"]
+        major,minor,patch = utils.get_version_major_minor_patch(self.version)
+        if (major < 17 ) and (minor < 2):
+            self.url = (
+                "https://github.com/trilinos/Trilinos/archive/refs/tags/trilinos-release-"
+                + self.version.replace(".", "-")
+                + ".tar.gz"
+            )
+        else: 
+            self.url = (
+                "https://github.com/trilinos/Trilinos/archive/refs/tags/"
+                + self.version
+                + ".tar.gz"
+            )
+        self.libraries = ["amesos2", "belos"]
         self.includes = [
             "Amesos2.hpp",
             "BelosSolverFactory.hpp",
             "Sacado.hpp",
-            "AztecOO.h",
-            "Amesos.h",
         ]
         self.dependencies = [
             "cmake",
@@ -58,31 +64,22 @@ class Package(packages.CMakePackage):
         builder.add_option("-DTrilinos_ENABLE_SECONDARY_TESTED_CODE=ON")
         builder.add_option("-DTrilinos_ENABLE_Triutils:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_SEACAS:BOOL=OFF")
-        builder.add_option("-DTrilinos_ENABLE_Epetra:BOOL=ON")
-        builder.add_option("-DTrilinos_ENABLE_Xpetra:BOOL=ON")
-        builder.add_option("-DTrilinos_ENABLE_Ifpack:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Ifpack2:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Teuchos:BOOL=ON")
-        builder.add_option("-DTrilinos_ENABLE_ML:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_MueLu:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Stratimikos:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Teko:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Belos:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Amesos2:BOOL=ON")
-        builder.add_option("-DTrilinos_ENABLE_Amesos:BOOL=ON")
-        builder.add_option("-DTrilinos_ENABLE_AztecOO:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Sacado:BOOL=ON")
-        builder.add_option("-DTrilinos_ENABLE_EpetraExt:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Thyra:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_ThyraTpetraAdapters:BOOL=ON")
-        builder.add_option("-DTrilinos_ENABLE_ThyraEpetraAdapters:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Tpetra:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_Stratimikos:BOOL=ON")
         builder.add_option("-DTrilinos_ENABLE_TESTS:BOOL=OFF")
         builder.add_option("-DTrilinos_ENABLE_EXPLICIT_INSTANTIATION:BOOL=ON")
         builder.add_option("-DTPL_ENABLE_MPI:BOOL=ON ")
         builder.add_option("-DMPI_BASE_DIR:PATH=" + builder.env["MPI_HOME"])
-        builder.add_option("-DEpetraExt_BUILD_GRAPH_REORDERINGS:BOOL=ON")
         builder.add_option("-DTPL_ENABLE_LAPACK:BOOL=ON")
         builder.add_option("-DTPL_ENABLE_BLAS:BOOL=ON ")
         builder.add_option("-DHAVE_EPETRA_LAPACK_GSSVD3:BOOL=ON ")
@@ -188,10 +185,6 @@ class Package(packages.CMakePackage):
             "-DSCALAPACK_LIBRARY_DIRS:FILEPATH=" + builder.env["SCALAPACK_DIR"] + "/lib"
         )
         builder.add_option("-DSCALAPACK_LIBRARY_NAMES:STRING=scalapack")
-        builder.add_option("-D Amesos_ENABLE_LAPACK:BOOL=ON ")
-        builder.add_option("-D Amesos_ENABLE_KLU:BOOL=ON ")
-        builder.add_option("-D Amesos_ENABLE_UMFPACK:BOOL=ON ")
-        builder.add_option("-D Amesos_ENABLE_MUMPS:BOOL=ON ")
         builder.add_option("-D Tpetra_INST_INT_INT:BOOL=ON ")
 
     def register(self, builder):
