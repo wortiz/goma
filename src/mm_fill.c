@@ -27,6 +27,8 @@
 
 #include "ac_stability.h"
 #include "ac_stability_util.h"
+#include "ad/level_set.h"
+#include "ad/lubrication.h"
 #include "ad/momentum.h"
 #include "ad/porous.h"
 #include "ad/turbulence.h"
@@ -1172,8 +1174,13 @@ Revised:         Summer 1998, SY Tam (UNM)
           return -1;
 #endif /* CHECK_FINITE */
       } else if (tran->Fill_Equation == FILL_EQN_ADVECT) {
+        if (upd->AutoDiff) {
+        err = ad_assemble_fill(theta, delta_t, &pg_data, R_FILL, xi, exo, time_value,
+                            &mass_lumped_penalty);
+        } else {
         err = assemble_fill(theta, delta_t, &pg_data, R_FILL, xi, exo, time_value,
                             &mass_lumped_penalty);
+        }
         GOMA_EH(err, "assemble_fill");
 #ifdef CHECK_FINITE
         err = CHECKFINITE("assemble_fill");
@@ -2046,7 +2053,11 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_LUBP]) {
+      if (upd->AutoDiff) {
+      err = ad_assemble_lubrication(R_LUBP, time_value, theta, delta_t, xi, exo);
+      } else {
       err = assemble_lubrication(R_LUBP, time_value, theta, delta_t, xi, exo);
+      }
       GOMA_EH(err, "assemble_lubrication");
 #ifdef CHECK_FINITE
       err = CHECKFINITE("assemble_lubrication");
@@ -2103,7 +2114,11 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_SHELL_LUB_CURV]) {
-      err = assemble_lubrication_curvature(time_value, theta, delta_t, &pg_data, xi, exo);
+      if (upd->AutoDiff) {
+        err = ad_assemble_lubrication_curvature(time_value, theta, delta_t, &pg_data, xi, exo);
+      } else {
+        err = assemble_lubrication_curvature(time_value, theta, delta_t, &pg_data, xi, exo);
+      }
       GOMA_EH(err, "assemble_lubrication_curvature");
 #ifdef CHECK_FINITE
       err = CHECKFINITE("assemble_lubrication_curvature");

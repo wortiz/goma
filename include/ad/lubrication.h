@@ -1,7 +1,10 @@
 #ifndef GOMA_AD_LUBRICATION_H
 #define GOMA_AD_LUBRICATION_H
-#include <memory>
 #ifdef __cplusplus
+extern "C" {
+#include "exo_struct.h"
+}
+#include <memory>
 #include "ad/structs.h"
 struct AD_Lubrication_Auxiliaries {
   ADType q[DIM];             /* Volumetric flow rate per unit width */
@@ -91,6 +94,12 @@ struct AD_Lubrication_Auxiliaries {
 
 extern std::unique_ptr<AD_Lubrication_Auxiliaries> AD_LubAux;
 
+void ad_calculate_lub_q_v(const int EQN, double time, double dt, double xi[DIM], const Exo_DB *exo);
+
+void ADInn(ADType v[DIM], // Input vector
+           ADType w[DIM]  // Output rotated vector
+);
+
 ADType ad_height_function_model(ADType *H_U,
                              ADType *H_L,
                              ADType *dH_U_dtime,
@@ -106,6 +115,7 @@ extern "C" {
 #endif
 #include "el_elm.h"
 #include "exo_struct.h"
+#include "mm_as_structs.h"
 int ad_assemble_lubrication(const int EQN,  /* equation type: either R_LUBP or R_LUBP2 */
                             double time,    /* present time value */
                             double tt,      /* parameter to vary time integration from
@@ -113,6 +123,13 @@ int ad_assemble_lubrication(const int EQN,  /* equation type: either R_LUBP or R
                             double dt,      /* current time step size */
                             double xi[DIM], /* Local stu coordinates */
                             const Exo_DB *exo);
+
+int ad_assemble_lubrication_curvature(double time,            /* present time value */
+                                   double tt,              /* parameter to vary time integration  */
+                                   double dt,              /* current time step size */
+                                   const PG_DATA *pg_data, /* Element scales */
+                                   double xi[DIM],         /* Local stu coordinates */
+                                   const Exo_DB *exo);    /* Exodus database */
 #ifdef __cplusplus
 }
 #endif

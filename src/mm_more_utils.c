@@ -768,7 +768,7 @@ void extract_nodal_eb_vec(double sol_vec[],
          (pd->i[pg->imtrx][var_no] == I_Q1_HV) || (pd->i[pg->imtrx][var_no] == I_Q1_HG) ||
          (pd->i[pg->imtrx][var_no] == I_Q1_HVG) || (pd->i[pg->imtrx][var_no] == I_Q1_D) ||
          (pd->i[pg->imtrx][var_no] == I_SP)) &&
-        ((ielem_type == S_BIQUAD_QUAD) || (ielem_type == BIQUAD_QUAD))) {
+        ((ielem_type == S_BIQUAD_QUAD) || (ielem_type == BIQUAD_QUAD) || (ielem_type == BIQUAD_SHELL))) {
       midside = 1;
     }
 
@@ -796,7 +796,7 @@ void extract_nodal_eb_vec(double sol_vec[],
       /*
        *  Only interpolate centroid in  BIQUAD_QUAD
        */
-      if (ielem_type == BIQUAD_QUAD) {
+      if ((ielem_type == BIQUAD_QUAD) || (ielem_type == BIQUAD_SHELL)) {
         I = Proc_Elem_Connect[iconnect_ptr + 8];
         nodal_vec[I] = 0.0;
         if ((Index_Solution(I, var_no, ktype, 0, matIndex, pg->imtrx) == -1) ||

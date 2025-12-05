@@ -387,8 +387,17 @@ extern "C" void fill_ad_field_variables() {
 
   if (pd->gv[FILL]) {
     ad_fv->F = 0;
+    ad_fv->F_dot = 0;
     for (int i = 0; i < ei[upd->matrix_index[FILL]]->dof[FILL]; i++) {
       ad_fv->F += set_ad_or_dbl(*esp->F[i], FILL, i) * bf[FILL]->phi[i];
+      ad_fv->F_dot += set_ad_or_dbl(*esp->F[i], FILL, i) * bf[FILL]->phi[i];
+      if (pd->TimeIntegration != STEADY) {
+        ADType ednudot =
+            ADType(num_ad_variables, ad_fv->offset[FILL] + i, *esp_dot->F[i]);
+        ednudot.fastAccessDx(ad_fv->offset[FILL] + i) =
+            (1. + 2. * tran->current_theta) / tran->delta_t;
+        ad_fv->F_dot += ednudot * bf[FILL]->phi[i];
+      }
     }
     for (int q = 0; q < pd->Num_Dim; q++) {
       ad_fv->grad_F[q] = 0;
@@ -411,6 +420,21 @@ extern "C" void fill_ad_field_variables() {
       for (int i = 0; i < ei[upd->matrix_index[LUBP]]->dof[LUBP]; i++) {
         ad_fv->grad_lubp[q] +=
             set_ad_or_dbl(*esp->lubp[i], LUBP, i) * ad_fv->basis[LUBP].grad_phi[i][q];
+      }
+    }
+  }
+
+  if (pd->gv[SHELL_LUB_CURV]) {
+    ad_fv->sh_l_curv = 0;
+    for (int i = 0; i < ei[upd->matrix_index[SHELL_LUB_CURV]]->dof[SHELL_LUB_CURV]; i++) {
+      ad_fv->sh_l_curv += set_ad_or_dbl(*esp->sh_l_curv[i], SHELL_LUB_CURV, i) * bf[SHELL_LUB_CURV]->phi[i];
+    }
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      ad_fv->grad_sh_l_curv[q] = 0;
+
+      for (int i = 0; i < ei[upd->matrix_index[SHELL_LUB_CURV]]->dof[SHELL_LUB_CURV]; i++) {
+        ad_fv->grad_sh_l_curv[q] +=
+            set_ad_or_dbl(*esp->sh_l_curv[i], SHELL_LUB_CURV, i) * ad_fv->basis[SHELL_LUB_CURV].grad_phi[i][q];
       }
     }
   }

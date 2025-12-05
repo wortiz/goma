@@ -44,6 +44,20 @@ struct AD_Level_Set_Interface {
 extern std::unique_ptr<AD_Level_Set_Interface> ad_lsi;
 
 int ad_load_lsi(const double width) ;
+
+int ad_level_set_property(
+    const ADType p0, const ADType p1, const double width, ADType &pp);
+
+int ad_level_set_property_log(
+    const ADType p0, const ADType p1, const double width, ADType &pp);
+
+ADType ad_ls_modulate_property(ADType p1,
+                            ADType p2,
+                            double width,
+                            double pm_minus,
+                            double pm_plus,
+                            ADType &factor,
+                            const int interp_method);
 extern "C" {
 #endif
 

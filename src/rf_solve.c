@@ -29,6 +29,7 @@
 
 #include "ac_particles.h"
 #include "ac_stability_util.h"
+#include "util/distance_helpers.h"
 #ifdef GOMA_ENABLE_AZTEC
 #include "az_aztec.h"
 #endif
@@ -928,6 +929,27 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     GOMA_EH(err, "Problem with variable_stats!");
     if (ProcID == 0)
       fflush(stdout);
+  }
+
+
+  if (upd->turbulent_info->use_internal_wall_distance) {
+    bool already_setup = true;
+    if (upd->turbulent_info->wall_distances == NULL) {
+      upd->turbulent_info->wall_distances = (double *)malloc(sizeof(double) * exo->num_nodes);
+      already_setup = false;
+    }
+
+    bool apply_displacements = false;
+    if (upd->matrix_index[R_MESH1] != -1) {
+      apply_displacements = true;
+    }
+
+    if (!already_setup || apply_displacements) {
+      find_current_distances(exo, dpi, x, apply_displacements, upd->turbulent_info->num_node_sets,
+                             upd->turbulent_info->node_set_ids, upd->turbulent_info->num_side_sets,
+                             upd->turbulent_info->side_set_ids,
+                             upd->turbulent_info->wall_distances);
+    }
   }
 
   /***************************************************************************

@@ -13,6 +13,7 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
+#include "ad/lubrication.h"
 #include <cstddef>
 #ifdef GOMA_ENABLE_SACADO
 #include "Sacado.hpp"
@@ -171,10 +172,21 @@ void ad_supg_tau_shakib(ADType &supg_tau, int dim, dbl dt, ADType diffusivity, i
 
   get_metric_tensor(bf[interp_eqn]->B, dim, ei[pg->imtrx]->ielem_type, G);
 
+  ADType v[DIM];
+  if (pd->gv[LUBP]) {
+    for (int i = 0; i < dim; i++) {
+      v[i] = AD_LubAux->v_avg[i] - ad_fv->x_dot[i];
+    }
+  } else {
+    for (int i = 0; i < dim; i++) {
+      v[i] = ad_fv->v[i] - ad_fv->x_dot[i];
+    }
+  }
+
   ADType v_d_gv = 0;
   for (int i = 0; i < dim; i++) {
     for (int j = 0; j < dim; j++) {
-      v_d_gv += fabs(ad_fv->v[i] * G[i][j] * ad_fv->v[j]);
+      v_d_gv += fabs(v[i] * G[i][j] * v[j]);
     }
   }
 
