@@ -423,6 +423,23 @@ extern "C" void fill_ad_field_variables() {
       }
     }
   }
+  if (pd->gv[NORMAL1]) {
+    for (int a = 0; a < pd->Num_Dim; a++) {
+      int eqn  = NORMAL1 + a;
+    ad_fv->n[a] = 0;
+    for (int i = 0; i < ei[upd->matrix_index[NORMAL1+a]]->dof[NORMAL1+a]; i++) {
+      ad_fv->n[a] += set_ad_or_dbl(*esp->n[a][i], NORMAL1+a, i) * bf[NORMAL1+a]->phi[i];
+    }
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      ad_fv->grad_n[a][q] = 0;
+
+      for (int i = 0; i < ei[upd->matrix_index[NORMAL1+a]]->dof[NORMAL1+a]; i++) {
+        ad_fv->grad_n[a][q] +=
+            set_ad_or_dbl(*esp->n[a][i], NORMAL1+a, i) * ad_fv->basis[NORMAL1+a].grad_phi[i][q];
+      }
+    }
+  }
+  }
 
   if (pd->gv[SHELL_LUB_CURV]) {
     ad_fv->sh_l_curv = 0;

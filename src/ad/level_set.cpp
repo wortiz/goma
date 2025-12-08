@@ -386,9 +386,10 @@ int ad_load_lsi(const double width) {
 
   /* Check if we're in the mushy zone. */
   ad_lsi->alpha = 0.5 * width;
-  alpha = lsi->alpha;
+  alpha = ad_lsi->alpha;
 
   ad_lsi->near = ls->on_sharp_surf || fabs(F) < alpha;
+  lsi->near = ad_lsi->near;
 
   /* Calculate the interfacial functions we want to know even if not in mushy
    * zone. */

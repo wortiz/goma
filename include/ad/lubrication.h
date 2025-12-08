@@ -130,6 +130,12 @@ int ad_assemble_lubrication_curvature(double time,            /* present time va
                                    const PG_DATA *pg_data, /* Element scales */
                                    double xi[DIM],         /* Local stu coordinates */
                                    const Exo_DB *exo);    /* Exodus database */
+int ad_assemble_normals_lubrication(
+                                   double tt,              /* parameter to vary time integration  */
+                                   double dt,              /* current time step size */
+                                   const PG_DATA *pg_data, /* Element scales */
+                                   double xi[DIM],         /* Local stu coordinates */
+                                   const Exo_DB *exo) ;    /* Exodus database */
 #ifdef __cplusplus
 }
 #endif

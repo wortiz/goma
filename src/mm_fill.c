@@ -2640,7 +2640,10 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
     }
 
-    if (pde[R_NORMAL1]) {
+    if (pd->gv[R_LUBP] && pde[R_NORMAL1]) {
+      err = ad_assemble_normals_lubrication(theta, delta_t, &pg_data, xi, exo);
+      GOMA_EH(err, "ad_assemble_normals_lubrication");
+    } else if (pde[R_NORMAL1]) {
       err = assemble_normals();
       GOMA_EH(err, "assemble_normals");
 #ifdef CHECK_FINITE
