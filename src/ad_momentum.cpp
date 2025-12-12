@@ -1504,9 +1504,8 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
   for (int a = 0; a < 2; a++) {
     for (int b = 0; b < 2; b++) {
       // Pi[a][b] = ad_fv->film_height * (delta(a, b) * p - mu * gamma[a][b]);
-      Pi[a][b] =  mu * gamma[a][b] - p * delta(a, b);
+      Pi[a][b] = mu * gamma[a][b] - p * delta(a, b);
     }
-
   }
 
   if (af->Assemble_Residual) {
@@ -1681,7 +1680,7 @@ int ad_assemble_film_height(dbl time, /* current time */
   if (!pd->e[pg->imtrx][eqn]) {
     return (status);
   }
-  
+
   ADType supg_tau = 0;
   ad_supg_tau_shakib(supg_tau, 2, dt, 1e-9, eqn);
 
@@ -1702,7 +1701,7 @@ int ad_assemble_film_height(dbl time, /* current time */
       for (int a = 0; a < 2; a++) {
         wt_func += supg_tau * ad_fv->v[a] * ad_fv->basis[eqn].grad_phi[i][a];
       }
-      
+
       /*
        *  Mass Terms: drhodt terms (usually though problem dependent)
        */

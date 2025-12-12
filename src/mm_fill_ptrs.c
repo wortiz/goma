@@ -1876,7 +1876,8 @@ int load_elem_dofptr(const int ielem,
   }
   eqn = R_FILM_HEIGHT;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
-    load_varType_Interpolation_ptrs(eqn, esp->film_height, esp_old->film_height, esp_dot->film_height);
+    load_varType_Interpolation_ptrs(eqn, esp->film_height, esp_old->film_height,
+                                    esp_dot->film_height);
   }
 
   eqn = R_STRESS11;
