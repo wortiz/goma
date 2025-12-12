@@ -837,6 +837,14 @@ int load_fv(void)
     stateVector[TURB_OMEGA] = fv->turb_omega;
   }
 
+  if (pdgv[FILM_HEIGHT]) {
+    v = FILM_HEIGHT;
+    scalar_fv_fill(esp->film_height, esp_dot->film_height, esp_old->film_height, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->film_height), &(fv_dot->film_height),
+                   &(fv_old->film_height));
+    stateVector[FILM_HEIGHT] = fv->film_height;
+  }
+
   if (pdgv[TURB_K]) {
     v = TURB_K;
     scalar_fv_fill(esp->turb_k, esp_dot->turb_k, esp_old->turb_k, bf[v]->phi,

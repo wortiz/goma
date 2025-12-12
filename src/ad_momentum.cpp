@@ -1463,3 +1463,302 @@ int ad_assemble_continuity(dbl time_value, /* current time */
   return 0;
 }
 #endif
+
+int ad_assemble_momentum_film_cast(dbl time,       /* current time */
+                                   dbl tt,         /* parameter to vary time integration from
+                                                      explicit (tt = 1) to implicit (tt = 0) */
+                                   dbl dt,         /* current time step size */
+                                   dbl h_elem_avg, /* average global element size for PSPG*/
+                                   const PG_DATA *pg_data,
+                                   double xi[DIM], /* Local stu coordinates */
+                                   const Exo_DB *exo) {
+
+  int eqn = VELOCITY1;
+  /*
+   * Residuals_________________________________________________________________
+   */
+  std::vector<std::vector<ADType>> resid(WIM);
+  for (int a = 0; a < WIM; a++) {
+    resid[a].resize(ei[pg->imtrx]->dof[eqn + a]);
+    for (int i = 0; i < ei[pg->imtrx]->dof[eqn + a]; i++) {
+      resid[a][i] = 0;
+    }
+  }
+  dbl rho = density(NULL, time);
+  ADType d_area = ad_fv->detJ * fv->wt * fv->h3;
+
+  ADType f[DIM];
+  ad_momentum_source_term(f, time);
+
+  ADType Pi[DIM][DIM];
+  ADType gamma[DIM][DIM];
+  for (int a = 0; a < 2; a++) {
+    for (int b = 0; b < 2; b++) {
+      gamma[a][b] = ad_fv->grad_v[a][b] + ad_fv->grad_v[b][a];
+    }
+  }
+  ADType mu = ad_viscosity(gn, gamma);
+
+  ADType p = -2 * mu * (ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1]);
+
+  for (int a = 0; a < 2; a++) {
+    for (int b = 0; b < 2; b++) {
+      // Pi[a][b] = ad_fv->film_height * (delta(a, b) * p - mu * gamma[a][b]);
+      Pi[a][b] =  mu * gamma[a][b] - p * delta(a, b);
+    }
+
+  }
+
+  if (af->Assemble_Residual) {
+    /*
+     * Assemble each component "a" of the momentum equation...
+     */
+    for (int a = 0; a < WIM; a++) {
+      int eqn = R_MOMENTUM1 + a;
+      int peqn = upd->ep[pg->imtrx][eqn];
+
+      int mass_on = pd->e[pg->imtrx][eqn] & T_MASS;
+      //  int  advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
+      int diffusion_on = pd->e[pg->imtrx][eqn] & T_DIFFUSION;
+      int source_on = pd->e[pg->imtrx][eqn] & T_SOURCE;
+
+      dbl mass_etm = pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+      //  dbl  advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+      dbl diffusion_etm = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      dbl source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
+
+      /*
+       * In the element, there will be contributions to this many equations
+       * based on the number of degrees of freedom...
+       */
+
+      for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        int ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+          /*
+           *  Here is where we figure out whether the row is to placed in
+           *  the normal spot (e.g., ii = i), or whether a boundary condition
+           *  require that the volumetric contribution be stuck in another
+           *  ldof pertaining to the same variable type.
+           */
+          int ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+          dbl phi_i = bf[eqn]->phi[i];
+          /* only use Petrov Galerkin on advective term - if required */
+          ADType wt_func = phi_i;
+
+          ADType mass = 0.;
+          if (mass_on) {
+            mass = rho * ad_fv->film_height * ad_fv->v_dot[a] +
+                   rho * ad_fv->film_height_dot * ad_fv->v[a];
+            mass *= -wt_func * d_area;
+            mass *= mass_etm;
+          }
+
+          ADType advection = 0.;
+          // if (advection_on) {
+          //   advection *= rho;
+          //   advection *= -wt_func * d_area;
+          //   advection *= advection_etm;
+          // }
+
+          ADType diffusion = 0.;
+          if (diffusion_on) {
+            for (int p = 0; p < VIM; p++) {
+              for (int q = 0; q < VIM; q++) {
+                diffusion += ad_fv->basis[eqn].grad_phi_e[i][a][p][q] * Pi[q][p];
+              }
+            }
+            diffusion *= -d_area * ad_fv->film_height;
+            diffusion *= diffusion_etm;
+          }
+
+          /*
+           * Source term...
+           */
+          ADType source = 0.0;
+          if (source_on) {
+            source += ad_fv->film_height * f[a];
+            source *= wt_func * d_area;
+            source *= source_etm;
+          }
+
+          /*
+           * Add contributions to this residual (globally into Resid, and
+           * locally into an accumulator)
+           */
+
+          /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
+          lec->R[LEC_R_INDEX(peqn, ii)] +=
+              mass.val() + advection.val() + diffusion.val() + source.val();
+          resid[a][ii] += mass + advection + diffusion + source;
+        } /*end if (active_dofs) */
+      } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
+    }
+  }
+
+  /*
+   * Jacobian terms...
+   */
+
+  if (af->Assemble_Jacobian) {
+    for (int a = 0; a < WIM; a++) {
+      int eqn = R_MOMENTUM1 + a;
+      int peqn = upd->ep[pg->imtrx][eqn];
+
+      for (int i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        int ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+        int ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
+          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+
+          for (int var = V_FIRST; var < V_LAST; var++) {
+
+            /* Sensitivity w.r.t. velocity */
+            if (pd->v[pg->imtrx][var]) {
+              int pvar = upd->vp[pg->imtrx][var];
+
+              for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += resid[a][ii].dx(ad_fv->offset[var] + j);
+
+              } /* End of loop over j */
+            } /* End of if the variale is active */
+          }
+
+        } /* end of if(active_dofs) */
+      } /* End of loop over i */
+    } /* End of if assemble Jacobian */
+  }
+  return 0;
+}
+
+int ad_assemble_film_height(dbl time, /* current time */
+                            dbl tt,
+                            dbl dt,
+                            const PG_DATA *pg_data) {
+
+  int a;
+
+  int eqn;
+  int peqn, pvar;
+
+  int i, j;
+  int status;
+
+  ADType det_J;
+  dbl h3;
+  dbl wt;
+  ADType d_area;
+
+  /*
+   * Galerkin weighting functions...
+   */
+
+  dbl phi_i;
+
+  status = 0;
+
+  /*
+   * Unpack variables from structures for local convenience...
+   */
+
+  eqn = R_FILM_HEIGHT;
+  peqn = upd->ep[pg->imtrx][eqn];
+
+  ADType div_v = 0;
+
+  for (a = 0; a < 2; a++) {
+    div_v += ad_fv->grad_v[a][a];
+  }
+  // div_v -= (ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1]);
+
+  /*
+   * Bail out fast if there's nothing to do...
+   */
+
+  if (!pd->e[pg->imtrx][eqn]) {
+    return (status);
+  }
+  
+  ADType supg_tau = 0;
+  ad_supg_tau_shakib(supg_tau, 2, dt, 1e-9, eqn);
+
+  wt = fv->wt;
+  det_J = ad_fv->detJ; /* Really, ought to be mesh eqn. */
+  h3 = fv->h3;         /* Differential volume element (scales). */
+
+  d_area = wt * det_J * h3;
+  std::vector<ADType> resid(ei[pg->imtrx]->dof[eqn]);
+  for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+    resid[i] = 0;
+  }
+  if (af->Assemble_Residual) {
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+
+      phi_i = bf[eqn]->phi[i];
+      ADType wt_func = phi_i;
+      for (int a = 0; a < 2; a++) {
+        wt_func += supg_tau * ad_fv->v[a] * ad_fv->basis[eqn].grad_phi[i][a];
+      }
+      
+      /*
+       *  Mass Terms: drhodt terms (usually though problem dependent)
+       */
+
+      ADType mass = 0.0;
+      mass = ad_fv->film_height_dot * wt_func * d_area;
+
+      /*
+       *  Advection:
+       *    This term refers to the standard del dot v .
+       *
+       *    int (phi_i div_v d_omega)
+       *
+       *   Note density is not multiplied into this term normally
+       */
+      ADType advection = 0.0;
+      if (pd->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
+      {
+
+        /*
+         * Standard incompressibility constraint means we have
+         * a solenoidal velocity field
+         */
+
+        for (int a = 0; a < 2; a++) {
+          advection += (ad_fv->v[a] - ad_fv->x_dot[a]) * ad_fv->grad_film_height[a];
+        }
+        advection += div_v * ad_fv->film_height;
+        advection *= wt_func * d_area;
+      }
+
+      /*
+       *  Add up the individual contributions and sum them into the local element
+       *  contribution for the total continuity equation for the ith local unknown
+       */
+      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + mass.val();
+      resid[i] = advection + mass;
+    }
+  }
+  if (af->Assemble_Jacobian) {
+    eqn = R_FILM_HEIGHT;
+    peqn = upd->ep[pg->imtrx][eqn];
+
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+
+      /* Sensitivity w.r.t. velocity */
+      for (int var = V_FIRST; var < V_LAST; var++) {
+        if (pd->v[pg->imtrx][var]) {
+          pvar = upd->vp[pg->imtrx][var];
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += resid[i].dx(ad_fv->offset[var] + j);
+          } /* End of loop over j */
+        } /* End of if the variale is active */
+      }
+
+    } /* End of loop over i */
+  } /* End of if assemble Jacobian */
+  return 0;
+}

@@ -50,6 +50,9 @@ struct AD_Field_Variables {
   ADType grad_turb_k[DIM];
   ADType turb_omega;
   ADType turb_omega_dot;
+  ADType film_height;
+  ADType film_height_dot;
+  ADType grad_film_height[DIM];
   ADType grad_turb_omega[DIM];
   ADType sh_sat_1;
   ADType sh_sat_1_dot;

@@ -747,6 +747,35 @@ extern "C" void fill_ad_field_variables() {
       }
     }
   }
+  if (pd->gv[FILM_HEIGHT]) {
+    ad_fv->film_height = 0;
+    ad_fv->film_height_dot = 0;
+    for (int i = 0; i < ei[upd->matrix_index[FILM_HEIGHT]]->dof[FILM_HEIGHT]; i++) {
+      ad_fv->film_height +=
+          ADType(num_ad_variables, ad_fv->offset[FILM_HEIGHT] + i, *esp->film_height[i]) *
+          bf[FILM_HEIGHT]->phi[i];
+
+      if (pd->TimeIntegration != STEADY) {
+        ADType ednudot =
+            ADType(num_ad_variables, ad_fv->offset[FILM_HEIGHT] + i, *esp_dot->film_height[i]);
+        ednudot.fastAccessDx(ad_fv->offset[FILM_HEIGHT] + i) =
+            (1. + 2. * tran->current_theta) / tran->delta_t;
+        ad_fv->film_height_dot += ednudot * bf[FILM_HEIGHT]->phi[i];
+      } else {
+        ad_fv->film_height_dot = 0;
+      }
+    }
+
+    for (int q = 0; q < pd->Num_Dim; q++) {
+      ad_fv->grad_film_height[q] = 0;
+
+      for (int i = 0; i < ei[upd->matrix_index[FILM_HEIGHT]]->dof[FILM_HEIGHT]; i++) {
+        ad_fv->grad_film_height[q] +=
+            ADType(num_ad_variables, ad_fv->offset[FILM_HEIGHT] + i, *esp->film_height[i]) *
+            ad_fv->basis[FILM_HEIGHT].grad_phi[i][q];
+      }
+    }
+  }
 
   if (pd->gv[PRESSURE]) {
     ad_fv->P = 0;

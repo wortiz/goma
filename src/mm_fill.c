@@ -2145,6 +2145,15 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
     }
 
+    if (pde[R_FILM_HEIGHT]) {
+#ifdef GOMA_ENABLE_SACADO
+      err = ad_assemble_film_height(time_value, theta, delta_t, &pg_data);
+      GOMA_EH(err, "ad_assemble_film_height");
+#else
+      GOMA_EH(GOMA_ERROR, "FILM_HEIGHT routine not available yet without SACADO");
+#endif
+    }
+
     /* Both SHELL_FILMP and SHELL_FILMH have to be activated to solve film profile equation */
 
     if (pde[R_SHELL_FILMP] && pde[R_SHELL_FILMH]) {
@@ -2435,7 +2444,15 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_MOMENTUM1]) {
-      if (upd->SegregatedSolve) {
+      if (pd->gv[FILM_HEIGHT]) {
+#ifdef GOMA_ENABLE_SACADO
+        err = ad_assemble_momentum_film_cast(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
+                                             exo);
+        GOMA_EH(err, "ad_assemble_momentum_film_cast");
+#else
+        GOMA_EH(GOMA_ERROR, "FILM_HEIGHT momentum routine not available yet without SACADO");
+#endif
+      } else if (upd->SegregatedSolve) {
         err = assemble_momentum_segregated(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_momentum");
 #ifdef CHECK_FINITE

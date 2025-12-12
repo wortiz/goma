@@ -1874,6 +1874,10 @@ int load_elem_dofptr(const int ielem,
   if (upd->ep[pg->imtrx][eqn] >= 0) {
     load_varType_Interpolation_ptrs(eqn, esp->turb_omega, esp_old->turb_omega, esp_dot->turb_omega);
   }
+  eqn = R_FILM_HEIGHT;
+  if (upd->ep[pg->imtrx][eqn] >= 0) {
+    load_varType_Interpolation_ptrs(eqn, esp->film_height, esp_old->film_height, esp_dot->film_height);
+  }
 
   eqn = R_STRESS11;
   if (upd->ep[pg->imtrx][eqn] >= 0) {
@@ -2776,6 +2780,12 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
     if (upd->ep[imtrx][eqn] >= 0) {
       load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->turb_omega, esp_old->turb_omega,
                                           esp_dot->turb_omega);
+    }
+
+    eqn = R_FILM_HEIGHT;
+    if (upd->ep[imtrx][eqn] >= 0) {
+      load_varType_Interpolation_ptrs_mat(imtrx, eqn, esp->film_height, esp_old->film_height,
+                                          esp_dot->film_height);
     }
 
     eqn = R_STRESS11;

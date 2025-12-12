@@ -898,6 +898,7 @@ double time_step_control(const double delta_t,
   /*    num_unknowns += ncp[EXT_VELOCITY];  */
   num_unknowns += ncp[TURB_K];
   num_unknowns += ncp[TURB_OMEGA];
+  num_unknowns += ncp[FILM_HEIGHT];
 
 #if 0 /* ------------------- maybe someday you'll want these, too... -----*/
   if (use_var_norm["index for shear rate equation"] ) {
@@ -957,6 +958,7 @@ double time_step_control(const double delta_t,
   e_extv = ecp[EXT_VELOCITY];
   e_int = ecp[LIGHT_INTP] + ecp[LIGHT_INTM] + ecp[LIGHT_INTD] + ecp[RESTIME];
   double e_turb = ecp[TURB_K] + ecp[TURB_OMEGA] + ecp[EDDY_NU];
+  double e_film_height = ecp[FILM_HEIGHT];
 
   e_d = sqrt(e_d * scaling);
   e_v = sqrt(e_v * scaling);
@@ -1048,6 +1050,9 @@ double time_step_control(const double delta_t,
     }
     if (rheo_present) {
       DPRINTF(stdout, ", %7.1e", e_rheo);
+    }
+    if (ncp[FILM_HEIGHT]) {
+      DPRINTF(stdout, ", %7.1e", e_film_height);
     }
     if (ncp[TURB_K] || ncp[TURB_OMEGA] || ncp[EDDY_NU]) {
       DPRINTF(stdout, ", %7.1e", e_turb);

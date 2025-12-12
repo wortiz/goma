@@ -1239,6 +1239,9 @@ int assembly_alloc(Exo_DB *exo)
     if (Num_Var_In_Type[imtrx][TURB_OMEGA]) {
       esp->turb_omega = (dbl **)alloc_ptr_1(MDE);
     }
+    if (Num_Var_In_Type[imtrx][FILM_HEIGHT]) {
+      esp->film_height = (dbl **)alloc_ptr_1(MDE);
+    }
 
   } /* End of loop over matrices */
 
