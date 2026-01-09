@@ -897,87 +897,82 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
       CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Asan")
-  set(CMAKE_C_FLAGS_ASAN
-      "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer"
-      CACHE STRING
-            "Flags used by the C compiler for Asan build type or configuration."
-            FORCE)
-  mark_as_advanced(CMAKE_C_FLAGS_ASAN)
+set(CMAKE_C_FLAGS_ASAN
+    "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer"
+    CACHE STRING
+          "Flags used by the C compiler for Asan build type or configuration."
+          FORCE)
+mark_as_advanced(CMAKE_C_FLAGS_ASAN)
 
-  set(CMAKE_CXX_FLAGS_ASAN
-      "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer"
-      CACHE
-        STRING
-        "Flags used by the C++ compiler for Asan build type or configuration."
-        FORCE)
-  mark_as_advanced(CMAKE_CXX_FLAGS_ASAN)
+set(CMAKE_CXX_FLAGS_ASAN
+    "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer"
+    CACHE
+      STRING
+      "Flags used by the C++ compiler for Asan build type or configuration."
+      FORCE)
+mark_as_advanced(CMAKE_CXX_FLAGS_ASAN)
 
-  set(CMAKE_Fortran_FLAGS_ASAN
-      "${CMAKE_Fortran_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer"
-      CACHE
-        STRING
-        "Flags used by the Fortran compiler for Asan build type or configuration."
-        FORCE)
-  mark_as_advanced(CMAKE_Fortran_FLAGS_ASAN)
+set(CMAKE_Fortran_FLAGS_ASAN
+    "${CMAKE_Fortran_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer"
+    CACHE
+      STRING
+      "Flags used by the Fortran compiler for Asan build type or configuration."
+      FORCE)
+mark_as_advanced(CMAKE_Fortran_FLAGS_ASAN)
 
-  set(CMAKE_EXE_LINKER_FLAGS_ASAN
-      "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -fsanitize=address"
-      CACHE STRING
-            "Linker flags to be used to create executables for Asan build type."
-            FORCE)
-  mark_as_advanced(CMAKE_EXE_LINKER_FLAGS_ASAN)
+set(CMAKE_EXE_LINKER_FLAGS_ASAN
+    "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -fsanitize=address"
+    CACHE STRING
+          "Linker flags to be used to create executables for Asan build type."
+          FORCE)
+mark_as_advanced(CMAKE_EXE_LINKER_FLAGS_ASAN)
 
-  set(CMAKE_SHARED_LINKER_FLAGS_ASAN
-      "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -fsanitize=address"
-      CACHE
-        STRING
-        "Linker lags to be used to create shared libraries for Asan build type."
-        FORCE)
-  mark_as_advanced(CMAKE_SHARED_LINKER_FLAGS_ASAN)
-endif()
+set(CMAKE_SHARED_LINKER_FLAGS_ASAN
+    "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -fsanitize=address"
+    CACHE
+      STRING
+      "Linker lags to be used to create shared libraries for Asan build type."
+      FORCE)
+mark_as_advanced(CMAKE_SHARED_LINKER_FLAGS_ASAN)
+set(CMAKE_C_FLAGS_GPROF
+    "${CMAKE_C_FLAGS_DEBUG} -pg"
+    CACHE
+      STRING
+      "Flags used by the C compiler for Gprof build type or configuration."
+      FORCE)
+mark_as_advanced(CMAKE_C_FLAGS_GPROF)
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Gprof")
-  set(CMAKE_C_FLAGS_GPROF
-      "${CMAKE_C_FLAGS_DEBUG} -pg"
-      CACHE
-        STRING
-        "Flags used by the C compiler for Gprof build type or configuration."
-        FORCE)
-  mark_as_advanced(CMAKE_C_FLAGS_GPROF)
+set(CMAKE_CXX_FLAGS_GPROF
+    "${CMAKE_CXX_FLAGS_DEBUG} -pg"
+    CACHE
+      STRING
+      "Flags used by the C++ compiler for Gprof build type or configuration."
+      FORCE)
+mark_as_advanced(CMAKE_CXX_FLAGS_GPROF)
 
-  set(CMAKE_CXX_FLAGS_GPROF
-      "${CMAKE_CXX_FLAGS_DEBUG} -pg"
-      CACHE
-        STRING
-        "Flags used by the C++ compiler for Gprof build type or configuration."
-        FORCE)
-  mark_as_advanced(CMAKE_CXX_FLAGS_GPROF)
+set(CMAKE_Fortran_FLAGS_GPROF
+    "${CMAKE_Fortran_FLAGS_DEBUG} -pg"
+    CACHE
+      STRING
+      "Flags used by the Fortran compiler for Gprof build type or configuration."
+      FORCE)
+mark_as_advanced(CMAKE_Fortran_FLAGS_GPROF)
 
-  set(CMAKE_Fortran_FLAGS_GPROF
-      "${CMAKE_Fortran_FLAGS_DEBUG} -pg"
-      CACHE
-        STRING
-        "Flags used by the Fortran compiler for Gprof build type or configuration."
-        FORCE)
-  mark_as_advanced(CMAKE_Fortran_FLAGS_GPROF)
+set(CMAKE_EXE_LINKER_FLAGS_GPROF
+    "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -pg"
+    CACHE
+      STRING
+      "Linker flags to be used to create executables for Gprof build type."
+      FORCE)
+mark_as_advanced(CMAKE_EXE_LINKER_FLAGS_GPROF)
 
-  set(CMAKE_EXE_LINKER_FLAGS_GPROF
-      "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -pg"
-      CACHE
-        STRING
-        "Linker flags to be used to create executables for Gprof build type."
-        FORCE)
-  mark_as_advanced(CMAKE_EXE_LINKER_FLAGS_GPROF)
-
-  set(CMAKE_SHARED_LINKER_FLAGS_GPROF
-      "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -pg"
-      CACHE
-        STRING
-        "Linker lags to be used to create shared libraries for Gprof build type."
-        FORCE)
-  mark_as_advanced(CMAKE_SHARED_LINKER_FLAGS_GPROF)
-endif()
+set(CMAKE_SHARED_LINKER_FLAGS_GPROF
+    "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -pg"
+    CACHE
+      STRING
+      "Linker lags to be used to create shared libraries for Gprof build type."
+      FORCE)
+mark_as_advanced(CMAKE_SHARED_LINKER_FLAGS_GPROF)
 
 option(ENABLE_WARNINGS "ENABLE_WARNINGS" ON)
 
@@ -1011,30 +1006,32 @@ if(ENABLE_PETSC AND PETSC_FOUND)
 endif()
 
 message(STATUS "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
-if(${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
-  message(STATUS "CMAKE_C_FLAGS_RELWITHDEBINFO=${CMAKE_C_FLAGS_RELWITHDEBINFO}")
-  message(
-    STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-  message(
-    STATUS
-      "CMAKE_Fortran_FLAGS_RELWITHDEBINFO=${CMAKE_Fortran_FLAGS_RELWITHDEBINFO}"
-  )
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-  message(STATUS "CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}")
-  message(STATUS "CMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}")
-  message(STATUS "CMAKE_Fortran_FLAGS_RELEASE=${CMAKE_Fortran_FLAGS_RELEASE}")
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-  message(STATUS "CMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}")
-  message(STATUS "CMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}")
-  message(STATUS "CMAKE_Fortran_FLAGS_DEBUG=${CMAKE_Fortran_FLAGS_DEBUG}")
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Asan")
-  message(STATUS "CMAKE_C_FLAGS_ASAN=${CMAKE_C_FLAGS_ASAN}")
-  message(STATUS "CMAKE_CXX_FLAGS_ASAN=${CMAKE_CXX_FLAGS_ASAN}")
-  message(STATUS "CMAKE_Fortran_FLAGS_ASAN=${CMAKE_Fortran_FLAGS_ASAN}")
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Gprof")
-  message(STATUS "CMAKE_C_FLAGS_GPROF=${CMAKE_C_FLAGS_GPROF}")
-  message(STATUS "CMAKE_CXX_FLAGS_GPROF=${CMAKE_CXX_FLAGS_GPROF}")
-  message(STATUS "CMAKE_Fortran_FLAGS_GPROF=${CMAKE_Fortran_FLAGS_GPROF}")
+if (NOT isMultiConfig)
+  if(${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+    message(STATUS "CMAKE_C_FLAGS_RELWITHDEBINFO=${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+    message(
+      STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+    message(
+      STATUS
+        "CMAKE_Fortran_FLAGS_RELWITHDEBINFO=${CMAKE_Fortran_FLAGS_RELWITHDEBINFO}"
+    )
+  elseif(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    message(STATUS "CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}")
+    message(STATUS "CMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}")
+    message(STATUS "CMAKE_Fortran_FLAGS_RELEASE=${CMAKE_Fortran_FLAGS_RELEASE}")
+  elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    message(STATUS "CMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}")
+    message(STATUS "CMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}")
+    message(STATUS "CMAKE_Fortran_FLAGS_DEBUG=${CMAKE_Fortran_FLAGS_DEBUG}")
+  elseif(${CMAKE_BUILD_TYPE} STREQUAL "Asan")
+    message(STATUS "CMAKE_C_FLAGS_ASAN=${CMAKE_C_FLAGS_ASAN}")
+    message(STATUS "CMAKE_CXX_FLAGS_ASAN=${CMAKE_CXX_FLAGS_ASAN}")
+    message(STATUS "CMAKE_Fortran_FLAGS_ASAN=${CMAKE_Fortran_FLAGS_ASAN}")
+  elseif(${CMAKE_BUILD_TYPE} STREQUAL "Gprof")
+    message(STATUS "CMAKE_C_FLAGS_GPROF=${CMAKE_C_FLAGS_GPROF}")
+    message(STATUS "CMAKE_CXX_FLAGS_GPROF=${CMAKE_CXX_FLAGS_GPROF}")
+    message(STATUS "CMAKE_Fortran_FLAGS_GPROF=${CMAKE_Fortran_FLAGS_GPROF}")
+  endif()
 endif()
 message("\n")
 message(STATUS "Goma compile defines:")

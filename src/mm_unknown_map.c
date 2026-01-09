@@ -1743,6 +1743,9 @@ static void set_interaction_masks(Exo_DB *exo)
         v = FILL;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
+        v = FILM_HEIGHT;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
 
         v = VOLTAGE;
         if (Num_Var_In_Type[imtrx][v])

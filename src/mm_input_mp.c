@@ -8785,6 +8785,14 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     num_const = read_constants(imp, &(mat_ptr->u_heat_source), NO_SPECIES);
     mat_ptr->len_u_heat_source = num_const;
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_heat_source);
+  } else if (!strcmp(model_name, "FILM_CAST")) {
+    HeatSourceModel = HS_FILM_CAST;
+    model_read = 1;
+    mat_ptr->HeatSourceModel = HeatSourceModel;
+
+    num_const = read_constants(imp, &(mat_ptr->u_heat_source), NO_SPECIES);
+    mat_ptr->len_u_heat_source = num_const;
+    SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_heat_source);
   } else if (!strcmp(model_name, "VISC_ACOUSTIC")) {
     HeatSourceModel = VISC_ACOUSTIC;
     model_read = 1;

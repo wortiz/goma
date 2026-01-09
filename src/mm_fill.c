@@ -2146,12 +2146,17 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_FILM_HEIGHT]) {
+      if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
-      err = ad_assemble_film_height(time_value, theta, delta_t, &pg_data);
-      GOMA_EH(err, "ad_assemble_film_height");
+        err = ad_assemble_film_height(time_value, theta, delta_t, &pg_data);
+        GOMA_EH(err, "ad_assemble_film_height");
 #else
-      GOMA_EH(GOMA_ERROR, "FILM_HEIGHT routine not available yet without SACADO");
+        GOMA_EH(GOMA_ERROR, "FILM_HEIGHT AutoDiff but not compiled with SACADO");
 #endif
+      } else {
+        err = assemble_film_height(time_value, theta, delta_t, &pg_data);
+        GOMA_EH(err, "assemble_film_height");
+      }
     }
 
     /* Both SHELL_FILMP and SHELL_FILMH have to be activated to solve film profile equation */
@@ -2445,13 +2450,19 @@ Revised:         Summer 1998, SY Tam (UNM)
 
     if (pde[R_MOMENTUM1]) {
       if (pd->gv[FILM_HEIGHT]) {
+        if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
-        err = ad_assemble_momentum_film_cast(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
+        err = assemble_momentum_film_cast(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
                                              exo);
         GOMA_EH(err, "ad_assemble_momentum_film_cast");
 #else
-        GOMA_EH(GOMA_ERROR, "FILM_HEIGHT momentum routine not available yet without SACADO");
+        GOMA_EH(GOMA_ERROR, "FILM_HEIGHT ad momentum routine requires SACADO");
 #endif
+        } else {
+        err = assemble_momentum_film_cast(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
+                                             exo);
+        GOMA_EH(err, "ad_assemble_momentum_film_cast");
+        }
       } else if (upd->SegregatedSolve) {
         err = assemble_momentum_segregated(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_momentum");

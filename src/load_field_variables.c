@@ -23,7 +23,9 @@
 #include "mm_fill_stress.h"
 #include "mm_mp.h"
 #include "mm_post_def.h"
+#include "rf_bc_const.h"
 #include "rf_fem.h"
+#include "rf_fem_const.h"
 #include "std.h"
 
 /***************************************************************************/
@@ -2133,6 +2135,21 @@ int load_fv_grads(void)
   } else if (zero_unused_grads && upd->vp[pg->imtrx][TEMPERATURE] == -1) {
     for (p = 0; p < VIM; p++)
       fv->grad_T[p] = 0.0;
+  }
+
+  if (pd->gv[FILM_HEIGHT]) {
+    v = FILM_HEIGHT;
+    for (p = 0; p < VIM; p++)
+      fv->grad_film_height[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      for (i = 0; i < dofs; i++) {
+        fv->grad_film_height[p] += *esp->film_height[i] * bf[v]->grad_phi[i][p];
+      }
+    }
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TEMPERATURE] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_film_height[p] = 0.0;
   }
 
   /*
