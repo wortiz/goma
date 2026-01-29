@@ -1480,6 +1480,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ConstitutiveEquation = CARREAU;
   } else if (!strcmp(model_name, "CARREAU_SUSPENSION")) {
     ConstitutiveEquation = CARREAU_SUSPENSION;
+  } else if (!strcmp(model_name, "CARREAU_ARRHENIUS")) {
+    ConstitutiveEquation = CARREAU_ARRHENIUS;
   } else if (!strcmp(model_name, "SUSPENSION")) {
     ConstitutiveEquation = SUSPENSION;
   } else if (!strcmp(model_name, "EPOXY")) {
@@ -1642,6 +1644,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
       ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == SUSPENSION ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS ||
       ConstitutiveEquation == EPOXY || ConstitutiveEquation == SYLGARD ||
       ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == THERMAL ||
       ConstitutiveEquation == CURE || ConstitutiveEquation == HERSCHEL_BULKLEY ||
@@ -1679,6 +1682,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (ConstitutiveEquation == POWER_LAW || ConstitutiveEquation == POWERLAW_SUSPENSION ||
       ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS ||
       ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == SUSPENSION ||
       ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == HERSCHEL_BULKLEY ||
@@ -1712,6 +1716,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == BINGHAM ||
       ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
       ConstitutiveEquation == CARREAU_WLF_CONC_EXP || ConstitutiveEquation == BOND_SH ||
@@ -1773,6 +1778,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == BINGHAM ||
       ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
       ConstitutiveEquation == CARREAU_WLF_CONC_EXP || ConstitutiveEquation == BOND_SH ||
@@ -1806,6 +1812,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == POWERLAW_SUSPENSION || ConstitutiveEquation == CARREAU_SUSPENSION ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == EPOXY ||
       ConstitutiveEquation == SYLGARD || ConstitutiveEquation == FILLED_EPOXY ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
@@ -1837,6 +1844,35 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     }
     ECHO(es, echo_file);
   }
+
+  if (ConstitutiveEquation == CARREAU_ARRHENIUS) {
+    model_read = look_for_mat_prop(imp, "Temperature Shift", &(gn_glob[mn]->T_shift_Model),
+                                   &(gn_glob[mn]->T_shift), NO_USER, NULL, model_name, SCALAR_INPUT,
+                                   &NO_SPECIES, es);
+
+    if (model_read == -1 && !strcmp(model_name, "NO_MODEL")) {
+      gn_glob[mn]->T_shift_Model = NO_MODEL;
+
+      num_const = read_constants(imp, &(gn_glob[mn]->u_T_shift), 0);
+
+      if (num_const < 3) {
+        sr = sprintf(err_msg, "Matl %s expected at least 3 constants for %s %s model.\n",
+                     pd_glob[mn]->MaterialName, "Temperature Shift", "LEVEL_SET");
+        GOMA_EH(GOMA_ERROR, err_msg);
+      }
+
+      gn_glob[mn]->len_u_T_shift = num_const;
+      SPF_DBL_VEC(endofstring(es), num_const, gn_glob[mn]->u_T_shift);
+
+      if (gn_glob[mn]->u_T_shift[2] == 0.0)
+        gn_glob[mn]->u_T_shift[2] = ls->Length_Scale / 2.0;
+
+    } else {
+      GOMA_EH(model_read, "Temperature Shift");
+    }
+    ECHO(es, echo_file);
+  }
+
 
   if (ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == BOND ||

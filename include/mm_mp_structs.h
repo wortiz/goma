@@ -1120,6 +1120,10 @@ struct Generalized_Newtonian {
   int atexpModel;
   int len_u_atexp;
   dbl *u_atexp;
+  dbl T_shift;
+  int T_shift_Model;
+  int len_u_T_shift;
+  dbl *u_T_shift;
   /* CARREAU_WLF viscosity model  */
   dbl wlfc2;
   int wlfc2Model;

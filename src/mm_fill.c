@@ -2452,7 +2452,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (pd->gv[FILM_HEIGHT]) {
         if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
-        err = assemble_momentum_film_cast(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
+        err = ad_assemble_momentum_film_cast(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
                                              exo);
         GOMA_EH(err, "ad_assemble_momentum_film_cast");
 #else

@@ -792,6 +792,13 @@ extern "C" void fill_ad_field_variables() {
     }
   }
 
+  if (pd->gv[TEMPERATURE]) {
+    ad_fv->T = 0;
+    for (int i = 0; i < ei[upd->matrix_index[TEMPERATURE]]->dof[TEMPERATURE]; i++) {
+      ad_fv->T += set_ad_or_dbl(*esp->T[i], TEMPERATURE, i) * bf[TEMPERATURE]->phi[i];
+    }
+  }
+
   if (pd->gv[POLYMER_STRESS11]) {
     int v_s[MAX_MODES][DIM][DIM];
     stress_eqn_pointer(v_s);

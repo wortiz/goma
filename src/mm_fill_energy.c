@@ -2194,11 +2194,13 @@ double heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
   } else if (mp->HeatSourceModel == HS_FOAM_PMDI_10) {
     h = foam_pmdi_10_heat_source(d_h, time, tt, dt);
   } else if (mp->HeatSourceModel == HS_FILM_CAST) {
+    dbl params[4] = {1.0, 0., 0., 0.};
+    h = visc_diss_heat_source(d_h, params);
     dbl alpha = mp->u_heat_source[0];
     dbl T_alpha = mp->u_heat_source[1];
-    h = alpha * (fv->T - T_alpha);
+    h -= alpha * (fv->T - T_alpha);
     for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-      d_h->T[j] = alpha;
+      d_h->T[j] -= alpha * bf[TEMPERATURE]->phi[j];
     }
   } else if (mp->HeatSourceModel == USER_GEN) {
     if (d_h == NULL) {

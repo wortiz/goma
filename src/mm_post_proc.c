@@ -965,7 +965,7 @@ static int calc_standard_fields(double **post_proc_vect,
 #if 1
   if (PP_Viscosity != -1 && pd->e[pg->imtrx][R_MOMENTUM1]) {
     mu = 0;
-    if (0 && upd->AutoDiff) {
+    if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
       mu = ad_viscosity_wrap(gn);
 #else
@@ -4819,6 +4819,13 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
          */
         err = load_fv_grads();
         GOMA_EH(err, "load_fv_grads");
+      if (upd->AutoDiff) {
+#ifdef GOMA_ENABLE_SACADO
+        fill_ad_field_variables();
+#else
+        GOMA_EH(GOMA_ERROR, "AutoDiff assembly enabled but Goma not compiled with Sacado support");
+#endif
+      }
 
         /*
          * Load up porous media variables and properties, if needed

@@ -37,6 +37,10 @@ extern "C" {
 #include "std.h"
 #include "user_mp.h"
 }
+
+ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
+                         ADType gamma_dot[DIM][DIM]);
+
 ADType ad_ls_modulate_property(
     const ADType &p1, const ADType &p2, double width, double pm_minus, double pm_plus) {
   ADType p_plus, p_minus, p;
@@ -199,6 +203,8 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
     mu = ad_sa_viscosity(gn_local);
   } else if (gn_local->ConstitutiveEquation == BINGHAM) {
     mu = ad_bingham_viscosity(gn_local, gamma_dot);
+  } else if (gn_local->ConstitutiveEquation == CARREAU_ARRHENIUS) {
+    mu = ad_carreau_arrhenius_viscosity(gn_local, gamma_dot);
   } else {
     GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for non-Newtonian fluid");
   }
@@ -1548,8 +1554,8 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
 
           ADType mass = 0.;
           if (mass_on) {
-            mass = rho * ad_fv->film_height * ad_fv->v_dot[a] +
-                   rho * ad_fv->film_height_dot * ad_fv->v[a];
+            mass = rho * ad_fv->film_height * ad_fv->v_dot[a]
+                  +  rho * ad_fv->film_height_dot * ad_fv->v[a];
             mass *= -wt_func * d_area;
             mass *= mass_etm;
           }
@@ -1760,4 +1766,74 @@ int ad_assemble_film_height(dbl time, /* current time */
     } /* End of loop over i */
   } /* End of if assemble Jacobian */
   return 0;
+}
+ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
+                         ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
+
+  int a, b;
+  int mdofs = 0, vdofs;
+
+  int i, j;
+
+  ADType gammadot; /* strain rate invariant */
+
+  ADType val, val1, val2;
+  ADType mu = 0.;
+  ADType mu0;
+  ADType muinf;
+  ADType nexp;
+  ADType aexp;
+  ADType lambda;
+
+  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
+
+  if (pd->e[pg->imtrx][R_MESH1]) {
+    mdofs = ei[pg->imtrx]->dof[R_MESH1];
+  }
+
+  ad_calc_shearrate(gammadot, gamma_dot);
+
+  mu0 = gn_local->mu0;
+  nexp = gn_local->nexp;
+  muinf = gn_local->muinf;
+  aexp = gn_local->aexp;
+  lambda = gn_local->lam;
+
+  ADType T;
+  if (pd->gv[TEMPERATURE]) {
+    T = ad_fv->T;
+  } else {
+    T = upd->Process_Temperature;
+  }
+
+  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_shift = gn_local->T_shift;
+  dbl atexp =  gn_local->atexp;
+
+  ADType hscale;
+  if (gn_local->T_shift_Model == NO_MODEL) {
+    hscale = exp(atexp / (T - T_shift));
+  } else {
+    hscale = exp(atexp / (T - T_shift) - atexp / (T_alpha - T_shift));
+  }
+
+  if (DOUBLE_NONZERO(gammadot)) {
+    val2 = pow(hscale * lambda * gammadot, aexp);
+  } else {
+    val2 = 0.;
+  }
+  val = pow(1. + val2, (nexp - 1.) / aexp);
+  mu = hscale * (muinf + (mu0 - muinf) * val);
+
+  /* gammadot = 0.0; */
+  /* this effectively turns off the viscosity Jac terms */
+
+  if (DOUBLE_NONZERO(gammadot)) {
+    val = pow(lambda * gammadot, aexp - 1.);
+  } else {
+    val = 0.;
+  }
+  val1 = pow(1. + val2, (nexp - 1. - aexp) / aexp);
+
+  return (mu);
 }

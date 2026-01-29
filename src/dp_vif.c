@@ -1844,11 +1844,11 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->len_u_cap_pres, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_tau_y, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_atexp, 1, MPI_INT);
+    ddd_add_member(n, &gn_glob[i]->len_u_T_shift, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_mu0, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_nexp, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_muinf, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_aexp, 1, MPI_INT);
-    ddd_add_member(n, &gn_glob[i]->len_u_atexp, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_wlfc2, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_tau_y, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->len_u_lam, 1, MPI_INT);
@@ -2317,6 +2317,8 @@ void noahs_ark(void) {
       ddd_add_member(n, &ve_glob[i][mode]->gn->aexpModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->gn->atexp, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->gn->atexpModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->T_shift, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->T_shift_Model, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->gn->tau_y, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->gn->tau_yModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->gn->fexp, 1, MPI_DOUBLE);
@@ -2404,6 +2406,8 @@ void noahs_ark(void) {
     ddd_add_member(n, &gn_glob[i]->aexpModel, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->atexp, 1, MPI_DOUBLE);
     ddd_add_member(n, &gn_glob[i]->atexpModel, 1, MPI_INT);
+    ddd_add_member(n, &gn_glob[i]->T_shift, 1, MPI_DOUBLE);
+    ddd_add_member(n, &gn_glob[i]->T_shift_Model, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->wlfc2, 1, MPI_DOUBLE);
     ddd_add_member(n, &gn_glob[i]->wlfc2Model, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->tau_y, 1, MPI_DOUBLE);
@@ -3059,6 +3063,8 @@ void ark_landing(void) {
 
     dalloc(gn_glob[i]->len_u_atexp, gn_glob[i]->u_atexp);
 
+    dalloc(gn_glob[i]->len_u_T_shift, gn_glob[i]->u_T_shift);
+
     dalloc(gn_glob[i]->len_u_wlfc2, gn_glob[i]->u_wlfc2);
 
     dalloc(gn_glob[i]->len_u_lam, gn_glob[i]->u_lam);
@@ -3370,6 +3376,8 @@ void noahs_dove(void) {
     crdv(gn_glob[i]->len_u_aexp, gn_glob[i]->u_aexp);
 
     crdv(gn_glob[i]->len_u_atexp, gn_glob[i]->u_atexp);
+
+    crdv(gn_glob[i]->len_u_T_shift, gn_glob[i]->u_T_shift);
 
     crdv(gn_glob[i]->len_u_wlfc2, gn_glob[i]->u_wlfc2);
 
