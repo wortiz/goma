@@ -619,7 +619,16 @@ int assemble_momentum(dbl time,       /* current time */
               diffusion += grad_phi_i_e_a[0][2] * Pi[2][0];
             }
 #endif
+            dbl gamma[DIM][DIM] = {{0.}};
+            for (int nn = 0; nn < 3; nn++) {
+              for (int mm = 0; mm < 3; mm++) {
+                gamma[nn][mm] = fv->grad_v[nn][mm] + fv->grad_v[mm][nn];
+              }
+            }
 
+            dbl mu = viscosity(gn, gamma, NULL);
+
+            diffusion -= supg * mu * fv->div_G[a];
             diffusion *= -d_area;
             diffusion *= diffusion_etm;
           }

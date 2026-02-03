@@ -2265,6 +2265,11 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       } else if (strcmp(input, "Facet_Based") == 0) {
         ls->Renorm_Method = FACET_BASED;
         strcat(echo_string, "Facet_Based");
+      } else if (strcmp(input, "Facet_Based_Smolianski") == 0) {
+        ls->Renorm_Method = FACET_BASED_SMOLIANSKI;
+        strcat(echo_string, "Facet_Based_Smolianski");
+        ls->Mass_Value = 0.0;
+        ls->Mass_Sign = I_MASS_NEGATIVE_FILL;
       } else if (strcmp(input, "Huygens_Constrained") == 0) {
 
         ls->Renorm_Method = HUYGENS_C;

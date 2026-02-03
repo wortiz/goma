@@ -218,10 +218,14 @@ extern "C" goma_error g_tpetra_zero_row_set_diag(GomaSparseMatrix matrix,
                                                  GomaGlobalOrdinal global_row) {
   auto *tmp = static_cast<TpetraSparseMatrix *>(matrix->data);
   using crs_t = Tpetra::CrsMatrix<double, LO, GO>;
-  typename crs_t::nonconst_global_inds_host_view_type Indices;
-  typename crs_t::nonconst_values_host_view_type Values;
-  size_t NumEntries;
+  size_t NumEntries = tmp->matrix->getNumEntriesInGlobalRow(global_row);
+  Teuchos::Array<double> values(NumEntries, 0);
+  Teuchos::Array<double> canonicalValues(NumEntries, 0);
+  Teuchos::Array<double> zeroValues(NumEntries, 0);
+  typename crs_t::nonconst_global_inds_host_view_type Indices = Kokkos::View<GO *>("indices set_diag", NumEntries);
+  typename crs_t::nonconst_values_host_view_type Values = Kokkos::View<double *>("values set_diag", NumEntries);
   tmp->matrix->getGlobalRowCopy(global_row, Indices, Values, NumEntries);
+
   if (NumEntries == Teuchos::OrdinalTraits<size_t>::invalid()) {
     GOMA_EH(GOMA_ERROR, "Global row does not exist on this processor, g_tptra_zero_row");
   }
@@ -232,6 +236,7 @@ extern "C" goma_error g_tpetra_zero_row_set_diag(GomaSparseMatrix matrix,
       Values[i] = 0;
     }
   }
+  tmp->matrix->replaceGlobalValues(global_row, Indices, Values);
   return GOMA_SUCCESS;
 }
 
