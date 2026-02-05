@@ -388,7 +388,7 @@ int assemble_energy(
         source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
       }
 
-      lec->R[LEC_R_INDEX(peqn, i)] += H*(mass + advection + diffusion + divergence) + source;
+      lec->R[LEC_R_INDEX(peqn, i)] += H * (mass + advection + diffusion + divergence) + source;
     }
   }
 
@@ -924,15 +924,15 @@ int assemble_energy(
             }
 
             dbl divergence = 0.;
-          if (enable_divergence) {
-            dbl divergence_a = fv->d_div_v_dmesh[b][j] * fv->T;
-            dbl divergence_b = fv->div_v * fv->T;
-            divergence_a *= -wt_func * rho * Cp * det_J * wt;
-            divergence_b *= -(d_wt_func * rho * Cp * det_J * wt + wt_func * rho * Cp * bf[var]->d_det_J_dm[b][j] * wt);
-            divergence = divergence_a + divergence_b;
-            divergence *= h3;
-          }
-
+            if (enable_divergence) {
+              dbl divergence_a = fv->d_div_v_dmesh[b][j] * fv->T;
+              dbl divergence_b = fv->div_v * fv->T;
+              divergence_a *= -wt_func * rho * Cp * det_J * wt;
+              divergence_b *= -(d_wt_func * rho * Cp * det_J * wt +
+                                wt_func * rho * Cp * bf[var]->d_det_J_dm[b][j] * wt);
+              divergence = divergence_a + divergence_b;
+              divergence *= h3;
+            }
 
             source = 0.;
 
@@ -945,7 +945,8 @@ int assemble_energy(
               source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
             }
 
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += H * (mass + advection + diffusion + divergence) + source;
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                H * (mass + advection + diffusion + divergence) + source;
           }
         }
       }

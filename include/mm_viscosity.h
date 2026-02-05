@@ -54,10 +54,10 @@ EXTERN double carreau_viscosity      /* mm_viscosity.c                          
      dbl[DIM][DIM],                  /* gamma_dot - strain rate tensor    */
      VISCOSITY_DEPENDENCE_STRUCT *); /* d_mu - viscosity dependence       */
 
-EXTERN double carreau_arrhenius_viscosity      /* mm_viscosity.c                            */
-    (GEN_NEWT_STRUCT *,              /* gn_local                          */
-     dbl[DIM][DIM],                  /* gamma_dot - strain rate tensor    */
-     VISCOSITY_DEPENDENCE_STRUCT *); /* d_mu - viscosity dependence       */
+EXTERN double carreau_arrhenius_viscosity /* mm_viscosity.c                            */
+    (GEN_NEWT_STRUCT *,                   /* gn_local                          */
+     dbl[DIM][DIM],                       /* gamma_dot - strain rate tensor    */
+     VISCOSITY_DEPENDENCE_STRUCT *);      /* d_mu - viscosity dependence       */
 
 EXTERN double bingham_viscosity      /* mm_viscosity.c                            */
     (GEN_NEWT_STRUCT *,              /* gn_local                          */

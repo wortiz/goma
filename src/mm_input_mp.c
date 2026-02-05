@@ -1683,27 +1683,27 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == ARRHENIUS_VISCOSITY) {
-    model_read =
-        look_for_mat_prop(imp, "Arrhenius Viscosity a", &(gn_glob[mn]->arrhenius_aModel), &(gn_glob[mn]->arrhenius_a),
-                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Arrhenius Viscosity a", &(gn_glob[mn]->arrhenius_aModel),
+                                   &(gn_glob[mn]->arrhenius_a), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1) {
       GOMA_EH(model_read, "Arrhenius Viscosity a");
     }
 
     ECHO(es, echo_file);
-    model_read =
-        look_for_mat_prop(imp, "Arrhenius Viscosity c", &(gn_glob[mn]->arrhenius_cModel), &(gn_glob[mn]->arrhenius_c),
-                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Arrhenius Viscosity c", &(gn_glob[mn]->arrhenius_cModel),
+                                   &(gn_glob[mn]->arrhenius_c), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1) {
       GOMA_EH(model_read, "Arrhenius Viscosity c");
     }
 
     ECHO(es, echo_file);
-    model_read =
-        look_for_mat_prop(imp, "Arrhenius Viscosity d", &(gn_glob[mn]->arrhenius_dModel), &(gn_glob[mn]->arrhenius_d),
-                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    model_read = look_for_mat_prop(imp, "Arrhenius Viscosity d", &(gn_glob[mn]->arrhenius_dModel),
+                                   &(gn_glob[mn]->arrhenius_d), NO_USER, NULL, model_name,
+                                   SCALAR_INPUT, &NO_SPECIES, es);
 
     if (model_read == -1) {
       GOMA_EH(model_read, "Arrhenius Viscosity d");
@@ -1714,10 +1714,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (ConstitutiveEquation == POWER_LAW || ConstitutiveEquation == POWERLAW_SUSPENSION ||
       ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS ||
-      ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
-      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == SUSPENSION ||
-      ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == HERSCHEL_BULKLEY ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == BINGHAM ||
+      ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == CARREAU_WLF ||
+      ConstitutiveEquation == SUSPENSION || ConstitutiveEquation == FILLED_EPOXY ||
+      ConstitutiveEquation == HERSCHEL_BULKLEY ||
       ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP) {
     model_read = look_for_mat_prop(imp, "Power Law Exponent", &(gn_glob[mn]->nexpModel),
@@ -1748,11 +1748,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS ||
-      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == BINGHAM ||
-      ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
-      ConstitutiveEquation == CARREAU_WLF_CONC_EXP || ConstitutiveEquation == BOND_SH ||
-      ConstitutiveEquation == BOND || ConstitutiveEquation == BINGHAM_MIXED) {
+      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == CARREAU_WLF ||
+      ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
+      ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
+      ConstitutiveEquation == BOND_SH || ConstitutiveEquation == BOND ||
+      ConstitutiveEquation == BINGHAM_MIXED) {
     model_read = look_for_mat_prop(imp, "High Rate Viscosity", &(gn_glob[mn]->muinfModel),
                                    &(gn_glob[mn]->muinf), NO_USER, NULL, model_name, SCALAR_INPUT,
                                    &NO_SPECIES, es);
@@ -1810,11 +1810,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS ||
-      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == BINGHAM ||
-      ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
-      ConstitutiveEquation == CARREAU_WLF_CONC_EXP || ConstitutiveEquation == BOND_SH ||
-      ConstitutiveEquation == BOND) {
+      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == CARREAU_WLF ||
+      ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
+      ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
+      ConstitutiveEquation == BOND_SH || ConstitutiveEquation == BOND) {
     model_read = look_for_mat_prop(imp, "Aexp", &(gn_glob[mn]->aexpModel), &(gn_glob[mn]->aexp),
                                    NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
 
@@ -1844,12 +1843,12 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == POWERLAW_SUSPENSION || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS ||
-      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == EPOXY ||
-      ConstitutiveEquation == SYLGARD || ConstitutiveEquation == FILLED_EPOXY ||
-      ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
-      ConstitutiveEquation == THERMAL || ConstitutiveEquation == BOND ||
-      ConstitutiveEquation == FOAM_EPOXY || ConstitutiveEquation == FOAM_PMDI_10) {
+      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == CARREAU_WLF ||
+      ConstitutiveEquation == EPOXY || ConstitutiveEquation == SYLGARD ||
+      ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
+      ConstitutiveEquation == CARREAU_WLF_CONC_EXP || ConstitutiveEquation == THERMAL ||
+      ConstitutiveEquation == BOND || ConstitutiveEquation == FOAM_EPOXY ||
+      ConstitutiveEquation == FOAM_PMDI_10) {
     model_read = look_for_mat_prop(imp, "Thermal Exponent", &(gn_glob[mn]->atexpModel),
                                    &(gn_glob[mn]->atexp), NO_USER, NULL, model_name, SCALAR_INPUT,
                                    &NO_SPECIES, es);
@@ -1904,7 +1903,6 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     }
     ECHO(es, echo_file);
   }
-
 
   if (ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == BOND ||

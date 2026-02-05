@@ -4504,7 +4504,7 @@ int assemble_film_height(dbl time, /* current time */
             if (pd->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
             {
               for (int a = 0; a < 2; a++) {
-                advection += (bf[var]->phi[j] * delta(a,b)) * fv->grad_film_height[a];
+                advection += (bf[var]->phi[j] * delta(a, b)) * fv->grad_film_height[a];
                 advection_b += (fv->v[a] - fv_dot->x[a]) * fv->grad_film_height[a];
               }
               advection += div_phi_j_e_b * fv->film_height;
@@ -4543,7 +4543,8 @@ int assemble_film_height(dbl time, /* current time */
                 advection += (fv->v[a] - fv_dot->x[a]) * (*esp->film_height[i]) *
                              bf[eqn]->d_grad_phi_dmesh[i][a][b][j];
                 if (pd->TimeIntegration != STEADY) {
-                  advection += (delta(a,b)*(-(1 + 2 * tt) / dt)) * bf[var]->phi[j] * fv->grad_film_height[a];
+                  advection += (delta(a, b) * (-(1 + 2 * tt) / dt)) * bf[var]->phi[j] *
+                               fv->grad_film_height[a];
                 }
                 advection_b += (fv->v[a] - fv_dot->x[a]) * fv->grad_film_height[a];
               }

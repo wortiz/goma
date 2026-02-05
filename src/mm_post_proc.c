@@ -4819,13 +4819,14 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
          */
         err = load_fv_grads();
         GOMA_EH(err, "load_fv_grads");
-      if (upd->AutoDiff) {
+        if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
-        fill_ad_field_variables();
+          fill_ad_field_variables();
 #else
-        GOMA_EH(GOMA_ERROR, "AutoDiff assembly enabled but Goma not compiled with Sacado support");
+          GOMA_EH(GOMA_ERROR,
+                  "AutoDiff assembly enabled but Goma not compiled with Sacado support");
 #endif
-      }
+        }
 
         /*
          * Load up porous media variables and properties, if needed

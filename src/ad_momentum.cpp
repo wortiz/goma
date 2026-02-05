@@ -39,9 +39,8 @@ extern "C" {
 }
 
 ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
-                         ADType gamma_dot[DIM][DIM]);
-ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
-                         ADType gamma_dot[DIM][DIM]);
+                                      ADType gamma_dot[DIM][DIM]);
+ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]);
 
 ADType ad_ls_modulate_property(
     const ADType &p1, const ADType &p2, double width, double pm_minus, double pm_plus) {
@@ -1558,8 +1557,8 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
 
           ADType mass = 0.;
           if (mass_on) {
-            mass = rho * ad_fv->film_height * ad_fv->v_dot[a]
-                  +  rho * ad_fv->film_height_dot * ad_fv->v[a];
+            mass = rho * ad_fv->film_height * ad_fv->v_dot[a] +
+                   rho * ad_fv->film_height_dot * ad_fv->v[a];
             mass *= -wt_func * d_area;
             mass *= mass_etm;
           }
@@ -1772,7 +1771,7 @@ int ad_assemble_film_height(dbl time, /* current time */
   return 0;
 }
 ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
-                         ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
+                                      ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
 
   int a, b;
   int mdofs = 0, vdofs;
@@ -1812,7 +1811,7 @@ ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
 
   dbl T_alpha = mp->reference[TEMPERATURE];
   dbl T_shift = gn_local->T_shift;
-  dbl atexp =  gn_local->atexp;
+  dbl atexp = gn_local->atexp;
 
   ADType hscale;
   if (gn_local->T_shift_Model == NO_MODEL) {
@@ -1842,10 +1841,9 @@ ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   return (mu);
 }
 
-ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
-                         ADType gamma_dot[DIM][DIM]) {
+ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]) {
 
-dbl a, c, d;
+  dbl a, c, d;
 
   a = gn_local->arrhenius_a;
   c = gn_local->arrhenius_c;
@@ -1862,12 +1860,11 @@ dbl a, c, d;
   dbl T_alpha = mp->reference[TEMPERATURE];
   dbl T_shift = gn_local->T_shift;
 
-  ADType Tpow = pow(T-T_shift, -d);
-  ADType Tpown1 = pow(T-T_shift, -d-1);
+  ADType Tpow = pow(T - T_shift, -d);
+  ADType Tpown1 = pow(T - T_shift, -d - 1);
   dbl Tapow = pow(T_alpha - T_shift, -d);
   ADType comp = -a * (T - T_alpha) + c * (Tpow - Tapow);
   ADType mu = eta0 * exp(comp);
-
 
   return (mu);
 }

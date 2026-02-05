@@ -749,7 +749,7 @@ double arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
                            dbl gamma_dot[DIM][DIM], /* strain rate tensor */
                            VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
 
-dbl a, c, d;
+  dbl a, c, d;
 
   a = gn_local->arrhenius_a;
   c = gn_local->arrhenius_c;
@@ -766,8 +766,8 @@ dbl a, c, d;
   dbl T_alpha = mp->reference[TEMPERATURE];
   dbl T_shift = gn_local->T_shift;
 
-  dbl Tpow = pow(T-T_shift, -d);
-  dbl Tpown1 = pow(T-T_shift, -d-1);
+  dbl Tpow = pow(T - T_shift, -d);
+  dbl Tpown1 = pow(T - T_shift, -d - 1);
   dbl Tapow = pow(T_alpha - T_shift, -d);
   dbl comp = -a * (T - T_alpha) + c * (Tpow - Tapow);
   dbl mu = eta0 * exp(comp);
@@ -782,7 +782,6 @@ dbl a, c, d;
 
   return (mu);
 }
-
 
 double power_law_viscosity(struct Generalized_Newtonian *gn_local,
                            dbl gamma_dot[DIM][DIM], /* strain rate tensor */
@@ -1159,8 +1158,8 @@ double carreau_viscosity(struct Generalized_Newtonian *gn_local,
 }
 
 double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
-                         dbl gamma_dot[DIM][DIM], /* strain rate tensor */
-                         VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
+                                   dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+                                   VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
 
   int a, b;
   int mdofs = 0, vdofs;
@@ -1252,38 +1251,38 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
 
   dbl T_alpha = mp->reference[TEMPERATURE];
   dbl T_shift = gn_local->T_shift;
-  dbl atexp =  gn_local->atexp;
-    if (gn_local->atexpModel == LEVEL_SET) {
-      if (d_mu != NULL) {
-        int err = level_set_property(gn_local->u_atexp[0], gn_local->u_atexp[1], gn_local->u_atexp[2],
-                                 &atexp, d_mu->F);
-                                 GOMA_EH(err, "level_set_property() failed for atexp.");
-      } else {
-        int err = level_set_property(gn_local->u_atexp[0], gn_local->u_atexp[1], gn_local->u_atexp[2],
-                                 &atexp, NULL);
-                                  GOMA_EH(err, "level_set_property() failed for atexp.");
-      }
+  dbl atexp = gn_local->atexp;
+  if (gn_local->atexpModel == LEVEL_SET) {
+    if (d_mu != NULL) {
+      int err = level_set_property(gn_local->u_atexp[0], gn_local->u_atexp[1], gn_local->u_atexp[2],
+                                   &atexp, d_mu->F);
+      GOMA_EH(err, "level_set_property() failed for atexp.");
+    } else {
+      int err = level_set_property(gn_local->u_atexp[0], gn_local->u_atexp[1], gn_local->u_atexp[2],
+                                   &atexp, NULL);
+      GOMA_EH(err, "level_set_property() failed for atexp.");
     }
-    if (gn_local->T_shift_Model == LEVEL_SET) {
-      if (d_mu != NULL) {
-        int err = level_set_property(gn_local->u_T_shift[0], gn_local->u_T_shift[1], gn_local->u_T_shift[2],
-                                 &T_shift, d_mu->F);
-                                 GOMA_EH(err, "level_set_property() failed for T_shift.");
-      } else {
-        int err = level_set_property(gn_local->u_T_shift[0], gn_local->u_T_shift[1], gn_local->u_T_shift[2],
-                                 &T_shift, NULL);
-                                 GOMA_EH(err, "level_set_property() failed for T_shift.");
-      }
+  }
+  if (gn_local->T_shift_Model == LEVEL_SET) {
+    if (d_mu != NULL) {
+      int err = level_set_property(gn_local->u_T_shift[0], gn_local->u_T_shift[1],
+                                   gn_local->u_T_shift[2], &T_shift, d_mu->F);
+      GOMA_EH(err, "level_set_property() failed for T_shift.");
+    } else {
+      int err = level_set_property(gn_local->u_T_shift[0], gn_local->u_T_shift[1],
+                                   gn_local->u_T_shift[2], &T_shift, NULL);
+      GOMA_EH(err, "level_set_property() failed for T_shift.");
     }
+  }
 
   dbl hscale;
   dbl d_hscale_dT;
   if (gn_local->T_shift_Model == NO_MODEL) {
     hscale = exp(atexp / (T - T_shift));
-    d_hscale_dT =  (-atexp / ((T - T_shift)*(T-T_shift))) * hscale;
+    d_hscale_dT = (-atexp / ((T - T_shift) * (T - T_shift))) * hscale;
   } else {
     hscale = exp(atexp / (T - T_shift) - atexp / (T_alpha - T_shift));
-    d_hscale_dT =  (-atexp / ((T - T_shift)*(T-T_shift))) * hscale;
+    d_hscale_dT = (-atexp / ((T - T_shift) * (T - T_shift))) * hscale;
   }
 
   if (DOUBLE_NONZERO(gammadot)) {
@@ -1306,7 +1305,6 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
 
   if (d_mu != NULL)
     d_mu->gd = hscale * (mu0 - muinf) * (nexp - 1.) * lambda * val * val1;
-
 
   /*
    * d( mu )/dmesh
@@ -1339,14 +1337,14 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
     }
   }
   if (d_mu != NULL && pd->e[pg->imtrx][TEMPERATURE]) {
-      for (i = 0; i < vdofs; i++) {
-        if (Include_Visc_Sens) {
-          d_mu->T[i] = mu / hscale * d_hscale_dT * bf[TEMPERATURE]->phi[i];
-        } else {
-          d_mu->T[i] = 0.0;
-        }
+    for (i = 0; i < vdofs; i++) {
+      if (Include_Visc_Sens) {
+        d_mu->T[i] = mu / hscale * d_hscale_dT * bf[TEMPERATURE]->phi[i];
+      } else {
+        d_mu->T[i] = 0.0;
       }
     }
+  }
   return (mu);
 }
 
