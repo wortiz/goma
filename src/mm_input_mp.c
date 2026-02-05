@@ -1482,6 +1482,8 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ConstitutiveEquation = CARREAU_SUSPENSION;
   } else if (!strcmp(model_name, "CARREAU_ARRHENIUS")) {
     ConstitutiveEquation = CARREAU_ARRHENIUS;
+  } else if (!strcmp(model_name, "ARRHENIUS")) {
+    ConstitutiveEquation = ARRHENIUS_VISCOSITY;
   } else if (!strcmp(model_name, "SUSPENSION")) {
     ConstitutiveEquation = SUSPENSION;
   } else if (!strcmp(model_name, "EPOXY")) {
@@ -1644,7 +1646,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
       ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == SUSPENSION ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == ARRHENIUS_VISCOSITY ||
       ConstitutiveEquation == EPOXY || ConstitutiveEquation == SYLGARD ||
       ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == THERMAL ||
       ConstitutiveEquation == CURE || ConstitutiveEquation == HERSCHEL_BULKLEY ||
@@ -1675,6 +1677,36 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
     } else {
       GOMA_EH(model_read, "Low Rate Viscosity");
+    }
+
+    ECHO(es, echo_file);
+  }
+
+  if (ConstitutiveEquation == ARRHENIUS_VISCOSITY) {
+    model_read =
+        look_for_mat_prop(imp, "Arrhenius Viscosity a", &(gn_glob[mn]->arrhenius_aModel), &(gn_glob[mn]->arrhenius_a),
+                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+
+    if (model_read == -1) {
+      GOMA_EH(model_read, "Arrhenius Viscosity a");
+    }
+
+    ECHO(es, echo_file);
+    model_read =
+        look_for_mat_prop(imp, "Arrhenius Viscosity c", &(gn_glob[mn]->arrhenius_cModel), &(gn_glob[mn]->arrhenius_c),
+                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+
+    if (model_read == -1) {
+      GOMA_EH(model_read, "Arrhenius Viscosity c");
+    }
+
+    ECHO(es, echo_file);
+    model_read =
+        look_for_mat_prop(imp, "Arrhenius Viscosity d", &(gn_glob[mn]->arrhenius_dModel), &(gn_glob[mn]->arrhenius_d),
+                          NO_USER, NULL, model_name, SCALAR_INPUT, &NO_SPECIES, es);
+
+    if (model_read == -1) {
+      GOMA_EH(model_read, "Arrhenius Viscosity d");
     }
 
     ECHO(es, echo_file);

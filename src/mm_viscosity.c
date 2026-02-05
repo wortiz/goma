@@ -633,6 +633,8 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     mu = carreau_viscosity(gn_local, gamma_dot, d_mu);
   } else if (gn_local->ConstitutiveEquation == CARREAU_ARRHENIUS) {
     mu = carreau_arrhenius_viscosity(gn_local, gamma_dot, d_mu);
+  } else if (gn_local->ConstitutiveEquation == ARRHENIUS_VISCOSITY) {
+    mu = arrhenius_viscosity(gn_local, gamma_dot, d_mu);
   } else if (gn_local->ConstitutiveEquation == BINGHAM) {
     mu = bingham_viscosity(gn_local, gamma_dot, d_mu);
   } else if (gn_local->ConstitutiveEquation == BINGHAM_WLF) {
@@ -742,6 +744,45 @@ double viscosity(struct Generalized_Newtonian *gn_local,
   }
   return (mu);
 }
+
+double arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
+                           dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+                           VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
+
+dbl a, c, d;
+
+  a = gn_local->arrhenius_a;
+  c = gn_local->arrhenius_c;
+  d = gn_local->arrhenius_d;
+  dbl eta0 = gn_local->mu0;
+
+  dbl T;
+  if (pd->gv[TEMPERATURE]) {
+    T = fv->T;
+  } else {
+    T = upd->Process_Temperature;
+  }
+
+  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_shift = gn_local->T_shift;
+
+  dbl Tpow = pow(T-T_shift, -d);
+  dbl Tpown1 = pow(T-T_shift, -d-1);
+  dbl Tapow = pow(T_alpha - T_shift, -d);
+  dbl comp = -a * (T - T_alpha) + c * (Tpow - Tapow);
+  dbl mu = eta0 * exp(comp);
+
+  dbl d_mu_dT = mu * (-a - c * d * Tpown1);
+
+  if (d_mu != NULL) {
+    for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
+      d_mu->T[j] = d_mu_dT * bf[TEMPERATURE]->phi[j];
+    }
+  }
+
+  return (mu);
+}
+
 
 double power_law_viscosity(struct Generalized_Newtonian *gn_local,
                            dbl gamma_dot[DIM][DIM], /* strain rate tensor */
@@ -1246,7 +1287,7 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   }
 
   if (DOUBLE_NONZERO(gammadot)) {
-    val2 = pow(hscale * lambda * gammadot, aexp);
+    val2 = pow(lambda * gammadot, aexp);
   } else {
     val2 = 0.;
   }

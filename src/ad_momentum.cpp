@@ -40,6 +40,8 @@ extern "C" {
 
 ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
                          ADType gamma_dot[DIM][DIM]);
+ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
+                         ADType gamma_dot[DIM][DIM]);
 
 ADType ad_ls_modulate_property(
     const ADType &p1, const ADType &p2, double width, double pm_minus, double pm_plus) {
@@ -205,6 +207,8 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
     mu = ad_bingham_viscosity(gn_local, gamma_dot);
   } else if (gn_local->ConstitutiveEquation == CARREAU_ARRHENIUS) {
     mu = ad_carreau_arrhenius_viscosity(gn_local, gamma_dot);
+  } else if (gn_local->ConstitutiveEquation == ARRHENIUS_VISCOSITY) {
+    mu = ad_arrhenius_viscosity(gn_local, gamma_dot);
   } else {
     GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for non-Newtonian fluid");
   }
@@ -1818,7 +1822,7 @@ ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   }
 
   if (DOUBLE_NONZERO(gammadot)) {
-    val2 = pow(hscale * lambda * gammadot, aexp);
+    val2 = pow(lambda * gammadot, aexp);
   } else {
     val2 = 0.;
   }
@@ -1834,6 +1838,36 @@ ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
     val = 0.;
   }
   val1 = pow(1. + val2, (nexp - 1. - aexp) / aexp);
+
+  return (mu);
+}
+
+ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
+                         ADType gamma_dot[DIM][DIM]) {
+
+dbl a, c, d;
+
+  a = gn_local->arrhenius_a;
+  c = gn_local->arrhenius_c;
+  d = gn_local->arrhenius_d;
+  dbl eta0 = gn_local->mu0;
+
+  ADType T;
+  if (pd->gv[TEMPERATURE]) {
+    T = ad_fv->T;
+  } else {
+    T = upd->Process_Temperature;
+  }
+
+  dbl T_alpha = mp->reference[TEMPERATURE];
+  dbl T_shift = gn_local->T_shift;
+
+  ADType Tpow = pow(T-T_shift, -d);
+  ADType Tpown1 = pow(T-T_shift, -d-1);
+  dbl Tapow = pow(T_alpha - T_shift, -d);
+  ADType comp = -a * (T - T_alpha) + c * (Tpow - Tapow);
+  ADType mu = eta0 * exp(comp);
+
 
   return (mu);
 }

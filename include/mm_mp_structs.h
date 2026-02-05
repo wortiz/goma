@@ -1168,6 +1168,12 @@ struct Generalized_Newtonian {
   int thixoModel;
   int len_u_thixo;
   dbl *u_thixo_factor;
+  dbl arrhenius_a;
+  int arrhenius_aModel;
+  dbl arrhenius_c;
+  int arrhenius_cModel;
+  dbl arrhenius_d;
+  int arrhenius_dModel;
 };
 typedef struct Generalized_Newtonian GEN_NEWT_STRUCT;
 typedef struct PolymerTimeConstants {

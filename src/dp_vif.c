@@ -2347,6 +2347,12 @@ void noahs_ark(void) {
       ddd_add_member(n, &ve_glob[i][mode]->gn->diff, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->gn->DilVisc0, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->gn->DilViscModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->arrhenius_a, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->arrhenius_aModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->arrhenius_c, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->arrhenius_cModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->arrhenius_d, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->arrhenius_dModel, 1, MPI_INT);
 
       ddd_add_member(n, &ve_glob[i][mode]->time_const_st->ConstitutiveEquation, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->time_const_st->lambda0, 1, MPI_DOUBLE);
@@ -2439,6 +2445,12 @@ void noahs_ark(void) {
     ddd_add_member(n, &gn_glob[i]->DilViscModel, 1, MPI_INT);
     ddd_add_member(n, &gn_glob[i]->thixo_factor, 1, MPI_DOUBLE);
     ddd_add_member(n, &gn_glob[i]->thixoModel, 1, MPI_INT);
+    ddd_add_member(n, &gn_glob[i]->arrhenius_a, 1, MPI_DOUBLE);
+    ddd_add_member(n, &gn_glob[i]->arrhenius_aModel, 1, MPI_INT);
+    ddd_add_member(n, &gn_glob[i]->arrhenius_c, 1, MPI_DOUBLE);
+    ddd_add_member(n, &gn_glob[i]->arrhenius_cModel, 1, MPI_INT);
+    ddd_add_member(n, &gn_glob[i]->arrhenius_d, 1, MPI_DOUBLE);
+    ddd_add_member(n, &gn_glob[i]->arrhenius_dModel, 1, MPI_INT);
 
     /*
      * Finally, the elastic constitutive models for solids and pseudosolids

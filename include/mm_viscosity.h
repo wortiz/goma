@@ -177,4 +177,8 @@ EXTERN void copy_pF_to_F(int);
 EXTERN double flowing_liquid_viscosity /* mm_viscosity.c                            */
     (VISCOSITY_DEPENDENCE_STRUCT *);   /* d_flow_vis - flowing liquid viscosity sensitivity   */
 
+double arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
+                           dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+                           VISCOSITY_DEPENDENCE_STRUCT *d_mu);
+
 #endif /* GOMA_MM_VISCOSITY_H */
