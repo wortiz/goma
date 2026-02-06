@@ -633,8 +633,10 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     mu = carreau_viscosity(gn_local, gamma_dot, d_mu);
   } else if (gn_local->ConstitutiveEquation == CARREAU_ARRHENIUS) {
     mu = carreau_arrhenius_viscosity(gn_local, gamma_dot, d_mu);
-  } else if (gn_local->ConstitutiveEquation == ARRHENIUS_VISCOSITY) {
-    mu = arrhenius_viscosity(gn_local, gamma_dot, d_mu);
+  } else if (gn_local->ConstitutiveEquation == ARRHENIUS_SIMPLE) {
+    mu = arrhenius_simple_viscosity(gn_local, gamma_dot, d_mu);
+  } else if (gn_local->ConstitutiveEquation == ARRHENIUS_ADVANCED) {
+    mu = arrhenius_advanced_viscosity(gn_local, gamma_dot, d_mu);
   } else if (gn_local->ConstitutiveEquation == BINGHAM) {
     mu = bingham_viscosity(gn_local, gamma_dot, d_mu);
   } else if (gn_local->ConstitutiveEquation == BINGHAM_WLF) {
@@ -745,7 +747,39 @@ double viscosity(struct Generalized_Newtonian *gn_local,
   return (mu);
 }
 
-double arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
+double arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
+                           dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+                           VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
+
+  dbl a, c, d;
+
+  dbl eta0 = gn_local->mu0;
+
+  dbl T;
+  if (pd->gv[TEMPERATURE]) {
+    T = fv->T;
+  } else {
+    T = upd->Process_Temperature;
+  }
+
+  dbl T_alpha = mp->reference[TEMPERATURE];
+
+  dbl atexp = gn_local->atexp;
+
+  dbl mu = eta0 * exp(atexp * (1/T-1/T_alpha));
+
+  dbl d_mu_dT = mu * (-atexp / (T * T));
+
+  if (d_mu != NULL) {
+    for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
+      d_mu->T[j] = d_mu_dT * bf[TEMPERATURE]->phi[j];
+    }
+  }
+
+  return (mu);
+}
+
+double arrhenius_advanced_viscosity(struct Generalized_Newtonian *gn_local,
                            dbl gamma_dot[DIM][DIM], /* strain rate tensor */
                            VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
 

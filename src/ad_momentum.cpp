@@ -38,6 +38,8 @@ extern "C" {
 #include "user_mp.h"
 }
 
+ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]);
+
 ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
                                       ADType gamma_dot[DIM][DIM]);
 ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]);
@@ -206,8 +208,10 @@ ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM
     mu = ad_bingham_viscosity(gn_local, gamma_dot);
   } else if (gn_local->ConstitutiveEquation == CARREAU_ARRHENIUS) {
     mu = ad_carreau_arrhenius_viscosity(gn_local, gamma_dot);
-  } else if (gn_local->ConstitutiveEquation == ARRHENIUS_VISCOSITY) {
+  } else if (gn_local->ConstitutiveEquation == ARRHENIUS_ADVANCED) {
     mu = ad_arrhenius_viscosity(gn_local, gamma_dot);
+  } else if (gn_local->ConstitutiveEquation == ARRHENIUS_SIMPLE) {
+    mu = ad_arrhenius_simple_viscosity(gn_local, gamma_dot);
   } else {
     GOMA_EH(GOMA_ERROR, "Unrecognized viscosity model for non-Newtonian fluid");
   }
@@ -1870,4 +1874,24 @@ ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local, ADType gam
   ADType mu = eta0 * exp(comp);
 
   return (mu);
-}
+} 
+ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]) {
+
+  dbl a, c, d;
+
+  dbl eta0 = gn_local->mu0;
+  dbl atexp = gn_local->atexp;
+
+  ADType T;
+  if (pd->gv[TEMPERATURE]) {
+    T = ad_fv->T;
+  } else {
+    T = upd->Process_Temperature;
+  }
+
+  dbl T_alpha = mp->reference[TEMPERATURE];
+
+  ADType mu = eta0 * exp((1/T - 1/T_alpha) * atexp);
+
+  return (mu);
+} 

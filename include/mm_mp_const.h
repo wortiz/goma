@@ -344,7 +344,8 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define EPOXY_LINEAR_EXP               57
 #define EPOXY_ARRHENIUS_EXP            58
 #define CARREAU_ARRHENIUS              59 /*  Carreau viscosity with arrhenius temperature dependence */
-#define ARRHENIUS_VISCOSITY            60 /*  Arrhenius temperature dependence viscosity model */
+#define ARRHENIUS_SIMPLE            60 /*  Arrhenius temperature dependence viscosity model */
+#define ARRHENIUS_ADVANCED            61 /*  Arrhenius temperature dependence viscosity model */
 /*
  *  Heat source modeling
  *
