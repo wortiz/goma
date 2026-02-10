@@ -1224,6 +1224,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             case HUYGENS_C:
             case HUYGENS_MASS_ITER:
             case FACET_BASED:
+            case FACET_BASED_SMOLIANSKI:
               Renorm_Now =
                   (ls->Force_Initial_Renorm || (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0));
 
@@ -2442,6 +2443,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           case HUYGENS_C:
           case HUYGENS_MASS_ITER:
           case FACET_BASED:
+          case FACET_BASED_SMOLIANSKI:
             Renorm_Now =
                 (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0) || ls_adc_event == TRUE;
 
