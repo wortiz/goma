@@ -895,6 +895,77 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
               break;
 
+            case FILM_CAST_STRESS: {
+              dbl Pi[DIM][DIM];
+              dbl gamma[DIM][DIM];
+              for (int a = 0; a < 2; a++) {
+                for (int b = 0; b < 2; b++) {
+                  gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
+                }
+              }
+              VISCOSITY_DEPENDENCE_STRUCT d_mu;
+              dbl mu = viscosity(gn, gamma, &d_mu);
+
+              dbl p = -2 * mu * (fv->grad_v[0][0] + fv->grad_v[1][1]);
+
+              dbl d_p_v[DIM][MDE];
+              dbl d_p_x[DIM][MDE];
+
+              for (int b = 0; b < WIM; b++) {
+                for (int j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
+                  dbl div_bj = 0;
+                  for (int p = 0; p < 2; p++) {
+                    div_bj += bf[VELOCITY1 + b]->grad_phi_e[j][b][p][p];
+                  }
+                  d_p_v[b][j] =
+                      -2 * mu * div_bj - 2 * d_mu.v[b][j] * (fv->grad_v[0][0] + fv->grad_v[1][1]);
+
+                  d_p_x[b][j] = -2 * mu * fv->d_div_v_dmesh[b][j] -
+                                2 * d_mu.X[b][j] * (fv->grad_v[0][0] + fv->grad_v[1][1]);
+                }
+              }
+
+              for (int a = 0; a < 2; a++) {
+                for (int b = 0; b < 2; b++) {
+                  // Pi[a][b] = fv->film_height * (delta(a, b) * p - mu * gamma[a][b]);
+                  Pi[a][b] = mu * gamma[a][b] - p * delta(a, b);
+                }
+              }
+              STRESS_DEPENDENCE_STRUCT d_Pi;
+
+              for (int p = 0; p < VIM; p++) {
+                for (int q = 0; q < VIM; q++) {
+                  for (int b = 0; b < WIM; b++) {
+                    for (int j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
+                      /* grad_phi_e cannot be the same for all
+                       * velocities for 3d stab of 2d flow!!
+                       * Compare with the old way in the CYLINDRICAL
+                       * chunk below... */
+                      d_Pi.v[p][q][b][j] = -d_p_v[b][j] * (delta(p, q)) +
+                                           mu * (bf[VELOCITY1 + q]->grad_phi_e[j][b][p][q] +
+                                                 bf[VELOCITY1 + p]->grad_phi_e[j][b][q][p]) +
+                                           d_mu.v[b][j] * gamma[p][q];
+                      d_Pi.X[p][q][b][j] =
+                          -d_p_x[b][j] * (delta(p, q)) +
+                          mu * (fv->d_grad_v_dmesh[p][q][b][j] + fv->d_grad_v_dmesh[q][p][b][j]) +
+                          d_mu.X[b][j] * gamma[p][q];
+                    }
+                  }
+                }
+              }
+
+              for (b = 0; b < dim; b++) {
+                for (a = 0; a < VIM; a++) {
+                  if (fv->x[1] > -0.1 || fv->x[1] < -0.9) {
+                    local_q += 0.0;
+                  }
+                  local_q += fv->stangent[0][b] * fv->snormal[a] * Pi[b][a];
+                  local_qconv += 0; // fv->snormal[a] * Pi[1][a];
+                }
+              }
+              local_flux += weight * det * local_q;
+              local_flux_conv += weight * det * local_qconv;
+            } break;
             case HEAT_FLUX:
 
               /* finally we can add up the outgoing flux and area */
@@ -2856,6 +2927,87 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
                 break;
 
+              case FILM_CAST_STRESS:
+
+                var = TEMPERATURE;
+
+                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  d_term = 0;
+
+                  for (a = 0; a < dim; a++) {
+                    d_term +=
+                        weight * det * fv->snormal[a] *
+                        (-d_k->T[j] * fv->grad_T[a] - k * bf[var]->grad_phi[j][a] +
+                         rho * (d_Cp->T[j] * fv->T + Cp * bf[var]->phi[j]) * (fv->v[a] - x_dot[a]));
+                  }
+
+                  J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                }
+
+                for (p = 0; p < dim; p++) {
+                  var = VELOCITY1 + p;
+
+                  if (pd->v[pg->imtrx][var]) {
+                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                      d_term = 0.0;
+
+                      d_term += weight * det * rho * Cp * fv->T * fv->snormal[p] * bf[var]->phi[j];
+
+                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term;
+                    }
+                    /* tabaer notes that d_Cp->v has not been included */
+                  }
+                }
+
+                for (p = 0; p < dim; p++) {
+                  var = MESH_DISPLACEMENT1 + p;
+
+                  if (pd->v[pg->imtrx][var]) {
+
+                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                      d_term = d_term1 = 0.0;
+
+                      for (a = 0; a < dim; a++) {
+                        d_term +=
+                            -weight * (fv->dsurfdet_dx[p][j] * k * fv->snormal[a] * fv->grad_T[a] +
+                                       det * d_k->X[p][j] * fv->snormal[a] * fv->grad_T[a] +
+                                       det * k * fv->dsnormal_dx[a][p][j] * fv->grad_T[a] +
+                                       det * k * fv->snormal[a] * fv->d_grad_T_dmesh[a][p][j]);
+                        d_term1 += weight * rho * fv->T * (fv->v[a] - x_dot[a]) *
+                                   (fv->dsurfdet_dx[p][j] * Cp * fv->snormal[a] +
+                                    det * d_Cp->X[p][j] * fv->snormal[a] +
+                                    det * Cp * fv->dsnormal_dx[a][p][j]);
+                      }
+
+                      J_AC[ei[pg->imtrx]->gun_list[var][j]] += d_term + d_term1;
+                    }
+                  }
+                }
+
+                var = MASS_FRACTION;
+                if (pd->v[pg->imtrx][var]) {
+                  for (w = 0; w < pd->Num_Species_Eqn; w++) {
+                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                      /*
+                       * Find the material index for the current
+                       * local variable degree of freedom
+                       * (can't just query gun_list for MASS_FRACTION
+                       *  unknowns -> have to do a lookup)
+                       */
+                      gnn = ei[pg->imtrx]->gnn_list[var][j];
+                      ledof = ei[pg->imtrx]->lvdof_to_ledof[var][j];
+                      matIndex = ei[pg->imtrx]->matID_ledof[ledof];
+                      c = Index_Solution(gnn, var, w, 0, matIndex, pg->imtrx);
+                      for (d_term = 0.0, a = 0; a < dim; a++) {
+                        d_term += -weight * det * d_k->C[w][j] * fv->snormal[a] * fv->grad_T[a] +
+                                  weight * det * rho * d_Cp->C[w][j] * fv->T * fv->snormal[a] *
+                                      (fv->v[a] - x_dot[a]);
+                      }
+                      J_AC[c] += d_term;
+                    }
+                  }
+                }
+                break;
               case HEAT_FLUX:
 
                 var = TEMPERATURE;

@@ -748,8 +748,8 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 }
 
 double arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
-                           dbl gamma_dot[DIM][DIM], /* strain rate tensor */
-                           VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
+                                  dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+                                  VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
 
   dbl a, c, d;
 
@@ -766,7 +766,7 @@ double arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
 
   dbl atexp = gn_local->atexp;
 
-  dbl mu = eta0 * exp(atexp * (1/T-1/T_alpha));
+  dbl mu = eta0 * exp(atexp * (1 / T - 1 / T_alpha));
 
   dbl d_mu_dT = mu * (-atexp / (T * T));
 
@@ -780,8 +780,8 @@ double arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
 }
 
 double arrhenius_advanced_viscosity(struct Generalized_Newtonian *gn_local,
-                           dbl gamma_dot[DIM][DIM], /* strain rate tensor */
-                           VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
+                                    dbl gamma_dot[DIM][DIM], /* strain rate tensor */
+                                    VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
 
   dbl a, c, d;
 

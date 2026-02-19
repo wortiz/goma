@@ -83,6 +83,7 @@
 #define POYNTING_Y               401
 #define POYNTING_Z               402
 #define SCATTERING_CROSS_SECTION 403
+#define FILM_CAST_STRESS         404
 
 #define I_VOLUME                  0
 #define I_DISSIP                  1
@@ -150,7 +151,7 @@ typedef struct Post_Processing_Flux_Names FLUX_NAME_STRUCT;
 extern FLUX_NAME_STRUCT pp_flux_names[];
 extern int Num_Flux_Names;
 
-struct Post_Processing_Flux_Names pp_flux_names[51] = {
+struct Post_Processing_Flux_Names pp_flux_names[52] = {
     {"FORCE_NORMAL", FORCE_NORMAL},
     {"FORCE_TANGENT1", FORCE_TANGENT1},
     {"FORCE_TANGENT2", FORCE_TANGENT2},
@@ -202,6 +203,7 @@ struct Post_Processing_Flux_Names pp_flux_names[51] = {
     {"POYNTING_Y", POYNTING_Y},
     {"POYNTING_Z", POYNTING_Z},
     {"SCATTERING_CROSS_SECTION", SCATTERING_CROSS_SECTION},
+    {"FILM_CAST_STRESS", FILM_CAST_STRESS},
 };
 
 int Num_Flux_Names = sizeof(pp_flux_names) / sizeof(struct Post_Processing_Flux_Names);

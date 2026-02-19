@@ -38,7 +38,8 @@ extern "C" {
 #include "user_mp.h"
 }
 
-ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]);
+ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
+                                     ADType gamma_dot[DIM][DIM]);
 
 ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
                                       ADType gamma_dot[DIM][DIM]);
@@ -1572,7 +1573,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
             for (int p = 0; p < WIM; p++) {
               advection += (ad_fv->v[p] - ad_fv->x_dot[p]) * ad_fv->grad_v[p][a];
             }
-            advection *= rho;
+            advection *= rho * ad_fv->film_height;
             advection *= -wt_func * d_area;
             advection *= advection_etm;
           }
@@ -1874,8 +1875,9 @@ ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local, ADType gam
   ADType mu = eta0 * exp(comp);
 
   return (mu);
-} 
-ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]) {
+}
+ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
+                                     ADType gamma_dot[DIM][DIM]) {
 
   dbl a, c, d;
 
@@ -1891,7 +1893,7 @@ ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local, ADT
 
   dbl T_alpha = mp->reference[TEMPERATURE];
 
-  ADType mu = eta0 * exp((1/T - 1/T_alpha) * atexp);
+  ADType mu = eta0 * exp((1 / T - 1 / T_alpha) * atexp);
 
   return (mu);
-} 
+}

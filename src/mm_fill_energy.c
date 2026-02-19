@@ -74,6 +74,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 /* assemble_energy -- assemble terms (Residual &| Jacobian) for energy eqns
  *
  * in:
@@ -260,11 +261,6 @@ int assemble_energy(
     }
   }
 
-  dbl H = 1.0;
-  if (pd->gv[FILM_HEIGHT]) {
-    H = fv->film_height;
-  }
-
   /* end Petrov-Galerkin addition */
 
   /*
@@ -388,7 +384,7 @@ int assemble_energy(
         source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
       }
 
-      lec->R[LEC_R_INDEX(peqn, i)] += H * (mass + advection + diffusion + divergence) + source;
+      lec->R[LEC_R_INDEX(peqn, i)] += mass + advection + diffusion + divergence + source;
     }
   }
 
@@ -492,7 +488,7 @@ int assemble_energy(
           }
 
           lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-              H * (mass + advection + diffusion + divergence) + source;
+              mass + advection + diffusion + divergence + source;
         }
       }
       /*
@@ -696,7 +692,7 @@ int assemble_energy(
             }
 
             lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                H * (mass + advection + diffusion + divergence) + source;
+                mass + advection + diffusion + divergence + source;
           }
         }
       }
@@ -946,7 +942,7 @@ int assemble_energy(
             }
 
             lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                H * (mass + advection + diffusion + divergence) + source;
+                mass + advection + diffusion + divergence + source;
           }
         }
       }
@@ -1176,58 +1172,14 @@ int assemble_energy(
       if (pd->v[pg->imtrx][var]) {
         pvar = upd->vp[pg->imtrx][var];
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          mass = 0.;
-          if (pd->TimeIntegration != STEADY) {
-            if (pd->e[pg->imtrx][eqn] & T_MASS) {
-              mass = T_dot;
-              mass *= -phi_i * rho * Cp * det_J * wt;
-              mass *= h3;
-              mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-            }
-          }
-
-          advection = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-
-            for (p = 0; p < VIM; p++) {
-              advection += vconv[p] * grad_T[p];
-            }
-
-            advection *= -wt_func * rho * Cp * det_J * wt;
-            advection *= h3;
-            advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
-          }
-
-          diffusion = 0.;
-          if (pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
-            for (p = 0; p < VIM; p++) {
-              grad_phi_i[p] = bf[eqn]->grad_phi[i][p];
-            }
-
-            for (p = 0; p < VIM; p++) {
-              diffusion += grad_phi_i[p] * q[p];
-            }
-            diffusion *= det_J * wt;
-            diffusion *= h3;
-            diffusion *= pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
-          }
-
-          dbl divergence = 0;
-          if (enable_divergence) {
-            divergence = fv->div_v * fv->T;
-            divergence *= -wt_func * rho * Cp * det_J * wt;
-            divergence *= h3;
-          }
-
           source = 0.;
           if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
-            source += phi_i * h * det_J * wt;
+            source += phi_i * d_h->film_height[j] * det_J * wt;
             source *= h3;
             source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
           }
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-              bf[var]->phi[j] * (mass + advection + diffusion + divergence);
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += bf[var]->phi[j] * source;
         }
       }
     }
@@ -2195,13 +2147,28 @@ double heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
   } else if (mp->HeatSourceModel == HS_FOAM_PMDI_10) {
     h = foam_pmdi_10_heat_source(d_h, time, tt, dt);
   } else if (mp->HeatSourceModel == HS_FILM_CAST) {
-    // dbl params[4] = {1.0, 0., 0., 0.};
-    // h = visc_diss_heat_source(d_h, params)/ fv->film_height;
     dbl alpha = mp->u_heat_source[0];
     dbl T_alpha = mp->u_heat_source[1];
     h = -alpha * (fv->T - T_alpha);
     for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
       d_h->T[j] = -alpha * bf[TEMPERATURE]->phi[j];
+    }
+    for (int j = 0; j < ei[pg->imtrx]->dof[FILM_HEIGHT]; j++) {
+      d_h->film_height[j] = h * -bf[FILM_HEIGHT]->phi[j] / fv->film_height;
+    }
+  } else if (mp->HeatSourceModel == HS_FILM_CAST_VISC_DISS) {
+    h = visc_diss_heat_source(d_h, &(mp->u_heat_source[2])) / fv->film_height;
+    for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
+      d_h->T[j] /= fv->film_height;
+    }
+    dbl alpha = mp->u_heat_source[0];
+    dbl T_alpha = mp->u_heat_source[1];
+    h += -alpha * (fv->T - T_alpha) / fv->film_height;
+    for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
+      d_h->T[j] += -alpha * bf[TEMPERATURE]->phi[j] / fv->film_height;
+    }
+    for (int j = 0; j < ei[pg->imtrx]->dof[FILM_HEIGHT]; j++) {
+      d_h->film_height[j] = h * -bf[FILM_HEIGHT]->phi[j] / fv->film_height;
     }
   } else if (mp->HeatSourceModel == USER_GEN) {
     if (d_h == NULL) {

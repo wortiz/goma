@@ -1648,10 +1648,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
       ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == SUSPENSION ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == ARRHENIUS_ADVANCED || ConstitutiveEquation == ARRHENIUS_SIMPLE ||
-      ConstitutiveEquation == EPOXY || ConstitutiveEquation == SYLGARD ||
-      ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == THERMAL ||
-      ConstitutiveEquation == CURE || ConstitutiveEquation == HERSCHEL_BULKLEY ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == ARRHENIUS_ADVANCED ||
+      ConstitutiveEquation == ARRHENIUS_SIMPLE || ConstitutiveEquation == EPOXY ||
+      ConstitutiveEquation == SYLGARD || ConstitutiveEquation == FILLED_EPOXY ||
+      ConstitutiveEquation == THERMAL || ConstitutiveEquation == CURE ||
+      ConstitutiveEquation == HERSCHEL_BULKLEY ||
       ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
       ConstitutiveEquation == BOND || ConstitutiveEquation == BOND_SH ||
@@ -1844,13 +1845,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
-      ConstitutiveEquation == POWERLAW_SUSPENSION || ConstitutiveEquation == CARREAU_SUSPENSION || ConstitutiveEquation == ARRHENIUS_SIMPLE ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == CARREAU_WLF ||
-      ConstitutiveEquation == EPOXY || ConstitutiveEquation == SYLGARD ||
-      ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
-      ConstitutiveEquation == CARREAU_WLF_CONC_EXP || ConstitutiveEquation == THERMAL ||
-      ConstitutiveEquation == BOND || ConstitutiveEquation == FOAM_EPOXY ||
-      ConstitutiveEquation == FOAM_PMDI_10) {
+      ConstitutiveEquation == POWERLAW_SUSPENSION || ConstitutiveEquation == CARREAU_SUSPENSION ||
+      ConstitutiveEquation == ARRHENIUS_SIMPLE || ConstitutiveEquation == CARREAU_ARRHENIUS ||
+      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == EPOXY ||
+      ConstitutiveEquation == SYLGARD || ConstitutiveEquation == FILLED_EPOXY ||
+      ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
+      ConstitutiveEquation == THERMAL || ConstitutiveEquation == BOND ||
+      ConstitutiveEquation == FOAM_EPOXY || ConstitutiveEquation == FOAM_PMDI_10) {
     model_read = look_for_mat_prop(imp, "Thermal Exponent", &(gn_glob[mn]->atexpModel),
                                    &(gn_glob[mn]->atexp), NO_USER, NULL, model_name, SCALAR_INPUT,
                                    &NO_SPECIES, es);
@@ -8855,6 +8856,14 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_heat_source);
   } else if (!strcmp(model_name, "FILM_CAST")) {
     HeatSourceModel = HS_FILM_CAST;
+    model_read = 1;
+    mat_ptr->HeatSourceModel = HeatSourceModel;
+
+    num_const = read_constants(imp, &(mat_ptr->u_heat_source), NO_SPECIES);
+    mat_ptr->len_u_heat_source = num_const;
+    SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_heat_source);
+  } else if (!strcmp(model_name, "FILM_CAST_VISC_DISS")) {
+    HeatSourceModel = HS_FILM_CAST_VISC_DISS;
     model_read = 1;
     mat_ptr->HeatSourceModel = HeatSourceModel;
 

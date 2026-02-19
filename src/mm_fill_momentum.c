@@ -4093,21 +4093,31 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
                                mu * (bf[VELOCITY1 + q]->grad_phi_e[j][b][p][q] +
                                      bf[VELOCITY1 + p]->grad_phi_e[j][b][q][p]) +
                                d_mu.v[b][j] * gamma[p][q];
+        }
+        for (int j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
           d_Pi.X[p][q][b][j] =
               -d_p_x[b][j] * (delta(p, q)) +
               mu * (fv->d_grad_v_dmesh[p][q][b][j] + fv->d_grad_v_dmesh[q][p][b][j]) +
               d_mu.X[b][j] * gamma[p][q];
         }
       }
+      for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
+        /* grad_phi_e cannot be the same for all
+         * velocities for 3d stab of 2d flow!!
+         * Compare with the old way in the CYLINDRICAL
+         * chunk below... */
+        dbl d_p = -2 * d_mu.T[j] * (fv->grad_v[0][0] + fv->grad_v[1][1]) * (delta(p, q));
+        d_Pi.T[p][q][j] = d_mu.T[j] * gamma[p][q] - d_p;
+      }
     }
   }
   int mass_on = pd->e[pg->imtrx][eqn] & T_MASS && (pd->TimeIntegration != STEADY);
-  //  int  advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
+  int advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
   int diffusion_on = pd->e[pg->imtrx][eqn] & T_DIFFUSION;
   int source_on = pd->e[pg->imtrx][eqn] & T_SOURCE;
 
   dbl mass_etm = pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
-  //  dbl  advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+  dbl advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
   dbl diffusion_etm = pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
   dbl source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
@@ -4147,11 +4157,14 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
           }
 
           dbl advection = 0.;
-          // if (advection_on) {
-          //   advection *= rho;
-          //   advection *= -wt_func * d_area;
-          //   advection *= advection_etm;
-          // }
+          if (advection_on) {
+            for (int p = 0; p < 2; p++) {
+              advection += (fv->v[p] - fv_dot->x[p]) * fv->grad_v[p][a];
+            }
+            advection *= rho * fv->film_height;
+            advection *= -wt_func * d_area;
+            advection *= advection_etm;
+          }
 
           dbl diffusion = 0.;
           if (diffusion_on) {
@@ -4218,11 +4231,14 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
               }
 
               dbl advection = 0.;
-              // if (advection_on) {
-              //   advection *= rho;
-              //   advection *= -wt_func * d_area;
-              //   advection *= advection_etm;
-              // }
+              if (advection_on) {
+                for (int p = 0; p < 2; p++) {
+                  advection += (fv->v[p] - fv_dot->x[p]) * fv->grad_v[p][a];
+                }
+                advection *= rho * bf[var]->phi[j];
+                advection *= -wt_func * d_area;
+                advection *= advection_etm;
+              }
 
               dbl diffusion = 0.;
               if (diffusion_on) {
@@ -4248,6 +4264,25 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
             }
           }
 
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var]) {
+            int pvar = upd->vp[pg->imtrx][var];
+            for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+              dbl diffusion = 0.;
+              if (diffusion_on) {
+                for (int p = 0; p < VIM; p++) {
+                  for (int q = 0; q < VIM; q++) {
+                    diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * d_Pi.T[q][p][j];
+                  }
+                }
+                diffusion *= -d_area;
+                diffusion *= diffusion_etm;
+              }
+              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+            }
+          }
+
           for (int b = 0; b < 2; b++) {
             int var = VELOCITY1 + b;
             /* Sensitivity w.r.t. velocity */
@@ -4255,7 +4290,6 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
               int pvar = upd->vp[pg->imtrx][var];
 
               for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-                // J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
                 dbl mass = 0.;
                 if (mass_on) {
                   mass = bf[var]->phi[j] * (delta(a, b)) *
@@ -4265,11 +4299,15 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
                 }
 
                 dbl advection = 0.;
-                // if (advection_on) {
-                //   advection *= rho;
-                //   advection *= -wt_func * d_area;
-                //   advection *= advection_etm;
-                // }
+                if (advection_on) {
+                  advection += bf[var]->phi[j] * fv->grad_v[b][a];
+                  for (int p = 0; p < 2; p++) {
+                    advection += (fv->v[p] - fv_dot->x[p]) * bf[var]->grad_phi_e[j][b][p][a];
+                  }
+                  advection *= rho * fv->film_height;
+                  advection *= -wt_func * d_area;
+                  advection *= advection_etm;
+                }
 
                 dbl diffusion = 0.;
                 if (diffusion_on) {
@@ -4315,11 +4353,27 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
                 }
 
                 dbl advection = 0.;
-                // if (advection_on) {
-                //   advection *= rho;
-                //   advection *= -wt_func * d_area;
-                //   advection *= advection_etm;
-                // }
+                if (advection_on) {
+                  dbl advection_a = 0.;
+                  for (int p = 0; p < WIM; p++) {
+                    advection_a += (fv->v[p] - fv_dot->x[p]) * fv->d_grad_v_dmesh[p][a][b][j];
+                  }
+                  advection_a *= -wt_func * rho * d_area;
+
+                  dbl advection_b = 0.;
+                  for (int p = 0; p < WIM; p++) {
+                    advection_b += (fv->v[p] - fv_dot->x[p]) * fv->grad_v[p][a];
+                  }
+                  dbl advection_c = 0.;
+                  for (int p = 0; p < WIM; p++) {
+                    advection_c += (-(1. + 2. * tt) * bf[var]->phi[j] / dt * (double)delta(p, b)) *
+                                   fv->grad_v[p][a];
+                  }
+                  advection *= (advection_a + advection_c) * rho * fv->film_height;
+                  advection *= -wt_func * d_area;
+                  advection += advection_b * rho * fv->film_height * -wt_func * d_d_area;
+                  advection *= advection_etm;
+                }
 
                 dbl diffusion = 0.;
                 if (diffusion_on) {
