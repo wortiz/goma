@@ -95,7 +95,9 @@
                                    /* lagged (explicit) terms for eigen-decomp parts grad(v) form*/
 #define SQRT_CONF 9                /* Log-conformation tensor formulation using */
                                    /* lagged (explicit) terms for eigen-decomp parts grad(v) form*/
-#define CONF 10                    /* Log-conformation tensor formulation using */
+#define CONF             10        /* Log-conformation tensor formulation using */
+#define EVSS_FILM_HEIGHT 11
+
 /* Discontinuous Galerkin viscoelastic jacobian options */
 #define EXPLICIT_DG 1
 #define FULL_DG     2

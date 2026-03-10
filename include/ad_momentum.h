@@ -41,6 +41,7 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                                  PG_DATA *pg_data);
 
 dbl ad_viscosity_wrap(struct Generalized_Newtonian *gn_local);
+int ad_assemble_film_height_grad_v(void);
 
 #ifdef __cplusplus
 }

@@ -802,9 +802,11 @@ extern "C" void fill_ad_field_variables() {
   if (pd->gv[POLYMER_STRESS11]) {
     int v_s[MAX_MODES][DIM][DIM];
     stress_eqn_pointer(v_s);
+    int sdim = VIM;
+    if (pd->gv[FILM_HEIGHT]) sdim = 3;
     for (int mode = 0; mode < vn->modes; mode++) {
-      for (int p = 0; p < VIM; p++) {
-        for (int q = 0; q < VIM; q++) {
+      for (int p = 0; p < sdim; p++) {
+        for (int q = 0; q < sdim; q++) {
           ad_fv->S[mode][p][q] = 0;
           ad_fv->S_dot[mode][p][q] = 0;
           if (p <= q) {
@@ -830,9 +832,10 @@ extern "C" void fill_ad_field_variables() {
             ad_fv->S[mode][q][p] = ad_fv->S[mode][p][q];
             ad_fv->S_dot[mode][q][p] = ad_fv->S_dot[mode][p][q];
           }
-          for (int r = 0; r < VIM; r++) {
+          for (int r = 0; r < sdim; r++) {
             ad_fv->grad_S[mode][r][p][q] = 0.;
             int v = v_s[mode][p][q];
+            if (pd->gv[v]) {
             int dofs = ei[upd->matrix_index[v]]->dof[v];
 
             for (int i = 0; i < dofs; i++) {
@@ -847,6 +850,7 @@ extern "C" void fill_ad_field_variables() {
               }
             }
           }
+          }
         }
       }
       for (int r = 0; r < pd->Num_Dim; r++) {
@@ -858,7 +862,7 @@ extern "C" void fill_ad_field_variables() {
       }
     }
   }
-  for (int p = 0; pd->gv[VELOCITY_GRADIENT11] && p < VIM; p++) {
+  for (int p = 0; pd->gv[VELOCITY_GRADIENT11] && p < 3; p++) {
     int v_g[DIM][DIM];
     v_g[0][0] = VELOCITY_GRADIENT11;
     v_g[0][1] = VELOCITY_GRADIENT12;
@@ -869,10 +873,10 @@ extern "C" void fill_ad_field_variables() {
     v_g[2][0] = VELOCITY_GRADIENT31;
     v_g[2][1] = VELOCITY_GRADIENT32;
     v_g[2][2] = VELOCITY_GRADIENT33;
-    for (int q = 0; q < VIM; q++) {
+    for (int q = 0; q < 3; q++) {
       int v = v_g[p][q];
+      ad_fv->G[p][q] = 0;
       if (pd->gv[v]) {
-        ad_fv->G[p][q] = 0;
         int dofs = ei[upd->matrix_index[v]]->dof[v];
         for (int i = 0; i < dofs; i++) {
           ad_fv->G[p][q] +=
@@ -880,17 +884,19 @@ extern "C" void fill_ad_field_variables() {
         }
       }
     }
-    for (int p = 0; p < VIM; p++) {
-      for (int q = 0; q < VIM; q++) {
+    for (int p = 0; p < 3; p++) {
+      for (int q = 0; q < 3; q++) {
         int v = v_g[p][q];
         for (int r = 0; r < VIM; r++) {
           ad_fv->grad_G[r][p][q] = 0.0;
+      if (pd->gv[v]) {
           int dofs = ei[upd->matrix_index[v]]->dof[v];
           for (int i = 0; i < dofs; i++) {
             ad_fv->grad_G[r][p][q] +=
                 ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->G[p][q][i]) *
                 bf[v]->grad_phi[i][r];
           }
+        }
         }
       }
     }

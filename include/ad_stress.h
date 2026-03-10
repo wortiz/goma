@@ -27,6 +27,10 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
                                  PG_DATA *pg_data);
 
 dbl ad_viscosity_wrap(struct Generalized_Newtonian *gn_local);
+int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time integration from
+                                            * explicit (tt = 1) to implicit (tt = 0) */
+                                   dbl dt, /* current time step size */
+                                   PG_DATA *pg_data);
 
 #ifdef __cplusplus
 }

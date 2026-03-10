@@ -29,6 +29,7 @@
 #include "ac_stability_util.h"
 #include "ad_momentum.h"
 #include "ad_porous.h"
+#include "ad_stress.h"
 #include "ad_turbulence.h"
 #include "bc/rotate.h"
 #include "bc/rotate_coordinates.h"
@@ -1469,6 +1470,24 @@ Revised:         Summer 1998, SY Tam (UNM)
      */
     do_LSA_mods(LSA_VOLUME);
 
+    if (pd->gv[FILM_HEIGHT] && vn->evssModel != NOPOLYMER) {
+      if (vn->evssModel != EVSS_FILM_HEIGHT) {
+        GOMA_EH(GOMA_ERROR, "Film height equation on but evss model not set to NOPOLYMER or EVSS_FILM_HEIGHT");
+      } else {
+        if (upd->AutoDiff) {
+      err = ad_assemble_film_height_stress(theta, delta_t, &pg_data);
+        } else {
+          GOMA_EH(GOMA_ERROR, "EVSS_FILM_HEIGHT requires autodiff assembly");
+        }
+      GOMA_EH(err, "assemble_film_height_stress");
+#ifdef CHECK_FINITE
+      err = CHECKFINITE("assemble_film_height_stress");
+      if (err)
+        return -1;
+#endif
+
+      }
+    }
     if (vn->evssModel == EVSS_G && cr->MeshFluxModel == ZENER_SLS) {
       err = assemble_stress_vesolid(theta, delta_t, ielem, ip, ip_total);
       GOMA_EH(err, "assemble_stress_vesolid");
@@ -1596,6 +1615,8 @@ Revised:         Summer 1998, SY Tam (UNM)
     if (pde[R_GRADIENT11]) {
       if (gn->ConstitutiveEquation == BINGHAM_MIXED) {
         err = assemble_rate_of_strain(theta, delta_t);
+      } else if (pd->gv[FILM_HEIGHT]) {
+        err = ad_assemble_film_height_grad_v();
       } else {
         err = assemble_gradient(theta, delta_t);
       }
