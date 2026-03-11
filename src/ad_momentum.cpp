@@ -1749,7 +1749,7 @@ int ad_assemble_film_height(dbl time, /* current time */
       phi_i = bf[eqn]->phi[i];
       ADType wt_func = phi_i;
       for (int a = 0; a < 2; a++) {
-        wt_func += supg_tau * ad_fv->v[a] * ad_fv->basis[eqn].grad_phi[i][a];
+        wt_func += supg_tau * (ad_fv->v[a]-ad_fv->x_dot[a]) * ad_fv->basis[eqn].grad_phi[i][a];
       }
 
       /*
