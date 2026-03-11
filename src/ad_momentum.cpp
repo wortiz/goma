@@ -1537,10 +1537,12 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
   ADType mu = ad_viscosity(gn, gamma);
   dbl evss_f = 0.0;
   ADType mup = 0;
-  for (int mode = 0; mode < vn->modes; mode++) {
-    evss_f = 1.0;
-    ADType mup_mode = ad_viscosity(ve[mode]->gn, gamma);
-    mup += mup_mode;
+  if (pd->gv[VELOCITY_GRADIENT11]) {
+    for (int mode = 0; mode < vn->modes; mode++) {
+      evss_f = 1.0;
+      ADType mup_mode = ad_viscosity(ve[mode]->gn, gamma);
+      mup += mup_mode;
+    }
   }
 
   ADType p = -2 * mu * (ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1]) + stress[2][2];
@@ -1593,8 +1595,8 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
 
           ADType mass = 0.;
           if (mass_on) {
-            mass = rho * ad_fv->film_height * ad_fv->v_dot[a] +
-                   rho * ad_fv->film_height_dot * ad_fv->v[a];
+            mass = rho * ad_fv->film_height * ad_fv->v_dot[a];
+                  //  rho * ad_fv->film_height_dot * ad_fv->v[a];
             mass *= -wt_func * d_area;
             mass *= mass_etm;
           }

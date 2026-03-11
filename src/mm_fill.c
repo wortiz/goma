@@ -1470,7 +1470,7 @@ Revised:         Summer 1998, SY Tam (UNM)
      */
     do_LSA_mods(LSA_VOLUME);
 
-    if (pd->gv[FILM_HEIGHT] && vn->evssModel != NOPOLYMER) {
+    if (pd->gv[FILM_HEIGHT] && pde[POLYMER_STRESS11] && vn->evssModel != NOPOLYMER) {
       if (vn->evssModel != EVSS_FILM_HEIGHT) {
         GOMA_EH(GOMA_ERROR, "Film height equation on but evss model not set to NOPOLYMER or EVSS_FILM_HEIGHT");
       } else {

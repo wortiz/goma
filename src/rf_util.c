@@ -887,6 +887,7 @@ double time_step_control(const double delta_t,
   /*    Err_norm      += ecp[EXT_VELOCITY];  */
   Err_norm += ecp[TURB_K];
   Err_norm += ecp[TURB_OMEGA];
+  Err_norm += ecp[FILM_HEIGHT];
 
   num_unknowns += ncp[ACOUS_PREAL];
   num_unknowns += ncp[ACOUS_PIMAG];
@@ -982,6 +983,7 @@ double time_step_control(const double delta_t,
   }
   e_int = sqrt(e_int * scaling);
   e_turb = sqrt(e_turb * scaling);
+  e_film_height = sqrt(e_film_height * scaling);
 
   /*
    * Print out the breakdown of contributions as well as the user specified
@@ -1112,6 +1114,9 @@ double time_step_control(const double delta_t,
     }
     if (ncp[TURB_K] || ncp[TURB_OMEGA] || ncp[EDDY_NU]) {
       DPRINTF(stdout, ", %7.1e", e_turb);
+    }
+    if (ncp[FILM_HEIGHT]) {
+      DPRINTF(stdout, ", %7.1e", e_film_height);
     }
 
     if (ncp[LIGHT_INTP] || ncp[LIGHT_INTM] || ncp[LIGHT_INTD] || ncp[RESTIME]) {
@@ -1252,6 +1257,9 @@ double time_step_control(const double delta_t,
   }
   if (ncp[TURB_K] || ncp[TURB_OMEGA] || ncp[EDDY_NU]) {
     DPRINTF(stdout, ",   %1d TURB", 1);
+  }
+  if (ncp[FILM_HEIGHT]) {
+    DPRINTF(stdout, ", %1d FIL_H", 1);
   }
   if (nAC > 0) {
     DPRINTF(stdout, ",   %1d AC ", use_var_norm[9]);
