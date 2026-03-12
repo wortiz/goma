@@ -1970,6 +1970,28 @@ void rd_levelset_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
+  iread = look_for_optional(ifp, "Level Set Formulation", input, '=');
+  ls->Formulation = LS_FORMULATION_DISTANCE;
+  if (iread == 1) {
+    if (fscanf(ifp, "%s", input) != 1) {
+      GOMA_EH(GOMA_ERROR, "Error reading Level Set Formulation .");
+    }
+
+    strip(input);
+    stringup(input);
+
+    if ((strcmp(input, "CONSERVATIVE") == 0)) {
+      ls->Formulation = LS_FORMULATION_CONSERVATIVE;
+    } else if (strcmp(input, "DISTANCE") == 0) {
+      ls->Formulation = LS_FORMULATION_DISTANCE;
+    } else {
+      GOMA_EH(GOMA_ERROR, "Error reading Level Set Formulation.");
+    }
+
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Level Set Formulation", input);
+    ECHO(echo_string, echo_file);
+  }
+
   if (ls != NULL) {
     /* for steady-state level set problems */
     if (pd_glob[0]->TimeIntegration == STEADY) {

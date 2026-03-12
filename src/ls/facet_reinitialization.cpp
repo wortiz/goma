@@ -19,6 +19,7 @@
 #include <mpi.h>
 #include <nanoflann.hpp>
 #include <numeric>
+#include <string>
 #include <tuple>
 #include <unordered_set>
 #include <vector>
@@ -349,6 +350,10 @@ static void facet_based_reinitialization_3D(
       GOMA_EH(GOMA_ERROR, "Unsupported element type %d", etype);
       break;
     }
+    dbl contour = 0.0;
+      if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
+        contour = 0.5;
+      }
 
     for (int elem = exo->eb_ptr[elem_block]; elem < exo->eb_ptr[elem_block + 1]; elem++) {
       // If the level set interface exists on that element we will compute facets for that element.
@@ -379,7 +384,7 @@ static void facet_based_reinitialization_3D(
           for (int j = 0; j < 8; j++) {
             values[j] = ls_values[hex_nodes[i][j]];
           }
-          auto facet_list = create_facet_from_hex(hexes[i], values, 0.0);
+          auto facet_list = create_facet_from_hex(hexes[i], values, contour);
 
           for (auto &facet : facet_list) {
             local_facets.push_back(facet);
@@ -390,7 +395,7 @@ static void facet_based_reinitialization_3D(
           for (int j = 0; j < 4; j++) {
             values[j] = ls_values[tet_nodes[i][j]];
           }
-          auto facet_list = create_facet_from_tet(tets[i], values, 0.0);
+          auto facet_list = create_facet_from_tet(tets[i], values, contour);
 
           for (auto &facet : facet_list) {
             local_facets.push_back(facet);
@@ -576,7 +581,14 @@ static void facet_based_reinitialization_3D(
       // std::cout << "Node " << node << p[0] << " " << p[1] << " " << " distance: " << min_distance
       // << "\n";
 
+      if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
+        // we need to determine the sign of the distance
+        // we can do this by checking which side of the facet the point is on
+        double orientation = x[index_ls] <= 0.5 ? -1.0 : 1.0;
+        x[index_ls] = 0.5 * (1 + tanh(orientation * min_distance / (2 * ls->Length_Scale)));
+      } else {
       x[index_ls] = std::copysign(min_distance, x[index_ls]);
+      }
     }
   }
 }
@@ -595,6 +607,10 @@ static void facet_based_reinitialization_2D(
   std::vector<std::tuple<int, int, int, int>> quad_nodes;
 
   std::unordered_set<int> level_set_nodes;
+  dbl contour = 0.0;
+  if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
+    contour = 0.5;
+  }
 
   for (int elem_block = 0; elem_block < exo->num_elem_blocks; elem_block++) {
     int mn = Matilda[elem_block];
@@ -646,7 +662,7 @@ static void facet_based_reinitialization_2D(
         auto [p1, p2, p3] = triangles[i];
         auto [v1, v2, v3] = triangle_nodes[i];
         std::array<double, 3> values = {ls_values[v1], ls_values[v2], ls_values[v3]};
-        auto facet = create_facet_from_triangle<2>(p1, p2, p3, values, 0.0);
+        auto facet = create_facet_from_triangle<2>(p1, p2, p3, values, contour);
 
         if (facet.has_value()) {
           local_facets.push_back(facet.value());
@@ -657,7 +673,7 @@ static void facet_based_reinitialization_2D(
         auto [p1, p2, p3, p4] = quads[i];
         auto [v1, v2, v3, v4] = quad_nodes[i];
         std::array<double, 4> values = {ls_values[v1], ls_values[v2], ls_values[v3], ls_values[v4]};
-        auto facet_list = create_facet_from_quad<2>(p1, p2, p3, p4, values, 0.0);
+        auto facet_list = create_facet_from_quad<2>(p1, p2, p3, p4, values, contour);
 
         for (auto &facet : facet_list) {
           local_facets.push_back(facet);
@@ -734,15 +750,6 @@ static void facet_based_reinitialization_2D(
     }
   }
 
-  std::ofstream file("facets.txt");
-  file << "x,y\n";
-  for (size_t i = 0; i < facets.size(); i++) {
-    file << facets[i].p0[0] << "," << facets[i].p0[1] << "\n"
-         << facets[i].p1[0] << "," << facets[i].p1[1] << "\n";
-  }
-  file.close();
-
-  // std::exit(0);
 
   // We will share our facets with other processors
   // pack facets into a vector
@@ -775,6 +782,18 @@ static void facet_based_reinitialization_2D(
     facets.push_back(Line<2>({all_facets[i * 4], all_facets[i * 4 + 1]},
                              {all_facets[i * 4 + 2], all_facets[i * 4 + 3]}));
   }
+  if (ProcID == 0) {
+    std::string filename = "facets_" + std::to_string(tran->time_value) + ".txt";
+   std::ofstream file(filename);
+   file << "x,y\n";
+   for (size_t i = 0; i < facets.size(); i++) {
+     file << facets[i].p0[0] << "," << facets[i].p0[1] << "\n"
+          << facets[i].p1[0] << "," << facets[i].p1[1] << "\n";
+   }
+   file.close();
+  }
+
+  // std::exit(0);
 
   PointCloud<2> pc;
   generate_point_cloud(pc, facets);
@@ -824,7 +843,14 @@ static void facet_based_reinitialization_2D(
         min_distance = std::min(min_distance, distance);
       }
 
+      if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
+        // we need to determine the sign of the distance
+        // we can do this by checking which side of the facet the point is on
+        double orientation = x[index_ls] <= 0.5 ? -1.0 : 1.0;
+        x[index_ls] = 0.5 * (1 + tanh(orientation * min_distance / (2 * ls->Length_Scale)));
+      } else {
       x[index_ls] = std::copysign(min_distance, x[index_ls]);
+      }
     }
   }
 }
@@ -833,6 +859,7 @@ extern "C" void facet_based_reinitialization(
     double *x, Exo_DB *exo, Comm_Ex *cx, Dpi *dpi, int num_total_nodes, double time) {
   BasicTimer timer;
   timer.start();
+
   if (ProcID == 0)
     std::cout << "Facet based reinitialization\n";
   if (exo->num_dim == 2) {

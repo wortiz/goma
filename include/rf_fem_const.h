@@ -134,6 +134,9 @@
 #define FILL_EQN_EXT_V   2
 #define FILL_EQN_EIKONAL 3
 
+#define LS_FORMULATION_DISTANCE     1
+#define LS_FORMULATION_CONSERVATIVE 2
+
 /* Fluid-structural interactions for shells */
 #define FSI_MESH_BOTH           1
 #define FSI_MESH_CONTINUUM      2
