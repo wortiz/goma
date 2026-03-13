@@ -354,21 +354,6 @@ else()
   message(STATUS "metis library disabled")
 endif()
 
-option(ENABLE_OMEGA_H "ENABLE_OMEGA_H" ON)
-if(ENABLE_OMEGA_H)
-  find_package(Omega_h)
-  if(Omega_h_FOUND)
-    set_target_properties(Omega_h::omega_h PROPERTIES INTERFACE_COMPILE_OPTIONS
-                                                      "")
-    set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} Omega_h::omega_h)
-    list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_OMEGA_H)
-  else()
-    message(STATUS "Omega_h not found")
-  endif()
-else()
-  message(STATUS "omega_h library disabled")
-endif()
-
 if(ENABLE_PETSC AND PETSC_FOUND)
   set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} PkgConfig::PETSC)
   list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_PETSC)
@@ -499,8 +484,6 @@ set(MAX_NUMBER_MATLS
 list(APPEND GOMA_COMPILE_DEFINITIONS MAX_NUMBER_MATLS=${MAX_NUMBER_MATLS})
 
 set(GOMA_INCLUDES
-    include/adapt/omega_h_interface.h
-    include/adapt/resetup_problem.h
     include/ac_conti.h
     include/ac_hunt.h
     include/ac_particles.h
@@ -664,8 +647,6 @@ set(GOMA_INCLUDES
     include/brkfix/setup_fix_data.h)
 
 set(GOMA_SOURCES
-    src/adapt/omega_h_interface.cpp
-    src/adapt/resetup_problem.c
     src/ac_conti.c
     src/ac_display_parameter.c
     src/ac_hunt.c
@@ -1085,7 +1066,7 @@ endif()
 # remove some C++ files from unity build as MACROS conflict with Trilinos
 # headers
 set_source_files_properties(
-  src/dp_ghost.cpp src/sl_epetra_util.cpp src/adapt/omega_h_interface.cpp
+  src/dp_ghost.cpp src/sl_epetra_util.cpp
   PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 # Most people probably want this for use with Goma TPLs

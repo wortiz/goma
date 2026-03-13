@@ -95,10 +95,6 @@
 #define GOMA_RF_SOLVE_C
 #include "el_quality.h"
 
-#ifdef GOMA_ENABLE_OMEGA_H
-#include "adapt/omega_h_interface.h"
-#endif
-
 /*
  * Global variables defined in this file.
  */
@@ -344,9 +340,6 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   double *x_sens = NULL;    /* solution sensitivity                     */
   double **x_sens_p = NULL; /* solution sensitivity for parameters      */
   int num_pvector = 0;      /* number of solution sensitivity vectors   */
-#ifdef GOMA_ENABLE_OMEGA_H
-  int adapt_step = 0;
-#endif
   int last_adapt_nt = 0;
 
   /* sparse variables for fill equation subcycling */
@@ -1840,58 +1833,6 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       if (nAC > 0)
         dcopy1(nAC, x_AC, x_AC_pred);
 
-#ifdef GOMA_ENABLE_OMEGA_H
-      if ((tran->ale_adapt || (ls != NULL && ls->adapt)) && tran->theta != 0) {
-        GOMA_EH(GOMA_ERROR, "Error theta time step parameter = %g only 0.0 supported", tran->theta);
-      }
-      if ((tran->ale_adapt || (ls != NULL && ls->adapt)) && pg->imtrx == 0 &&
-          (nt == 0 || ((ls != NULL && nt % ls->adapt_freq == 0) ||
-                       (tran->ale_adapt && nt % tran->ale_adapt_freq == 0)))) {
-        if (last_adapt_nt == nt && adapt_step > 0) {
-          adapt_step--;
-        }
-        last_adapt_nt = nt;
-        adapt_mesh_omega_h(ams, exo, dpi, &x, &x_old, &x_older, &xdot, &xdot_old, &x_oldest,
-                           &resid_vector, &x_update, &scale, adapt_step);
-        adapt_step++;
-        num_total_nodes = dpi->num_universe_nodes;
-        num_total_nodes = dpi->num_universe_nodes;
-        numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
-        if (nt == 0) {
-          if (ls->Num_Var_Init > 0)
-            ls_var_initialization(&x, exo, dpi, cx);
-        }
-        x_save = realloc(x_save, sizeof(double) * numProcUnknowns);
-        xdot_save = realloc(xdot_save, sizeof(double) * numProcUnknowns);
-        exchange_dof(cx[0], dpi, x, 0);
-        dcopy1(numProcUnknowns, x, x_old);
-        dcopy1(numProcUnknowns, x, x_save);
-        dcopy1(numProcUnknowns, x_old, x_older);
-        dcopy1(numProcUnknowns, x_older, x_oldest);
-        dcopy1(numProcUnknowns, xdot, xdot_save);
-        realloc_dbl_1(&x_pred, numProcUnknowns, 0);
-        realloc_dbl_1(&gvec, Num_Node, 0);
-        realloc_dbl_1(&xdot_older, numProcUnknowns, 0);
-        x_pred_static = x_pred;
-        memset(xdot, 0, sizeof(double) * numProcUnknowns);
-        memset(xdot_older, 0, sizeof(double) * numProcUnknowns);
-        memset(x_pred, 0, sizeof(double) * numProcUnknowns);
-        memset(resid_vector, 0, sizeof(double) * numProcUnknowns);
-        memset(scale, 0, sizeof(double) * numProcUnknowns);
-        memset(x_update, 0, sizeof(double) * (numProcUnknowns + numProcUnknowns));
-        dcopy1(numProcUnknowns, xdot, xdot_old);
-        wr_result_prelim_exo(rd, exo, ExoFileOut, gvec_elem);
-        nprint = 0;
-        //        (void) write_solution(ExoFileOut, resid_vector, x, x_sens_p,
-        //                              x_old, xdot, xdot_old, tev, tev_post, gv,
-        //                              rd, gvec, gvec_elem,
-        //                              &nprint, delta_t, theta, 0, x_pp,
-        //                              exo, dpi);
-        //        nprint++;
-        nullify_dirichlet_bcs();
-        find_and_set_Dirichlet(x, xdot, exo, dpi);
-      }
-#endif
 
       numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
       /*

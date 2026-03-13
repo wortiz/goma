@@ -20,7 +20,6 @@ Options that might be useful:
                          CHECKFINITE but will abort on failure
     ENABLE_UMFPACK=[ON|OFF]
     ENABLE_ARPACK=[ON|OFF]
-    ENABLE_OMEGA_H=[ON|OFF]
     ENABLE_SPARSE=[ON|OFF]
     ENABLE_METIS=[ON|OFF]
     MDE=<number>

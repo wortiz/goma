@@ -70,9 +70,6 @@
 #include "std.h"
 #include "wr_exo.h"
 #include "wr_soln.h"
-#ifdef GOMA_ENABLE_OMEGA_H
-#include "adapt/omega_h_interface.h"
-#endif
 
 #define GOMA_RF_SOLVE_SEGREGATED_C
 #include "rf_solve_segregated.h"
@@ -1375,9 +1372,6 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
      *  TOP OF THE TIME STEP LOOP -> Loop over time steps whether
      *                               they be successful or not
      *******************************************************************/
-#ifdef GOMA_ENABLE_OMEGA_H
-    int adapt_step = 0;
-#endif
     int last_adapt_nt = 0;
     for (n = 0; n < MaxTimeSteps; n++) {
 
@@ -1406,62 +1400,6 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           if (upd->XFEM) {
             xfem = matrix_xfem[pg->imtrx];
           }
-
-#ifdef GOMA_ENABLE_OMEGA_H
-          if ((tran->ale_adapt || (ls != NULL && ls->adapt)) && tran->theta != 0) {
-            GOMA_EH(GOMA_ERROR, "Error theta time step parameter = %g only 0.0 supported",
-                    tran->theta);
-          }
-          if (subcycle == 0 && (tran->ale_adapt || (ls != NULL && ls->adapt)) && pg->imtrx == 0 &&
-              (nt == 0 || ((ls != NULL && nt % ls->adapt_freq == 0) ||
-                           (tran->ale_adapt && nt % tran->ale_adapt_freq == 0)))) {
-            if (last_adapt_nt == nt && adapt_step > 0) {
-              adapt_step--;
-            }
-            last_adapt_nt = nt;
-            adapt_mesh_omega_h(ams, exo, dpi, x, x_old, x_older, xdot, xdot_old, x_oldest,
-                               resid_vector, x_update, scale, adapt_step);
-            adapt_step++;
-            num_total_nodes = dpi->num_universe_nodes;
-            num_total_nodes = dpi->num_universe_nodes;
-            if (nt == 0) {
-              if (ls != NULL && ls->Num_Var_Init > 0) {
-                pg->imtrx = Fill_Matrix;
-                ls_var_initialization(x, exo, dpi, cx);
-              }
-            }
-            for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-              exchange_dof(cx[imtrx], dpi, x[imtrx], imtrx);
-              numProcUnknowns[imtrx] = NumUnknowns[imtrx] + NumExtUnknowns[imtrx];
-              dcopy1(numProcUnknowns[imtrx], x[imtrx], x_old[imtrx]);
-              dcopy1(numProcUnknowns[imtrx], x_old[imtrx], x_older[imtrx]);
-              dcopy1(numProcUnknowns[imtrx], x_older[imtrx], x_oldest[imtrx]);
-              realloc_dbl_1(&x_pred[imtrx], numProcUnknowns[imtrx], 0);
-              realloc_dbl_1(&gvec[imtrx], Num_Node, 0);
-              realloc_dbl_1(&xdot_older[imtrx], numProcUnknowns[imtrx], 0);
-              realloc_dbl_1(&x_prev[imtrx], numProcUnknowns[imtrx], 0);
-              memset(xdot[imtrx], 0, sizeof(double) * numProcUnknowns[imtrx]);
-              memset(xdot_older[imtrx], 0, sizeof(double) * numProcUnknowns[imtrx]);
-              memset(x_pred[imtrx], 0, sizeof(double) * numProcUnknowns[imtrx]);
-              memset(resid_vector[imtrx], 0, sizeof(double) * numProcUnknowns[imtrx]);
-              memset(scale[imtrx], 0, sizeof(double) * numProcUnknowns[imtrx]);
-              memset(x_update[imtrx], 0,
-                     sizeof(double) * (numProcUnknowns[imtrx] + numProcUnknowns[imtrx]));
-              dcopy1(numProcUnknowns[imtrx], xdot[imtrx], xdot_old[imtrx]);
-              dcopy1(numProcUnknowns[pg->imtrx], x[imtrx], x_prev[imtrx]);
-            }
-            wr_result_prelim_exo_segregated(rd, exo, ExoFileOut, gvec_elem);
-            pg->imtrx = 0;
-            nprint = 0;
-            nullify_dirichlet_bcs();
-            find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
-            x_static = x[pg->imtrx];
-            x_old_static = x_old[pg->imtrx];
-            xdot_static = xdot[pg->imtrx];
-            xdot_old_static = xdot_old[pg->imtrx];
-            pg->imtrx = 0;
-          }
-#endif
 
           /*
            * Get started with forward/Backward Euler predictor-corrector

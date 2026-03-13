@@ -14219,12 +14219,6 @@ void echo_compiler_settings(void) {
 #endif
 #endif
 
-#ifdef GOMA_ENABLE_OMEGA_H
-  fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_OMEGA_H", "yes");
-#else
-  fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_OMEGA_H", "no");
-#endif
-
 #ifdef GOMA_ENABLE_STRATIMIKOS
   fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_STRATIMIKOS", "yes");
 #else
