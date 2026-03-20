@@ -1179,7 +1179,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
                   // wt_func += supg * supg_tau * ad_fv->v[w];// * ad_fv->basis[eqn].grad_phi[i][w];
-                  wt_func += supg * supg_tau * ad_fv->v[w] * ad_fv->basis[eqn].grad_phi[i][w];
+                  wt_func += supg * supg_tau * (ad_fv->v[w]-ad_fv->x_dot[w]) * ad_fv->basis[eqn].grad_phi[i][w];
                 }
               }
 

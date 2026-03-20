@@ -1520,8 +1520,8 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
   ADType gamma[DIM][DIM];
   ADType gamma_cont[DIM][DIM];
   ADType stress[DIM][DIM];
-  for (int a = 0; a < 2; a++) {
-    for (int b = 0; b < 2; b++) {
+  for (int a = 0; a < 3; a++) {
+    for (int b = 0; b < 3; b++) {
       gamma[a][b] = grad_v[a][b] + grad_v[b][a];
     }
   }
@@ -1550,7 +1550,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
   for (int a = 0; a < 2; a++) {
     for (int b = 0; b < 2; b++) {
       // Pi[a][b] = ad_fv->film_height * (delta(a, b) * p - mu * gamma[a][b]);
-      Pi[a][b] = (mu + mup) * gamma[a][b] - evss_f * mup * gamma_cont[a][b] - p * delta(a, b) +
+      Pi[a][b] = (mu + evss_f * mup) * gamma[a][b] - evss_f * mup * gamma_cont[a][b] - p * delta(a, b) +
                  stress[a][b];
     }
   }

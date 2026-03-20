@@ -2149,9 +2149,9 @@ double heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
   } else if (mp->HeatSourceModel == HS_FILM_CAST) {
     dbl alpha = mp->u_heat_source[0];
     dbl T_alpha = mp->u_heat_source[1];
-    h = -alpha * (fv->T - T_alpha);
+    h = -alpha * (fv->T - T_alpha) / fv->film_height;;
     for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-      d_h->T[j] = -alpha * bf[TEMPERATURE]->phi[j];
+      d_h->T[j] = -alpha * bf[TEMPERATURE]->phi[j] / fv->film_height;
     }
     for (int j = 0; j < ei[pg->imtrx]->dof[FILM_HEIGHT]; j++) {
       d_h->film_height[j] = h * -bf[FILM_HEIGHT]->phi[j] / fv->film_height;
