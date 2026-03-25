@@ -803,7 +803,8 @@ extern "C" void fill_ad_field_variables() {
     int v_s[MAX_MODES][DIM][DIM];
     stress_eqn_pointer(v_s);
     int sdim = VIM;
-    if (pd->gv[FILM_HEIGHT]) sdim = 3;
+    if (pd->gv[FILM_HEIGHT])
+      sdim = 3;
     for (int mode = 0; mode < vn->modes; mode++) {
       for (int p = 0; p < sdim; p++) {
         for (int q = 0; q < sdim; q++) {
@@ -836,20 +837,20 @@ extern "C" void fill_ad_field_variables() {
             ad_fv->grad_S[mode][r][p][q] = 0.;
             int v = v_s[mode][p][q];
             if (pd->gv[v]) {
-            int dofs = ei[upd->matrix_index[v]]->dof[v];
+              int dofs = ei[upd->matrix_index[v]]->dof[v];
 
-            for (int i = 0; i < dofs; i++) {
-              if (p <= q) {
-                ad_fv->grad_S[mode][r][p][q] +=
-                    ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->S[mode][p][q][i]) *
-                    ad_fv->basis[v].grad_phi[i][r];
-              } else {
-                ad_fv->grad_S[mode][r][p][q] +=
-                    ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->S[mode][q][p][i]) *
-                    ad_fv->basis[v].grad_phi[i][r];
+              for (int i = 0; i < dofs; i++) {
+                if (p <= q) {
+                  ad_fv->grad_S[mode][r][p][q] +=
+                      ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->S[mode][p][q][i]) *
+                      ad_fv->basis[v].grad_phi[i][r];
+                } else {
+                  ad_fv->grad_S[mode][r][p][q] +=
+                      ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->S[mode][q][p][i]) *
+                      ad_fv->basis[v].grad_phi[i][r];
+                }
               }
             }
-          }
           }
         }
       }
@@ -889,14 +890,14 @@ extern "C" void fill_ad_field_variables() {
         int v = v_g[p][q];
         for (int r = 0; r < VIM; r++) {
           ad_fv->grad_G[r][p][q] = 0.0;
-      if (pd->gv[v]) {
-          int dofs = ei[upd->matrix_index[v]]->dof[v];
-          for (int i = 0; i < dofs; i++) {
-            ad_fv->grad_G[r][p][q] +=
-                ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->G[p][q][i]) *
-                bf[v]->grad_phi[i][r];
+          if (pd->gv[v]) {
+            int dofs = ei[upd->matrix_index[v]]->dof[v];
+            for (int i = 0; i < dofs; i++) {
+              ad_fv->grad_G[r][p][q] +=
+                  ADType(num_ad_variables, ad_fv->offset[v] + i, *esp->G[p][q][i]) *
+                  bf[v]->grad_phi[i][r];
+            }
           }
-        }
         }
       }
     }

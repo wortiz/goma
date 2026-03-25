@@ -1886,7 +1886,8 @@ int load_elem_dofptr(const int ielem,
      * for all the modes.
      */
     int sdim = VIM;
-    if (pd->gv[FILM_HEIGHT]) sdim = 3;
+    if (pd->gv[FILM_HEIGHT])
+      sdim = 3;
     for (mode = 0; mode < vn->modes; mode++) {
       for (b = 0; b < sdim; b++) {
         for (c = 0; c < sdim; c++) {
@@ -2796,8 +2797,9 @@ int load_elem_dofptr_all(const int ielem, const Exo_DB *exo) {
       /* This should loop through all the stress variables
        * for all the modes.
        */
-    int sdim = VIM;
-    if (pd->gv[FILM_HEIGHT]) sdim = 3;
+      int sdim = VIM;
+      if (pd->gv[FILM_HEIGHT])
+        sdim = 3;
       for (mode = 0; mode < vn->modes; mode++) {
         for (b = 0; b < sdim; b++) {
           for (c = 0; c < sdim; c++) {

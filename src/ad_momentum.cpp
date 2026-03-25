@@ -1550,8 +1550,8 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
   for (int a = 0; a < 2; a++) {
     for (int b = 0; b < 2; b++) {
       // Pi[a][b] = ad_fv->film_height * (delta(a, b) * p - mu * gamma[a][b]);
-      Pi[a][b] = (mu + evss_f * mup) * gamma[a][b] - evss_f * mup * gamma_cont[a][b] - p * delta(a, b) +
-                 stress[a][b];
+      Pi[a][b] = (mu + evss_f * mup) * gamma[a][b] - evss_f * mup * gamma_cont[a][b] -
+                 p * delta(a, b) + stress[a][b];
     }
   }
 
@@ -1596,7 +1596,7 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
           ADType mass = 0.;
           if (mass_on) {
             mass = rho * ad_fv->film_height * ad_fv->v_dot[a];
-                  //  rho * ad_fv->film_height_dot * ad_fv->v[a];
+            //  rho * ad_fv->film_height_dot * ad_fv->v[a];
             mass *= -wt_func * d_area;
             mass *= mass_etm;
           }
@@ -1749,7 +1749,7 @@ int ad_assemble_film_height(dbl time, /* current time */
       phi_i = bf[eqn]->phi[i];
       ADType wt_func = phi_i;
       for (int a = 0; a < 2; a++) {
-        wt_func += supg_tau * (ad_fv->v[a]-ad_fv->x_dot[a]) * ad_fv->basis[eqn].grad_phi[i][a];
+        wt_func += supg_tau * (ad_fv->v[a] - ad_fv->x_dot[a]) * ad_fv->basis[eqn].grad_phi[i][a];
       }
 
       /*

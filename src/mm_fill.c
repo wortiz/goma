@@ -1472,20 +1472,20 @@ Revised:         Summer 1998, SY Tam (UNM)
 
     if (pd->gv[FILM_HEIGHT] && pde[POLYMER_STRESS11] && vn->evssModel != NOPOLYMER) {
       if (vn->evssModel != EVSS_FILM_HEIGHT) {
-        GOMA_EH(GOMA_ERROR, "Film height equation on but evss model not set to NOPOLYMER or EVSS_FILM_HEIGHT");
+        GOMA_EH(GOMA_ERROR,
+                "Film height equation on but evss model not set to NOPOLYMER or EVSS_FILM_HEIGHT");
       } else {
         if (upd->AutoDiff) {
-      err = ad_assemble_film_height_stress(theta, delta_t, &pg_data);
+          err = ad_assemble_film_height_stress(theta, delta_t, &pg_data);
         } else {
           GOMA_EH(GOMA_ERROR, "EVSS_FILM_HEIGHT requires autodiff assembly");
         }
-      GOMA_EH(err, "assemble_film_height_stress");
+        GOMA_EH(err, "assemble_film_height_stress");
 #ifdef CHECK_FINITE
-      err = CHECKFINITE("assemble_film_height_stress");
-      if (err)
-        return -1;
+        err = CHECKFINITE("assemble_film_height_stress");
+        if (err)
+          return -1;
 #endif
-
       }
     }
     if (vn->evssModel == EVSS_G && cr->MeshFluxModel == ZENER_SLS) {

@@ -310,7 +310,8 @@ void ad_load_modal_pointers(
 
   /* put stress in a nice working array */
   int sdim = VIM;
-  if (pd->gv[FILM_HEIGHT]) sdim = 3;
+  if (pd->gv[FILM_HEIGHT])
+    sdim = 3;
 
   for (a = 0; a < sdim; a++) {
     for (b = 0; b < sdim; b++) {
@@ -870,9 +871,9 @@ int ad_assemble_stress_sqrt_conf(dbl tt, /* parameter to vary time integration f
 }
 
 extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time integration from
-                                            * explicit (tt = 1) to implicit (tt = 0) */
-                                   dbl dt, /* current time step size */
-                                   PG_DATA *pg_data) {
+                                                       * explicit (tt = 1) to implicit (tt = 0) */
+                                              dbl dt, /* current time step size */
+                                              PG_DATA *pg_data) {
   int dim, q, w;
 
   int eqn;
@@ -1162,7 +1163,8 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
        */
       for (int ii = 0; ii < 3; ii++) {
         for (int jj = 0; jj < 3; jj++) {
-          if ((ii == 2 || jj == 2) && ii != jj) continue;
+          if ((ii == 2 || jj == 2) && ii != jj)
+            continue;
 
           if (ii <= jj) /* since the stress tensor is symmetric, only assemble the upper half */
           {
@@ -1179,7 +1181,8 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
               if (supg != 0.) {
                 for (w = 0; w < dim; w++) {
                   // wt_func += supg * supg_tau * ad_fv->v[w];// * ad_fv->basis[eqn].grad_phi[i][w];
-                  wt_func += supg * supg_tau * (ad_fv->v[w]-ad_fv->x_dot[w]) * ad_fv->basis[eqn].grad_phi[i][w];
+                  wt_func += supg * supg_tau * (ad_fv->v[w] - ad_fv->x_dot[w]) *
+                             ad_fv->basis[eqn].grad_phi[i][w];
                 }
               }
 
@@ -1248,7 +1251,8 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
     if (af->Assemble_Jacobian) {
       for (int ii = 0; ii < 3; ii++) {
         for (int jj = 0; jj < 3; jj++) {
-          if ((ii == 2 || jj == 2) && ii != jj) continue;
+          if ((ii == 2 || jj == 2) && ii != jj)
+            continue;
           if (ii <= jj) /* since the stress tensor is symmetric, only assemble the upper half */
           {
             eqn = R_s[mode][ii][jj];
