@@ -1648,12 +1648,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == POWER_LAW || ConstitutiveEquation == POWERLAW_SUSPENSION ||
-      ConstitutiveEquation == POWER_LAW_ARRHENIUS ||
-      ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
-      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == SUSPENSION ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == ARRHENIUS_ADVANCED ||
-      ConstitutiveEquation == ARRHENIUS_SIMPLE ||
+      ConstitutiveEquation == POWER_LAW_ARRHENIUS || ConstitutiveEquation == CARREAU ||
+      ConstitutiveEquation == CARREAU_SUSPENSION || ConstitutiveEquation == BINGHAM ||
+      ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == CARREAU_WLF ||
+      ConstitutiveEquation == SUSPENSION || ConstitutiveEquation == CARREAU_ARRHENIUS ||
+      ConstitutiveEquation == ARRHENIUS_ADVANCED || ConstitutiveEquation == ARRHENIUS_SIMPLE ||
       ConstitutiveEquation == EPOXY || ConstitutiveEquation == SYLGARD ||
       ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == THERMAL ||
       ConstitutiveEquation == CURE || ConstitutiveEquation == HERSCHEL_BULKLEY ||
@@ -1720,10 +1719,10 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == POWER_LAW || ConstitutiveEquation == POWERLAW_SUSPENSION ||
-      ConstitutiveEquation == POWER_LAW_ARRHENIUS ||
-      ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
-      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == SUSPENSION ||
+      ConstitutiveEquation == POWER_LAW_ARRHENIUS || ConstitutiveEquation == CARREAU ||
+      ConstitutiveEquation == CARREAU_SUSPENSION || ConstitutiveEquation == BINGHAM ||
+      ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == CARREAU_WLF ||
+      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == SUSPENSION ||
       ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == HERSCHEL_BULKLEY ||
       ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP) {
@@ -1850,12 +1849,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == POWERLAW_SUSPENSION || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == POWER_LAW_ARRHENIUS || ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == ARRHENIUS_SIMPLE ||
-      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == EPOXY ||
-      ConstitutiveEquation == SYLGARD || ConstitutiveEquation == FILLED_EPOXY ||
-      ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
-      ConstitutiveEquation == THERMAL || ConstitutiveEquation == BOND ||
-      ConstitutiveEquation == FOAM_EPOXY || ConstitutiveEquation == FOAM_PMDI_10) {
+      ConstitutiveEquation == POWER_LAW_ARRHENIUS || ConstitutiveEquation == CARREAU_ARRHENIUS ||
+      ConstitutiveEquation == ARRHENIUS_SIMPLE || ConstitutiveEquation == CARREAU_WLF ||
+      ConstitutiveEquation == EPOXY || ConstitutiveEquation == SYLGARD ||
+      ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == CARREAU_WLF_CONC_PL ||
+      ConstitutiveEquation == CARREAU_WLF_CONC_EXP || ConstitutiveEquation == THERMAL ||
+      ConstitutiveEquation == BOND || ConstitutiveEquation == FOAM_EPOXY ||
+      ConstitutiveEquation == FOAM_PMDI_10) {
     model_read = look_for_mat_prop(imp, "Thermal Exponent", &(gn_glob[mn]->atexpModel),
                                    &(gn_glob[mn]->atexp), NO_USER, NULL, model_name, SCALAR_INPUT,
                                    &NO_SPECIES, es);
