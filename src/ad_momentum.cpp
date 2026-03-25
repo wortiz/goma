@@ -1476,7 +1476,6 @@ int ad_assemble_continuity(dbl time_value, /* current time */
   } /* End of if assemble Jacobian */
   return 0;
 }
-#endif
 
 int ad_assemble_momentum_film_cast(dbl time,       /* current time */
                                    dbl tt,         /* parameter to vary time integration from
@@ -2081,3 +2080,5 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
   }
   return 0;
 }
+
+#endif // GOMA_ENABLE_SACADO
