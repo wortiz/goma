@@ -344,9 +344,11 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define HERSCHEL_BULKLEY_PAPANASTASIOU 56 /* Herschel_bulkley model - power-law + yield stress */
 #define EPOXY_LINEAR_EXP               57
 #define EPOXY_ARRHENIUS_EXP            58
-#define CARREAU_ARRHENIUS              59 /*  Carreau viscosity with arrhenius temperature dependence */
-#define ARRHENIUS_SIMPLE               60 /*  Arrhenius temperature dependence viscosity model */
-#define ARRHENIUS_ADVANCED             61 /*  Arrhenius temperature dependence viscosity model */
+#define POWER_LAW_ARRHENIUS            59 /*  Power law viscosity with arrhenius temperature dependence */
+#define CARREAU_ARRHENIUS              60 /*  Carreau viscosity with arrhenius temperature dependence */
+#define ARRHENIUS_SIMPLE               61 /*  Arrhenius temperature dependence viscosity model */
+#define ARRHENIUS_ADVANCED             62 /*  Arrhenius temperature dependence viscosity model */
+
 /*
  *  Heat source modeling
  *

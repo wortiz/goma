@@ -176,7 +176,7 @@ double shape(const double s, /* quadrature point coordinates */
       break;
 
     default:
-      fprintf(stderr, "Bad LINEAR_TRI case: %d!\n", Iquant);
+      fprintf(stderr, "Bad QUAD_TRI case: %d!\n", Iquant);
       GOMA_EH(-1, "Bad selection of phi,dphids, etc.");
       break;
     }

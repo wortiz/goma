@@ -1474,8 +1474,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     ConstitutiveEquation = NEWTONIAN;
   } else if (!strcmp(model_name, "POWER_LAW")) {
     ConstitutiveEquation = POWER_LAW;
-  } else if (!strcmp(model_name, "POWERLAW_SUSPENSION")) {
+  } else if (!strcmp(model_name, "POWERLAW_SUSPENSION") ||
+             (!strcmp(model_name, "POWER_LAW_SUSPENSION"))) {
     ConstitutiveEquation = POWERLAW_SUSPENSION;
+  } else if (!strcmp(model_name, "POWER_LAW_ARRHENIUS")) {
+    ConstitutiveEquation = POWER_LAW_ARRHENIUS;
   } else if (!strcmp(model_name, "CARREAU")) {
     ConstitutiveEquation = CARREAU;
   } else if (!strcmp(model_name, "CARREAU_SUSPENSION")) {
@@ -1645,14 +1648,15 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == POWER_LAW || ConstitutiveEquation == POWERLAW_SUSPENSION ||
+      ConstitutiveEquation == POWER_LAW_ARRHENIUS ||
       ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
       ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == SUSPENSION ||
       ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == ARRHENIUS_ADVANCED ||
-      ConstitutiveEquation == ARRHENIUS_SIMPLE || ConstitutiveEquation == EPOXY ||
-      ConstitutiveEquation == SYLGARD || ConstitutiveEquation == FILLED_EPOXY ||
-      ConstitutiveEquation == THERMAL || ConstitutiveEquation == CURE ||
-      ConstitutiveEquation == HERSCHEL_BULKLEY ||
+      ConstitutiveEquation == ARRHENIUS_SIMPLE ||
+      ConstitutiveEquation == EPOXY || ConstitutiveEquation == SYLGARD ||
+      ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == THERMAL ||
+      ConstitutiveEquation == CURE || ConstitutiveEquation == HERSCHEL_BULKLEY ||
       ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
       ConstitutiveEquation == BOND || ConstitutiveEquation == BOND_SH ||
@@ -1716,11 +1720,11 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
   }
 
   if (ConstitutiveEquation == POWER_LAW || ConstitutiveEquation == POWERLAW_SUSPENSION ||
+      ConstitutiveEquation == POWER_LAW_ARRHENIUS ||
       ConstitutiveEquation == CARREAU || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == BINGHAM ||
-      ConstitutiveEquation == BINGHAM_WLF || ConstitutiveEquation == CARREAU_WLF ||
-      ConstitutiveEquation == SUSPENSION || ConstitutiveEquation == FILLED_EPOXY ||
-      ConstitutiveEquation == HERSCHEL_BULKLEY ||
+      ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
+      ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == SUSPENSION ||
+      ConstitutiveEquation == FILLED_EPOXY || ConstitutiveEquation == HERSCHEL_BULKLEY ||
       ConstitutiveEquation == HERSCHEL_BULKLEY_PAPANASTASIOU ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP) {
     model_read = look_for_mat_prop(imp, "Power Law Exponent", &(gn_glob[mn]->nexpModel),
@@ -1846,7 +1850,7 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   if (ConstitutiveEquation == BINGHAM || ConstitutiveEquation == BINGHAM_WLF ||
       ConstitutiveEquation == POWERLAW_SUSPENSION || ConstitutiveEquation == CARREAU_SUSPENSION ||
-      ConstitutiveEquation == ARRHENIUS_SIMPLE || ConstitutiveEquation == CARREAU_ARRHENIUS ||
+      ConstitutiveEquation == POWER_LAW_ARRHENIUS || ConstitutiveEquation == CARREAU_ARRHENIUS || ConstitutiveEquation == ARRHENIUS_SIMPLE ||
       ConstitutiveEquation == CARREAU_WLF || ConstitutiveEquation == EPOXY ||
       ConstitutiveEquation == SYLGARD || ConstitutiveEquation == FILLED_EPOXY ||
       ConstitutiveEquation == CARREAU_WLF_CONC_PL || ConstitutiveEquation == CARREAU_WLF_CONC_EXP ||
