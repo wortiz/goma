@@ -2147,7 +2147,7 @@ int load_fv_grads(void)
         fv->grad_film_height[p] += *esp->film_height[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads && upd->vp[pg->imtrx][TEMPERATURE] == -1) {
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][FILM_HEIGHT] == -1) {
     for (p = 0; p < VIM; p++)
       fv->grad_film_height[p] = 0.0;
   }

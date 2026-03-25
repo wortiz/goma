@@ -393,7 +393,7 @@ void assemble_essential_elliptic_mesh(dbl func[DIM],
       int var = MESH_DISPLACEMENT1 + b;
       for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         d_func[0][var][j] = -M * geta * d_T_dmesh[1][b][j] / fv->sdet +
-                            M * fxi * T[1] * fv->dsurfdet_dx[b][j] / (fv->sdet * fv->sdet);
+                            M * geta * T[1] * fv->dsurfdet_dx[b][j] / (fv->sdet * fv->sdet);
       }
     }
   } break;
@@ -403,8 +403,8 @@ void assemble_essential_elliptic_mesh(dbl func[DIM],
     for (int b = 0; b < pd->Num_Dim; b++) {
       int var = MESH_DISPLACEMENT1 + b;
       for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-        d_func[0][var][j] = -M * hzeta * d_T_dmesh[1][b][j] / fv->sdet +
-                            M * fxi * T[2] * fv->dsurfdet_dx[b][j] / (fv->sdet * fv->sdet);
+        d_func[0][var][j] = -M * hzeta * d_T_dmesh[2][b][j] / fv->sdet +
+                            M * hzeta * T[2] * fv->dsurfdet_dx[b][j] / (fv->sdet * fv->sdet);
       }
     }
   } break;

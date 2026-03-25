@@ -4060,7 +4060,7 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
   dbl d_p_v[DIM][MDE];
   dbl d_p_x[DIM][MDE];
 
-  for (int b = 0; b < WIM; b++) {
+  for (int b = 0; b < 2; b++) {
     for (int j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
       dbl div_bj = 0;
       for (int p = 0; p < 2; p++) {
@@ -4081,9 +4081,9 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
   }
   STRESS_DEPENDENCE_STRUCT d_Pi;
 
-  for (int p = 0; p < VIM; p++) {
-    for (int q = 0; q < VIM; q++) {
-      for (int b = 0; b < WIM; b++) {
+  for (int p = 0; p < 2; p++) {
+    for (int q = 0; q < 2; q++) {
+      for (int b = 0; b < 2; b++) {
         for (int j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
           /* grad_phi_e cannot be the same for all
            * velocities for 3d stab of 2d flow!!
@@ -4125,7 +4125,7 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
     /*
      * Assemble each component "a" of the momentum equation...
      */
-    for (int a = 0; a < WIM; a++) {
+    for (int a = 0; a < 2; a++) {
       int eqn = R_MOMENTUM1 + a;
       int peqn = upd->ep[pg->imtrx][eqn];
 
@@ -4168,8 +4168,8 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
 
           dbl diffusion = 0.;
           if (diffusion_on) {
-            for (int p = 0; p < VIM; p++) {
-              for (int q = 0; q < VIM; q++) {
+            for (int p = 0; p < 2; p++) {
+              for (int q = 0; q < 2; q++) {
                 diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * Pi[q][p];
               }
             }
@@ -4204,7 +4204,7 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
    */
 
   if (af->Assemble_Jacobian) {
-    for (int a = 0; a < WIM; a++) {
+    for (int a = 0; a < 2; a++) {
       int eqn = R_MOMENTUM1 + a;
       int peqn = upd->ep[pg->imtrx][eqn];
 
@@ -4242,8 +4242,8 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
 
               dbl diffusion = 0.;
               if (diffusion_on) {
-                for (int p = 0; p < VIM; p++) {
-                  for (int q = 0; q < VIM; q++) {
+                for (int p = 0; p < 2; p++) {
+                  for (int q = 0; q < 2; q++) {
                     diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * Pi[q][p];
                   }
                 }
@@ -4271,8 +4271,8 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
 
               dbl diffusion = 0.;
               if (diffusion_on) {
-                for (int p = 0; p < VIM; p++) {
-                  for (int q = 0; q < VIM; q++) {
+                for (int p = 0; p < 2; p++) {
+                  for (int q = 0; q < 2; q++) {
                     diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * d_Pi.T[q][p][j];
                   }
                 }
@@ -4311,8 +4311,8 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
 
                 dbl diffusion = 0.;
                 if (diffusion_on) {
-                  for (int p = 0; p < VIM; p++) {
-                    for (int q = 0; q < VIM; q++) {
+                  for (int p = 0; p < 2; p++) {
+                    for (int q = 0; q < 2; q++) {
                       diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * d_Pi.v[q][p][b][j];
                     }
                   }
@@ -4355,17 +4355,17 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
                 dbl advection = 0.;
                 if (advection_on) {
                   dbl advection_a = 0.;
-                  for (int p = 0; p < WIM; p++) {
+                  for (int p = 0; p < 2; p++) {
                     advection_a += (fv->v[p] - fv_dot->x[p]) * fv->d_grad_v_dmesh[p][a][b][j];
                   }
                   advection_a *= -wt_func * rho * d_area;
 
                   dbl advection_b = 0.;
-                  for (int p = 0; p < WIM; p++) {
+                  for (int p = 0; p < 2; p++) {
                     advection_b += (fv->v[p] - fv_dot->x[p]) * fv->grad_v[p][a];
                   }
                   dbl advection_c = 0.;
-                  for (int p = 0; p < WIM; p++) {
+                  for (int p = 0; p < 2; p++) {
                     advection_c += (-(1. + 2. * tt) * bf[var]->phi[j] / dt * (double)delta(p, b)) *
                                    fv->grad_v[p][a];
                   }
@@ -4378,8 +4378,8 @@ int assemble_momentum_film_cast(dbl time,       /* current time */
                 dbl diffusion = 0.;
                 if (diffusion_on) {
                   dbl diffusion_b = 0.;
-                  for (int p = 0; p < VIM; p++) {
-                    for (int q = 0; q < VIM; q++) {
+                  for (int p = 0; p < 2; p++) {
+                    for (int q = 0; q < 2; q++) {
                       diffusion += bf[eqn]->grad_phi_e[i][a][p][q] * Pi[q][p];
                       diffusion_b += bf[eqn]->grad_phi_e[i][a][p][q] * d_Pi.X[q][p][b][j] +
                                      bf[eqn]->d_grad_phi_e_dmesh[i][a][p][q][b][j] * Pi[q][p];

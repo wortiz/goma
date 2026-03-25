@@ -753,8 +753,6 @@ double arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
                                   dbl gamma_dot[DIM][DIM], /* strain rate tensor */
                                   VISCOSITY_DEPENDENCE_STRUCT *d_mu) {
 
-  dbl a, c, d;
-
   dbl eta0 = gn_local->mu0;
 
   dbl T;

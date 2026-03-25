@@ -1475,11 +1475,15 @@ Revised:         Summer 1998, SY Tam (UNM)
         GOMA_EH(GOMA_ERROR,
                 "Film height equation on but evss model not set to NOPOLYMER or EVSS_FILM_HEIGHT");
       } else {
+#ifdef GOMA_ENABLE_SACADO
         if (upd->AutoDiff) {
           err = ad_assemble_film_height_stress(theta, delta_t, &pg_data);
         } else {
           GOMA_EH(GOMA_ERROR, "EVSS_FILM_HEIGHT requires autodiff assembly");
         }
+#else
+        GOMA_EH(GOMA_ERROR, "EVSS_FILM_HEIGHT requires Goma to be compiled with Sacado support");
+#endif
         GOMA_EH(err, "assemble_film_height_stress");
 #ifdef CHECK_FINITE
         err = CHECKFINITE("assemble_film_height_stress");
@@ -1616,7 +1620,15 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (gn->ConstitutiveEquation == BINGHAM_MIXED) {
         err = assemble_rate_of_strain(theta, delta_t);
       } else if (pd->gv[FILM_HEIGHT]) {
-        err = ad_assemble_film_height_grad_v();
+#ifdef GOMA_ENABLE_SACADO
+        if (upd->AutoDiff) {
+          err = ad_assemble_film_height_grad_v();
+        } else {
+          GOMA_EH(GOMA_ERROR, "FILM_HEIGHT GRADIENT equations requires autodiff assembly");
+        }
+#else
+        GOMA_EH(GOMA_ERROR, "FILM_HEIGHT requires Goma to be compiled with Sacado support");
+#endif
       } else {
         err = assemble_gradient(theta, delta_t);
       }

@@ -2318,7 +2318,7 @@ void noahs_ark(void) {
       ddd_add_member(n, &ve_glob[i][mode]->gn->atexp, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->gn->atexpModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->gn->T_shift, 1, MPI_DOUBLE);
-      ddd_add_member(n, &ve_glob[i][mode]->gn->T_shift_Model, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->gn->T_shift_Model, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->gn->tau_y, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->gn->tau_yModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->gn->fexp, 1, MPI_DOUBLE);

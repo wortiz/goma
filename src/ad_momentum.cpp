@@ -1813,11 +1813,6 @@ int ad_assemble_film_height(dbl time, /* current time */
 ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
                                       ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
 
-  int a, b;
-  int mdofs = 0, vdofs;
-
-  int i, j;
-
   ADType gammadot; /* strain rate invariant */
 
   ADType val, val1, val2;
@@ -1827,12 +1822,6 @@ ADType ad_carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   ADType nexp;
   ADType aexp;
   ADType lambda;
-
-  vdofs = ei[pg->imtrx]->dof[VELOCITY1];
-
-  if (pd->e[pg->imtrx][R_MESH1]) {
-    mdofs = ei[pg->imtrx]->dof[R_MESH1];
-  }
 
   ad_calc_shearrate(gammadot, gamma_dot);
 
@@ -1910,8 +1899,6 @@ ADType ad_arrhenius_viscosity(struct Generalized_Newtonian *gn_local, ADType gam
 }
 ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
                                      ADType gamma_dot[DIM][DIM]) {
-
-  dbl a, c, d;
 
   dbl eta0 = gn_local->mu0;
   dbl atexp = gn_local->atexp;
