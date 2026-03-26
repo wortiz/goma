@@ -29,6 +29,7 @@
 
 #include "ac_particles.h"
 #include "ac_stability_util.h"
+#include "adapt/adapt_mmg.h"
 #ifdef GOMA_ENABLE_AZTEC
 #include "az_aztec.h"
 #endif
@@ -1741,6 +1742,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       } else {
         DPRINTF(stderr, "skipping predict_solution at time: %g %d\n", time1, nonconv_roll);
       }
+              if (ls != NULL && ls->adapt) {
+                adapt_mesh_with_mmg(exo, dpi, rd, pg->imtrx, ams, &x, &x_old, &x_older, &x_oldest, &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1, theta, delta_t, gvec_elem, false);
+    numProcUnknowns = NumUnknowns[0] + NumExtUnknowns[0];
+  num_total_nodes = dpi->num_universe_nodes;
+                last_adapt_nt = nt;
+              }
 
 #ifdef LASER_RAYTRACE
       if (ls != NULL) {
@@ -2092,6 +2099,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                            exo, dpi);
             nprint++;
 #endif
+              if (ls != NULL && ls->adapt) {
+                adapt_mesh_with_mmg(exo, dpi, rd, pg->imtrx, ams, &x, &x_old, &x_older, &x_oldest, &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1, theta, delta_t, gvec_elem,false);
+    numProcUnknowns = NumUnknowns[0] + NumExtUnknowns[0];
+  num_total_nodes = dpi->num_universe_nodes;
+                last_adapt_nt = nt;
+              }
 
             if (ls != NULL && ls->Interface_Output == TRUE) {
               print_point_list(x, exo, ls->output_file, time);

@@ -12,6 +12,7 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
+#include "adapt/adapt_mmg.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1538,6 +1539,12 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                                           num_total_nodes, ls->init_surf_list, time1, theta,
                                           delta_t);
               }
+
+              // if (ls != NULL && ls->adapt) {
+              //   adapt_mesh_with_mmg(exo, dpi, rd[0], pg->imtrx, x[pg->imtrx],
+              //              xdot[pg->imtrx], time1, theta, delta_t, false);
+              //   last_adapt_nt = nt;
+              // }
 
               /*
                * Now, that we have a predicted solution for the current

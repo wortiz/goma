@@ -306,10 +306,10 @@ double height_function_model(double *H_U,
     // Define factors
     dbl n = (h2 - h1) / (x2 - x1);
     dbl f = h1 + n * (x - x1);
-    dbl z1 = 0.5 + atan(p * (x - x1)) / PI;
-    dbl z2 = 0.5 + atan(p * (x - x2)) / PI;
-    dbl z1_x = p / (PI * (pp * xx - 2 * pp * x1 * x + pp * xx1 + 1));
-    dbl z2_x = p / (PI * (pp * xx - 2 * pp * x2 * x + pp * xx2 + 1));
+    dbl z1 = 0.5 + atan(p * (x - x1)) / M_PI;
+    dbl z2 = 0.5 + atan(p * (x - x2)) / M_PI;
+    dbl z1_x = p / (M_PI * (pp * xx - 2 * pp * x1 * x + pp * xx1 + 1));
+    dbl z2_x = p / (M_PI * (pp * xx - 2 * pp * x2 * x + pp * xx2 + 1));
 
     // Assemble
     *H_U = (1 - z1) * h1 + z1 * (1 - z2) * f + z2 * h2;
@@ -360,7 +360,7 @@ double height_function_model(double *H_U,
     if (x > 0) {
       theta = acos(y / Ri);
     } else {
-      theta = 2 * PI - acos(y / Ri);
+      theta = 2 * M_PI - acos(y / Ri);
     }
 
     // Calculate height and slopes
@@ -706,8 +706,8 @@ double height_function_model(double *H_U,
         exp_plusd = -alpha * (1. - exp_plus);
         exp_plus2 = pow(exp_plus, pl_fact);
         if (F_prime <= 1.) {
-          H_prime = 0.5 * (1. + F_prime + sin(PI * F_prime) / PI);
-          dH_prime = (1. + cos(PI * F_prime)) * inv_F_str / ls->Length_Scale;
+          H_prime = 0.5 * (1. + F_prime + sin(M_PI * F_prime) / M_PI);
+          dH_prime = (1. + cos(M_PI * F_prime)) * inv_F_str / ls->Length_Scale;
         } else if (F_prime <= -1.) {
           H_prime = 0.0;
         } else {

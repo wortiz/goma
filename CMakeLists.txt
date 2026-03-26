@@ -199,6 +199,7 @@ if(ENABLE_APREPRO_LIB)
   endif()
 endif()
 
+
 message(STATUS "PETSC_DIR = $ENV{PETSC_DIR}")
 option(ENABLE_PETSC "ENABLE_PETSC" ON)
 if(ENABLE_PETSC)
@@ -332,6 +333,20 @@ if(ENABLE_SPARSE)
 else()
   message(STATUS "Sparse library disabled.")
   set(Sparse_INCLUDES "")
+endif()
+option(ENABLE_MMG "ENABLE_MMG" ON)
+if(ENABLE_MMG)
+  FIND_PACKAGE(MMG)
+  list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_MMG)
+  list(APPEND GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} ${MMG_LIBRARIES})
+  list(APPEND GOMA_TPL_INCLUDES ${MMG_INCLUDE_DIRS})
+  if(MMG_FOUND)
+    message(STATUS "mmg library found, enabling")
+  else()
+    message(STATUS "mmg library not found, disabling")
+  endif()
+else()
+  message(STATUS "mmg library disabled")
 endif()
 
 option(ENABLE_METIS "ENABLE_METIS" ON)
@@ -490,6 +505,8 @@ set(GOMA_INCLUDES
     include/ac_stability.h
     include/ac_stability_util.h
     include/ac_update_parameter.h
+    include/adapt/adapt_mmg.h
+    include/adapt/resetup_problem.h
     include/ad_turbulence.h
     include/ad_porous.h
     include/ad_momentum.h
@@ -655,6 +672,8 @@ set(GOMA_SOURCES
     src/ac_stability.c
     src/ac_stability_util.c
     src/ac_update_parameter.c
+    src/adapt/adapt_mmg.cpp
+    src/adapt/resetup_problem.c
     src/ad_turbulence.cpp
     src/ad_porous.cpp
     src/ad_momentum.cpp

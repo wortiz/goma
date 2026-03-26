@@ -192,10 +192,6 @@
 #define M_PIE M_PI
 #endif
 
-#ifndef PI
-#define PI M_PI
-#endif
-
 #define delta(m, n) ((m) == (n) ? 1 : 0) /* Kroenecker delta */
 // NOLINTBEGIN(bugprone-integer-division)
 #define permute(i, j, k) \
