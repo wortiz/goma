@@ -25,6 +25,7 @@
 #include "rf_util.h"
 #include "rf_vars_const.h"
 #include "sl_util_structs.h"
+#include "el_geom.h"
 
 int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
                     Dpi *dpi)    /* distributed processing information */
@@ -184,6 +185,7 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
 
   /* Communicate non-shared but needed BC information */
   //  exchange_bc_info();
+  Num_Node = exo->num_nodes;
 
   return 0;
 }

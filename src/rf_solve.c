@@ -1742,17 +1742,30 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       } else {
         DPRINTF(stderr, "skipping predict_solution at time: %g %d\n", time1, nonconv_roll);
       }
-              if (ls != NULL && ls->adapt) {
-                adapt_mesh_with_mmg(exo, dpi, rd, pg->imtrx, ams, &x, &x_old, &x_older, &x_oldest, &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1, theta, delta_t, gvec_elem, false);
-    numProcUnknowns = NumUnknowns[0] + NumExtUnknowns[0];
-  num_total_nodes = dpi->num_universe_nodes;
-                last_adapt_nt = nt;
-              }
+      if (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0) {
+        adapt_mesh_with_mmg(exo, dpi, rd, pg->imtrx, ams, &x, &x_old, &x_older, &x_oldest,
+                            &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1, theta,
+                            delta_t, gvec_elem, false);
+        numProcUnknowns = NumUnknowns[0] + NumExtUnknowns[0];
+        realloc_dbl_1(&x_pred, numProcUnknowns, 0);
+        realloc_dbl_1(&x_save, numProcUnknowns, 0);
+        realloc_dbl_1(&xdot_save, numProcUnknowns, 0);
+        num_total_nodes = dpi->num_universe_nodes;
+        last_adapt_nt = nt;
+        zero_dbl_1(xdot, numProcUnknowns);
+        zero_dbl_1(xdot_old, numProcUnknowns);
+        zero_dbl_1(xdot_older, numProcUnknowns);
+        zero_dbl_1(x_old, numProcUnknowns);
+        zero_dbl_1(x_older, numProcUnknowns);
+        zero_dbl_1(x_oldest, numProcUnknowns);
+
+      }
+
 
 #ifdef LASER_RAYTRACE
       if (ls != NULL) {
-        double (*point0)[DIM] = NULL;
-        double (*point1)[DIM] = NULL;
+        double(*point0)[DIM] = NULL;
+        double(*point1)[DIM] = NULL;
         int *owning_elem = NULL;
         int facet, num_facets;
 
@@ -1839,7 +1852,6 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       dcopy1(numProcUnknowns, x, x_pred);
       if (nAC > 0)
         dcopy1(nAC, x_AC, x_AC_pred);
-
 
       numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
       /*
@@ -2099,12 +2111,17 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                            exo, dpi);
             nprint++;
 #endif
-              if (ls != NULL && ls->adapt) {
-                adapt_mesh_with_mmg(exo, dpi, rd, pg->imtrx, ams, &x, &x_old, &x_older, &x_oldest, &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1, theta, delta_t, gvec_elem,false);
-    numProcUnknowns = NumUnknowns[0] + NumExtUnknowns[0];
-  num_total_nodes = dpi->num_universe_nodes;
-                last_adapt_nt = nt;
-              }
+            // if (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0) {
+            //   adapt_mesh_with_mmg(exo, dpi, rd, pg->imtrx, ams, &x, &x_old, &x_older, &x_oldest,
+            //                       &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1, theta,
+            //                       delta_t, gvec_elem, false);
+            //   numProcUnknowns = NumUnknowns[0] + NumExtUnknowns[0];
+            //   num_total_nodes = dpi->num_universe_nodes;
+            //   realloc_dbl_1(&x_pred, numProcUnknowns, 0);
+            //   realloc_dbl_1(&x_save, numProcUnknowns, 0);
+            //   realloc_dbl_1(&xdot_save, numProcUnknowns, 0);
+            //   last_adapt_nt = nt;
+            // }
 
             if (ls != NULL && ls->Interface_Output == TRUE) {
               print_point_list(x, exo, ls->output_file, time);
