@@ -38,6 +38,8 @@ default_packages = [
     "petsc_complex",
     "sparse",
     "catch2",
+    "mmg",
+    "parmmg"
 ]
 
 
