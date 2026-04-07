@@ -81,19 +81,20 @@ extern Comm_Ex **cx;
 
 std::optional<std::array<double, 3>> triangle_linear_interp(
     double x, double y, double x1, double y1, double x2, double y2, double x3, double y3) {
-  std::array<double, 3> weights;
-  double w1 = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) /
-              ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
-  double w2 = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) /
-              ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
-  double w3 = 1.0 - w1 - w2;
-  weights[0] = w1;
-  weights[1] = w2;
-  weights[2] = w3;
-  if (w1 < 0 || w2 < 0 || w3 < 0) {
+  const double denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
+  const double scale = std::max({std::abs(x1 - x3), std::abs(x2 - x3), std::abs(y1 - y3),
+                                 std::abs(y2 - y3), 1.0});
+  const double tol = 1e-12 * scale * scale;
+  if (std::abs(denom) <= tol) {
     return {};
   }
-  return weights;
+  double w1 = ((y2 - y3) * (x - x3) + (x3 - x2) * (y - y3)) / denom;
+  double w2 = ((y3 - y1) * (x - x3) + (x1 - x3) * (y - y3)) / denom;
+  double w3 = 1.0 - w1 - w2;
+  if (w1 < -tol || w2 < -tol || w3 < -tol) {
+    return {};
+  }
+  return std::array<double, 3>{w1, w2, w3};
 }
 
 bool tetrahedron_linear_interp(double x,
@@ -442,7 +443,6 @@ void interp_solution_to_new_mesh_3d(Exo_DB *exo,
       }
     }
 
-    int nearest_node_id = -1;
     if (!found) {
       const int nearest_results = 1;
       std::vector<size_t> nearest_index(nearest_results);
@@ -699,7 +699,7 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
    */
   Exo_DB exo_base_s;
   Exo_DB *exo_base = &exo_base_s;
-  exo_base->num_elem_blocks = 1;
+  exo_base->num_elem_blocks = exo->num_elem_blocks;
   exo_base->eb_id = (int *)malloc(sizeof(int) * exo_base->num_elem_blocks);
   exo_base->eb_elem_type = (char **)malloc(sizeof(char *) * exo_base->num_elem_blocks);
   exo_base->eb_num_elems = (int *)malloc(sizeof(int) * exo_base->num_elem_blocks);
@@ -834,6 +834,9 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
   free(facesNew);
   free(x_coord);
   free(y_coord);
+  free(exo_base->eb_id);
+  free(exo_base->eb_elem_type);
+  free(exo_base->eb_num_elems);
 }
 
 void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
@@ -1192,6 +1195,9 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
         break;
       }
     }
+    if (vdex == -1) {
+      GOMA_EH(GOMA_ERROR, "Level set variable not found in Goma");
+    }
     std::vector<double> ls_values(np);
     err = ex_get_var(exoII_id, time_step, EX_NODAL, vdex + 1, 1, np, ls_values.data());
     CHECK_EX_ERROR(err, "ex_get_var");
@@ -1251,19 +1257,6 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
   }
   free(idv);
   idv = NULL;
-
-  free_Surf_BC(First_Elem_Side_BC_Array, exo);
-  free_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
-  free_nodes();
-  if (Num_Proc == 1) {
-    free_dpi_uni(dpi);
-  } else {
-    free_dpi(dpi);
-  }
-  free_exo(exo);
-  init_exo_struct(exo);
-  init_dpi_struct(dpi);
-
   if (rotation_allocated) {
     for (int i = 0; i < exo->num_nodes; i++) {
       for (int j = 0; j < NUM_VECTOR_EQUATIONS; j++) {
@@ -1278,6 +1271,19 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
     local_ROT_list = NULL;
     rotation_allocated = FALSE;
   }
+
+  free_Surf_BC(First_Elem_Side_BC_Array, exo);
+  free_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
+  free_nodes();
+  if (Num_Proc == 1) {
+    free_dpi_uni(dpi);
+  } else {
+    free_dpi(dpi);
+  }
+  free_exo(exo);
+  init_exo_struct(exo);
+  init_dpi_struct(dpi);
+
 
   if (goma_automatic_rotations.rotation_nodes != NULL) {
     for (int i = 0; i < exo->num_nodes; i++) {
@@ -1405,5 +1411,8 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
       MMG3D_Free_all(MMG5_ARG_start, MMG5_ARG_ppMesh, &mmgMesh, MMG5_ARG_ppMet, &mmgSol,
                      MMG5_ARG_end);
     }
+  }
+  if (Num_Proc > 1) {
+    free(exo_central);
   }
 }
