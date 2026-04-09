@@ -1801,6 +1801,10 @@ void init_exo_struct(Exo_DB *x) {
   x->ss_elem_len = 0;
   x->ss_elem_list = NULL;
   x->ss_side_list = NULL;
+  x->ns_node_len = 0;
+  x->ns_node_list = NULL;
+  x->ns_distfact_len = 0;
+  x->ns_distfact_list = NULL;
 
   x->base_mesh = NULL;
   x->elem_var_tab = NULL;

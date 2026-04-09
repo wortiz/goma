@@ -1753,6 +1753,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         realloc_dbl_1(&x_pred, numProcUnknowns, 0);
         realloc_dbl_1(&x_save, numProcUnknowns, 0);
         realloc_dbl_1(&xdot_save, numProcUnknowns, 0);
+        realloc_dbl_1(&xdot_older, numProcUnknowns, 0);
         num_total_nodes = dpi->num_universe_nodes;
         last_adapt_nt = nt;
         zero_dbl_1(xdot, numProcUnknowns);

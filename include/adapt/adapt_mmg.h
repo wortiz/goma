@@ -9,6 +9,7 @@ extern "C" {
 #include "exo_struct.h"
 #include "dpi.h"
 #include "rf_io_structs.h"
+#include "sl_util_structs.h"
 void adapt_mesh_with_mmg(Exo_DB *exo,
                          Dpi *dpi,
                          struct Results_Description *rd,

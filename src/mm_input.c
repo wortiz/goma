@@ -2127,7 +2127,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, ls->adapt_freq);
       } else {
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", "Level Set Adapt Outer Size",
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", "Level Set Adapt Frequency",
                  ls->adapt_freq, default_string);
       }
 

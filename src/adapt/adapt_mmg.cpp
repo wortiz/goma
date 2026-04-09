@@ -975,6 +975,7 @@ void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
   }
 
   for (int ns = 0; ns < exo->num_node_sets; ns++) {
+    if (exo->ns_num_nodes[ns] == 1) {
     std::vector<int> node_set;
     int ns_id = exo->ns_id[ns];
     for (int i = 0; i < numVerticesNew; i++) {
@@ -993,6 +994,7 @@ void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
       status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
       GOMA_EH(status, "ex_put_set_dist_fact node set");
     }
+  }
   }
 
   int num_vars = rd->nnv;
@@ -1050,6 +1052,7 @@ Exo_DB *collect_mesh(Exo_DB *exo,
                      double theta,
                      double delta_t) {
   Exo_DB *exo_central = (Exo_DB *)malloc(sizeof(Exo_DB));
+  init_exo_struct(exo_central);
   exo_central->base_mesh = NULL;
   Dpi *dpi_central = (Dpi *)malloc(sizeof(Dpi));
   // Here you would implement the logic to gather the mesh data from all processes
@@ -1111,12 +1114,14 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
    * MMG5_ARG_ppMet: next arg will be a pointer over a MMG5_pSol storing a metric
    * &mmgSol: pointer toward your MMG5_pSol (that store your metric) */
 
-  Exo_DB *exo_central = exo;
+  Exo_DB *exo_central = NULL;
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  if (ProcID == 0) {
+    exo_central = exo;
   if (Num_Proc > 1) {
     exo_central = collect_mesh(exo, dpi, imtrx, x, xdot, time1, theta, delta_t);
   }
-
-  if (ProcID == 0) {
 
     mmgMesh = NULL;
     mmgSol = NULL;
@@ -1275,15 +1280,6 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
   free_Surf_BC(First_Elem_Side_BC_Array, exo);
   free_Edge_BC(First_Elem_Edge_BC_Array, exo, dpi);
   free_nodes();
-  if (Num_Proc == 1) {
-    free_dpi_uni(dpi);
-  } else {
-    free_dpi(dpi);
-  }
-  free_exo(exo);
-  init_exo_struct(exo);
-  init_dpi_struct(dpi);
-
 
   if (goma_automatic_rotations.rotation_nodes != NULL) {
     for (int i = 0; i < exo->num_nodes; i++) {
@@ -1303,7 +1299,7 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
 
   static bool first_call = true;
   static std::string base_name;
-  static int step = 0;
+  static int step = 1;
 
   if (first_call) {
     base_name = std::string(ExoFileOutMono);
@@ -1345,6 +1341,15 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
   if (Num_Proc > 1 && ProcID == 0) {
     goma_metis_decomposition(mmg_files.data(), 1);
   }
+
+  if (Num_Proc == 1) {
+    free_dpi_uni(dpi);
+  } else {
+    free_dpi(dpi);
+  }
+  free_exo(exo);
+  init_exo_struct(exo);
+  init_dpi_struct(dpi);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
