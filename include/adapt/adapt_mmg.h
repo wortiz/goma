@@ -5,9 +5,8 @@
 extern "C" {
 #endif
 
-
-#include "exo_struct.h"
 #include "dpi.h"
+#include "exo_struct.h"
 #include "rf_io_structs.h"
 #include "sl_util_structs.h"
 void adapt_mesh_with_mmg(Exo_DB *exo,
@@ -27,11 +26,11 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
                          double time1,
                          double theta,
                          double delta_t,
- double ***gvec_elem,
+                         double ***gvec_elem,
                          bool mapvar);
 
 #ifdef __cplusplus
-}   /* extern "C" */
+} /* extern "C" */
 #endif
 
 #endif /* GOMA_ADAPT_MMG_H */

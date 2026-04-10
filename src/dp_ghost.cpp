@@ -707,8 +707,8 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   exo->ns_distfact_len = total_ns_nodes;
 
   if (exo->ns_node_len > 0) {
-  int_ptr = (int *)realloc(exo->ns_node_list, sizeof(int) * exo->ns_node_len);
-  GOMA_ASSERT(int_ptr != NULL);
+    int_ptr = (int *)realloc(exo->ns_node_list, sizeof(int) * exo->ns_node_len);
+    GOMA_ASSERT(int_ptr != NULL);
   } else {
     int_ptr = NULL;
   }
@@ -729,8 +729,8 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
 
   dbl *dbl_ptr = NULL;
   if (exo->ns_node_len > 0) {
-  dbl_ptr = (dbl *)realloc(exo->ns_distfact_list, sizeof(dbl) * exo->ns_node_len);
-  GOMA_ASSERT(dbl_ptr != NULL);
+    dbl_ptr = (dbl *)realloc(exo->ns_distfact_list, sizeof(dbl) * exo->ns_node_len);
+    GOMA_ASSERT(dbl_ptr != NULL);
   }
   exo->ns_distfact_list = dbl_ptr;
 

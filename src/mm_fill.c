@@ -1173,13 +1173,13 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif /* CHECK_FINITE */
       } else if (tran->Fill_Equation == FILL_EQN_ADVECT) {
         if (ls->Formulation == LS_FORMULATION_DISTANCE) {
-        err = assemble_fill(theta, delta_t, &pg_data, R_FILL, xi, exo, time_value,
-                            &mass_lumped_penalty);
-        GOMA_EH(err, "assemble_fill");
+          err = assemble_fill(theta, delta_t, &pg_data, R_FILL, xi, exo, time_value,
+                              &mass_lumped_penalty);
+          GOMA_EH(err, "assemble_fill");
         } else if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
-        err = assemble_fill(theta, delta_t, &pg_data, R_FILL, xi, exo, time_value,
-                            &mass_lumped_penalty);
-        GOMA_EH(err, "assemble_fill_conservative");
+          err = assemble_fill(theta, delta_t, &pg_data, R_FILL, xi, exo, time_value,
+                              &mass_lumped_penalty);
+          GOMA_EH(err, "assemble_fill_conservative");
         } else {
           GOMA_EH(GOMA_ERROR, "Unrecognized level set formulation in fill assembly");
         }

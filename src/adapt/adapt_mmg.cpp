@@ -82,8 +82,8 @@ extern Comm_Ex **cx;
 std::optional<std::array<double, 3>> triangle_linear_interp(
     double x, double y, double x1, double y1, double x2, double y2, double x3, double y3) {
   const double denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
-  const double scale = std::max({std::abs(x1 - x3), std::abs(x2 - x3), std::abs(y1 - y3),
-                                 std::abs(y2 - y3), 1.0});
+  const double scale =
+      std::max({std::abs(x1 - x3), std::abs(x2 - x3), std::abs(y1 - y3), std::abs(y2 - y3), 1.0});
   const double tol = 1e-12 * scale * scale;
   if (std::abs(denom) <= tol) {
     return {};
@@ -396,7 +396,7 @@ void interp_solution_to_new_mesh_3d(Exo_DB *exo,
   std::vector<std::vector<double>> old_values_list(num_nodal_vars);
   for (int var = 0; var < num_nodal_vars; var++) {
     old_values_list[var].resize(exo->num_nodes);
-    err = ex_get_var(old_exoid, 1, EX_NODAL, var + 1, 1, old_values_list[var].size(),
+    err = ex_get_var(old_exoid, time_step, EX_NODAL, var + 1, 1, old_values_list[var].size(),
                      old_values_list[var].data());
   }
   ex_close(old_exoid);
@@ -976,25 +976,26 @@ void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
 
   for (int ns = 0; ns < exo->num_node_sets; ns++) {
     if (exo->ns_num_nodes[ns] == 1) {
-    std::vector<int> node_set;
-    int ns_id = exo->ns_id[ns];
-    for (int i = 0; i < numVerticesNew; i++) {
-      if (verTagsNew[i] == ns_id) {
-        node_set.push_back(i + 1);
+      std::vector<int> node_set;
+      int ns_id = exo->ns_id[ns];
+      for (int i = 0; i < numVerticesNew; i++) {
+        if (verTagsNew[i] == ns_id) {
+          node_set.push_back(i + 1);
+        }
+      }
+      if (node_set.size() == 1) {
+        std::vector<double> node_set_dist(node_set.size());
+        std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
+        status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
+                                  node_set.size());
+        GOMA_EH(status, "ex_put_set_param node set");
+        status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
+        GOMA_EH(status, "ex_put_set node set");
+        status =
+            ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
+        GOMA_EH(status, "ex_put_set_dist_fact node set");
       }
     }
-    if (node_set.size() == 1) {
-      std::vector<double> node_set_dist(node_set.size());
-      std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
-      status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
-                                node_set.size());
-      GOMA_EH(status, "ex_put_set_param node set");
-      status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
-      GOMA_EH(status, "ex_put_set node set");
-      status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
-      GOMA_EH(status, "ex_put_set_dist_fact node set");
-    }
-  }
   }
 
   int num_vars = rd->nnv;
@@ -1119,9 +1120,9 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
 
   if (ProcID == 0) {
     exo_central = exo;
-  if (Num_Proc > 1) {
-    exo_central = collect_mesh(exo, dpi, imtrx, x, xdot, time1, theta, delta_t);
-  }
+    if (Num_Proc > 1) {
+      exo_central = collect_mesh(exo, dpi, imtrx, x, xdot, time1, theta, delta_t);
+    }
 
     mmgMesh = NULL;
     mmgSol = NULL;
@@ -1253,7 +1254,8 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
     if (exo->num_dim == 2) {
       mmg_convert_to_exodus(&mmgMesh, rd, exo, dpi, imtrx, x, xdot, time1, theta, delta_t);
     } else {
-      mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, imtrx, x, xdot, time1, theta, delta_t);
+      mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, imtrx, x, xdot, time1, theta,
+                               delta_t);
     }
   }
 

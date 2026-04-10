@@ -10,6 +10,7 @@
 #include "dp_map_comm_vec.h"
 #include "dp_types.h"
 #include "dpi.h"
+#include "el_geom.h"
 #include "linalg/sparse_matrix.h"
 #include "mm_as.h"
 #include "mm_as_structs.h"
@@ -25,7 +26,6 @@
 #include "rf_util.h"
 #include "rf_vars_const.h"
 #include "sl_util_structs.h"
-#include "el_geom.h"
 
 int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
                     Dpi *dpi)    /* distributed processing information */

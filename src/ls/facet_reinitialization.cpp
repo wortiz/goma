@@ -351,9 +351,9 @@ static void facet_based_reinitialization_3D(
       break;
     }
     dbl contour = 0.0;
-      if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
-        contour = 0.5;
-      }
+    if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
+      contour = 0.5;
+    }
 
     for (int elem = exo->eb_ptr[elem_block]; elem < exo->eb_ptr[elem_block + 1]; elem++) {
       // If the level set interface exists on that element we will compute facets for that element.
@@ -587,7 +587,7 @@ static void facet_based_reinitialization_3D(
         double orientation = x[index_ls] <= 0.5 ? -1.0 : 1.0;
         x[index_ls] = 0.5 * (1 + tanh(orientation * min_distance / (2 * ls->Length_Scale)));
       } else {
-      x[index_ls] = std::copysign(min_distance, x[index_ls]);
+        x[index_ls] = std::copysign(min_distance, x[index_ls]);
       }
     }
   }
@@ -750,7 +750,6 @@ static void facet_based_reinitialization_2D(
     }
   }
 
-
   // We will share our facets with other processors
   // pack facets into a vector
   std::vector<double> facet_data(facets.size() * 4);
@@ -784,13 +783,13 @@ static void facet_based_reinitialization_2D(
   }
   if (ProcID == 0) {
     std::string filename = "facets_" + std::to_string(tran->time_value) + ".txt";
-   std::ofstream file(filename);
-   file << "x,y\n";
-   for (size_t i = 0; i < facets.size(); i++) {
-     file << facets[i].p0[0] << "," << facets[i].p0[1] << "\n"
-          << facets[i].p1[0] << "," << facets[i].p1[1] << "\n";
-   }
-   file.close();
+    std::ofstream file(filename);
+    file << "x,y\n";
+    for (size_t i = 0; i < facets.size(); i++) {
+      file << facets[i].p0[0] << "," << facets[i].p0[1] << "\n"
+           << facets[i].p1[0] << "," << facets[i].p1[1] << "\n";
+    }
+    file.close();
   }
 
   // std::exit(0);
@@ -849,7 +848,7 @@ static void facet_based_reinitialization_2D(
         double orientation = x[index_ls] <= 0.5 ? -1.0 : 1.0;
         x[index_ls] = 0.5 * (1 + tanh(orientation * min_distance / (2 * ls->Length_Scale)));
       } else {
-      x[index_ls] = std::copysign(min_distance, x[index_ls]);
+        x[index_ls] = std::copysign(min_distance, x[index_ls]);
       }
     }
   }

@@ -1260,7 +1260,6 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     if (Particle_Dynamics)
       initialize_particles(exo, x, x_old, xdot, xdot_old, resid_vector);
 
-
     /*
      * In order to write an updated final solution, one extra call
      * is made to solve_problem just to call write_solution.
@@ -1605,24 +1604,24 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         exchange_dof(cx[0], dpi, x_oldest, 0);
       }
 
-    /*
-     * Write out the initial solution to an ascii file
-     * and to the exodus output file, if requested to do so by
-     * an optional flag in the input file
-     *  -> Helpful in debugging what's going on.
-     */
-    if (Write_Initial_Solution) {
-      Write_Initial_Solution = 0; /* Only do this once */
-      if (file != NULL) {
-        error = write_ascii_soln(x, resid_vector, numProcUnknowns, x_AC, nAC, time, file);
-        if (error != 0)
-          DPRINTF(stderr, "%s:  error writing ASCII soln file\n", yo);
+      /*
+       * Write out the initial solution to an ascii file
+       * and to the exodus output file, if requested to do so by
+       * an optional flag in the input file
+       *  -> Helpful in debugging what's going on.
+       */
+      if (Write_Initial_Solution) {
+        Write_Initial_Solution = 0; /* Only do this once */
+        if (file != NULL) {
+          error = write_ascii_soln(x, resid_vector, numProcUnknowns, x_AC, nAC, time, file);
+          if (error != 0)
+            DPRINTF(stderr, "%s:  error writing ASCII soln file\n", yo);
+        }
+        (void)write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
+                             tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
+                             exo, dpi);
+        nprint++;
       }
-      (void)write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev,
-                           tev_post, gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time, x_pp,
-                           exo, dpi);
-      nprint++;
-    }
 
       ls_old = ls;
       if (upd->vp[pg->imtrx][PHASE1] > -1 && nt == 0) { /* Start of Phase Function initialization */
@@ -1765,21 +1764,20 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
         const_delta_t = 1.0;
         realloc_dbl_1(&gvec, Num_Node, 0);
-                x_pred_static = x_pred;
+        x_pred_static = x_pred;
         if (nt == 0) {
           if (ls->Num_Var_Init > 0)
             ls_var_initialization(&x, exo, dpi, cx);
         }
         nullify_dirichlet_bcs();
         find_and_set_Dirichlet(x, xdot, exo, dpi);
-                nprint = 0;
+        nprint = 0;
       }
-
 
 #ifdef LASER_RAYTRACE
       if (ls != NULL) {
-        double(*point0)[DIM] = NULL;
-        double(*point1)[DIM] = NULL;
+        double (*point0)[DIM] = NULL;
+        double (*point1)[DIM] = NULL;
         int *owning_elem = NULL;
         int facet, num_facets;
 
@@ -2127,8 +2125,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 #endif
             // if (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0) {
             //   adapt_mesh_with_mmg(exo, dpi, rd, pg->imtrx, ams, &x, &x_old, &x_older, &x_oldest,
-            //                       &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1, theta,
-            //                       delta_t, gvec_elem, false);
+            //                       &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1,
+            //                       theta, delta_t, gvec_elem, false);
             //   numProcUnknowns = NumUnknowns[0] + NumExtUnknowns[0];
             //   num_total_nodes = dpi->num_universe_nodes;
             //   realloc_dbl_1(&x_pred, numProcUnknowns, 0);

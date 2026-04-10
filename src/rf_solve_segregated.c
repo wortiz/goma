@@ -1430,31 +1430,32 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           }
           numProcUnknowns[pg->imtrx] = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
 
-      if (ls != NULL && subcycle == 0 && ls->adapt && nt % ls->adapt_freq == 0 && last_adapt_nt != nt) {
-        int save = pg->imtrx;
-        pg->imtrx = upd->matrix_index[FILL];
-        last_adapt_nt = nt;
-        adapt_mesh_with_mmg(exo, dpi, rd[pg->imtrx], pg->imtrx, ams, x, x_old, x_older, x_oldest,
-                            x_update, xdot, xdot_old, resid_vector, scale, time1, theta,
-                            delta_t, gvec_elem[pg->imtrx], false);
-        for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-        numProcUnknowns[imtrx] = NumUnknowns[imtrx] + NumExtUnknowns[imtrx];
-        }
-        num_total_nodes = dpi->num_universe_nodes;
-        last_adapt_nt = nt;
+          if (ls != NULL && subcycle == 0 && ls->adapt && nt % ls->adapt_freq == 0 &&
+              last_adapt_nt != nt) {
+            int save = pg->imtrx;
+            pg->imtrx = upd->matrix_index[FILL];
+            last_adapt_nt = nt;
+            adapt_mesh_with_mmg(exo, dpi, rd[pg->imtrx], pg->imtrx, ams, x, x_old, x_older,
+                                x_oldest, x_update, xdot, xdot_old, resid_vector, scale, time1,
+                                theta, delta_t, gvec_elem[pg->imtrx], false);
+            for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+              numProcUnknowns[imtrx] = NumUnknowns[imtrx] + NumExtUnknowns[imtrx];
+            }
+            num_total_nodes = dpi->num_universe_nodes;
+            last_adapt_nt = nt;
 
-        const_delta_t = 1.0;
-        for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-        realloc_dbl_1(&gvec[imtrx], Num_Node, 0);
-        }
-        if (nt == 0) {
-          if (ls->Num_Var_Init > 0)
-            ls_var_initialization(x, exo, dpi, cx);
-        }
-        nullify_dirichlet_bcs();
+            const_delta_t = 1.0;
+            for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+              realloc_dbl_1(&gvec[imtrx], Num_Node, 0);
+            }
+            if (nt == 0) {
+              if (ls->Num_Var_Init > 0)
+                ls_var_initialization(x, exo, dpi, cx);
+            }
+            nullify_dirichlet_bcs();
             find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
-        pg->imtrx = save;
-      }
+            pg->imtrx = save;
+          }
           if (pg->matrix_subcycle_count[pg->imtrx] > 1) {
             double sub_time = time;
 

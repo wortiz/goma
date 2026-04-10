@@ -5460,7 +5460,7 @@ int load_lsi_conservative(const double width) {
 
   dbl tol = fmin(0.0001, alpha * 0.0001);
 
-  lsi->near = ls->on_sharp_surf || (fabs(F) < (1-tol) && fabs(F) > (0 + tol));
+  lsi->near = ls->on_sharp_surf || (fabs(F) < (1 - tol) && fabs(F) > (0 + tol));
 
   /* Calculate the interfacial functions we want to know even if not in mushy
    * zone. */
@@ -5604,7 +5604,7 @@ int load_lsi_derivs_conservative() {
     lsi->d_H_dF[j] = phi_j * lsi->dH;
 
     /* Derivative of the delta function. */
-    lsi->d_delta_dF[j] = lsi->d_gfmag_dF[j]/alpha;
+    lsi->d_delta_dF[j] = lsi->d_gfmag_dF[j] / alpha;
   } /* for: j */
 
   /*
@@ -5619,7 +5619,7 @@ int load_lsi_derivs_conservative() {
            and, hence, it doens't depend on the mesh. */
 
         /* delta */
-        lsi->d_delta_dmesh[b][j] = lsi->d_gfmag_dmesh[b][j]/alpha;
+        lsi->d_delta_dmesh[b][j] = lsi->d_gfmag_dmesh[b][j] / alpha;
 
       } /* for: j */
 
