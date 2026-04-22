@@ -2287,6 +2287,21 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       } else if (strcmp(input, "Facet_Based") == 0) {
         ls->Renorm_Method = FACET_BASED;
         strcat(echo_string, "Facet_Based");
+      } else if (strcmp(input, "Facet_Based_Negative") == 0) {
+        ls->Renorm_Method = FACET_BASED_NEGATIVE;
+        strcat(echo_string, "Facet_Based_Negative");
+
+        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+          char *s = endofstring(echo_string);
+
+          ls->Mass_Sign = I_NEG_FILL;
+          ls->Mass_Value = ls->Mass_Value;
+
+          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+        } else {
+          ls->Mass_Value = 0.0;
+          ls->Mass_Sign = I_NEG_FILL;
+        }
       } else if (strcmp(input, "Huygens_Constrained") == 0) {
 
         ls->Renorm_Method = HUYGENS_C;

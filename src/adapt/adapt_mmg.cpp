@@ -332,7 +332,7 @@ void interp_solution_to_new_mesh(Exo_DB *exo,
 
 void interp_solution_to_new_mesh_3d(Exo_DB *exo,
                                     Dpi *dpi,
-                                    struct Results_Description *rd,
+                                    struct Results_Description **rd,
                                     double **x,
                                     double **xdot,
                                     double time1,
@@ -473,7 +473,6 @@ void interp_solution_to_new_mesh_3d(Exo_DB *exo,
 
 void convert_mesh_to_mmg(Exo_DB *exo,
                          Dpi *dpi,
-                         int imtrx,
                          double **x,
                          double **xdot,
                          double time1,
@@ -556,7 +555,6 @@ void convert_mesh_to_mmg(Exo_DB *exo,
 
 void convert_mesh_to_mmg_3d(Exo_DB *exo,
                             Dpi *dpi,
-                            int imtrx,
                             double **x,
                             double **xdot,
                             double time1,
@@ -840,10 +838,9 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
 }
 
 void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
-                              struct Results_Description *rd,
+                              struct Results_Description **rd,
                               Exo_DB *exo,
                               Dpi *dpi,
-                              int imtrx,
                               double **x,
                               double **xdot,
                               double time1,
@@ -998,11 +995,17 @@ void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
     }
   }
 
-  int num_vars = rd->nnv;
+  int offset = 0;
   char *var_names[MAX_NNV];
-  for (int i = 0; i < num_vars; i++) {
-    var_names[i] = rd->nvname[i];
+  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    int num_vars = rd[imtrx]->nnv;
+    for (int i = 0; i < num_vars; i++) {
+      var_names[offset+i] = rd[imtrx]->nvname[i];
+    }
+    offset += rd[imtrx]->nnv;
   }
+  int num_vars = offset;
+
   status = ex_put_variable_param(exo->exoid, EX_NODAL, num_vars);
   GOMA_EH(status, "ex_put_variable_param EX_NODAL");
   status = ex_put_variable_names(exo->exoid, EX_NODAL, num_vars, var_names);
@@ -1078,10 +1081,9 @@ Exo_DB *collect_mesh(Exo_DB *exo,
   return exo_central;
 }
 
-void adapt_mesh_with_mmg(Exo_DB *exo,
+extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
                          Dpi *dpi,
-                         struct Results_Description *rd,
-                         int imtrx,
+                         struct Results_Description **rd,
                          struct GomaLinearSolverData **ams,
                          double **x,
                          double **x_old,
@@ -1095,9 +1097,8 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
                          double time1,
                          double theta,
                          double delta_t,
-                         double ***gvec_elem,
-                         bool mapvar) {
-
+                         double ****gvec_elem)
+{
   MMG5_pMesh mmgMesh;
   MMG5_pSol mmgSol;
   MMG5_int k, np;
@@ -1121,7 +1122,7 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
   if (ProcID == 0) {
     exo_central = exo;
     if (Num_Proc > 1) {
-      exo_central = collect_mesh(exo, dpi, imtrx, x, xdot, time1, theta, delta_t);
+      exo_central = collect_mesh(exo, dpi,0, x, xdot, time1, theta, delta_t);
     }
 
     mmgMesh = NULL;
@@ -1146,7 +1147,7 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
     /** Two solutions: just use the MMG2D_loadMet function that will read a .sol(b)
         file formatted or manually set your sol using the MMG2D_Set* functions */
     if (exo->num_dim == 2) {
-      convert_mesh_to_mmg(exo_central, dpi, imtrx, x, xdot, time1, theta, delta_t, &mmgMesh);
+      convert_mesh_to_mmg(exo_central, dpi,  x, xdot, time1, theta, delta_t, &mmgMesh);
 
       /** Manually set of the sol */
       /** a) Get np the number of vertex */
@@ -1156,7 +1157,7 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
       if (MMG2D_Set_solSize(mmgMesh, mmgSol, MMG5_Vertex, np, MMG5_Scalar) != 1)
         exit(EXIT_FAILURE);
     } else {
-      convert_mesh_to_mmg_3d(exo_central, dpi, imtrx, x, xdot, time1, theta, delta_t, &mmgMesh);
+      convert_mesh_to_mmg_3d(exo_central, dpi, x, xdot, time1, theta, delta_t, &mmgMesh);
 
       /** Manually set of the sol */
       /** a) Get np the number of vertex */
@@ -1195,11 +1196,16 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
     }
 
     vdex = -1;
-    for (int i = 0; i < rd->nnv; i++) {
-      if (rd->nvtype[i] == ls->var && strcmp(nodal_var_names_ptrs[i], rd->nvname[i]) == 0) {
-        vdex = i;
-        break;
+    int offset = 0;
+    for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      for (int i = 0; i < rd[imtrx]->nnv; i++) {
+        if (rd[imtrx]->nvtype[i] == ls->var &&
+            strcmp(nodal_var_names_ptrs[i + offset], rd[imtrx]->nvname[i]) == 0) {
+          vdex = i + offset;
+          break;
+        }
       }
+      offset += rd[imtrx]->nnv;
     }
     if (vdex == -1) {
       GOMA_EH(GOMA_ERROR, "Level set variable not found in Goma");
@@ -1252,10 +1258,10 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
     // if (MMG2D_saveSol(mmgMesh, mmgSol, outname) != 1)
     //   exit(EXIT_FAILURE);
     if (exo->num_dim == 2) {
-      mmg_convert_to_exodus(&mmgMesh, rd, exo, dpi, imtrx, x, xdot, time1, theta, delta_t);
+      // mmg_convert_to_exodus(&mmgMesh, rd, exo, dpi, x, xdot, time1, theta, delta_t);
+      GOMA_EH(GOMA_ERROR, "MMG2D -> EXODUS conversion not implemented for 2D mesh\n");
     } else {
-      mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, imtrx, x, xdot, time1, theta,
-                               delta_t);
+      mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t);
     }
   }
 
@@ -1360,7 +1366,11 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
   wr_mesh_exo(exo, ExoFileOut, 0);
   zero_base(exo);
 
-  wr_result_prelim_exo(rd, exo, ExoFileOut, gvec_elem);
+  if (upd->Total_Num_Matrices == 1) {
+  wr_result_prelim_exo(rd[0], exo, ExoFileOut, gvec_elem[0]);
+  } else {
+    wr_result_prelim_exo_segregated(rd, exo, ExoFileOut, gvec_elem);
+  }
 
   if (Num_Proc > 1) {
     wr_dpi(dpi, ExoFileOut);
@@ -1408,6 +1418,12 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
   resetup_matrix(ams, exo, dpi);
 
   read_solution_exoII(exo, dpi, x, xdot);
+  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    dcopy1(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], x[imtrx], x_old[imtrx]);
+    dcopy1(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], x[imtrx], x_older[imtrx]);
+    dcopy1(NumUnknowns[imtrx] + NumExtUnknowns[imtrx], x[imtrx], x_oldest[imtrx]);
+  }
+
 
   /** 5) Free the MMG3D5 structures */
   if (ProcID == 0) {

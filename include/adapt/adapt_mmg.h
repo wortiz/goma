@@ -11,8 +11,7 @@ extern "C" {
 #include "sl_util_structs.h"
 void adapt_mesh_with_mmg(Exo_DB *exo,
                          Dpi *dpi,
-                         struct Results_Description *rd,
-                         int imtrx,
+                         struct Results_Description **rd,
                          struct GomaLinearSolverData **ams,
                          double **x,
                          double **x_old,
@@ -26,8 +25,7 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
                          double time1,
                          double theta,
                          double delta_t,
-                         double ***gvec_elem,
-                         bool mapvar);
+                         double ****gvec_elem);
 
 #ifdef __cplusplus
 } /* extern "C" */

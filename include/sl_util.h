@@ -55,6 +55,7 @@ struct GomaLinearSolverData;
 #define HUYGENS_MASS_ITER 9
 #define SMOLIANSKI_ONLY   10
 #define FACET_BASED       11
+#define FACET_BASED_NEGATIVE 12
 
 #define LS_SURF_POINT      0
 #define LS_SURF_PLANE      1

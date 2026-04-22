@@ -1222,6 +1222,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             case HUYGENS_C:
             case HUYGENS_MASS_ITER:
             case FACET_BASED:
+                  case FACET_BASED_NEGATIVE:
               Renorm_Now =
                   (ls->Force_Initial_Renorm || (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0));
 
@@ -1435,14 +1436,26 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             int save = pg->imtrx;
             pg->imtrx = upd->matrix_index[FILL];
             last_adapt_nt = nt;
-            adapt_mesh_with_mmg(exo, dpi, rd[pg->imtrx], pg->imtrx, ams, x, x_old, x_older,
-                                x_oldest, x_update, xdot, xdot_old, resid_vector, scale, time1,
-                                theta, delta_t, gvec_elem[pg->imtrx], false);
+            adapt_mesh_with_mmg(exo, dpi, rd, ams, x, x_old, x_older, x_oldest, x_update, xdot,
+                                xdot_old, resid_vector, scale, time1, theta, delta_t, gvec_elem);
             for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
               numProcUnknowns[imtrx] = NumUnknowns[imtrx] + NumExtUnknowns[imtrx];
+              realloc_dbl_1(&xdot_older[imtrx], numProcUnknowns[imtrx], 0);
+              realloc_dbl_1(&x_pred[imtrx], numProcUnknowns[imtrx], 0);
+              realloc_dbl_1(&x_prev[imtrx], numProcUnknowns[imtrx], 0);
+              realloc_dbl_1(&delta_x[imtrx], numProcUnknowns[imtrx], 0);
+              realloc_dbl_1(&x_previous[imtrx], numProcUnknowns[imtrx], 0);
+              zero_dbl_1(xdot_old[imtrx], numProcUnknowns[imtrx]);
+              zero_dbl_1(xdot_older[imtrx], numProcUnknowns[imtrx]);
+              zero_dbl_1(xdot[imtrx], numProcUnknowns[imtrx]);
+              pg->matrices[imtrx].x_prev = x_prev[imtrx];
+              pg->matrices[imtrx].xdot_older = xdot_older[imtrx];
+              exchange_dof(cx[imtrx], dpi, x[imtrx], imtrx);
+              exchange_dof(cx[imtrx], dpi, x_old[imtrx], imtrx);
             }
             num_total_nodes = dpi->num_universe_nodes;
             last_adapt_nt = nt;
+            nprint = 0;
 
             const_delta_t = 1.0;
             for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
@@ -1451,6 +1464,179 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             if (nt == 0) {
               if (ls->Num_Var_Init > 0)
                 ls_var_initialization(x, exo, dpi, cx);
+              Fill_Matrix = pg->imtrx;
+              ls->MatrixNum = pg->imtrx;
+
+              if (ls != NULL || pfd != NULL) {
+
+                int eqntype = ls->Init_Method;
+                /* This is a temporary loc for this allocation */
+
+                switch (ls->Evolution) {
+                case LS_EVOLVE_ADVECT_EXPLICIT:
+                  DPRINTF(stdout, "\n\t Using decoupled / subcycling for FILL equation.\n");
+                  break;
+                case LS_EVOLVE_ADVECT_COUPLED:
+                  DPRINTF(stdout, "\n\t Using Coupled Level Set evolution!\n");
+                  break;
+                case LS_EVOLVE_SLAVE:
+                  DPRINTF(stdout, "\n\t USING SLAVE LEVEL SET INTERFACE\n");
+                  break;
+                case LS_EVOLVE_SEMILAGRANGIAN:
+                  DPRINTF(stdout, "\n\t Using semi-Lagrangian Level Set Evolution\n");
+                  break;
+                default:
+                  GOMA_EH(GOMA_ERROR, "Level Set Evolution scheme not found \n");
+                }
+
+                if (ls->Length_Scale < 0.0)
+                  GOMA_EH(GOMA_ERROR, "\tError: a Level Set Length Scale needs to be specified\n");
+
+                if (ls->Integration_Depth > 0 || ls->SubElemIntegration || ls->AdaptIntegration) {
+
+                  if (ls->Integration_Depth > 0) {
+                    int first_elem;
+
+                    first_elem = find_first_elem_with_var(exo, LS);
+
+                    if (first_elem != -1) {
+                      load_ei(first_elem, exo, 0, pg->imtrx);
+
+                      Subgrid_Tree = create_shape_fcn_tree(ls->Integration_Depth);
+                      DPRINTF(stdout, "\n\tSubgrid Integration of level set "
+                                      "interface active.\n");
+                    }
+                  } else if (ls->SubElemIntegration) {
+                    DPRINTF(stdout, "\n\tSubelement Integration of level set "
+                                    "interface active.\n");
+                  } else if (ls->AdaptIntegration) {
+                    DPRINTF(stdout, "\n\tAdaptive Integration of level set "
+                                    "interface active.\n");
+                    DPRINTF(stdout, "\tAdaptive Integration Interface Order = %d\n",
+                            ls->Adaptive_Order);
+                  }
+                  Subgrid_Int.ip_total = 0;
+                  Subgrid_Int.s = NULL;
+                  Subgrid_Int.wt = NULL;
+                }
+
+                switch (eqntype) {
+                case PROJECT:
+
+                  DPRINTF(stdout, "\n\t Projection level set initialization \n");
+
+                  GOMA_EH(GOMA_ERROR, "Use of \"PROJECT\" is obsolete.");
+
+                  break;
+
+                case EXO_READ:
+
+                  DPRINTF(stdout, "\t\t Level set read from exodus database \n");
+
+                  break;
+
+                case SURFACES:
+
+                  DPRINTF(stdout, "\n\t\t Surface object level set initialization : ");
+
+                  /* parallel synchronization of initialization surfaces */
+                  if (Num_Proc > 1) {
+                    if (!ls->init_surf_list)
+                      ls->init_surf_list = create_surf_list();
+                    assemble_Global_surf_list(ls->init_surf_list);
+                  }
+
+                  surf_based_initialization(x[pg->imtrx], NULL, NULL, exo, num_total_nodes,
+                                            ls->init_surf_list, 0., 0., 0.);
+
+                  DPRINTF(stdout, "- done \n");
+
+                  break;
+
+                default:
+                  GOMA_WH(-1, "Level Set Initialization method not found \n");
+                } /* end of switch( eqntype )  */
+
+                exchange_dof(cx[pg->imtrx], dpi, x[pg->imtrx], pg->imtrx);
+
+                if (converged) {
+                  switch (ls->Renorm_Method) {
+
+                  case HUYGENS:
+                  case HUYGENS_C:
+                  case HUYGENS_MASS_ITER:
+                  case FACET_BASED:
+                  case FACET_BASED_NEGATIVE:
+                    Renorm_Now = (ls->Force_Initial_Renorm ||
+                                  (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0));
+
+                    did_renorm = huygens_renormalization(
+                        x[pg->imtrx], num_total_nodes, exo, cx[pg->imtrx], dpi, num_fill_unknowns,
+                        numProcUnknowns[pg->imtrx], time1, Renorm_Now);
+
+                    break;
+
+                  case CORRECT:
+
+                    GOMA_EH(GOMA_ERROR, "Use of \"CORRECT\" is obsolete.");
+                    break;
+                  default:
+                    if (ls->Evolution == LS_EVOLVE_ADVECT_EXPLICIT ||
+                        ls->Evolution == LS_EVOLVE_ADVECT_COUPLED)
+                      GOMA_WH(-1, "No level set renormalization is on.\n");
+                  } /* end of switch(ls->Renorm_Method ) */
+                }
+                /*
+                 * More initialization needed. Have to set those field variables
+                 * that initially are indexed by level set function.  For example,
+                 * species concentration and temperature.
+                 */
+                if (ls->Num_Var_Init > 0)
+                  ls_var_initialization(x, exo, dpi, cx);
+
+                /* 	  DPRINTF(stderr, "Done with ls_var_initialization.\n"); */
+
+                /*
+                 * Now check to see if we need to build a surface represent.
+                 * on each time step.  Initialize the structures if so.
+                 */
+                {
+                  int build = FALSE, ibc = 0;
+
+                  while (!build && ibc < Num_BC) {
+                    build = (BC_Types[ibc].BC_Name == LS_INLET_BC);
+                    build = build || (BC_Types[ibc].BC_Name == LS_ADC_BC);
+                    ibc++;
+                  }
+
+                  /* Here we create space for an isosurface list that is updated
+                   * every time step.
+                   */
+
+                  if (build && ls->last_surf_list == NULL) {
+                    struct LS_Surf *tmp_surf = NULL;
+                    struct LS_Surf_Iso_Data *tmp_data;
+
+                    ls->last_surf_list = create_surf_list();
+
+                    tmp_surf = create_surf(LS_SURF_ISOSURFACE);
+                    tmp_data = (struct LS_Surf_Iso_Data *)tmp_surf->data;
+                    tmp_data->isovar = FILL;
+                    tmp_data->isoval = 0.0;
+
+                    append_surf(ls->last_surf_list, tmp_surf);
+                  }
+
+                } /* matches int build */
+
+              } /* end of ls != NULL */
+              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_older[pg->imtrx]);
+              dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_oldest[pg->imtrx]);
+
+              exchange_dof(cx[pg->imtrx], dpi, x[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx], dpi, x_old[pg->imtrx], pg->imtrx);
+              exchange_dof(cx[pg->imtrx], dpi, x_oldest[pg->imtrx], pg->imtrx);
             }
             nullify_dirichlet_bcs();
             find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
@@ -2413,6 +2599,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           case HUYGENS_C:
           case HUYGENS_MASS_ITER:
           case FACET_BASED:
+                  case FACET_BASED_NEGATIVE:
             Renorm_Now =
                 (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0) || ls_adc_event == TRUE;
 

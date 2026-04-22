@@ -567,6 +567,10 @@ huygens_renormalization ( double *x,
                               time);
     } else if (ls->Renorm_Method == FACET_BASED) {
       facet_based_reinitialization(x, exo, cx, dpi, num_total_nodes, time);
+    } else if (ls->Renorm_Method == FACET_BASED_NEGATIVE) {
+      facet_based_reinitialization(x, exo, cx, dpi, num_total_nodes, time);
+      Hrenorm_smolianksi_only(exo, cx, dpi, x, list, num_total_nodes, num_ls_unkns, num_total_unkns,
+                              time);
     } else {
       GOMA_EH(GOMA_ERROR, "You shouldn't actually be here. \n");
     }
