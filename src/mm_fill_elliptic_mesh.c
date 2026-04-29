@@ -16,51 +16,15 @@
 
 #include "std.h"
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#ifdef GOMA_ENABLE_AZTEC
-#include "az_aztec.h"
-#endif
 #include "el_elm.h"
-#include "el_geom.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_fill_ptrs.h"
-#include "mm_fill_rs.h"
-#include "mm_fill_shell.h"
-#include "mm_fill_solid.h"
-#include "mm_fill_species.h"
-#include "mm_fill_terms.h"
-#include "mm_fill_util.h"
-#include "mm_mp.h"
-#include "mm_mp_const.h"
-#include "mm_mp_structs.h"
-#include "mm_post_def.h"
-#include "mm_shell_util.h"
-#include "mm_std_models.h"
-#include "mm_std_models_shell.h"
-#include "mm_viscosity.h"
-#include "rf_allo.h"
-#include "rf_bc.h"
 #include "rf_bc_const.h"
-#include "rf_fem.h"
 #include "rf_fem_const.h"
-#include "rf_fill_const.h"
-#include "rf_io.h"
-#include "rf_io_const.h"
-#include "rf_masks.h"
-#include "rf_mp.h"
-#include "rf_node_const.h"
-#include "rf_solver.h"
-#include "rf_solver_const.h"
-#include "rf_vars_const.h"
-#include "sl_util.h"
 #include "std.h"
-#include "user_mp.h"
 
 int assemble_elliptic_mesh(void) {
   const int dim = pd->Num_Dim;

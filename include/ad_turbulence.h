@@ -81,6 +81,7 @@ ADType sst_viscosity(const ADType &Omega, const ADType &F2);
 extern "C" {
 #endif
 
+#include "mm_fill_energy.h"
 #include "mm_as_structs.h"
 #include "mm_fill_stabilization.h"
 #include "mm_mp_structs.h"
@@ -134,6 +135,7 @@ int ad_assemble_invariant(double tt,  /* parameter to vary time integration from
                           double dt); /*  time step size                          */
 void ad_omega_wall_func(double func[DIM], double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE]);
 
+dbl visc_diss_heat_source_film_use_ad(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h, dbl scale);
 #ifdef __cplusplus
 }
 #endif

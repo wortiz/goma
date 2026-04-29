@@ -36,6 +36,7 @@ extern "C" {
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "std.h"
+#include "mm_fill_energy.h"
 }
 
 extern ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]);
@@ -162,6 +163,9 @@ int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
       gammadot += gamma_dot[a][b] * gamma_dot[b][a];
     }
   }
+  // if (pd->gv[FILM_HEIGHT]) {
+  //   gammadot += -(ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1])  * -(ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1]);
+  // }
 
   gammadot = sqrt(0.5 * fabs(gammadot) + 1e-14);
   return 0;
@@ -3536,5 +3540,40 @@ int ad_assemble_invariant(double tt, /* parameter to vary time integration from
   return (status);
 
 } /* END of assemble_invariant */
+
+extern "C" dbl visc_diss_heat_source_film_use_ad(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h, dbl scale) {
+  ADType h = 0;
+  ADType gamma_dot[DIM][DIM];
+  for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < 2; j++) {
+      gamma_dot[i][j] = ad_fv->grad_v[i][j] + ad_fv->grad_v[j][i];
+    }
+  }
+  gamma_dot[2][2] = 2.0 * (-ad_fv->grad_v[0][0] - ad_fv->grad_v[1][1]);
+
+  ADType mu = ad_viscosity(gn, gamma_dot);
+
+  for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < 2; j++) {
+      h += mu * gamma_dot[i][j] * ad_fv->grad_v[i][j];
+    }
+  }
+  h += mu * gamma_dot[2][2] * (-ad_fv->grad_v[0][0] - ad_fv->grad_v[1][1]);
+  h *= scale;
+  for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
+    d_h->T[j] = h.dx(ad_fv->offset[TEMPERATURE] + j);
+  }
+
+  for (int b = 0; b < pd->Num_Dim; b++) {
+    for (int j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1 + b]; j++) {
+      d_h->X[b][j] = h.dx(ad_fv->offset[MESH_DISPLACEMENT1 + b] + j);
+    }
+    for (int j = 0; j < ei[pg->imtrx]->dof[VELOCITY1 + b]; j++) {
+      d_h->v[b][j] = h.dx(ad_fv->offset[VELOCITY1 + b] + j);
+    }
+  }
+
+  return h.val();
+}
 #endif
 #endif
