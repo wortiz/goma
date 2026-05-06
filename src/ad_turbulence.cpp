@@ -158,7 +158,8 @@ int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
                       ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
   gammadot = 0.;
   int vdim = VIM;
-  if (pd->gv[FILM_HEIGHT]) vdim = 3;
+  if (pd->gv[FILM_HEIGHT])
+    vdim = 3;
   /* get gamma_dot invariant for viscosity calculations */
   for (int a = 0; a < vdim; a++) {
     for (int b = 0; b < vdim; b++) {
@@ -3566,7 +3567,7 @@ extern "C" dbl visc_diss_heat_source_film_use_ad(HEAT_SOURCE_DEPENDENCE_STRUCT *
   }
   h += mu * gamma_dot[2][2] * (-ad_fv->grad_v[0][0] - ad_fv->grad_v[1][1]);
   h = mu * gammadot * gammadot;
-  h *= scale;// ad_fv->film_height;
+  h *= scale; // ad_fv->film_height;
 
   dbl alpha = mp->u_heat_source[0];
   dbl T_alpha = mp->u_heat_source[1];

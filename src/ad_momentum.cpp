@@ -1525,7 +1525,6 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
     }
   }
 
-
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
       gamma_cont[a][b] = ad_fv->G[a][b];
