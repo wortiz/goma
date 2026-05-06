@@ -81,8 +81,8 @@ ADType sst_viscosity(const ADType &Omega, const ADType &F2);
 extern "C" {
 #endif
 
-#include "mm_fill_energy.h"
 #include "mm_as_structs.h"
+#include "mm_fill_energy.h"
 #include "mm_fill_stabilization.h"
 #include "mm_mp_structs.h"
 #include "std.h"

@@ -14,8 +14,6 @@
 
 #include "mm_fill_elliptic_mesh.h"
 
-#include "std.h"
-#include <math.h>
 #include "el_elm.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
@@ -25,6 +23,7 @@
 #include "rf_bc_const.h"
 #include "rf_fem_const.h"
 #include "std.h"
+#include <math.h>
 
 int assemble_elliptic_mesh(void) {
   const int dim = pd->Num_Dim;

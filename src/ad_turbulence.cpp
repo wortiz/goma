@@ -31,12 +31,12 @@ extern "C" {
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
+#include "mm_fill_energy.h"
 #include "mm_mp.h"
 #include "mm_mp_structs.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "std.h"
-#include "mm_fill_energy.h"
 }
 
 extern ADType ad_viscosity(struct Generalized_Newtonian *gn_local, ADType gamma_dot[DIM][DIM]);
@@ -157,14 +157,17 @@ static int ad_calc_sa_S(scalar &S,                /* strain rate invariant */
 int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
                       ADType gamma_dot[DIM][DIM]) { /* strain rate tensor */
   gammadot = 0.;
+  int vdim = VIM;
+  if (pd->gv[FILM_HEIGHT]) vdim = 3;
   /* get gamma_dot invariant for viscosity calculations */
-  for (int a = 0; a < VIM; a++) {
-    for (int b = 0; b < VIM; b++) {
+  for (int a = 0; a < vdim; a++) {
+    for (int b = 0; b < vdim; b++) {
       gammadot += gamma_dot[a][b] * gamma_dot[b][a];
     }
   }
   // if (pd->gv[FILM_HEIGHT]) {
-  //   gammadot += -(ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1])  * -(ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1]);
+  //   gammadot += -(ad_fv->grad_v[0][0] + ad_fv->grad_v[1][1])  * -(ad_fv->grad_v[0][0] +
+  //   ad_fv->grad_v[1][1]);
   // }
 
   gammadot = sqrt(0.5 * fabs(gammadot) + 1e-14);
@@ -3551,17 +3554,30 @@ extern "C" dbl visc_diss_heat_source_film_use_ad(HEAT_SOURCE_DEPENDENCE_STRUCT *
   }
   gamma_dot[2][2] = 2.0 * (-ad_fv->grad_v[0][0] - ad_fv->grad_v[1][1]);
 
+  ADType gammadot;
+  ad_calc_shearrate(gammadot, gamma_dot);
+
   ADType mu = ad_viscosity(gn, gamma_dot);
 
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < 2; j++) {
-      h += mu * gamma_dot[i][j] * ad_fv->grad_v[i][j];
+      h += mu * gamma_dot[j][i] * ad_fv->grad_v[i][j];
     }
   }
   h += mu * gamma_dot[2][2] * (-ad_fv->grad_v[0][0] - ad_fv->grad_v[1][1]);
-  h *= scale;
+  h = mu * gammadot * gammadot;
+  h *= scale;// ad_fv->film_height;
+
+  dbl alpha = mp->u_heat_source[0];
+  dbl T_alpha = mp->u_heat_source[1];
+  h += -alpha * (ad_fv->T - T_alpha) / ad_fv->film_height;
+
   for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
     d_h->T[j] = h.dx(ad_fv->offset[TEMPERATURE] + j);
+  }
+
+  for (int j = 0; j < ei[pg->imtrx]->dof[FILM_HEIGHT]; j++) {
+    d_h->film_height[j] = h.dx(ad_fv->offset[FILM_HEIGHT] + j);
   }
 
   for (int b = 0; b < pd->Num_Dim; b++) {

@@ -2158,7 +2158,7 @@ double heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
       d_h->film_height[j] = h * -bf[FILM_HEIGHT]->phi[j] / fv->film_height;
     }
   } else if (mp->HeatSourceModel == HS_FILM_CAST_VISC_DISS) {
-    h = visc_diss_heat_source_film_use_ad(d_h, mp->u_heat_source[2]);// / fv->film_height;
+    h = visc_diss_heat_source_film_use_ad(d_h, mp->u_heat_source[2]);
     // for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
     //   d_h->T[j] /= fv->film_height;
     // }
@@ -2170,16 +2170,17 @@ double heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
     //     d_h->v[b][j] /= fv->film_height;
     //   }
     // }
-
-    dbl alpha = mp->u_heat_source[0];
-    dbl T_alpha = mp->u_heat_source[1];
-    h += -alpha * (fv->T - T_alpha) / fv->film_height;
-    for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
-      d_h->T[j] += -alpha * bf[TEMPERATURE]->phi[j] / fv->film_height;
-    }
-    for (int j = 0; j < ei[pg->imtrx]->dof[FILM_HEIGHT]; j++) {
-      d_h->film_height[j] = -(alpha * (fv->T - T_alpha) / fv->film_height) * -bf[FILM_HEIGHT]->phi[j] / fv->film_height;
-    }
+    //
+    // dbl alpha = mp->u_heat_source[0];
+    // dbl T_alpha = mp->u_heat_source[1];
+    // h += -alpha * (fv->T - T_alpha) / fv->film_height;
+    // for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
+    //   d_h->T[j] += -alpha * bf[TEMPERATURE]->phi[j] / fv->film_height;
+    // }
+    // for (int j = 0; j < ei[pg->imtrx]->dof[FILM_HEIGHT]; j++) {
+    //   d_h->film_height[j] = -(alpha * (fv->T - T_alpha) / fv->film_height) *
+    //                         -bf[FILM_HEIGHT]->phi[j] / fv->film_height;
+    // }
   } else if (mp->HeatSourceModel == USER_GEN) {
     if (d_h == NULL) {
       dbl dhdT[MDE];
