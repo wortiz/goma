@@ -1471,10 +1471,10 @@ Revised:         Summer 1998, SY Tam (UNM)
     do_LSA_mods(LSA_VOLUME);
 
     if (pd->gv[FILM_HEIGHT] && pde[POLYMER_STRESS11] && vn->evssModel != NOPOLYMER) {
-      if (vn->evssModel != EVSS_FILM_HEIGHT) {
+      if (vn->evssModel != EVSS_FILM_HEIGHT && vn->evssModel != EVSS_FILM_HEIGHT_SQRT_CONF) {
         GOMA_EH(GOMA_ERROR,
                 "Film height equation on but evss model not set to NOPOLYMER or EVSS_FILM_HEIGHT");
-      } else {
+      } else if (vn->evssModel == EVSS_FILM_HEIGHT) {
 #ifdef GOMA_ENABLE_SACADO
         if (upd->AutoDiff) {
           err = ad_assemble_film_height_stress(theta, delta_t, &pg_data);
@@ -1490,8 +1490,28 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif
-      }
+      } else if (vn->evssModel == EVSS_FILM_HEIGHT_SQRT_CONF) {
+#ifdef GOMA_ENABLE_SACADO
+        if (upd->AutoDiff) {
+          err = ad_assemble_film_height_sqrt_conf_stress(theta, delta_t, &pg_data);
+        } else {
+          GOMA_EH(GOMA_ERROR,
+                  "EVSS_FILM_HEIGHT_SQRT_CONF requires autodiff assembly");
+          }
+#else
+        GOMA_EH(GOMA_ERROR,
+                "EVSS_FILM_HEIGHT_SQRT_CONF requires Goma to be compiled with Sacado support");
+#endif
+        GOMA_EH(err, "assemble_film_height_sqrt_conf_stress");
+#ifdef CHECK_FINITE
+        err = CHECKFINITE("assemble_film_height_sqrt_conf_stress");
+        if (err)          return -1;
+#endif
+    } else {
+      GOMA_EH(GOMA_ERROR, "Film height equation on but evss model not set to EVSS_FILM_HEIGHT or EVSS_FILM_HEIGHT_SQRT_CONF");
     }
+  }
+
     if (vn->evssModel == EVSS_G && cr->MeshFluxModel == ZENER_SLS) {
       err = assemble_stress_vesolid(theta, delta_t, ielem, ip, ip_total);
       GOMA_EH(err, "assemble_stress_vesolid");

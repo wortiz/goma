@@ -583,15 +583,20 @@ int ad_assemble_momentum(dbl time,       /* current time */
 
 void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
 #if 1
+      int sdim = VIM;
+      if (pd->gv[FILM_HEIGHT]) {
+        sdim = 3;
+      }
 
   dbl dgamma[DIM][DIM];
-  for (int i = 0; i < VIM; i++) {
-    for (int j = 0; j < VIM; j++) {
+  for (int i = 0; i < sdim; i++) {
+    for (int j = 0; j < sdim; j++) {
       stress[i][j] = 0;
       dgamma[i][j] = gamma[i][j].val();
     }
   }
   switch (vn->evssModel) {
+  case EVSS_FILM_HEIGHT_SQRT_CONF:
   case SQRT_CONF: {
     for (int mode = 0; mode < vn->modes; mode++) {
       /* get polymer viscosity */
@@ -600,8 +605,8 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
 
       ADType bdotb[DIM][DIM];
       ADType b[DIM][DIM];
-      for (int ii = 0; ii < VIM; ii++) {
-        for (int jj = 0; jj < VIM; jj++) {
+      for (int ii = 0; ii < sdim; ii++) {
+        for (int jj = 0; jj < sdim; jj++) {
           if (ii <= jj) {
             b[ii][jj] = ad_fv->S[mode][ii][jj];
             b[jj][ii] = b[ii][jj];
@@ -609,10 +614,10 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
         }
       }
 
-      ad_tensor_dot(b, b, bdotb, VIM);
+      ad_tensor_dot(b, b, bdotb, sdim);
 
-      for (int ii = 0; ii < VIM; ii++) {
-        for (int jj = 0; jj < VIM; jj++) {
+      for (int ii = 0; ii < sdim; ii++) {
+        for (int jj = 0; jj < sdim; jj++) {
           stress[ii][jj] += -(mup / lambda) * (delta(ii, jj) - bdotb[ii][jj]);
         }
       }
@@ -622,8 +627,8 @@ void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
   default: // Regular stress formulations
   {
     for (int mode = 0; mode < vn->modes; mode++) {
-      for (int i = 0; i < VIM; i++) {
-        for (int j = 0; j < VIM; j++) {
+      for (int i = 0; i < sdim; i++) {
+        for (int j = 0; j < sdim; j++) {
           stress[i][j] += ad_fv->S[mode][i][j];
         }
       }
@@ -1527,13 +1532,12 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
 
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
-      gamma_cont[a][b] = ad_fv->G[a][b];
+      gamma_cont[a][b] = ad_fv->G[a][b] + ad_fv->G[b][a];
       stress[a][b] = 0.;
-      for (int mode = 0; mode < vn->modes; mode++) {
-        stress[a][b] += ad_fv->S[mode][a][b];
-      }
     }
   }
+  ad_ve_polymer_stress(gamma, stress);
+
   ADType mu = ad_viscosity(gn, gamma);
   dbl evss_f = 0.0;
   ADType mup = 0;
@@ -1783,12 +1787,18 @@ int ad_assemble_film_height(dbl time, /* current time */
         advection *= wt_func * d_area;
       }
 
+      ADType diffusion = 0.0;
+        for (int a = 0; a < 2; a++) {
+          diffusion += ad_fv->basis[eqn].grad_phi[i][a] * ad_fv->grad_film_height[a];
+        }
+        diffusion *= 1e-5 * d_area;
+
       /*
        *  Add up the individual contributions and sum them into the local element
        *  contribution for the total continuity equation for the ith local unknown
        */
-      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + mass.val();
-      resid[i] = advection + mass;
+      lec->R[LEC_R_INDEX(peqn, i)] += advection.val() + mass.val() + diffusion.val();
+      resid[i] = advection + mass + diffusion;
     }
   }
   if (af->Assemble_Jacobian) {
@@ -2005,6 +2015,12 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
               advection *= advection_etm;
             }
 
+            ADType diffusion = 0.;
+            for (int p = 0; p < VIM; p++) {
+                diffusion += ad_fv->basis[eqn].grad_phi_e[i][p][a][b] * ad_fv->grad_G[p][a][b];
+            }
+            diffusion *= 1e-7 * -ad_fv->detJ * fv->wt * fv->h3;
+
             /*
              * Source term...
              */
@@ -2021,8 +2037,8 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
              */
 
             /*lec->R[LEC_R_INDEX(peqn,ii)] += mass + advection + porous + diffusion + source;*/
-            lec->R[LEC_R_INDEX(peqn, ii)] += advection.val() + source.val();
-            resid[a][b][ii] += advection + source;
+            lec->R[LEC_R_INDEX(peqn, ii)] += advection.val() + source.val() + diffusion.val();
+            resid[a][b][ii] += advection + source + diffusion;
           } /*end if (active_dofs) */
         } /* end of for (i=0,ei[pg->imtrx]->dofs...) */
       }

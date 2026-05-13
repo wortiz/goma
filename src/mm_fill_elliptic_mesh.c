@@ -166,7 +166,7 @@ int assemble_elliptic_mesh(void) {
   dbl eps_s = 1.2;
 
   dbl fxi = 1.0;
-  dbl geta = 109.0;
+  dbl geta = 1.0;
   dbl hzeta = 1.0;
 
   dbl sc[DIM] = {fxi, geta, hzeta};

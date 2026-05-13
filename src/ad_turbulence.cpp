@@ -818,6 +818,12 @@ extern "C" void fill_ad_field_variables() {
         for (int q = 0; q < sdim; q++) {
           ad_fv->S[mode][p][q] = 0;
           ad_fv->S_dot[mode][p][q] = 0;
+        }
+      }
+    }
+    for (int mode = 0; mode < vn->modes; mode++) {
+      for (int p = 0; p < sdim; p++) {
+        for (int q = 0; q < sdim; q++) {
           if (p <= q) {
             int v = v_s[mode][p][q];
             if (pd->gv[v]) {
