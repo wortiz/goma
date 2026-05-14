@@ -2158,7 +2158,11 @@ double heat_source(HEAT_SOURCE_DEPENDENCE_STRUCT *d_h,
       d_h->film_height[j] = h * -bf[FILM_HEIGHT]->phi[j] / fv->film_height;
     }
   } else if (mp->HeatSourceModel == HS_FILM_CAST_VISC_DISS) {
+#ifdef GOMA_ENABLE_SACADO
     h = visc_diss_heat_source_film_use_ad(d_h, mp->u_heat_source[2]);
+#else
+    GOMA_EH(GOMA_ERROR, "HS_FILM_CAST_VISC_DISS is only implemented with Sacado enabled");
+#endif
     // for (int j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
     //   d_h->T[j] /= fv->film_height;
     // }
