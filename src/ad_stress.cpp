@@ -1286,10 +1286,11 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
   return (status);
 }
 
-extern "C" int ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integration from
-                                          * explicit (tt = 1) to implicit (tt = 0) */
-                                 dbl dt, /* current time step size */
-                                 PG_DATA *pg_data) {
+extern "C" int
+ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integration from
+                                                  * explicit (tt = 1) to implicit (tt = 0) */
+                                         dbl dt, /* current time step size */
+                                         PG_DATA *pg_data) {
   int dim, q, w;
 
   int eqn;
@@ -1302,7 +1303,7 @@ extern "C" int ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to 
   dbl h3;            /* Volume element (scale factors). */
 
   ADType grad_v[DIM][DIM] = {{0.0}}; /* velocity gradient tensor */
-  ADType det_J; /* determinant of element Jacobian */
+  ADType det_J;                      /* determinant of element Jacobian */
 
   int err;
   dbl alpha = 0;  /* This is the Geisekus mobility parameter */
@@ -1441,7 +1442,6 @@ extern "C" int ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to 
       dgamma[a][b] = grad_v[a][b].val() + grad_v[b][a].val();
     }
   }
-
 
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
@@ -1758,13 +1758,13 @@ extern "C" int ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to 
                   }
 
                   for (int w = 0; w < dim; w++) {
-                     diffusion += tau_dcdd * grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
+                    diffusion += tau_dcdd * grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
                     diffusion += tau_dcdd * gs_inner_dot[w] * ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= dcdd_factor * det_J * wt * h3;
                 } else {
                   for (int w = 0; w < dim; w++) {
-                     diffusion += grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
+                    diffusion += grad_b[w][ii][jj] * ad_fv->basis[eqn].grad_phi[i][w];
                   }
                   diffusion *= 1e-6 * det_J * wt * h3;
                 }

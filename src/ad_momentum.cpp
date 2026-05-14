@@ -583,10 +583,10 @@ int ad_assemble_momentum(dbl time,       /* current time */
 
 void ad_ve_polymer_stress(ADType gamma[DIM][DIM], ADType stress[DIM][DIM]) {
 #if 1
-      int sdim = VIM;
-      if (pd->gv[FILM_HEIGHT]) {
-        sdim = 3;
-      }
+  int sdim = VIM;
+  if (pd->gv[FILM_HEIGHT]) {
+    sdim = 3;
+  }
 
   dbl dgamma[DIM][DIM];
   for (int i = 0; i < sdim; i++) {
@@ -1788,10 +1788,10 @@ int ad_assemble_film_height(dbl time, /* current time */
       }
 
       ADType diffusion = 0.0;
-        for (int a = 0; a < 2; a++) {
-          diffusion += ad_fv->basis[eqn].grad_phi[i][a] * ad_fv->grad_film_height[a];
-        }
-        diffusion *= 1e-5 * d_area;
+      for (int a = 0; a < 2; a++) {
+        diffusion += ad_fv->basis[eqn].grad_phi[i][a] * ad_fv->grad_film_height[a];
+      }
+      diffusion *= 1e-5 * d_area;
 
       /*
        *  Add up the individual contributions and sum them into the local element
@@ -2017,7 +2017,7 @@ extern "C" int ad_assemble_film_height_grad_v(void) {
 
             ADType diffusion = 0.;
             for (int p = 0; p < VIM; p++) {
-                diffusion += ad_fv->basis[eqn].grad_phi_e[i][p][a][b] * ad_fv->grad_G[p][a][b];
+              diffusion += ad_fv->basis[eqn].grad_phi_e[i][p][a][b] * ad_fv->grad_G[p][a][b];
             }
             diffusion *= 1e-7 * -ad_fv->detJ * fv->wt * fv->h3;
 

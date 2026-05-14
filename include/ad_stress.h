@@ -33,9 +33,9 @@ int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time integration
                                    PG_DATA *pg_data);
 
 int ad_assemble_film_height_sqrt_conf_stress(dbl tt, /* parameter to vary time integration from
-                                          * explicit (tt = 1) to implicit (tt = 0) */
-                                 dbl dt, /* current time step size */
-                                 PG_DATA *pg_data);
+                                                      * explicit (tt = 1) to implicit (tt = 0) */
+                                             dbl dt, /* current time step size */
+                                             PG_DATA *pg_data);
 #ifdef __cplusplus
 }
 #endif
