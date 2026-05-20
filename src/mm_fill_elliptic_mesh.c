@@ -20,10 +20,16 @@
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_fill_ptrs.h"
+#include "mm_mp.h"
 #include "rf_bc_const.h"
 #include "rf_fem_const.h"
 #include "std.h"
 #include <math.h>
+
+double simple_abs_model(dbl xi, dbl xi_0, dbl a, dbl b, dbl c, dbl d, dbl e) {
+  dbl x = fabs(xi - xi_0);
+  return e + a / (b + c * x) + d * x;
+}
 
 int assemble_elliptic_mesh(void) {
   const int dim = pd->Num_Dim;
@@ -166,8 +172,38 @@ int assemble_elliptic_mesh(void) {
   dbl eps_s = 1.2;
 
   dbl fxi = 1.0;
+  if (elc_glob[ei[pg->imtrx]->mn]->fxi_model == CONSTANT) {
+    fxi = elc_glob[ei[pg->imtrx]->mn]->fxi;
+  } else if (elc_glob[ei[pg->imtrx]->mn]->fxi_model == ELLIPTIC_SIMPLE_ABS) {
+    fxi = simple_abs_model(
+        fv->x0[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[1],
+        elc_glob[ei[pg->imtrx]->mn]->u_fxi[2], elc_glob[ei[pg->imtrx]->mn]->u_fxi[3],
+        elc_glob[ei[pg->imtrx]->mn]->u_fxi[4], elc_glob[ei[pg->imtrx]->mn]->u_fxi[5]);
+  } else {
+    GOMA_EH(GOMA_ERROR, "Unknown Elliptic fxi model");
+  }
   dbl geta = 1.0;
+  if (elc_glob[ei[pg->imtrx]->mn]->geta_model == CONSTANT) {
+    geta = elc_glob[ei[pg->imtrx]->mn]->geta;
+  } else if (elc_glob[ei[pg->imtrx]->mn]->geta_model == ELLIPTIC_SIMPLE_ABS) {
+    geta = simple_abs_model(
+        fv->x0[1], elc_glob[ei[pg->imtrx]->mn]->u_geta[0], elc_glob[ei[pg->imtrx]->mn]->u_geta[1],
+        elc_glob[ei[pg->imtrx]->mn]->u_geta[2], elc_glob[ei[pg->imtrx]->mn]->u_geta[3],
+        elc_glob[ei[pg->imtrx]->mn]->u_geta[4], elc_glob[ei[pg->imtrx]->mn]->u_geta[5]);
+  } else {
+    GOMA_EH(GOMA_ERROR, "Unknown Elliptic geta model");
+  }
   dbl hzeta = 1.0;
+  if (elc_glob[ei[pg->imtrx]->mn]->hzeta_model == CONSTANT) {
+    hzeta = elc_glob[ei[pg->imtrx]->mn]->hzeta;
+  } else if (elc_glob[ei[pg->imtrx]->mn]->hzeta_model == ELLIPTIC_SIMPLE_ABS) {
+    hzeta = simple_abs_model(
+        fv->x0[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[0], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[1],
+        elc_glob[ei[pg->imtrx]->mn]->u_hzeta[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[3],
+        elc_glob[ei[pg->imtrx]->mn]->u_hzeta[4], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[5]);
+  } else {
+    GOMA_EH(GOMA_ERROR, "Unknown Elliptic hzeta model");
+  }
 
   dbl sc[DIM] = {fxi, geta, hzeta};
 

@@ -1339,6 +1339,21 @@ struct Elastic_Constitutive {
   int len_u_v_mesh_sfs;
   dbl *u_v_mesh_sfs;
 
+  int fxi_model;
+  dbl fxi;
+  dbl *u_fxi;
+  int len_u_fxi;
+
+  int geta_model;
+  dbl geta;
+  dbl *u_geta;
+  int len_u_geta;
+
+  int hzeta_model;
+  dbl hzeta;
+  dbl *u_hzeta;
+  int len_u_hzeta;
+
   dbl thermal_expansion; /*  thermo-elasticity properties   */
   int thermal_expansion_model;
   int len_u_thermal_expansion;

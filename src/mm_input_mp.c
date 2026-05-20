@@ -767,6 +767,72 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
   ECHO(es, echo_file);
 
+  if (ElasticConstitutiveEquation == ELLIPTIC) {
+    elc_glob[mn]->fxi = 1.0;
+    elc_glob[mn]->fxi_model = CONSTANT;
+    model_read =
+        look_for_mat_prop(imp, "Elliptic fxi", &(elc_glob[mn]->fxi_model), &(elc_glob[mn]->fxi),
+                          &(elc_glob[mn]->u_fxi), &(elc_glob[mn]->len_u_fxi), model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
+    if (model_read == -1) {
+      if (!strcmp(model_name, "SIMPLE_ABS")) {
+        elc_glob[mn]->fxi_model = ELLIPTIC_SIMPLE_ABS;
+        elc_glob[mn]->len_u_fxi = read_constants(imp, &(elc_glob[mn]->u_fxi), NO_SPECIES);
+
+        if (elc_glob[mn]->len_u_fxi != 6) {
+          GOMA_EH(GOMA_ERROR, "Elliptic fxi model SIMPLE_ABS expects 6 constants");
+        }
+        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_fxi, elc_glob[mn]->u_fxi);
+      } else {
+        elc_glob[mn]->fxi = 1.0;
+        elc_glob[mn]->fxi_model = CONSTANT;
+      }
+    }
+    ECHO(es, echo_file);
+    elc_glob[mn]->geta = 1.0;
+    elc_glob[mn]->geta_model = CONSTANT;
+    model_read =
+        look_for_mat_prop(imp, "Elliptic geta", &(elc_glob[mn]->geta_model), &(elc_glob[mn]->geta),
+                          &(elc_glob[mn]->u_geta), &(elc_glob[mn]->len_u_geta), model_name,
+                          SCALAR_INPUT, &NO_SPECIES, es);
+    if (model_read == -1) {
+      if (!strcmp(model_name, "SIMPLE_ABS")) {
+        elc_glob[mn]->geta_model = ELLIPTIC_SIMPLE_ABS;
+        elc_glob[mn]->len_u_geta = read_constants(imp, &(elc_glob[mn]->u_geta), NO_SPECIES);
+
+        if (elc_glob[mn]->len_u_geta != 6) {
+          GOMA_EH(GOMA_ERROR, "Elliptic geta model SIMPLE_ABS expects 6 constants");
+        }
+        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_geta, elc_glob[mn]->u_geta);
+      } else {
+        elc_glob[mn]->geta = 1.0;
+        elc_glob[mn]->geta_model = CONSTANT;
+      }
+    }
+    ECHO(es, echo_file);
+    elc_glob[mn]->hzeta = 1.0;
+    elc_glob[mn]->hzeta_model = CONSTANT;
+    model_read =
+        look_for_mat_prop(imp, "Elliptic hzeta", &(elc_glob[mn]->hzeta_model),
+                          &(elc_glob[mn]->hzeta), &(elc_glob[mn]->u_hzeta),
+                          &(elc_glob[mn]->len_u_hzeta), model_name, SCALAR_INPUT, &NO_SPECIES, es);
+    if (model_read == -1) {
+      if (!strcmp(model_name, "SIMPLE_ABS")) {
+        elc_glob[mn]->hzeta_model = ELLIPTIC_SIMPLE_ABS;
+        elc_glob[mn]->len_u_hzeta = read_constants(imp, &(elc_glob[mn]->u_hzeta), NO_SPECIES);
+
+        if (elc_glob[mn]->len_u_hzeta != 6) {
+          GOMA_EH(GOMA_ERROR, "Elliptic hzeta model SIMPLE_ABS expects 6 constants");
+        }
+        SPF_DBL_VEC(endofstring(es), elc_glob[mn]->len_u_hzeta, elc_glob[mn]->u_hzeta);
+      } else {
+        elc_glob[mn]->hzeta = 1.0;
+        elc_glob[mn]->hzeta_model = CONSTANT;
+      }
+    }
+    ECHO(es, echo_file);
+  }
+
   /* An optional additional type of mesh motion which includes an inertial term in the
      momentum equation */
 

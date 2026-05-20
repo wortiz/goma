@@ -38,6 +38,47 @@ extern "C" {
 #include "user_mp.h"
 }
 
+/* This routine calculates the adaptive viscosity from Sun et al., 1999.
+ * The adaptive viscosity term multiplies the continuous and discontinuous
+ * shear-rate, so it should cancel out and not affect the
+ * solution, other than increasing the stability of the
+ * algorithm in areas of high shear and stress.
+ */
+ADType ad_numerical_viscosity(ADType s[DIM][DIM], /* total stress */
+                              ADType gamma_cont[DIM][DIM],
+                              int sdim) /* continuous shear rate */
+{
+  int a, b;
+  ADType s_dbl_dot_s;
+  ADType g_dbl_dot_g;
+  ADType eps2;
+  ADType eps; /* should migrate this to input deck */
+
+  ADType mun;
+
+  eps = vn->eps;
+
+  eps2 = eps / 2.;
+
+  s_dbl_dot_s = 0.;
+  for (a = 0; a < sdim; a++) {
+    for (b = 0; b < sdim; b++) {
+      s_dbl_dot_s += s[a][b] * s[a][b];
+    }
+  }
+
+  g_dbl_dot_g = 0.;
+  for (a = 0; a < VIM; a++) {
+    for (b = 0; b < VIM; b++) {
+      g_dbl_dot_g += gamma_cont[a][b] * gamma_cont[a][b];
+    }
+  }
+
+  mun = (sqrt(1. + eps2 * s_dbl_dot_s)) / sqrt(1. + eps2 * g_dbl_dot_g);
+
+  return (mun);
+}
+
 ADType ad_arrhenius_simple_viscosity(struct Generalized_Newtonian *gn_local,
                                      ADType gamma_dot[DIM][DIM]);
 
@@ -665,7 +706,7 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
 
   /* numerical "adaptive" viscosity and derivatives */
 
-  ADType mu_num;
+  ADType mu_num = 0.0;
   if (pd->gv[TEMPERATURE]) {
     GOMA_EH(GOMA_ERROR, "Temperature not yet implemented ad_fluid_stress");
   }
@@ -734,16 +775,18 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
      */
 
     mu_num = 1;
-    // if (DOUBLE_NONZERO(vn->eps)) {
-    //   for (int mode = 0; mode < vn->modes; mode++) {
-    //     for (a = 0; a < VIM; a++) {
-    //       for (b = 0; b < VIM; b++) {
-    //         s[a][b] += fv->S[mode][a][b];
-    //       }
-    //     }
-    //   }
+    if (DOUBLE_NONZERO(vn->eps)) {
+      ADType s[DIM][DIM] = {{0.}};
+       for (int mode = 0; mode < vn->modes; mode++) {
+         for (int a = 0; a < VIM; a++) {
+           for (int b = 0; b < VIM; b++) {
+             s[a][b] += fv->S[mode][a][b];
+           }
+         }
+       }
 
-    //   mu_num = numerical_viscosity(s, gamma_cont, d_mun_dS, d_mun_dG);
+    mu_num = ad_numerical_viscosity(s, gamma_cont, VIM);
+  }
 
     mu = mu_num * mus;
 
@@ -1540,6 +1583,12 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
 
   ADType mu = ad_viscosity(gn, gamma);
   dbl evss_f = 0.0;
+
+  ADType mu_num = 1.0;
+  if (DOUBLE_NONZERO(vn->eps)) {
+    mu_num = ad_numerical_viscosity(stress, gamma_cont, 2);
+  }
+
   ADType mup = 0;
   if (pd->gv[VELOCITY_GRADIENT11]) {
     for (int mode = 0; mode < vn->modes; mode++) {
@@ -1554,8 +1603,8 @@ int ad_assemble_momentum_film_cast(dbl time,       /* current time */
   for (int a = 0; a < 2; a++) {
     for (int b = 0; b < 2; b++) {
       // Pi[a][b] = ad_fv->film_height * (delta(a, b) * p - mu * gamma[a][b]);
-      Pi[a][b] = (mu + evss_f * mup) * gamma[a][b] - evss_f * mup * gamma_cont[a][b] -
-                 p * delta(a, b) + stress[a][b];
+      Pi[a][b] = (mu + evss_f * mup) * mu_num * gamma[a][b] -
+                 evss_f * mu_num * mup * gamma_cont[a][b] - p * delta(a, b) + stress[a][b];
     }
   }
 

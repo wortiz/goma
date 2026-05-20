@@ -2514,8 +2514,19 @@ void noahs_ark(void) {
 
     ddd_add_member(n, elc_glob[i]->v_mesh_sfs, DIM, MPI_DOUBLE);
     ddd_add_member(n, &elc_glob[i]->v_mesh_sfs_model, 1, MPI_INT);
-
     ddd_add_member(n, &elc_glob[i]->len_u_v_mesh_sfs, 1, MPI_INT);
+
+    ddd_add_member(n, &elc_glob[i]->fxi, 1, MPI_DOUBLE);
+    ddd_add_member(n, &elc_glob[i]->fxi_model, 1, MPI_INT);
+    ddd_add_member(n, &elc_glob[i]->len_u_fxi, 1, MPI_INT);
+
+    ddd_add_member(n, &elc_glob[i]->geta, 1, MPI_DOUBLE);
+    ddd_add_member(n, &elc_glob[i]->geta_model, 1, MPI_INT);
+    ddd_add_member(n, &elc_glob[i]->len_u_geta, 1, MPI_INT);
+
+    ddd_add_member(n, &elc_glob[i]->hzeta, 1, MPI_DOUBLE);
+    ddd_add_member(n, &elc_glob[i]->hzeta_model, 1, MPI_INT);
+    ddd_add_member(n, &elc_glob[i]->len_u_hzeta, 1, MPI_INT);
 
     ddd_add_member(n, &elc_glob[i]->thermal_expansion, 1, MPI_DOUBLE);
     ddd_add_member(n, &elc_glob[i]->thermal_expansion_model, 1, MPI_INT);
@@ -3229,6 +3240,10 @@ void ark_landing(void) {
 
     dalloc(e->len_u_v_mesh_sfs, e->u_v_mesh_sfs);
 
+    dalloc(e->len_u_fxi, e->u_fxi);
+    dalloc(e->len_u_geta, e->u_geta);
+    dalloc(e->len_u_hzeta, e->u_hzeta);
+
     dalloc(e->len_u_thermal_expansion, e->u_thermal_expansion);
 
     dalloc(e->len_u_solid_viscosity, e->u_solid_viscosity);
@@ -3544,6 +3559,10 @@ void noahs_dove(void) {
     crdv(e->len_u_lame_TempShift, e->u_lame_TempShift);
 
     crdv(e->len_u_v_mesh_sfs, e->u_v_mesh_sfs);
+
+    crdv(e->len_u_fxi, e->u_fxi);
+    crdv(e->len_u_geta, e->u_geta);
+    crdv(e->len_u_hzeta, e->u_hzeta);
 
     crdv(e->len_u_thermal_expansion, e->u_thermal_expansion);
 
