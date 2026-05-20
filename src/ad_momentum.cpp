@@ -777,16 +777,16 @@ void ad_fluid_stress(ADType Pi[DIM][DIM]) {
     mu_num = 1;
     if (DOUBLE_NONZERO(vn->eps)) {
       ADType s[DIM][DIM] = {{0.}};
-       for (int mode = 0; mode < vn->modes; mode++) {
-         for (int a = 0; a < VIM; a++) {
-           for (int b = 0; b < VIM; b++) {
-             s[a][b] += fv->S[mode][a][b];
-           }
-         }
-       }
+      for (int mode = 0; mode < vn->modes; mode++) {
+        for (int a = 0; a < VIM; a++) {
+          for (int b = 0; b < VIM; b++) {
+            s[a][b] += fv->S[mode][a][b];
+          }
+        }
+      }
 
-    mu_num = ad_numerical_viscosity(s, gamma_cont, VIM);
-  }
+      mu_num = ad_numerical_viscosity(s, gamma_cont, VIM);
+    }
 
     mu = mu_num * mus;
 
