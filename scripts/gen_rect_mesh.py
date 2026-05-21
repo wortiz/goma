@@ -26,6 +26,7 @@ from datetime import datetime
 import netCDF4 as nc
 import numpy as np
 
+
 def create_rect_mesh(
     nx: int,
     ny: int,
@@ -49,7 +50,9 @@ def create_rect_mesh(
     if nx < 2 or ny < 2:
         raise ValueError("nx and ny must each be at least 2")
     if element_type not in ("QUAD4", "QUAD9"):
-        raise ValueError(f"element_type must be 'QUAD4' or 'QUAD9', got {element_type!r}")
+        raise ValueError(
+            f"element_type must be 'QUAD4' or 'QUAD9', got {element_type!r}"
+        )
 
     num_elems = (nx - 1) * (ny - 1)
     npe = 9 if element_type == "QUAD9" else 4
@@ -73,22 +76,26 @@ def create_rect_mesh(
                 e = iy * (nx - 1) + ix
                 r, c = 2 * iy, 2 * ix
                 connectivity[e] = [
-                    r * nx_fine + c + 1,        # n1 LL corner
-                    r * nx_fine + c + 3,        # n2 LR corner
-                    (r+2) * nx_fine + c + 3,    # n3 UR corner
-                    (r+2) * nx_fine + c + 1,    # n4 UL corner
-                    r * nx_fine + c + 2,        # n5 mid bottom
-                    (r+1) * nx_fine + c + 3,    # n6 mid right
-                    (r+2) * nx_fine + c + 2,    # n7 mid top
-                    (r+1) * nx_fine + c + 1,    # n8 mid left
-                    (r+1) * nx_fine + c + 2,    # n9 center
+                    r * nx_fine + c + 1,  # n1 LL corner
+                    r * nx_fine + c + 3,  # n2 LR corner
+                    (r + 2) * nx_fine + c + 3,  # n3 UR corner
+                    (r + 2) * nx_fine + c + 1,  # n4 UL corner
+                    r * nx_fine + c + 2,  # n5 mid bottom
+                    (r + 1) * nx_fine + c + 3,  # n6 mid right
+                    (r + 2) * nx_fine + c + 2,  # n7 mid top
+                    (r + 1) * nx_fine + c + 1,  # n8 mid left
+                    (r + 1) * nx_fine + c + 2,  # n9 center
                 ]
 
-        left_nodes   = np.array([J * nx_fine + 1             for J in range(ny_fine)], dtype=np.int32)
-        right_nodes  = np.array([J * nx_fine + nx_fine        for J in range(ny_fine)], dtype=np.int32)
-        bottom_nodes = np.array([I + 1                        for I in range(nx_fine)], dtype=np.int32)
-        top_nodes    = np.array([(ny_fine-1)*nx_fine + I + 1  for I in range(nx_fine)], dtype=np.int32)
-        all_nodes    = np.arange(1, num_nodes + 1, dtype=np.int32)
+        left_nodes = np.array([J * nx_fine + 1 for J in range(ny_fine)], dtype=np.int32)
+        right_nodes = np.array(
+            [J * nx_fine + nx_fine for J in range(ny_fine)], dtype=np.int32
+        )
+        bottom_nodes = np.array([I + 1 for I in range(nx_fine)], dtype=np.int32)
+        top_nodes = np.array(
+            [(ny_fine - 1) * nx_fine + I + 1 for I in range(nx_fine)], dtype=np.int32
+        )
+        all_nodes = np.arange(1, num_nodes + 1, dtype=np.int32)
 
     else:  # QUAD4
         num_nodes = nx * ny
@@ -109,42 +116,50 @@ def create_rect_mesh(
                 n4 = (iy + 1) * nx + ix + 1
                 connectivity[e] = [n1, n2, n3, n4]
 
-        left_nodes   = np.array([iy * nx + 1       for iy in range(ny)], dtype=np.int32)
-        right_nodes  = np.array([iy * nx + nx       for iy in range(ny)], dtype=np.int32)
-        bottom_nodes = np.array([ix + 1             for ix in range(nx)], dtype=np.int32)
-        top_nodes    = np.array([(ny-1)*nx + ix + 1 for ix in range(nx)], dtype=np.int32)
-        all_nodes    = np.arange(1, num_nodes + 1,   dtype=np.int32)
+        left_nodes = np.array([iy * nx + 1 for iy in range(ny)], dtype=np.int32)
+        right_nodes = np.array([iy * nx + nx for iy in range(ny)], dtype=np.int32)
+        bottom_nodes = np.array([ix + 1 for ix in range(nx)], dtype=np.int32)
+        top_nodes = np.array(
+            [(ny - 1) * nx + ix + 1 for ix in range(nx)], dtype=np.int32
+        )
+        all_nodes = np.arange(1, num_nodes + 1, dtype=np.int32)
 
     node_sets = [
-        ("left",   left_nodes,   1),
-        ("right",  right_nodes,  2),
+        ("left", left_nodes, 1),
+        ("right", right_nodes, 2),
         ("bottom", bottom_nodes, 3),
-        ("top",    top_nodes,    4),
-        ("all",    all_nodes,    5),
+        ("top", top_nodes, 4),
+        ("all", all_nodes, 5),
     ]
 
     # -- Side sets (1-based element indices, side numbers) ------------------
     # Left boundary:   ix=0     elements, side 4
-    left_ss_elems  = np.array([iy*(nx-1) + 1       for iy in range(ny-1)], dtype=np.int32)
-    left_ss_sides  = np.full(ny - 1, 4, dtype=np.int32)
+    left_ss_elems = np.array(
+        [iy * (nx - 1) + 1 for iy in range(ny - 1)], dtype=np.int32
+    )
+    left_ss_sides = np.full(ny - 1, 4, dtype=np.int32)
 
     # Right boundary:  ix=nx-2  elements, side 2
-    right_ss_elems = np.array([iy*(nx-1) + (nx-1)  for iy in range(ny-1)], dtype=np.int32)
+    right_ss_elems = np.array(
+        [iy * (nx - 1) + (nx - 1) for iy in range(ny - 1)], dtype=np.int32
+    )
     right_ss_sides = np.full(ny - 1, 2, dtype=np.int32)
 
     # Bottom boundary: iy=0     elements, side 1
-    bot_ss_elems   = np.arange(1, nx,                                       dtype=np.int32)
-    bot_ss_sides   = np.full(nx - 1, 1, dtype=np.int32)
+    bot_ss_elems = np.arange(1, nx, dtype=np.int32)
+    bot_ss_sides = np.full(nx - 1, 1, dtype=np.int32)
 
     # Top boundary:    iy=ny-2  elements, side 3
-    top_ss_elems   = np.array([(ny-2)*(nx-1) + ix + 1 for ix in range(nx-1)], dtype=np.int32)
-    top_ss_sides   = np.full(nx - 1, 3, dtype=np.int32)
+    top_ss_elems = np.array(
+        [(ny - 2) * (nx - 1) + ix + 1 for ix in range(nx - 1)], dtype=np.int32
+    )
+    top_ss_sides = np.full(nx - 1, 3, dtype=np.int32)
 
     side_sets = [
-        ("left",   left_ss_elems,  left_ss_sides,  1),
-        ("right",  right_ss_elems, right_ss_sides, 2),
-        ("bottom", bot_ss_elems,   bot_ss_sides,   3),
-        ("top",    top_ss_elems,   top_ss_sides,   4),
+        ("left", left_ss_elems, left_ss_sides, 1),
+        ("right", right_ss_elems, right_ss_sides, 2),
+        ("bottom", bot_ss_elems, bot_ss_sides, 3),
+        ("top", top_ss_elems, top_ss_sides, 4),
     ]
 
     # -- Write ExodusII (netCDF3 64-bit offset) ------------------------------
@@ -182,14 +197,20 @@ def create_rect_mesh(
         # QA record
         ds.createDimension("num_qa_rec", 1)
         now = datetime.now()
-        qa_var = ds.createVariable("qa_records", "S1", ("num_qa_rec", "four", "len_string"))
+        qa_var = ds.createVariable(
+            "qa_records", "S1", ("num_qa_rec", "four", "len_string")
+        )
         qa_data = np.zeros((1, 4, STR), dtype="S1")
-        for j, s in enumerate(["mesh_gen.py", "1.0", now.strftime("%m/%d/%Y"), now.strftime("%H:%M:%S")]):
+        for j, s in enumerate(
+            ["mesh_gen.py", "1.0", now.strftime("%m/%d/%Y"), now.strftime("%H:%M:%S")]
+        ):
             for k, c in enumerate(s[: STR - 1]):
                 qa_data[0, j, k] = c.encode()
         qa_var[:] = qa_data
 
-        coor_names_var = ds.createVariable("coor_names", "S1", ("num_dim", "len_string"))
+        coor_names_var = ds.createVariable(
+            "coor_names", "S1", ("num_dim", "len_string")
+        )
         coor_data = np.zeros((2, STR), dtype="S1")
         for j, (name, row) in enumerate([("x", 0), ("y", 1)]):
             for k, c in enumerate(name):
@@ -211,11 +232,15 @@ def create_rect_mesh(
             eb_name_data[0, k] = c.encode()
         eb_names_var[:] = eb_name_data
 
-        connect1 = ds.createVariable("connect1", "i4", ("num_el_in_blk1", "num_nod_per_el1"))
+        connect1 = ds.createVariable(
+            "connect1", "i4", ("num_el_in_blk1", "num_nod_per_el1")
+        )
         connect1.elem_type = element_type
         connect1[:] = connectivity
 
-        attrib1 = ds.createVariable("attrib1", "f8", ("num_el_in_blk1", "num_att_in_blk1"))
+        attrib1 = ds.createVariable(
+            "attrib1", "f8", ("num_el_in_blk1", "num_att_in_blk1")
+        )
         attrib1[:] = np.ones((num_elems, 1))
 
         ns_status = ds.createVariable("ns_status", "i4", ("num_node_sets",))
@@ -224,7 +249,9 @@ def create_rect_mesh(
         ns_prop1.setncattr("name", "ID")
         ns_prop1[:] = np.array([sid for _, _, sid in node_sets], dtype=np.int32)
 
-        ns_names_var = ds.createVariable("ns_names", "S1", ("num_node_sets", "len_string"))
+        ns_names_var = ds.createVariable(
+            "ns_names", "S1", ("num_node_sets", "len_string")
+        )
         ns_name_data = np.zeros((len(node_sets), STR), dtype="S1")
         for i, (name, _, _) in enumerate(node_sets):
             for k, c in enumerate(name):
@@ -240,7 +267,9 @@ def create_rect_mesh(
         ss_prop1.setncattr("name", "ID")
         ss_prop1[:] = np.array([sid for _, _, _, sid in side_sets], dtype=np.int32)
 
-        ss_names_var = ds.createVariable("ss_names", "S1", ("num_side_sets", "len_string"))
+        ss_names_var = ds.createVariable(
+            "ss_names", "S1", ("num_side_sets", "len_string")
+        )
         ss_name_data = np.zeros((len(side_sets), STR), dtype="S1")
         for i, (name, _, _, _) in enumerate(side_sets):
             for k, c in enumerate(name):
@@ -258,16 +287,23 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate a 2D rectangular ExodusII mesh."
     )
-    parser.add_argument("--nx", type=int, required=True, help="Number of corner nodes in x direction")
-    parser.add_argument("--ny", type=int, required=True, help="Number of corner nodes in y direction")
+    parser.add_argument(
+        "--nx", type=int, required=True, help="Number of corner nodes in x direction"
+    )
+    parser.add_argument(
+        "--ny", type=int, required=True, help="Number of corner nodes in y direction"
+    )
     parser.add_argument("--x-min", type=float, default=0.0, metavar="XMIN")
     parser.add_argument("--y-min", type=float, default=0.0, metavar="YMIN")
     parser.add_argument("--x-max", type=float, default=1.0, metavar="XMAX")
     parser.add_argument("--y-max", type=float, default=1.0, metavar="YMAX")
     parser.add_argument("-o", "--output", default="mesh.g", metavar="FILE")
     parser.add_argument(
-        "--element-type", choices=["QUAD4", "QUAD9"], default="QUAD9",
-        metavar="TYPE", help="Element type: QUAD9 (default) or QUAD4"
+        "--element-type",
+        choices=["QUAD4", "QUAD9"],
+        default="QUAD9",
+        metavar="TYPE",
+        help="Element type: QUAD9 (default) or QUAD4",
     )
     args = parser.parse_args()
 
@@ -297,8 +333,12 @@ def main():
     print(f"  Nodes:    {nn}  ({args.nx} x {args.ny} corner nodes)")
     print(f"  Elements: {ne}  ({args.nx-1} x {args.ny-1})")
     print(f"  Domain:   [{args.x_min}, {args.x_max}] x [{args.y_min}, {args.y_max}]")
-    print(f"  Node sets:  left({nn_boundary}), right({nn_boundary}), bottom({nx_b}), top({nx_b}), all({nn})")
-    print(f"  Side sets:  left({args.ny-1}), right({args.ny-1}), bottom({args.nx-1}), top({args.nx-1})")
+    print(
+        f"  Node sets:  left({nn_boundary}), right({nn_boundary}), bottom({nx_b}), top({nx_b}), all({nn})"
+    )
+    print(
+        f"  Side sets:  left({args.ny-1}), right({args.ny-1}), bottom({args.nx-1}), top({args.nx-1})"
+    )
 
 
 if __name__ == "__main__":
