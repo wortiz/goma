@@ -27,7 +27,7 @@
 #include <math.h>
 
 double elliptic_simple_abs_model(dbl xi, dbl xi_0, dbl a, dbl b, dbl c, dbl d, dbl e) {
-  dbl x = fabs(xi- xi_0);
+  dbl x = fabs(xi - xi_0);
   return e + a / (b + c * x) + d * x;
 }
 
