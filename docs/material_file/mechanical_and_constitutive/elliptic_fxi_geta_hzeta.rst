@@ -29,6 +29,11 @@ SIMPLE_ABS
 
   :math:`val = a_5 + \frac{a_1}{a_2 + a_3 * |x - x_0|} + a_4 * |x - x_0|}`
 
+DUAL_ABS
+  takes five floating point numbers, :math:`x_0`, :math:`a_1`, :math:`a_2`, :math:`a_3`, :math:`a_4`
+
+  :math:`val = a_4 + \frac{a_1}{a_2 + a_3 * (|x| - |x_0|)}`
+
 ------------
 **Examples**
 ------------

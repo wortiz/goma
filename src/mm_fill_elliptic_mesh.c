@@ -26,9 +26,14 @@
 #include "std.h"
 #include <math.h>
 
-double simple_abs_model(dbl xi, dbl xi_0, dbl a, dbl b, dbl c, dbl d, dbl e) {
-  dbl x = fabs(xi - xi_0);
+double elliptic_simple_abs_model(dbl xi, dbl xi_0, dbl a, dbl b, dbl c, dbl d, dbl e) {
+  dbl x = fabs(xi- xi_0);
   return e + a / (b + c * x) + d * x;
+}
+
+double elliptic_dual_abs_model(dbl xi, dbl xi_0, dbl a, dbl b, dbl c, dbl d) {
+  dbl x = fabs(xi) - fabs(xi_0);
+  return d + a / (b + c * x);
 }
 
 int assemble_elliptic_mesh(void) {
@@ -175,10 +180,15 @@ int assemble_elliptic_mesh(void) {
   if (elc_glob[ei[pg->imtrx]->mn]->fxi_model == CONSTANT) {
     fxi = elc_glob[ei[pg->imtrx]->mn]->fxi;
   } else if (elc_glob[ei[pg->imtrx]->mn]->fxi_model == ELLIPTIC_SIMPLE_ABS) {
-    fxi = simple_abs_model(
+    fxi = elliptic_simple_abs_model(
         fv->x0[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[1],
         elc_glob[ei[pg->imtrx]->mn]->u_fxi[2], elc_glob[ei[pg->imtrx]->mn]->u_fxi[3],
         elc_glob[ei[pg->imtrx]->mn]->u_fxi[4], elc_glob[ei[pg->imtrx]->mn]->u_fxi[5]);
+  } else if (elc_glob[ei[pg->imtrx]->mn]->fxi_model == ELLIPTIC_DUAL_ABS) {
+    fxi = elliptic_dual_abs_model(
+        fv->x0[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[0], elc_glob[ei[pg->imtrx]->mn]->u_fxi[1],
+        elc_glob[ei[pg->imtrx]->mn]->u_fxi[2], elc_glob[ei[pg->imtrx]->mn]->u_fxi[3],
+        elc_glob[ei[pg->imtrx]->mn]->u_fxi[4]);
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Elliptic fxi model");
   }
@@ -186,10 +196,15 @@ int assemble_elliptic_mesh(void) {
   if (elc_glob[ei[pg->imtrx]->mn]->geta_model == CONSTANT) {
     geta = elc_glob[ei[pg->imtrx]->mn]->geta;
   } else if (elc_glob[ei[pg->imtrx]->mn]->geta_model == ELLIPTIC_SIMPLE_ABS) {
-    geta = simple_abs_model(
+    geta = elliptic_simple_abs_model(
         fv->x0[1], elc_glob[ei[pg->imtrx]->mn]->u_geta[0], elc_glob[ei[pg->imtrx]->mn]->u_geta[1],
         elc_glob[ei[pg->imtrx]->mn]->u_geta[2], elc_glob[ei[pg->imtrx]->mn]->u_geta[3],
         elc_glob[ei[pg->imtrx]->mn]->u_geta[4], elc_glob[ei[pg->imtrx]->mn]->u_geta[5]);
+  } else if (elc_glob[ei[pg->imtrx]->mn]->geta_model == ELLIPTIC_DUAL_ABS) {
+    geta = elliptic_dual_abs_model(
+        fv->x0[1], elc_glob[ei[pg->imtrx]->mn]->u_geta[0], elc_glob[ei[pg->imtrx]->mn]->u_geta[1],
+        elc_glob[ei[pg->imtrx]->mn]->u_geta[2], elc_glob[ei[pg->imtrx]->mn]->u_geta[3],
+        elc_glob[ei[pg->imtrx]->mn]->u_geta[4]);
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Elliptic geta model");
   }
@@ -197,10 +212,15 @@ int assemble_elliptic_mesh(void) {
   if (elc_glob[ei[pg->imtrx]->mn]->hzeta_model == CONSTANT) {
     hzeta = elc_glob[ei[pg->imtrx]->mn]->hzeta;
   } else if (elc_glob[ei[pg->imtrx]->mn]->hzeta_model == ELLIPTIC_SIMPLE_ABS) {
-    hzeta = simple_abs_model(
+    hzeta = elliptic_simple_abs_model(
         fv->x0[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[0], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[1],
         elc_glob[ei[pg->imtrx]->mn]->u_hzeta[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[3],
         elc_glob[ei[pg->imtrx]->mn]->u_hzeta[4], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[5]);
+  } else if (elc_glob[ei[pg->imtrx]->mn]->hzeta_model == ELLIPTIC_DUAL_ABS) {
+    hzeta = elliptic_dual_abs_model(
+        fv->x0[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[0], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[1],
+        elc_glob[ei[pg->imtrx]->mn]->u_hzeta[2], elc_glob[ei[pg->imtrx]->mn]->u_hzeta[3],
+        elc_glob[ei[pg->imtrx]->mn]->u_hzeta[4]);
   } else {
     GOMA_EH(GOMA_ERROR, "Unknown Elliptic hzeta model");
   }

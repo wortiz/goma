@@ -106,6 +106,7 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 /*#define  POROUS_BRINKMAN         7 */
 // ELLIPTIC MESH
 #define ELLIPTIC_SIMPLE_ABS 2
+#define ELLIPTIC_DUAL_ABS   3
 
 /* Types of media */
 #define CONTINUOUS               0
