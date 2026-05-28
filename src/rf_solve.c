@@ -1524,7 +1524,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             case HUYGENS_C:
             case HUYGENS_MASS_ITER:
             case FACET_BASED:
-                  case FACET_BASED_NEGATIVE:
+            case FACET_BASED_NEGATIVE:
               Renorm_Now =
                   (ls->Force_Initial_Renorm || (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0));
 
@@ -1746,9 +1746,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       }
       if (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0 && last_adapt_nt != nt) {
         last_adapt_nt = nt;
-        adapt_mesh_with_mmg(exo, dpi, &rd, ams, &x, &x_old, &x_older, &x_oldest,
-                            &x_update, &xdot, &xdot_old, &resid_vector, &scale, time1, theta,
-                            delta_t, &gvec_elem);
+        adapt_mesh_with_mmg(exo, dpi, &rd, ams, &x, &x_old, &x_older, &x_oldest, &x_update, &xdot,
+                            &xdot_old, &resid_vector, &scale, time1, theta, delta_t, &gvec_elem);
         numProcUnknowns = NumUnknowns[0] + NumExtUnknowns[0];
         realloc_dbl_1(&x_pred, numProcUnknowns, 0);
         realloc_dbl_1(&x_save, numProcUnknowns, 0);
@@ -2267,7 +2266,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           case HUYGENS_C:
           case HUYGENS_MASS_ITER:
           case FACET_BASED:
-                  case FACET_BASED_NEGATIVE:
+          case FACET_BASED_NEGATIVE:
             Renorm_Now =
                 (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0) || ls_adc_event == TRUE;
 
@@ -2314,7 +2313,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             case HUYGENS_C:
             case HUYGENS_MASS_ITER:
             case FACET_BASED:
-                  case FACET_BASED_NEGATIVE:
+            case FACET_BASED_NEGATIVE:
               Renorm_Now = (ls->Renorm_Freq != 0 && ls->Renorm_Countdown == 0);
 
               did_renorm =

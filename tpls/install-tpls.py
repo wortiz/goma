@@ -38,7 +38,6 @@ default_packages = [
     "sparse",
     "catch2",
     "mmg",
-    "parmmg"
 ]
 
 
