@@ -7,11 +7,11 @@
 #include <mmg/mmg3d/libmmg3d.h>
 #include <mpi.h>
 #include <nanoflann.hpp>
+#include <optional>
 #include <sstream>
 #include <stdio.h>
 #include <unordered_set>
 #include <vector>
-#include <optional>
 extern "C" {
 #include "base_mesh.h"
 #include "brkfix/fix.h"
@@ -73,30 +73,30 @@ extern Comm_Ex **cx;
 }
 
 // bool triangle_linear_interp(double xp,
-                            // double yp,
-                            // double xa,
-                            // double ya,
-                            // double xb,
-                            // double yb,
-                            // double xc,
-                            // double yc,
-                            // double &w1,
-                            // double &w2,
-                            // double &w3) {
-  // const double denom = xa*(yb - yc) + xb*(yb - ya) + xc*(ya - yb);
-  // const double scale =
-      // std::max({std::abs(xa - xc), std::abs(xb - xc), std::abs(ya - yc), std::abs(yb - yc), 1.0});
-  // const double tol = 1e-12 * scale * scale;
-  // if (std::abs(denom) <= tol) {
-    // return {};
-  // }
-  // w1 = (xp*(yb - yc) + xb*(yc - yp) + xc*(yp - yb)) / denom;
-  // w2 = (xa*(yp - yc) + xp*(yc - ya) + xc*(ya - yp)) / denom;
-  // w3 = (xa*(yb - yp) + xb*(yp - ya) + xp*(ya - yb)) / denom;
-  // if (w1 < -tol || w2 < -tol || w3 < -tol) {
-    // return false;
-  // }
-  // return true;
+// double yp,
+// double xa,
+// double ya,
+// double xb,
+// double yb,
+// double xc,
+// double yc,
+// double &w1,
+// double &w2,
+// double &w3) {
+// const double denom = xa*(yb - yc) + xb*(yb - ya) + xc*(ya - yb);
+// const double scale =
+// std::max({std::abs(xa - xc), std::abs(xb - xc), std::abs(ya - yc), std::abs(yb - yc), 1.0});
+// const double tol = 1e-12 * scale * scale;
+// if (std::abs(denom) <= tol) {
+// return {};
+// }
+// w1 = (xp*(yb - yc) + xb*(yc - yp) + xc*(yp - yb)) / denom;
+// w2 = (xa*(yp - yc) + xp*(yc - ya) + xc*(ya - yp)) / denom;
+// w3 = (xa*(yb - yp) + xb*(yp - ya) + xp*(ya - yb)) / denom;
+// if (w1 < -tol || w2 < -tol || w3 < -tol) {
+// return false;
+// }
+// return true;
 // }
 std::optional<std::array<double, 3>> triangle_linear_interp(
     double x, double y, double x1, double y1, double x2, double y2, double x3, double y3) {
@@ -196,15 +196,15 @@ template <int pdim> struct PointCloud {
 };
 
 void interp_solution_to_new_mesh_2d(Exo_DB *exo,
-                                 Dpi *dpi,
-                                 struct Results_Description **rd,
-                                 double **x,
-                                 double **xdot,
-                                 double time1,
-                                 double theta,
-                                 double delta_t,
-                                 double *new_nodes,
-                                 int num_nodes) {
+                                    Dpi *dpi,
+                                    struct Results_Description **rd,
+                                    double **x,
+                                    double **xdot,
+                                    double time1,
+                                    double theta,
+                                    double delta_t,
+                                    double *new_nodes,
+                                    int num_nodes) {
   std::vector<std::array<double, 2>> nodes;
   std::vector<std::array<double, 2>> elements_centroids;
   std::vector<std::pair<int, int>> elem_to_block;
@@ -240,7 +240,6 @@ void interp_solution_to_new_mesh_2d(Exo_DB *exo,
 
   my_kd_tree_t index_points(2, pc_points, nanoflann::KDTreeSingleIndexAdaptorParams(10));
 
-
   int time_step;
   float ret_float;
   float version;
@@ -266,61 +265,62 @@ void interp_solution_to_new_mesh_2d(Exo_DB *exo,
     interpolated_values_list[var].resize(num_nodes);
   }
 
-    for (int i = 0; i < num_nodes; i++) {
-      double query_pt[2] = {new_nodes[i * 2], new_nodes[i * 2 + 1]};
+  for (int i = 0; i < num_nodes; i++) {
+    double query_pt[2] = {new_nodes[i * 2], new_nodes[i * 2 + 1]};
 
-      const int num_results = 8;
-      std::vector<size_t> ret_index(num_results);
-      std::vector<double> out_dist_sqr(num_results);
-      nanoflann::KNNResultSet<double> resultSet(num_results);
-      resultSet.init(&ret_index[0], &out_dist_sqr[0]);
+    const int num_results = 8;
+    std::vector<size_t> ret_index(num_results);
+    std::vector<double> out_dist_sqr(num_results);
+    nanoflann::KNNResultSet<double> resultSet(num_results);
+    resultSet.init(&ret_index[0], &out_dist_sqr[0]);
 
-      index.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
-      bool found = false;
-      // triangular linear interpolation
-      for (size_t j = 0; j < resultSet.size(); j++) {
-        int block_id = elem_to_block[ret_index[j]].first;
-        int elem_id = elem_to_block[ret_index[j]].second;
-        int node1_id = exo->eb_conn[block_id][elem_id * 3];
-        int node2_id = exo->eb_conn[block_id][elem_id * 3 + 1];
-        int node3_id = exo->eb_conn[block_id][elem_id * 3 + 2];
-        double x1 = exo->x_coord[node1_id];
-        double y1 = exo->y_coord[node1_id];
-        double x2 = exo->x_coord[node2_id];
-        double y2 = exo->y_coord[node2_id];
-        double x3 = exo->x_coord[node3_id];
-        double y3 = exo->y_coord[node3_id];
-        auto weights = triangle_linear_interp(query_pt[0], query_pt[1], x1, y1, x2, y2, x3, y3);
+    index.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
+    bool found = false;
+    // triangular linear interpolation
+    for (size_t j = 0; j < resultSet.size(); j++) {
+      int block_id = elem_to_block[ret_index[j]].first;
+      int elem_id = elem_to_block[ret_index[j]].second;
+      int node1_id = exo->eb_conn[block_id][elem_id * 3];
+      int node2_id = exo->eb_conn[block_id][elem_id * 3 + 1];
+      int node3_id = exo->eb_conn[block_id][elem_id * 3 + 2];
+      double x1 = exo->x_coord[node1_id];
+      double y1 = exo->y_coord[node1_id];
+      double x2 = exo->x_coord[node2_id];
+      double y2 = exo->y_coord[node2_id];
+      double x3 = exo->x_coord[node3_id];
+      double y3 = exo->y_coord[node3_id];
+      auto weights = triangle_linear_interp(query_pt[0], query_pt[1], x1, y1, x2, y2, x3, y3);
 
-        if (weights) {
-          for (int var = 0; var < num_nodal_vars; var++) {
+      if (weights) {
+        for (int var = 0; var < num_nodal_vars; var++) {
           found = true;
           double v1 = old_values_list[var][node1_id];
           double v2 = old_values_list[var][node2_id];
           double v3 = old_values_list[var][node3_id];
-          interpolated_values_list[var][i] = (*weights)[0] * v1 + (*weights)[1] * v2 + (*weights)[2] * v3;
-          }
-          break;
+          interpolated_values_list[var][i] =
+              (*weights)[0] * v1 + (*weights)[1] * v2 + (*weights)[2] * v3;
         }
-      }
-      if (!found) {
-        const int num_results = 1;
-        std::vector<size_t> ret_index(num_results);
-        std::vector<double> out_dist_sqr(num_results);
-        nanoflann::KNNResultSet<double> resultSet(num_results);
-        resultSet.init(&ret_index[0], &out_dist_sqr[0]);
-        index_points.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
-        int nearest_node_id = ret_index[0];
-          for (int var = 0; var < num_nodal_vars; var++) {
-        interpolated_values_list[var][i] =
-            old_values_list[var][nearest_node_id];
-          }
+        break;
       }
     }
+    if (!found) {
+      const int num_results = 1;
+      std::vector<size_t> ret_index(num_results);
+      std::vector<double> out_dist_sqr(num_results);
+      nanoflann::KNNResultSet<double> resultSet(num_results);
+      resultSet.init(&ret_index[0], &out_dist_sqr[0]);
+      index_points.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
+      int nearest_node_id = ret_index[0];
+      for (int var = 0; var < num_nodal_vars; var++) {
+        interpolated_values_list[var][i] = old_values_list[var][nearest_node_id];
+      }
+    }
+  }
 
   for (int var = 0; var < num_nodal_vars; var++) {
-    int status = ex_put_var(exo->exoid, 1, EX_NODAL, var + 1, 1, interpolated_values_list[var].size(),
-                            interpolated_values_list[var].data());
+    int status =
+        ex_put_var(exo->exoid, 1, EX_NODAL, var + 1, 1, interpolated_values_list[var].size(),
+                   interpolated_values_list[var].data());
     GOMA_EH(status, "ex_put_var");
   }
 
@@ -990,8 +990,8 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
   //     GOMA_EH(status, "ex_put_set_param node set");
   //     status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
   //     GOMA_EH(status, "ex_put_set node set");
-  //     status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
-  //     GOMA_EH(status, "ex_put_set_dist_fact node set");
+  //     status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns],
+  //     node_set_dist.data()); GOMA_EH(status, "ex_put_set_dist_fact node set");
   //   }
   // }
 
@@ -1361,7 +1361,6 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
       CHECK_EX_ERROR(err, "ex_get_variable_names");
     }
 
-
     // Update mesh coordinates with displacements
     // check for displacments
     bool mesh_enabled = false;
@@ -1407,8 +1406,6 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
       std::vector<double> dy_values(np);
       err = ex_get_var(exoII_id, time_step, EX_NODAL, vdex + 1, 1, np, dy_values.data());
       CHECK_EX_ERROR(err, "ex_get_var");
-
-
 
       std::vector<double> dz_values(np);
       if (exo->num_dim == 3) {
