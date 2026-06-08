@@ -1336,6 +1336,107 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     /** with MMG2D_loadMesh function */
     //   if (MMG2D_loadMesh(mmgMesh, filename) != 1)
     // exit(EXIT_FAILURE);
+    /** c) give solutions values and positions */
+    int vdex;
+    int time_step = 1;
+    float version;
+    float ret_float;
+    char ret_char[MAX_STR_LENGTH];
+    int exoII_id =
+        ex_open(ExoFileOutMono, EX_READ, &exo->comp_wordsize, &exo->io_wordsize, &version);
+    ex_inquire(exoII_id, EX_INQ_TIME, &time_step, &ret_float, ret_char);
+
+    int num_nodal_vars;
+    int err = ex_get_variable_param(exoII_id, EX_NODAL, &num_nodal_vars);
+    CHECK_EX_ERROR(err, "ex_get_variable_param");
+
+    std::vector<char> nodal_var_names_vec(num_nodal_vars * (MAX_STR_LENGTH + 1));
+    std::vector<char *> nodal_var_names_ptrs(num_nodal_vars);
+    for (int i = 0; i < num_nodal_vars; i++) {
+      nodal_var_names_ptrs[i] = &nodal_var_names_vec[i * (MAX_STR_LENGTH + 1)];
+    }
+    if (num_nodal_vars > 0) {
+      int err =
+          ex_get_variable_names(exoII_id, EX_NODAL, num_nodal_vars, nodal_var_names_ptrs.data());
+      CHECK_EX_ERROR(err, "ex_get_variable_names");
+    }
+
+
+    // Update mesh coordinates with displacements
+    // check for displacments
+    bool mesh_enabled = false;
+    for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+      if (upd->ep[imtrx][R_MESH1] >= 0) {
+        mesh_enabled = true;
+      }
+    }
+    //
+    if (mesh_enabled) {
+      vdex = -1;
+      int offset = 0;
+      for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+        for (int i = 0; i < rd[imtrx]->nnv; i++) {
+          if (rd[imtrx]->nvtype[i] == R_MESH1 &&
+              strcmp(nodal_var_names_ptrs[i + offset], rd[imtrx]->nvname[i]) == 0) {
+            vdex = i + offset;
+            break;
+          }
+        }
+        offset += rd[imtrx]->nnv;
+      }
+      if (vdex == -1) {
+        GOMA_EH(GOMA_ERROR, "DMX variable not found in Goma");
+      }
+      std::vector<double> dx_values(np);
+      err = ex_get_var(exoII_id, time_step, EX_NODAL, vdex + 1, 1, np, dx_values.data());
+      CHECK_EX_ERROR(err, "ex_get_var");
+      vdex = -1;
+      for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+        for (int i = 0; i < rd[imtrx]->nnv; i++) {
+          if (rd[imtrx]->nvtype[i] == R_MESH2 &&
+              strcmp(nodal_var_names_ptrs[i + offset], rd[imtrx]->nvname[i]) == 0) {
+            vdex = i + offset;
+            break;
+          }
+        }
+        offset += rd[imtrx]->nnv;
+      }
+      if (vdex == -1) {
+        GOMA_EH(GOMA_ERROR, "DMY variable not found in Goma");
+      }
+      std::vector<double> dy_values(np);
+      err = ex_get_var(exoII_id, time_step, EX_NODAL, vdex + 1, 1, np, dy_values.data());
+      CHECK_EX_ERROR(err, "ex_get_var");
+
+
+
+      std::vector<double> dz_values(np);
+      if (exo->num_dim == 3) {
+        vdex = -1;
+        for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+          for (int i = 0; i < rd[imtrx]->nnv; i++) {
+            if (rd[imtrx]->nvtype[i] == R_MESH2 &&
+                strcmp(nodal_var_names_ptrs[i + offset], rd[imtrx]->nvname[i]) == 0) {
+              vdex = i + offset;
+              break;
+            }
+          }
+          offset += rd[imtrx]->nnv;
+        }
+        if (vdex == -1) {
+          GOMA_EH(GOMA_ERROR, "DMY variable not found in Goma");
+        }
+        err = ex_get_var(exoII_id, time_step, EX_NODAL, vdex + 1, 1, np, dz_values.data());
+        CHECK_EX_ERROR(err, "ex_get_var");
+      }
+      for (int i = 0; i < np; i++) {
+        exo_central->x_coord[i] += dx_values[i];
+        exo_central->y_coord[i] += dy_values[i];
+        if (exo->num_dim == 3) {
+          exo_central->z_coord[i] += dz_values[i];
+        }
+      }
+    }
 
     /** 3) Build sol in MMG5 format */
     /** Two solutions: just use the MMG2D_loadMet function that will read a .sol(b)
@@ -1365,29 +1466,6 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
         number of vertices=np, the sol is scalar*/
 
     /** c) give solutions values and positions */
-    int vdex;
-    int time_step = 1;
-    float version;
-    float ret_float;
-    char ret_char[MAX_STR_LENGTH];
-    int exoII_id =
-        ex_open(ExoFileOutMono, EX_READ, &exo->comp_wordsize, &exo->io_wordsize, &version);
-    ex_inquire(exoII_id, EX_INQ_TIME, &time_step, &ret_float, ret_char);
-
-    int num_nodal_vars;
-    int err = ex_get_variable_param(exoII_id, EX_NODAL, &num_nodal_vars);
-    CHECK_EX_ERROR(err, "ex_get_variable_param");
-
-    std::vector<char> nodal_var_names_vec(num_nodal_vars * (MAX_STR_LENGTH + 1));
-    std::vector<char *> nodal_var_names_ptrs(num_nodal_vars);
-    for (int i = 0; i < num_nodal_vars; i++) {
-      nodal_var_names_ptrs[i] = &nodal_var_names_vec[i * (MAX_STR_LENGTH + 1)];
-    }
-    if (num_nodal_vars > 0) {
-      int err =
-          ex_get_variable_names(exoII_id, EX_NODAL, num_nodal_vars, nodal_var_names_ptrs.data());
-      CHECK_EX_ERROR(err, "ex_get_variable_names");
-    }
 
     vdex = -1;
     int offset = 0;
