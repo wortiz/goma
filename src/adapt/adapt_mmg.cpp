@@ -7,13 +7,11 @@
 #include <mmg/mmg3d/libmmg3d.h>
 #include <mpi.h>
 #include <nanoflann.hpp>
-#include <optional>
-#include <set>
 #include <sstream>
 #include <stdio.h>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <optional>
 extern "C" {
 #include "base_mesh.h"
 #include "brkfix/fix.h"
@@ -27,15 +25,11 @@ extern "C" {
 #include "mm_as_structs.h"
 #include "mm_bc.h"
 #include "mm_eh.h"
-#include "mm_interface.h"
-#include "mm_unknown_map.h"
 #include "rd_mesh.h"
 #include "rf_allo.h"
 #include "rf_bc.h"
-#include "rf_bc_const.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
-#include "rf_fill_const.h"
 #include "rf_io.h"
 #include "rf_io_const.h"
 #include "rf_io_structs.h"
@@ -50,7 +44,6 @@ extern "C" {
 #include "adapt/resetup_problem.h"
 #include "el_elm.h"
 #include "el_elm_info.h"
-#include "mm_unknown_map.h"
 #include "rd_dpi.h"
 #include "rd_exo.h"
 #include "rd_mesh.h"
@@ -79,6 +72,32 @@ extern Comm_Ex **cx;
 #undef DISABLE_CPP
 }
 
+// bool triangle_linear_interp(double xp,
+                            // double yp,
+                            // double xa,
+                            // double ya,
+                            // double xb,
+                            // double yb,
+                            // double xc,
+                            // double yc,
+                            // double &w1,
+                            // double &w2,
+                            // double &w3) {
+  // const double denom = xa*(yb - yc) + xb*(yb - ya) + xc*(ya - yb);
+  // const double scale =
+      // std::max({std::abs(xa - xc), std::abs(xb - xc), std::abs(ya - yc), std::abs(yb - yc), 1.0});
+  // const double tol = 1e-12 * scale * scale;
+  // if (std::abs(denom) <= tol) {
+    // return {};
+  // }
+  // w1 = (xp*(yb - yc) + xb*(yc - yp) + xc*(yp - yb)) / denom;
+  // w2 = (xa*(yp - yc) + xp*(yc - ya) + xc*(ya - yp)) / denom;
+  // w3 = (xa*(yb - yp) + xb*(yp - ya) + xp*(ya - yb)) / denom;
+  // if (w1 < -tol || w2 < -tol || w3 < -tol) {
+    // return false;
+  // }
+  // return true;
+// }
 std::optional<std::array<double, 3>> triangle_linear_interp(
     double x, double y, double x1, double y1, double x2, double y2, double x3, double y3) {
   const double denom = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
@@ -176,9 +195,9 @@ template <int pdim> struct PointCloud {
   template <class BBOX> bool kdtree_get_bbox(BBOX & /* bb */) const { return false; }
 };
 
-void interp_solution_to_new_mesh(Exo_DB *exo,
+void interp_solution_to_new_mesh_2d(Exo_DB *exo,
                                  Dpi *dpi,
-                                 struct Results_Description *rd,
+                                 struct Results_Description **rd,
                                  double **x,
                                  double **xdot,
                                  double time1,
@@ -221,9 +240,32 @@ void interp_solution_to_new_mesh(Exo_DB *exo,
 
   my_kd_tree_t index_points(2, pc_points, nanoflann::KDTreeSingleIndexAdaptorParams(10));
 
-  for (int k = 0; k < rd->TotalNVSolnOutput; k++) {
-    std::vector<double> interpolated_values(num_nodes);
-    int var = rd->nvtype[k];
+
+  int time_step;
+  float ret_float;
+  float version;
+  char ret_char[3];
+  int old_exoid =
+      ex_open(ExoFileOutMono, EX_READ, &exo->comp_wordsize, &exo->io_wordsize, &version);
+  ex_inquire(old_exoid, EX_INQ_TIME, &time_step, &ret_float, ret_char);
+
+  int num_nodal_vars;
+  int err = ex_get_variable_param(old_exoid, EX_NODAL, &num_nodal_vars);
+  CHECK_EX_ERROR(err, "ex_get_variable_param");
+
+  std::vector<std::vector<double>> old_values_list(num_nodal_vars);
+  for (int var = 0; var < num_nodal_vars; var++) {
+    old_values_list[var].resize(exo->num_nodes);
+    err = ex_get_var(old_exoid, time_step, EX_NODAL, var + 1, 1, old_values_list[var].size(),
+                     old_values_list[var].data());
+  }
+  ex_close(old_exoid);
+
+  std::vector<std::vector<double>> interpolated_values_list(num_nodal_vars);
+  for (int var = 0; var < num_nodal_vars; var++) {
+    interpolated_values_list[var].resize(num_nodes);
+  }
+
     for (int i = 0; i < num_nodes; i++) {
       double query_pt[2] = {new_nodes[i * 2], new_nodes[i * 2 + 1]};
 
@@ -251,11 +293,13 @@ void interp_solution_to_new_mesh(Exo_DB *exo,
         auto weights = triangle_linear_interp(query_pt[0], query_pt[1], x1, y1, x2, y2, x3, y3);
 
         if (weights) {
+          for (int var = 0; var < num_nodal_vars; var++) {
           found = true;
-          double v1 = x[pg->imtrx][Index_Solution(node1_id, var, 0, 0, -1, pg->imtrx)];
-          double v2 = x[pg->imtrx][Index_Solution(node2_id, var, 0, 0, -1, pg->imtrx)];
-          double v3 = x[pg->imtrx][Index_Solution(node3_id, var, 0, 0, -1, pg->imtrx)];
-          interpolated_values[i] = (*weights)[0] * v1 + (*weights)[1] * v2 + (*weights)[2] * v3;
+          double v1 = old_values_list[var][node1_id];
+          double v2 = old_values_list[var][node2_id];
+          double v3 = old_values_list[var][node3_id];
+          interpolated_values_list[var][i] = (*weights)[0] * v1 + (*weights)[1] * v2 + (*weights)[2] * v3;
+          }
           break;
         }
       }
@@ -267,13 +311,16 @@ void interp_solution_to_new_mesh(Exo_DB *exo,
         resultSet.init(&ret_index[0], &out_dist_sqr[0]);
         index_points.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
         int nearest_node_id = ret_index[0];
-        interpolated_values[i] =
-            x[pg->imtrx][Index_Solution(nearest_node_id, var, 0, 0, -1, pg->imtrx)];
+          for (int var = 0; var < num_nodal_vars; var++) {
+        interpolated_values_list[var][i] =
+            old_values_list[var][nearest_node_id];
+          }
       }
     }
 
-    int status = ex_put_var(exo->exoid, 1, EX_NODAL, k + 1, 1, interpolated_values.size(),
-                            interpolated_values.data());
+  for (int var = 0; var < num_nodal_vars; var++) {
+    int status = ex_put_var(exo->exoid, 1, EX_NODAL, var + 1, 1, interpolated_values_list[var].size(),
+                            interpolated_values_list[var].data());
     GOMA_EH(status, "ex_put_var");
   }
 
@@ -329,6 +376,137 @@ void interp_solution_to_new_mesh(Exo_DB *exo,
     std::copy(interpolated_values.begin(), interpolated_values.end(), efv->ext_fld_ndl_val[k]);
   }
 }
+
+#if 0
+void interp_solution_to_new_mesh_2d(Exo_DB *exo,
+                                    Dpi *dpi,
+                                    struct Results_Description **rd,
+                                    double **x,
+                                    double **xdot,
+                                    double time1,
+                                    double theta,
+                                    double delta_t,
+                                    double *new_nodes,
+                                    int num_nodes) {
+  std::vector<std::array<double, 2>> elements_centroids;
+  std::vector<std::pair<int, int>> elem_to_block;
+  for (int i = 0; i < exo->num_elem_blocks; i++) {
+    for (int j = 0; j < exo->eb_num_elems[i]; j++) {
+      elem_to_block.push_back(std::make_pair(i, j));
+      int node1_id = exo->eb_conn[i][j * 3];
+      int node2_id = exo->eb_conn[i][j * 3 + 1];
+      int node3_id = exo->eb_conn[i][j * 3 + 2];
+      double x1 = exo->x_coord[node1_id];
+      double y1 = exo->y_coord[node1_id];
+      double x2 = exo->x_coord[node2_id];
+      double y2 = exo->y_coord[node2_id];
+      double x3 = exo->x_coord[node3_id];
+      double y3 = exo->y_coord[node3_id];
+      elements_centroids.push_back({(x1 + x2 + x3) / 3.0, (y1 + y2 + y3) / 3.0});
+    }
+  }
+
+  PointCloud<2> pc;
+  pc.pts = elements_centroids;
+
+  PointCloud<2> pc_points;
+  for (int i = 0; i < exo->base_mesh->num_nodes; i++) {
+    pc_points.pts.push_back({exo->x_coord[i], exo->y_coord[i]});
+  }
+
+  using my_kd_tree_2d_t =
+      nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, PointCloud<2>>,
+                                          PointCloud<2>, 2 /* dim */>;
+
+  my_kd_tree_2d_t index(2, pc, nanoflann::KDTreeSingleIndexAdaptorParams(10));
+  my_kd_tree_2d_t index_points(2, pc_points, nanoflann::KDTreeSingleIndexAdaptorParams(10));
+
+  int time_step;
+  float ret_float;
+  float version;
+  char ret_char[3];
+  int old_exoid =
+      ex_open(ExoFileOutMono, EX_READ, &exo->comp_wordsize, &exo->io_wordsize, &version);
+  ex_inquire(old_exoid, EX_INQ_TIME, &time_step, &ret_float, ret_char);
+
+  int num_nodal_vars;
+  int err = ex_get_variable_param(old_exoid, EX_NODAL, &num_nodal_vars);
+  CHECK_EX_ERROR(err, "ex_get_variable_param");
+
+  std::vector<std::vector<double>> old_values_list(num_nodal_vars);
+  for (int var = 0; var < num_nodal_vars; var++) {
+    old_values_list[var].resize(exo->num_nodes);
+    err = ex_get_var(old_exoid, time_step, EX_NODAL, var + 1, 1, old_values_list[var].size(),
+                     old_values_list[var].data());
+  }
+  ex_close(old_exoid);
+
+  std::vector<std::vector<double>> interpolated_values_list(num_nodal_vars);
+  for (int var = 0; var < num_nodal_vars; var++) {
+    interpolated_values_list[var].resize(num_nodes);
+  }
+
+  for (int i = 0; i < num_nodes; i++) {
+    double query_pt[2] = {new_nodes[i * 3], new_nodes[i * 3 + 1]};
+
+    const int num_results = 12;
+    std::vector<size_t> ret_index(num_results);
+    std::vector<double> out_dist_sqr(num_results);
+    nanoflann::KNNResultSet<double> resultSet(num_results);
+    resultSet.init(&ret_index[0], &out_dist_sqr[0]);
+
+    index.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
+    bool found = false;
+    dbl w1, w2, w3;
+    int node_ids[4];
+    for (size_t j = 0; j < resultSet.size(); j++) {
+      int block_id = elem_to_block[ret_index[j]].first;
+      int elem_id = elem_to_block[ret_index[j]].second;
+      int node1_id = exo->eb_conn[block_id][elem_id * 3];
+      int node2_id = exo->eb_conn[block_id][elem_id * 3 + 1];
+      int node3_id = exo->eb_conn[block_id][elem_id * 3 + 2];
+
+      found = triangle_linear_interp(query_pt[0], query_pt[1], exo->x_coord[node1_id],
+                                     exo->y_coord[node1_id], exo->x_coord[node2_id],
+                                     exo->y_coord[node2_id], exo->x_coord[node3_id],
+                                     exo->y_coord[node3_id], w1, w2, w3);
+
+      if (found) {
+        node_ids[0] = node1_id;
+        node_ids[1] = node2_id;
+        node_ids[2] = node3_id;
+        break;
+      }
+    }
+
+    if (!found) {
+      const int nearest_results = 1;
+      std::vector<size_t> nearest_index(nearest_results);
+      std::vector<double> nearest_dist_sqr(nearest_results);
+      nanoflann::KNNResultSet<double> nearestSet(nearest_results);
+      nearestSet.init(&nearest_index[0], &nearest_dist_sqr[0]);
+      index_points.findNeighbors(nearestSet, query_pt, nanoflann::SearchParameters());
+      int nearest_node_id = nearest_index[0];
+      for (int var = 0; var < num_nodal_vars; var++) {
+        interpolated_values_list[var][i] = old_values_list[var][nearest_node_id];
+      }
+    } else {
+      for (int var = 0; var < num_nodal_vars; var++) {
+        interpolated_values_list[var][i] = w1 * old_values_list[var][node_ids[0]] +
+                                           w2 * old_values_list[var][node_ids[1]] +
+                                           w3 * old_values_list[var][node_ids[2]];
+      }
+    }
+  }
+
+  for (int var = 0; var < num_nodal_vars; var++) {
+    int status =
+        ex_put_var(exo->exoid, 1, EX_NODAL, var + 1, 1, interpolated_values_list[var].size(),
+                   interpolated_values_list[var].data());
+    GOMA_EH(status, "ex_put_var");
+  }
+}
+#endif
 
 void interp_solution_to_new_mesh_3d(Exo_DB *exo,
                                     Dpi *dpi,
@@ -641,10 +819,9 @@ void convert_mesh_to_mmg_3d(Exo_DB *exo,
 }
 
 void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
-                           struct Results_Description *rd,
+                           struct Results_Description **rd,
                            Exo_DB *exo,
                            Dpi *dpi,
-                           int imtrx,
                            double **x,
                            double **xdot,
                            double time1,
@@ -783,38 +960,56 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
     status = ex_put_set_dist_fact(exo->exoid, EX_SIDE_SET, exo->ss_id[ss], side_set_dist.data());
     GOMA_EH(status, "ex_put_set_dist_fact side set");
   }
-  for (int ns = 0; ns < exo->num_node_sets; ns++) {
-    std::vector<int> node_set;
-    int ns_id = exo->ns_id[ns];
-    for (int i = 0; i < numVerticesNew; i++) {
-      if (verTagsNew[i] == ns_id) {
-        node_set.push_back(i + 1);
-      }
-    }
-    if (node_set.size() == 1) {
-      std::vector<double> node_set_dist(node_set.size());
-      std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
-      status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
-                                node_set.size());
-      GOMA_EH(status, "ex_put_set_param node set");
-      status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
-      GOMA_EH(status, "ex_put_set node set");
-      status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
-      GOMA_EH(status, "ex_put_set_dist_fact node set");
-    }
-  }
-  int num_vars = rd->nnv;
+  // for (int ns = 0; ns < exo->num_node_sets; ns++) {
+  //   std::vector<int> node_set;
+  //   int ns_id = exo->ns_id[ns];
+  //   for (int i = 0; i < numVerticesNew; i++) {
+  //     if (verTagsNew[i] == ns_id) {
+  //       node_set.push_back(i + 1);
+  //     }
+  //   }
+  //   if (node_set.size() == 1) {
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+  //     std::vector<double> node_set_dist(node_set.size());
+  //     std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
+  //     status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
+  //                               node_set.size());
+  //     GOMA_EH(status, "ex_put_set_param node set");
+  //     status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
+  //     GOMA_EH(status, "ex_put_set node set");
+  //     status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
+  //     GOMA_EH(status, "ex_put_set_dist_fact node set");
+  //   }
+  // }
+
   char *var_names[MAX_NNV];
-  for (int i = 0; i < num_vars; i++) {
-    var_names[i] = rd->nvname[i];
+  int num_vars = 0;
+  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (int i = 0; i < rd[imtrx]->nnv; i++) {
+      var_names[num_vars + i] = rd[imtrx]->nvname[i];
+    }
+    num_vars += rd[imtrx]->nnv;
   }
   status = ex_put_variable_param(exo->exoid, EX_NODAL, num_vars);
   GOMA_EH(status, "ex_put_variable_param EX_NODAL");
   status = ex_put_variable_names(exo->exoid, EX_NODAL, num_vars, var_names);
   GOMA_EH(status, "ex_put_variable_names nodal");
 
-  interp_solution_to_new_mesh(exo, dpi, rd, x, xdot, time1, theta, delta_t, verticesNew,
-                              numVerticesNew);
+  interp_solution_to_new_mesh_2d(exo, dpi, rd, x, xdot, time1, theta, delta_t, verticesNew,
+                                 numVerticesNew);
 
   status = ex_close(exo->exoid);
   GOMA_EH(status, "ex_close");
@@ -1257,8 +1452,8 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     // if (MMG2D_saveSol(mmgMesh, mmgSol, outname) != 1)
     //   exit(EXIT_FAILURE);
     if (exo->num_dim == 2) {
-      // mmg_convert_to_exodus(&mmgMesh, rd, exo, dpi, x, xdot, time1, theta, delta_t);
-      GOMA_EH(GOMA_ERROR, "MMG2D -> EXODUS conversion not implemented for 2D mesh\n");
+      mmg_convert_to_exodus(&mmgMesh, rd, exo, dpi, x, xdot, time1, theta, delta_t);
+      // GOMA_EH(GOMA_ERROR, "MMG2D -> EXODUS conversion not implemented for 2D mesh\n");
     } else {
       mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t);
     }
@@ -1343,8 +1538,8 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
   safer_free((void **)&Dolphin);
 
   std::vector<char *> mmg_files;
-  char *file = "tmp.mmg_adapted.e";
-  mmg_files.push_back(file);
+  std::string file = "tmp.mmg_adapted.e";
+  mmg_files.push_back(const_cast<char *>(file.c_str()));
   if (Num_Proc > 1 && ProcID == 0) {
     goma_metis_decomposition(mmg_files.data(), 1);
   }
