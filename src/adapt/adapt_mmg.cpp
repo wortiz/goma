@@ -960,40 +960,40 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
     status = ex_put_set_dist_fact(exo->exoid, EX_SIDE_SET, exo->ss_id[ss], side_set_dist.data());
     GOMA_EH(status, "ex_put_set_dist_fact side set");
   }
-  // for (int ns = 0; ns < exo->num_node_sets; ns++) {
-  //   std::vector<int> node_set;
-  //   int ns_id = exo->ns_id[ns];
-  //   for (int i = 0; i < numVerticesNew; i++) {
-  //     if (verTagsNew[i] == ns_id) {
-  //       node_set.push_back(i + 1);
-  //     }
-  //   }
-  //   if (node_set.size() == 1) {
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-  //     std::vector<double> node_set_dist(node_set.size());
-  //     std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
-  //     status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
-  //                               node_set.size());
-  //     GOMA_EH(status, "ex_put_set_param node set");
-  //     status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
-  //     GOMA_EH(status, "ex_put_set node set");
-  //     status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns],
-  //     node_set_dist.data()); GOMA_EH(status, "ex_put_set_dist_fact node set");
-  //   }
-  // }
+  for (int ns = 0; ns < exo->num_node_sets; ns++) {
+    std::vector<int> node_set;
+    int ns_id = exo->ns_id[ns];
+    for (int i = 0; i < numVerticesNew; i++) {
+      if (verTagsNew[i] == ns_id) {
+        node_set.push_back(i + 1);
+      }
+    }
+    if (node_set.size() == 1) {
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
+      std::vector<double> node_set_dist(node_set.size());
+      std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
+      status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
+                                node_set.size());
+      GOMA_EH(status, "ex_put_set_param node set");
+      status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
+      GOMA_EH(status, "ex_put_set node set");
+      status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns],
+      node_set_dist.data()); GOMA_EH(status, "ex_put_set_dist_fact node set");
+    }
+  }
 
   char *var_names[MAX_NNV];
   int num_vars = 0;
@@ -1360,6 +1360,7 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
           ex_get_variable_names(exoII_id, EX_NODAL, num_nodal_vars, nodal_var_names_ptrs.data());
       CHECK_EX_ERROR(err, "ex_get_variable_names");
     }
+    np = exo_central->num_nodes;
 
     // Update mesh coordinates with displacements
     // check for displacments
@@ -1412,7 +1413,7 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
         vdex = -1;
         for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
           for (int i = 0; i < rd[imtrx]->nnv; i++) {
-            if (rd[imtrx]->nvtype[i] == R_MESH2 &&
+            if (rd[imtrx]->nvtype[i] == R_MESH3 &&
                 strcmp(nodal_var_names_ptrs[i + offset], rd[imtrx]->nvname[i]) == 0) {
               vdex = i + offset;
               break;
@@ -1527,7 +1528,7 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     // if (MMG2D_saveSol(mmgMesh, mmgSol, outname) != 1)
     //   exit(EXIT_FAILURE);
     if (exo->num_dim == 2) {
-      mmg_convert_to_exodus(&mmgMesh, rd, exo, dpi, x, xdot, time1, theta, delta_t);
+      mmg_convert_to_exodus(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t);
       // GOMA_EH(GOMA_ERROR, "MMG2D -> EXODUS conversion not implemented for 2D mesh\n");
     } else {
       mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t);

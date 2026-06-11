@@ -202,9 +202,9 @@ int resetup_matrix(struct GomaLinearSolverData **ams, Exo_DB *exo, Dpi *dpi) {
                                        num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx],
                                        local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
                                        dpi, cx[pg->imtrx], pg->imtrx, Debug_Flag, ams[JAC]);
+      ams[pg->imtrx]->solveSetup = 0;
     }
     pg->imtrx = 0;
-    ams[pg->imtrx]->solveSetup = 0;
   } else {
     GOMA_EH(-1, "Unsupported matrix storage format use epetra");
   }
