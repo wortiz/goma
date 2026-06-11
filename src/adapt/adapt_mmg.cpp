@@ -669,7 +669,9 @@ void convert_mesh_to_mmg(Exo_DB *exo,
     /*First we must calculate the material-referenced element
      *number so as to be compatible with the ElemStorage struct
      */
-    int type = exo->eb_elem_itype[ebn];
+    int type =
+        get_type(exo->eb_elem_type[ebn], exo->eb_num_nodes_per_elem[ebn], exo->eb_num_attr[ebn]);
+
     if (type != LINEAR_TRI) {
       GOMA_EH(GOMA_ERROR,
               "Only linear triangles are supported in this version of the MMG adapter.");
