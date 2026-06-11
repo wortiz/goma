@@ -828,7 +828,8 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
                            double **xdot,
                            double time1,
                            double theta,
-                           double delta_t) {
+                           double delta_t,
+                           const std::unordered_set<int> &single_node_ns_ids) {
   int numVerticesNew, numCellsNew, numFacesNew;
   MMG2D_Get_meshSize(*mmgMesh, &numVerticesNew, &numCellsNew, 0, &numFacesNew);
   int32_t *verTagsNew, *corners, *requiredVer;
@@ -963,6 +964,8 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
     GOMA_EH(status, "ex_put_set_dist_fact side set");
   }
   for (int ns = 0; ns < exo->num_node_sets; ns++) {
+    if (single_node_ns_ids.count(exo->ns_id[ns]) == 0)
+      continue;
     std::vector<int> node_set;
     int ns_id = exo->ns_id[ns];
     for (int i = 0; i < numVerticesNew; i++) {
@@ -971,20 +974,6 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
       }
     }
     if (node_set.size() == 1) {
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
-      printf("NODE SET %d is a single node, setting it as required\n", ns_id);
       std::vector<double> node_set_dist(node_set.size());
       std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
       status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
@@ -992,8 +981,9 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
       GOMA_EH(status, "ex_put_set_param node set");
       status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
       GOMA_EH(status, "ex_put_set node set");
-      status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns],
-      node_set_dist.data()); GOMA_EH(status, "ex_put_set_dist_fact node set");
+      status =
+          ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
+      GOMA_EH(status, "ex_put_set_dist_fact node set");
     }
   }
 
@@ -1042,7 +1032,8 @@ void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
                               double **xdot,
                               double time1,
                               double theta,
-                              double delta_t) {
+                              double delta_t,
+                              const std::unordered_set<int> &single_node_ns_ids) {
   MMG5_int numVerticesNew = 0, numCellsNew = 0, numPrismsNew = 0, numFacesNew = 0;
   MMG5_int numQuadsNew = 0, numEdgesNew = 0;
   MMG3D_Get_meshSize(*mmgMesh, &numVerticesNew, &numCellsNew, &numPrismsNew, &numFacesNew,
@@ -1169,26 +1160,26 @@ void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
   }
 
   for (int ns = 0; ns < exo->num_node_sets; ns++) {
-    if (exo->ns_num_nodes[ns] == 1) {
-      std::vector<int> node_set;
-      int ns_id = exo->ns_id[ns];
-      for (int i = 0; i < numVerticesNew; i++) {
-        if (verTagsNew[i] == ns_id) {
-          node_set.push_back(i + 1);
-        }
+    if (single_node_ns_ids.count(exo->ns_id[ns]) == 0)
+      continue;
+    std::vector<int> node_set;
+    int ns_id = exo->ns_id[ns];
+    for (int i = 0; i < numVerticesNew; i++) {
+      if (verTagsNew[i] == ns_id) {
+        node_set.push_back(i + 1);
       }
-      if (node_set.size() == 1) {
-        std::vector<double> node_set_dist(node_set.size());
-        std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
-        status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
-                                  node_set.size());
-        GOMA_EH(status, "ex_put_set_param node set");
-        status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
-        GOMA_EH(status, "ex_put_set node set");
-        status =
-            ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
-        GOMA_EH(status, "ex_put_set_dist_fact node set");
-      }
+    }
+    if (node_set.size() == 1) {
+      std::vector<double> node_set_dist(node_set.size());
+      std::fill(node_set_dist.begin(), node_set_dist.end(), 0.0);
+      status = ex_put_set_param(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.size(),
+                                node_set.size());
+      GOMA_EH(status, "ex_put_set_param node set");
+      status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
+      GOMA_EH(status, "ex_put_set node set");
+      status =
+          ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
+      GOMA_EH(status, "ex_put_set_dist_fact node set");
     }
   }
 
@@ -1441,6 +1432,13 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     /** 3) Build sol in MMG5 format */
     /** Two solutions: just use the MMG2D_loadMet function that will read a .sol(b)
         file formatted or manually set your sol using the MMG2D_Set* functions */
+    std::unordered_set<int> single_node_ns_ids;
+    for (int ns = 0; ns < exo_central->num_node_sets; ns++) {
+      if (exo_central->ns_num_nodes[ns] == 1) {
+        single_node_ns_ids.insert(exo_central->ns_id[ns]);
+      }
+    }
+
     if (exo->num_dim == 2) {
       convert_mesh_to_mmg(exo_central, dpi, x, xdot, time1, theta, delta_t, &mmgMesh);
 
@@ -1530,10 +1528,12 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     // if (MMG2D_saveSol(mmgMesh, mmgSol, outname) != 1)
     //   exit(EXIT_FAILURE);
     if (exo->num_dim == 2) {
-      mmg_convert_to_exodus(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t);
+      mmg_convert_to_exodus(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t,
+                             single_node_ns_ids);
       // GOMA_EH(GOMA_ERROR, "MMG2D -> EXODUS conversion not implemented for 2D mesh\n");
     } else {
-      mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t);
+      mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t,
+                                single_node_ns_ids);
     }
   }
 
