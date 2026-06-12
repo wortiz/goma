@@ -981,8 +981,7 @@ void mmg_convert_to_exodus(MMG5_pMesh *mmgMesh,
       GOMA_EH(status, "ex_put_set_param node set");
       status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
       GOMA_EH(status, "ex_put_set node set");
-      status =
-          ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
+      status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
       GOMA_EH(status, "ex_put_set_dist_fact node set");
     }
   }
@@ -1177,8 +1176,7 @@ void mmg_convert_to_exodus_3d(MMG5_pMesh *mmgMesh,
       GOMA_EH(status, "ex_put_set_param node set");
       status = ex_put_set(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set.data(), NULL);
       GOMA_EH(status, "ex_put_set node set");
-      status =
-          ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
+      status = ex_put_set_dist_fact(exo->exoid, EX_NODE_SET, exo->ns_id[ns], node_set_dist.data());
       GOMA_EH(status, "ex_put_set_dist_fact node set");
     }
   }
@@ -1529,11 +1527,11 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     //   exit(EXIT_FAILURE);
     if (exo->num_dim == 2) {
       mmg_convert_to_exodus(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t,
-                             single_node_ns_ids);
+                            single_node_ns_ids);
       // GOMA_EH(GOMA_ERROR, "MMG2D -> EXODUS conversion not implemented for 2D mesh\n");
     } else {
       mmg_convert_to_exodus_3d(&mmgMesh, rd, exo_central, dpi, x, xdot, time1, theta, delta_t,
-                                single_node_ns_ids);
+                               single_node_ns_ids);
     }
   }
 

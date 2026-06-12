@@ -1639,8 +1639,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               exchange_dof(cx[pg->imtrx], dpi, x_oldest[pg->imtrx], pg->imtrx);
             }
             for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-            nullify_dirichlet_bcs();
-            find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
+              nullify_dirichlet_bcs();
+              find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
             }
             pg->imtrx = save;
           }

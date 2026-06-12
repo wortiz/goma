@@ -781,18 +781,6 @@ static void facet_based_reinitialization_2D(
     facets.push_back(Line<2>({all_facets[i * 4], all_facets[i * 4 + 1]},
                              {all_facets[i * 4 + 2], all_facets[i * 4 + 3]}));
   }
-  if (ProcID == 0) {
-    std::string filename = "facets_" + std::to_string(tran->time_value) + ".txt";
-    std::ofstream file(filename);
-    file << "x,y\n";
-    for (size_t i = 0; i < facets.size(); i++) {
-      file << facets[i].p0[0] << "," << facets[i].p0[1] << "\n"
-           << facets[i].p1[0] << "," << facets[i].p1[1] << "\n";
-    }
-    file.close();
-  }
-
-  // std::exit(0);
 
   PointCloud<2> pc;
   generate_point_cloud(pc, facets);
