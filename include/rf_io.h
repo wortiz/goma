@@ -101,6 +101,7 @@ extern int Write_Intermediate_Solutions;
 /* write out solution data at each */
 /* Newton iteration. */
 extern int Write_Initial_Solution;
+extern int Enable_Floating_Exceptions;
 /* Flag to indicate whether to write the
  * initial solution to the ascii and
  * exodus output files */

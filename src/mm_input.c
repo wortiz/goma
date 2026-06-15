@@ -69,6 +69,11 @@
 #define GOMA_MM_INPUT_C
 #include "mm_input.h"
 
+#ifdef __linux__
+#define __USE_GNU
+#include <fenv.h>
+#endif
+
 static char aprepro_command[1024];
 
 static int look_forward_optional_until(
@@ -12095,6 +12100,11 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
         istr++;
         clc[*nclc]->type = WRITE_INTERMEDIATE;
       }
+      else if (strcmp(argv[istr], "-fpe") == 0) {
+        (*nclc)++;
+        istr++;
+        clc[*nclc]->type = FLOATING_EXCEPTION_CL;
+      }
       /*
        * OPTION -time_pl: SPECIFY EXOII FILE STEP NUMBER TO READ
        */
@@ -12338,6 +12348,9 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
     } else if (clc[i]->type == WRITE_INTERMEDIATE) {
       fprintf(stdout, "Write Intermediate Solutions request.\n\n");
       Write_Intermediate_Solutions = TRUE;
+    } else if (clc[i]->type == FLOATING_EXCEPTION_CL) {
+      fprintf(stdout, "Floating point exceptions request.\n\n");
+      Enable_Floating_Exceptions = TRUE;
     } else if (clc[i]->type == EXOII_TIME_PLANE) {
       fprintf(stdout, "Exodus Time Plane = %d\n\n", clc[i]->i_val);
       ExoTimePlane = clc[i]->i_val;

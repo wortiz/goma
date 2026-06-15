@@ -24,7 +24,7 @@
 #include <sunmath.h>
 #endif
 
-#ifdef FP_EXCEPT
+#ifdef __linux__
 #define __USE_GNU
 #include <fenv.h>
 #endif
@@ -156,6 +156,7 @@ int Write_Intermediate_Solutions = FALSE; /* Flag specifies whether to */
                                           /* write out solution data at each */
                                           /* Newton iteration. */
 int Write_Initial_Solution = FALSE;
+int Enable_Floating_Exceptions = FALSE;
 /* Flag to indicate whether to write the
  * initial solution to the ascii and exodus
  * output files */
@@ -810,9 +811,20 @@ int main(int argc, char **argv)
       wr_dpi(DPI_ptr, ExoFileOut);
     }
   }
+  int force_fpe = 0;
 #ifdef FP_EXCEPT
-  feenableexcept((FE_OVERFLOW | FE_DIVBYZERO | FE_INVALID));
+  force_fpe = 1;
 #endif
+  if (force_fpe || Enable_Floating_Exceptions) {
+#ifdef __linux__
+    // Enable trapping for common FPEs
+    if (feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW) == -1) {
+        GOMA_EH(GOMA_ERROR, "-fpe, Fprintfloating point exceptions not supported on this architecture.\n");
+    }
+#else
+    GOMA_EH(GOMA_ERROR, "-fpe feenableexcept is not available.\n");
+#endif
+  }
 
   /***********************************************************************/
   /***********************************************************************/
