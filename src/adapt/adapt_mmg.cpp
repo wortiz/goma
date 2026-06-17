@@ -1,3 +1,4 @@
+#ifdef GOMA_ENABLE_MMG
 #include "adapt/adapt_mmg.h"
 #include <algorithm>
 #include <cmath>
@@ -1707,3 +1708,4 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     free(exo_central);
   }
 }
+#endif
