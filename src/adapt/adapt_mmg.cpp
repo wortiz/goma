@@ -1663,13 +1663,12 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     realloc_dbl_1(&x[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&x_old[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&x_older[imtrx], numProcUnknowns, 0);
-    realloc_dbl_1(&x_update[imtrx], numProcUnknowns, 0);
+    realloc_dbl_1(&x_update[imtrx], numProcUnknowns + numProcUnknowns, 0);
     realloc_dbl_1(&xdot[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&xdot_old[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&x_oldest[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&resid_vector[imtrx], numProcUnknowns, 0);
     realloc_dbl_1(&scale[imtrx], numProcUnknowns, 0);
-    // realloc_dbl_1(&x_update[imtrx], numProcUnknowns + numProcUnknowns, 0);
     pg->matrices[imtrx].ams = ams[imtrx];
     pg->matrices[imtrx].x = x[imtrx];
     pg->matrices[imtrx].x_old = x_old[imtrx];

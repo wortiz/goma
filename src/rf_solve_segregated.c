@@ -2129,7 +2129,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               // Relax the solution
               P0PRINTF("Relaxing solution with %g\n", tran->relaxation[pg->imtrx]);
               dbl sol_norm_diff = 0;
-              for (int i = 0; i < numProcUnknowns[pg->imtrx]; i++) {
+              for (int i = 0; i < NumUnknowns[pg->imtrx]; i++) {
                 dbl tmp = x[pg->imtrx][i] - x_prev[pg->imtrx][i];
                 sol_norm_diff += tmp * tmp;
                 x[pg->imtrx][i] =
@@ -2141,6 +2141,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               P0PRINTF("Relax diff current: %g target: %g\n", sqrt(global_diff),
                        tran->relaxation_tolerance[pg->imtrx]);
               relaxation_diff[pg->imtrx] = sqrt(global_diff);
+              if (!isfinite(relaxation_diff[pg->imtrx])) {
+                GOMA_EH(GOMA_ERROR, "Relaxation diff is inf or nan");
+              }
               dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_prev[pg->imtrx]);
             }
           } // sub-time loop if else
