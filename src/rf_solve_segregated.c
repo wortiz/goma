@@ -556,7 +556,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   /* Allocate sparse matrix */
 
   ija = malloc(upd->Total_Num_Matrices * sizeof(int *));
-  ija_attic = malloc(upd->Total_Num_Matrices * sizeof(int *));
+  ija_attic = calloc(upd->Total_Num_Matrices, sizeof(int *));
   a = malloc(upd->Total_Num_Matrices * sizeof(double *));
   a_old = malloc(upd->Total_Num_Matrices * sizeof(double *));
 
