@@ -15,7 +15,9 @@
 #include "mm_as.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
+#include "mm_fill_util.h"
 #include "mm_unknown_map.h"
+#include "rf_allo.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
 #include "rf_io.h"
@@ -203,6 +205,100 @@ int resetup_matrix(struct GomaLinearSolverData **ams, Exo_DB *exo, Dpi *dpi) {
                                        local_nodes, Nodes, MaxVarPerNode, Matilda, Inter_Mask, exo,
                                        dpi, cx[pg->imtrx], pg->imtrx, Debug_Flag, ams[JAC]);
       ams[pg->imtrx]->solveSetup = 0;
+    }
+    pg->imtrx = 0;
+  } else if (strcmp(Matrix_Format, "msr") == 0) {
+    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+      int imtrx = pg->imtrx;
+
+      if (ams[imtrx]->DestroySolverData) {
+        ams[imtrx]->DestroySolverData(ams[imtrx]);
+        ams[imtrx]->DestroySolverData = NULL;
+        ams[imtrx]->SolverData = NULL;
+      }
+
+      safer_free((void **)&ams[imtrx]->val);
+      safer_free((void **)&ams[imtrx]->val_old);
+      safer_free((void **)&ams[imtrx]->bindx);
+      safer_free((void **)&ams[imtrx]->belfry);
+      safer_free((void **)&ams[imtrx]->data_org);
+
+      int *ija = NULL;
+      double *a = NULL, *a_old = NULL;
+      int *ija_attic = NULL;
+
+      /* Fill=0 means node_to_fill is unused; pass NULL */
+      alloc_MSR_sparse_arrays(&ija, &a, &a_old, 0, NULL, exo, dpi);
+      alloc_extern_ija_buffer(num_universe_dofs[imtrx],
+                              num_internal_dofs[imtrx] + num_boundary_dofs[imtrx], ija, &ija_attic);
+
+      ams[imtrx]->bindx = ija;
+      ams[imtrx]->val = a;
+      ams[imtrx]->val_old = a_old;
+      ams[imtrx]->belfry = ija_attic;
+      ams[imtrx]->indx = NULL;
+      ams[imtrx]->bpntr = NULL;
+      ams[imtrx]->rpntr = NULL;
+      ams[imtrx]->cpntr = NULL;
+
+      ams[imtrx]->N_update = num_internal_dofs[imtrx] + num_boundary_dofs[imtrx];
+      ams[imtrx]->npn = dpi->num_internal_nodes + dpi->num_boundary_nodes;
+      ams[imtrx]->npn_plus =
+          dpi->num_internal_nodes + dpi->num_boundary_nodes + dpi->num_external_nodes;
+      ams[imtrx]->npu = num_internal_dofs[imtrx] + num_boundary_dofs[imtrx];
+      ams[imtrx]->npu_plus = num_universe_dofs[imtrx];
+      ams[imtrx]->nnz = ija[num_internal_dofs[imtrx] + num_boundary_dofs[imtrx]] - 1;
+      ams[imtrx]->nnz_plus = ija[num_universe_dofs[imtrx]];
+
+#ifdef GOMA_ENABLE_AZTEC
+      /* Rebuild data_org — mirrors sl_init() logic; sl_init() cannot be called
+       * again due to the static Num_Calls guard in sl_util.c */
+      if (Num_Proc == 1) {
+        ams[imtrx]->data_org = (int *)array_alloc(1, AZ_COMM_SIZE, sizeof(int));
+        ams[imtrx]->data_org[AZ_matrix_type] = AZ_MSR_MATRIX;
+        ams[imtrx]->mat_type = AZ_MSR_MATRIX;
+        ams[imtrx]->data_org[AZ_N_int_blk] = ams[imtrx]->N_update;
+        ams[imtrx]->data_org[AZ_N_bord_blk] = 0;
+        ams[imtrx]->data_org[AZ_N_ext_blk] = 0;
+        ams[imtrx]->data_org[AZ_N_internal] = ams[imtrx]->N_update;
+        ams[imtrx]->data_org[AZ_N_border] = 0;
+        ams[imtrx]->data_org[AZ_N_external] = 0;
+        ams[imtrx]->data_org[AZ_N_neigh] = 0;
+        ams[imtrx]->data_org[AZ_total_send] = 0;
+        ams[imtrx]->data_org[AZ_name] = 1 + imtrx;
+        ams[imtrx]->data_org[AZ_neighbors] = 0;
+        ams[imtrx]->data_org[AZ_rec_length] = 0;
+        ams[imtrx]->data_org[AZ_send_length] = 0;
+        ams[imtrx]->external = NULL;
+        ams[imtrx]->update_index = NULL;
+        ams[imtrx]->extern_index = NULL;
+      } else {
+        int length = AZ_COMM_SIZE + ptr_dof_send[imtrx][dpi->num_neighbors];
+        ams[imtrx]->data_org = (int *)smalloc(length * sizeof(int));
+        ams[imtrx]->data_org[AZ_N_internal] = num_internal_dofs[imtrx];
+        ams[imtrx]->data_org[AZ_N_border] = num_boundary_dofs[imtrx];
+        ams[imtrx]->data_org[AZ_N_external] = num_external_dofs[imtrx];
+        ams[imtrx]->data_org[AZ_matrix_type] = AZ_MSR_MATRIX;
+        ams[imtrx]->mat_type = AZ_MSR_MATRIX;
+        ams[imtrx]->data_org[AZ_N_int_blk] = num_internal_dofs[imtrx];
+        ams[imtrx]->data_org[AZ_N_bord_blk] = num_boundary_dofs[imtrx];
+        ams[imtrx]->data_org[AZ_N_ext_blk] = num_external_dofs[imtrx];
+        ams[imtrx]->data_org[AZ_N_neigh] = dpi->num_neighbors;
+        ams[imtrx]->data_org[AZ_total_send] = ptr_dof_send[imtrx][dpi->num_neighbors];
+        ams[imtrx]->data_org[AZ_name] = 1 + imtrx;
+        /* sl_init is always called with cx[0]; cx[0][p] gives per-neighbor info */
+        for (int p = 0; p < dpi->num_neighbors; p++) {
+          ams[imtrx]->data_org[AZ_neighbors + p] = cx[0][p].neighbor_name;
+          ams[imtrx]->data_org[AZ_rec_length + p] = cx[0][p].num_dofs_recv;
+          ams[imtrx]->data_org[AZ_send_length + p] = cx[0][p].num_dofs_send;
+        }
+        for (int i = 0; i < ptr_dof_send[imtrx][dpi->num_neighbors]; i++) {
+          ams[imtrx]->data_org[AZ_send_list + i] = list_dof_send[imtrx][i];
+        }
+      }
+#endif /* GOMA_ENABLE_AZTEC */
+
+      ams[imtrx]->solveSetup = 0;
     }
     pg->imtrx = 0;
   } else {
