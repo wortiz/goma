@@ -1,6 +1,8 @@
 #ifndef GOMA_ADAPT_MMG_H
 #define GOMA_ADAPT_MMG_H
 
+#ifdef GOMA_ENABLE_MMG
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,5 +32,7 @@ void adapt_mesh_with_mmg(Exo_DB *exo,
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+
+#endif /* GOMA_ENABLE_MMG */
 
 #endif /* GOMA_ADAPT_MMG_H */

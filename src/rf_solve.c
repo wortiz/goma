@@ -29,7 +29,9 @@
 
 #include "ac_particles.h"
 #include "ac_stability_util.h"
+#ifdef GOMA_ENABLE_MMG
 #include "adapt/adapt_mmg.h"
+#endif
 #ifdef GOMA_ENABLE_AZTEC
 #include "az_aztec.h"
 #endif
@@ -1744,6 +1746,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       } else {
         DPRINTF(stderr, "skipping predict_solution at time: %g %d\n", time1, nonconv_roll);
       }
+#ifdef GOMA_ENABLE_MMG
       if (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0 && last_adapt_nt != nt) {
         last_adapt_nt = nt;
         adapt_mesh_with_mmg(exo, dpi, &rd, ams, &x, &x_old, &x_older, &x_oldest, &x_update, &xdot,
@@ -1773,6 +1776,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         find_and_set_Dirichlet(x, xdot, exo, dpi);
         nprint = 0;
       }
+#endif /* GOMA_ENABLE_MMG */
 
 #ifdef LASER_RAYTRACE
       if (ls != NULL) {

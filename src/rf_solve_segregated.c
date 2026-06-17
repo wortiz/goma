@@ -12,7 +12,9 @@
 * See LICENSE file.                                                       *
 \************************************************************************/
 
+#ifdef GOMA_ENABLE_MMG
 #include "adapt/adapt_mmg.h"
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1431,6 +1433,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           }
           numProcUnknowns[pg->imtrx] = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
 
+#ifdef GOMA_ENABLE_MMG
           if (ls != NULL && subcycle == 0 && ls->adapt && nt % ls->adapt_freq == 0 &&
               last_adapt_nt != nt) {
             int save = pg->imtrx;
@@ -1683,6 +1686,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             }
             pg->imtrx = save;
           }
+#endif /* GOMA_ENABLE_MMG */
           if (pg->matrix_subcycle_count[pg->imtrx] > 1) {
             double sub_time = time;
 

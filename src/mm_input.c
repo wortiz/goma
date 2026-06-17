@@ -1879,6 +1879,9 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     stringup(input);
 
     if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
+#ifndef GOMA_ENABLE_MMG
+      GOMA_EH(GOMA_ERROR, "Goma not compiled with MMG, cannot use ALE Adapt");
+#endif
       tran->ale_adapt = 1;
     } else if ((strcmp(input, "OFF") == 0) || (strcmp(input, "NO") == 0)) {
       tran->ale_adapt = 0;
@@ -2062,6 +2065,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
+#ifndef GOMA_ENABLE_MMG
+        GOMA_EH(GOMA_ERROR, "Goma not compiled with MMG, cannot use Level Set Adaptive Mesh");
+#endif
         ls->adapt = TRUE;
       }
 
