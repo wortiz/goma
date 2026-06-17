@@ -819,7 +819,8 @@ int main(int argc, char **argv)
 #ifdef __linux__
     // Enable trapping for common FPEs
     if (feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW) == -1) {
-        GOMA_EH(GOMA_ERROR, "-fpe, Fprintfloating point exceptions not supported on this architecture.\n");
+      GOMA_EH(GOMA_ERROR,
+              "-fpe, Fprintfloating point exceptions not supported on this architecture.\n");
     }
 #else
     GOMA_EH(GOMA_ERROR, "-fpe feenableexcept is not available.\n");

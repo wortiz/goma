@@ -157,8 +157,8 @@ int Write_Intermediate_Solutions = FALSE; /* Flag specifies whether to */
                                           /* Newton iteration. */
 int Write_Initial_Solution = FALSE;
 int Enable_Floating_Exceptions = FALSE; /* Flag specifies whether to */
-                                          /* write out solution data at each */
-                                          /* Newton iteration. */
+                                        /* write out solution data at each */
+                                        /* Newton iteration. */
 /* Flag to indicate whether to write the
  * initial solution to the ascii and exodus
  * output files */

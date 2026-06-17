@@ -1454,26 +1454,41 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               pg->matrices[imtrx].xdot_older = xdot_older[imtrx];
               exchange_dof(cx[imtrx], dpi, x[imtrx], imtrx);
               exchange_dof(cx[imtrx], dpi, x_old[imtrx], imtrx);
-              if (timestep_subcycle) {
-                for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
-                  if (pg->matrix_subcycle_count[imtrx] > 1) {
-                    realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x), numProcUnknowns[imtrx], 0);
-                    realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x_old), numProcUnknowns[imtrx], 0);
-                    realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x_older), numProcUnknowns[imtrx], 0);
-                    realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x_oldest), numProcUnknowns[imtrx], 0);
-                    realloc_dbl_1(&(pg->sub_step_solutions[imtrx].xdot), numProcUnknowns[imtrx], 0);
-                    realloc_dbl_1(&(pg->sub_step_solutions[imtrx].xdot_old), numProcUnknowns[imtrx], 0);
-                    realloc_dbl_1(&(pg->sub_step_solutions[imtrx].xdot_older), numProcUnknowns[imtrx], 0);
-                    realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x_update), numProcUnknowns[imtrx], 0);
-                    dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], pg->sub_step_solutions[imtrx].x);
-                    dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx], pg->sub_step_solutions[imtrx].x_old);
-                    dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx], pg->sub_step_solutions[imtrx].x_older);
-                    dcopy1(numProcUnknowns[pg->imtrx], x_oldest[pg->imtrx], pg->sub_step_solutions[imtrx].x_oldest);
-                    dcopy1(numProcUnknowns[pg->imtrx], xdot[pg->imtrx], pg->sub_step_solutions[imtrx].xdot);
-                    dcopy1(numProcUnknowns[pg->imtrx], xdot_old[pg->imtrx], pg->sub_step_solutions[imtrx].xdot_old);
-                    dcopy1(numProcUnknowns[pg->imtrx], xdot_older[pg->imtrx], pg->sub_step_solutions[imtrx].xdot_older);
-                    dcopy1(numProcUnknowns[pg->imtrx], x_update[pg->imtrx], pg->sub_step_solutions[imtrx].x_update);
-                  }
+            }
+            if (timestep_subcycle) {
+              for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+                if (pg->matrix_subcycle_count[imtrx] > 1) {
+                  realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x), numProcUnknowns[imtrx], 0);
+                  realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x_old), numProcUnknowns[imtrx], 0);
+                  realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x_older), numProcUnknowns[imtrx],
+                                0);
+                  realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x_oldest), numProcUnknowns[imtrx],
+                                0);
+                  realloc_dbl_1(&(pg->sub_step_solutions[imtrx].xdot), numProcUnknowns[imtrx], 0);
+                  realloc_dbl_1(&(pg->sub_step_solutions[imtrx].xdot_old), numProcUnknowns[imtrx],
+                                0);
+                  realloc_dbl_1(&(pg->sub_step_solutions[imtrx].xdot_older), numProcUnknowns[imtrx],
+                                0);
+                  realloc_dbl_1(&(pg->sub_step_solutions[imtrx].x_update), numProcUnknowns[imtrx],
+                                0);
+                  dcopy1(numProcUnknowns[imtrx], x[imtrx], pg->sub_step_solutions[imtrx].x);
+                  dcopy1(numProcUnknowns[imtrx], x_old[imtrx], pg->sub_step_solutions[imtrx].x_old);
+                  dcopy1(numProcUnknowns[imtrx], x_older[imtrx],
+                         pg->sub_step_solutions[imtrx].x_older);
+                  dcopy1(numProcUnknowns[imtrx], x_oldest[imtrx],
+                         pg->sub_step_solutions[imtrx].x_oldest);
+                  dcopy1(numProcUnknowns[imtrx], xdot[imtrx], pg->sub_step_solutions[imtrx].xdot);
+                  dcopy1(numProcUnknowns[imtrx], xdot_old[imtrx],
+                         pg->sub_step_solutions[imtrx].xdot_old);
+                  dcopy1(numProcUnknowns[imtrx], xdot_older[imtrx],
+                         pg->sub_step_solutions[imtrx].xdot_older);
+                  dcopy1(numProcUnknowns[imtrx], x_update[imtrx],
+                         pg->sub_step_solutions[imtrx].x_update);
+                  exchange_dof(cx[imtrx], dpi, pg->sub_step_solutions[imtrx].x, imtrx);
+                  exchange_dof(cx[imtrx], dpi, pg->sub_step_solutions[imtrx].x_old, imtrx);
+                  exchange_dof(cx[imtrx], dpi, pg->sub_step_solutions[imtrx].x_older, imtrx);
+                  exchange_dof(cx[imtrx], dpi, pg->sub_step_solutions[imtrx].xdot, imtrx);
+                  exchange_dof(cx[imtrx], dpi, pg->sub_step_solutions[imtrx].xdot_old, imtrx);
                 }
               }
             }
