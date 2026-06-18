@@ -5647,9 +5647,6 @@ int load_lsi_derivs_conservative() {
  * Author: Pat Notz 10/29/01
  ******************************************************************************/
 int load_lsi(const double width) {
-  if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
-    return load_lsi_conservative(width);
-  }
   double F = 0, alpha, *grad_F = NULL;
   int a, b;
   int i, j, k;
@@ -6175,9 +6172,6 @@ static void copy_distance_function(double *F, double **grad_F) {
  * Author: Pat Notz 10/29/01
  ******************************************************************************/
 int load_lsi_derivs(void) {
-  if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
-    return load_lsi_derivs_conservative();
-  }
   double F = 0, phi_j, grad_phi_j[DIM], *grad_F = NULL;
   double alpha = lsi->alpha;
   int a, b, j, var;

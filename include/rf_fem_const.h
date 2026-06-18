@@ -138,9 +138,6 @@
 #define FILL_EQN_EXT_V   2
 #define FILL_EQN_EIKONAL 3
 
-#define LS_FORMULATION_DISTANCE     1
-#define LS_FORMULATION_CONSERVATIVE 2
-
 /* Fluid-structural interactions for shells */
 #define FSI_MESH_BOTH           1
 #define FSI_MESH_CONTINUUM      2
@@ -481,8 +478,8 @@
 #define SHELL_PRESS_OPEN     169 /*  Structured porous shell saturation - open pores - SAR */
 #define SHELL_TEMPERATURE    170 /*  Shell temperature */
 #define SHELL_DELTAH         171 /*  Lubrication shell thickness change (melting problems)*/
-#define SHELL_LUB_CURV 172 /*  Curvature from the level set field in a lubrication shell - SAR */
-#define SHELL_SAT_GASN 173 /*  Structured porous shell saturation - gas compression - SAR */
+#define SHELL_LUB_CURV       172 /*  Curvature from the level set field in a lubrication shell - SAR */
+#define SHELL_SAT_GASN       173 /*  Structured porous shell saturation - gas compression - SAR */
 #define SHELL_SHEAR_TOP \
   174 /*  Shear rate at top wall - lubrication shell for generalized Newtonian flow */
 #define SHELL_SHEAR_BOT \

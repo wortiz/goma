@@ -351,9 +351,6 @@ static void facet_based_reinitialization_3D(
       break;
     }
     dbl contour = 0.0;
-    if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
-      contour = 0.5;
-    }
 
     for (int elem = exo->eb_ptr[elem_block]; elem < exo->eb_ptr[elem_block + 1]; elem++) {
       // If the level set interface exists on that element we will compute facets for that element.
@@ -581,14 +578,7 @@ static void facet_based_reinitialization_3D(
       // std::cout << "Node " << node << p[0] << " " << p[1] << " " << " distance: " << min_distance
       // << "\n";
 
-      if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
-        // we need to determine the sign of the distance
-        // we can do this by checking which side of the facet the point is on
-        double orientation = x[index_ls] <= 0.5 ? -1.0 : 1.0;
-        x[index_ls] = 0.5 * (1 + tanh(orientation * min_distance / (2 * ls->Length_Scale)));
-      } else {
-        x[index_ls] = std::copysign(min_distance, x[index_ls]);
-      }
+      x[index_ls] = std::copysign(min_distance, x[index_ls]);
     }
   }
 }
@@ -608,9 +598,6 @@ static void facet_based_reinitialization_2D(
 
   std::unordered_set<int> level_set_nodes;
   dbl contour = 0.0;
-  if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
-    contour = 0.5;
-  }
 
   for (int elem_block = 0; elem_block < exo->num_elem_blocks; elem_block++) {
     int mn = Matilda[elem_block];
@@ -830,14 +817,7 @@ static void facet_based_reinitialization_2D(
         min_distance = std::min(min_distance, distance);
       }
 
-      if (ls->Formulation == LS_FORMULATION_CONSERVATIVE) {
-        // we need to determine the sign of the distance
-        // we can do this by checking which side of the facet the point is on
-        double orientation = x[index_ls] <= 0.5 ? -1.0 : 1.0;
-        x[index_ls] = 0.5 * (1 + tanh(orientation * min_distance / (2 * ls->Length_Scale)));
-      } else {
-        x[index_ls] = std::copysign(min_distance, x[index_ls]);
-      }
+      x[index_ls] = std::copysign(min_distance, x[index_ls]);
     }
   }
 }
