@@ -196,6 +196,11 @@ template <int pdim> struct PointCloud {
   template <class BBOX> bool kdtree_get_bbox(BBOX & /* bb */) const { return false; }
 };
 
+bool var_name_is_dm(std::vector<char *> &nodal_var_names_ptrs, size_t i) {
+  return strcmp(nodal_var_names_ptrs[i], "DMX") == 0 || strcmp(nodal_var_names_ptrs[i], "DMY") == 0 ||
+         strcmp(nodal_var_names_ptrs[i], "DMZ") == 0;
+}
+
 void interp_solution_to_new_mesh_2d(Exo_DB *exo,
                                     Dpi *dpi,
                                     struct Results_Description **rd,
@@ -252,6 +257,17 @@ void interp_solution_to_new_mesh_2d(Exo_DB *exo,
   int num_nodal_vars;
   int err = ex_get_variable_param(old_exoid, EX_NODAL, &num_nodal_vars);
   CHECK_EX_ERROR(err, "ex_get_variable_param");
+    std::vector<char> nodal_var_names_vec(num_nodal_vars * (MAX_STR_LENGTH + 1));
+    std::vector<char *> nodal_var_names_ptrs(num_nodal_vars);
+    for (int i = 0; i < num_nodal_vars; i++) {
+      nodal_var_names_ptrs[i] = &nodal_var_names_vec[i * (MAX_STR_LENGTH + 1)];
+    }
+    if (num_nodal_vars > 0) {
+      int err =
+          ex_get_variable_names(old_exoid, EX_NODAL, num_nodal_vars, nodal_var_names_ptrs.data());
+      CHECK_EX_ERROR(err, "ex_get_variable_names");
+    }
+
 
   std::vector<std::vector<double>> old_values_list(num_nodal_vars);
   for (int var = 0; var < num_nodal_vars; var++) {
@@ -294,12 +310,16 @@ void interp_solution_to_new_mesh_2d(Exo_DB *exo,
 
       if (weights) {
         for (int var = 0; var < num_nodal_vars; var++) {
+          if (var_name_is_dm(nodal_var_names_ptrs, var)) {
+            interpolated_values_list[var][i] = 0.0;
+          } else {
           found = true;
           double v1 = old_values_list[var][node1_id];
           double v2 = old_values_list[var][node2_id];
           double v3 = old_values_list[var][node3_id];
           interpolated_values_list[var][i] =
               (*weights)[0] * v1 + (*weights)[1] * v2 + (*weights)[2] * v3;
+          }
         }
         break;
       }
@@ -313,7 +333,11 @@ void interp_solution_to_new_mesh_2d(Exo_DB *exo,
       index_points.findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
       int nearest_node_id = ret_index[0];
       for (int var = 0; var < num_nodal_vars; var++) {
-        interpolated_values_list[var][i] = old_values_list[var][nearest_node_id];
+        if (var_name_is_dm(nodal_var_names_ptrs, var)) {
+          interpolated_values_list[var][i] = 0.0;
+        } else {
+          interpolated_values_list[var][i] = old_values_list[var][nearest_node_id];
+        }
       }
     }
   }
