@@ -44,17 +44,18 @@ struct GomaLinearSolverData;
  *  Definitions of Constants for use in mm_fill_fill routines
  */
 
-#define ADVECT            0
-#define CORRECT           1
-#define PROJECT           2
-#define EXO_READ          4
-#define HUYGENS           5
-#define SURFACES          6
-#define HUYGENS_C         7
-#define SM_OBJECT         8
-#define HUYGENS_MASS_ITER 9
-#define SMOLIANSKI_ONLY   10
-#define FACET_BASED       11
+#define ADVECT               0
+#define CORRECT              1
+#define PROJECT              2
+#define EXO_READ             4
+#define HUYGENS              5
+#define SURFACES             6
+#define HUYGENS_C            7
+#define SM_OBJECT            8
+#define HUYGENS_MASS_ITER    9
+#define SMOLIANSKI_ONLY      10
+#define FACET_BASED          11
+#define FACET_BASED_NEGATIVE 12
 
 #define LS_SURF_POINT      0
 #define LS_SURF_PLANE      1

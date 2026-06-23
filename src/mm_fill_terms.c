@@ -1972,7 +1972,9 @@ int assemble_normals(void) {
           advection = 0.0;
 
           if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
-            advection = -normal[a];
+            if (mag_grad_F > 1e-5) {
+              advection = -normal[a];
+            }
             advection *= wt * wt_func * h3 * det_J;
             advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
           }
@@ -2040,7 +2042,9 @@ int assemble_normals(void) {
 
             if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
               for (b = 0; b < dim; b++) {
-                advection += P[a][b] * bf[var]->grad_phi[j][b] / mag_grad_F;
+                if (mag_grad_F > 1e-5) {
+                  advection += P[a][b] * bf[var]->grad_phi[j][b] / mag_grad_F;
+                }
               }
 
               advection *= -phi_i * wt * h3 * det_J;

@@ -6141,9 +6141,9 @@ double shell_saturation_pressure_curve(double Pliq, double *dSdP, double *dSdP_P
 #define _USE_MATH_DEFINES
 
   /* Calculate capillary radius */
-  dbl Rc = 2 * sigma * cos(theta / 180.0 * PI) / (Pcap + DBL_SEMI_SMALL);
-  dbl Rc_P = -2 * sigma * cos(theta / 180.0 * PI) / pow(Pcap + DBL_SEMI_SMALL, 2) * dPdP;
-  dbl Rc_PP = 4 * sigma * cos(theta / 180.0 * PI) / pow(Pcap + DBL_SEMI_SMALL, 3) * pow(dPdP, 2);
+  dbl Rc = 2 * sigma * cos(theta / 180.0 * M_PI) / (Pcap + DBL_SEMI_SMALL);
+  dbl Rc_P = -2 * sigma * cos(theta / 180.0 * M_PI) / pow(Pcap + DBL_SEMI_SMALL, 2) * dPdP;
+  dbl Rc_PP = 4 * sigma * cos(theta / 180.0 * M_PI) / pow(Pcap + DBL_SEMI_SMALL, 3) * pow(dPdP, 2);
 
   /* Define limiting values */
   dbl Rmax3 = pow(Rmax, 3);
@@ -6151,7 +6151,7 @@ double shell_saturation_pressure_curve(double Pliq, double *dSdP, double *dSdP_P
   dbl SatCut = 1 - 0.05;
   // dbl RCut = pow( (Rmax3-Rmin3)*(Rmin3*(SatCut-1)-Rmax3*SatCut)/(Rmin3-Rmax3) , 1.0/3.0);
   dbl RCut = Rmin + (Rmax - Rmin) * SatCut;
-  dbl PCut = -2 * sigma * cos(theta / 180.0 * PI) / RCut;
+  dbl PCut = -2 * sigma * cos(theta / 180.0 * M_PI) / RCut;
 
   /* Define modulation function */
   // dbl ModK    = 0.1;

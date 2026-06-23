@@ -16,7 +16,6 @@ default_packages = [
     "hdf5",
     "pnetcdf",
     "netcdf",
-    "omega_h",
     "fmt",
     "seacas",
     "bison",
@@ -38,6 +37,7 @@ default_packages = [
     "petsc_complex",
     "sparse",
     "catch2",
+    "mmg",
 ]
 
 

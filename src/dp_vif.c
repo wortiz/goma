@@ -553,6 +553,7 @@ void noahs_ark(void) {
   ddd_add_member(n, &ExoTimePlane, 1, MPI_INT);
   ddd_add_member(n, &Write_Intermediate_Solutions, 1, MPI_INT);
   ddd_add_member(n, &Write_Initial_Solution, 1, MPI_INT);
+  ddd_add_member(n, &Enable_Floating_Exceptions, 1, MPI_INT);
 
   if (GomaPetscOptionsStrLen > 0) {
     ddd_add_member(n, GomaPetscOptions, GomaPetscOptionsStrLen, MPI_CHAR);

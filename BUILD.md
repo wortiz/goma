@@ -1,3 +1,32 @@
+## Build Instructions
+
+Goma uses CMake to build it's source code. A number of third party libraries are required
+to use goma. A script to build third party libraries is available in the `tpls` folder.
+
+Common configuration options can be configured from the command line
+or through the `CMake` GUI interfaces
+ 
+    cmake -B <build directory> <path to goma src>
+    # cmake -B <build directory> <path to goma src> -DMDE=10 -DMAX_PROB_VAR=23 ...more options
+    make -C <build directory>
+
+Install should be handled by setting CMAKE_INSTALL_PREFIX
+
+Options that might be useful:
+
+    DISABLE_COLOR_ERROR_PRINT=[ON|OFF]
+    CHECKFINITE=[ON|OFF]
+    FP_EXCEPT=[ON|OFF] # Floating point exceptions, faster than 
+                         CHECKFINITE but will abort on failure
+    ENABLE_UMFPACK=[ON|OFF]
+    ENABLE_ARPACK=[ON|OFF]
+    ENABLE_SPARSE=[ON|OFF]
+    ENABLE_METIS=[ON|OFF]
+    MDE=<number>
+    MAX_CONC=<number>
+    MAX_EXTERNAL_FIELD=<number>
+    MAX_PROB_VAR=<number>
+
 ## Third party libraries
 
 ### Configure options

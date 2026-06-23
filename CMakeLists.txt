@@ -199,6 +199,7 @@ if(ENABLE_APREPRO_LIB)
   endif()
 endif()
 
+
 message(STATUS "PETSC_DIR = $ENV{PETSC_DIR}")
 option(ENABLE_PETSC "ENABLE_PETSC" ON)
 if(ENABLE_PETSC)
@@ -333,6 +334,20 @@ else()
   message(STATUS "Sparse library disabled.")
   set(Sparse_INCLUDES "")
 endif()
+option(ENABLE_MMG "ENABLE_MMG" ON)
+if(ENABLE_MMG)
+  FIND_PACKAGE(MMG)
+  if (MMG_FOUND)
+  list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_MMG)
+  list(APPEND GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} ${MMG_LIBRARIES})
+  list(APPEND GOMA_TPL_INCLUDES ${MMG_INCLUDE_DIRS})
+    message(STATUS "Using MMG ${MMG_LIBRARIES}")
+  else()
+    message(STATUS "MMG library not found, disabling")
+  endif()
+else()
+  message(STATUS "mmg library disabled")
+endif()
 
 option(ENABLE_METIS "ENABLE_METIS" ON)
 if(ENABLE_METIS)
@@ -352,21 +367,6 @@ if(ENABLE_METIS)
 
 else()
   message(STATUS "metis library disabled")
-endif()
-
-option(ENABLE_OMEGA_H "ENABLE_OMEGA_H" ON)
-if(ENABLE_OMEGA_H)
-  find_package(Omega_h)
-  if(Omega_h_FOUND)
-    set_target_properties(Omega_h::omega_h PROPERTIES INTERFACE_COMPILE_OPTIONS
-                                                      "")
-    set(GOMA_TPL_LIBRARIES ${GOMA_TPL_LIBRARIES} Omega_h::omega_h)
-    list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_OMEGA_H)
-  else()
-    message(STATUS "Omega_h not found")
-  endif()
-else()
-  message(STATUS "omega_h library disabled")
 endif()
 
 if(ENABLE_PETSC AND PETSC_FOUND)
@@ -499,14 +499,14 @@ set(MAX_NUMBER_MATLS
 list(APPEND GOMA_COMPILE_DEFINITIONS MAX_NUMBER_MATLS=${MAX_NUMBER_MATLS})
 
 set(GOMA_INCLUDES
-    include/adapt/omega_h_interface.h
-    include/adapt/resetup_problem.h
     include/ac_conti.h
     include/ac_hunt.h
     include/ac_particles.h
     include/ac_stability.h
     include/ac_stability_util.h
     include/ac_update_parameter.h
+    include/adapt/adapt_mmg.h
+    include/adapt/resetup_problem.h
     include/ad_turbulence.h
     include/ad_porous.h
     include/ad_momentum.h
@@ -664,8 +664,6 @@ set(GOMA_INCLUDES
     include/brkfix/setup_fix_data.h)
 
 set(GOMA_SOURCES
-    src/adapt/omega_h_interface.cpp
-    src/adapt/resetup_problem.c
     src/ac_conti.c
     src/ac_display_parameter.c
     src/ac_hunt.c
@@ -674,6 +672,8 @@ set(GOMA_SOURCES
     src/ac_stability.c
     src/ac_stability_util.c
     src/ac_update_parameter.c
+    src/adapt/adapt_mmg.cpp
+    src/adapt/resetup_problem.c
     src/ad_turbulence.cpp
     src/ad_porous.cpp
     src/ad_momentum.cpp
@@ -1042,7 +1042,6 @@ foreach(d ${GOMA_COMPILE_DEFINITIONS})
   message(STATUS "${d}")
 endforeach()
 message("\n")
-message(STATUS "Exodus include dirs:" ${SEACASExodus_INCLUDE_DIRS})
 
 set(GOMA_TPL_INCLUDES
     ${GOMA_TPL_INCLUDES}
@@ -1085,7 +1084,7 @@ endif()
 # remove some C++ files from unity build as MACROS conflict with Trilinos
 # headers
 set_source_files_properties(
-  src/dp_ghost.cpp src/sl_epetra_util.cpp src/adapt/omega_h_interface.cpp
+  src/dp_ghost.cpp src/sl_epetra_util.cpp
   PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 # Most people probably want this for use with Goma TPLs

@@ -1302,6 +1302,7 @@ struct Elastic_Constitutive {
   int *u_mu_ns;
   int len_u_mu_ns;
   int lame_mu_tableid;
+  int multi_contact_line_n_nodes;
   double *multi_contact_line_distances;
 
   dbl lame_lambda;

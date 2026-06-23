@@ -1,22 +1,20 @@
 from tpl_tools.packages import packages
-import os
+from tpl_tools import utils
 
 
 class Package(packages.CMakePackage):
     def __init__(self):
-        self.name = "omega-h"
-        self.version = "9.34.13"
-        self.sha256 = "2eadfd6d634abc0b50396a82fd446f8f0b586ba6e64788c47827162c2aadec02"
-        self.filename = "omega-h-" + self.version + ".tar.gz"
+        self.name = "mmg"
+        self.version = "5.8.0"
+        self.sha256 = "686eaab84de79c072f3aedf26cd11ced44c84b435d51ce34e016ad203172922f"
+        self.filename = "mmg-" + self.version + ".tar.gz"
         self.url = (
-            "https://github.com/sandialabs/omega_h/archive/refs/tags/v"
+            "https://github.com/mmgtools/mmg/archive/refs/tags/v"
             + self.version
             + ".tar.gz"
         )
-        self.executables = []
-        self.libraries = ["omega_h"]
-        self.includes = ["Omega_h_adapt.hpp", "Omega_h_mesh.hpp"]
-        self.dependencies = ["openmpi", "cmake"]
+        self.libraries = ["mmg", "mmg2d", "mmg3d"]
+        self.dependencies = ["cmake", "scotch", "lapack"]
 
     def set_environment(self, builder):
         builder.env = builder._registry.get_environment().copy()
@@ -29,18 +27,14 @@ class Package(packages.CMakePackage):
             builder.add_option("-DBUILD_SHARED_LIBS:BOOL=ON")
         else:
             builder.add_option("-DBUILD_SHARED_LIBS:BOOL=OFF")
-
-        CC = builder.env["CC"]
-        CXX = builder.env["CXX"]
-        FC = builder.env["FC"]
-        builder.add_option("-DCMAKE_C_COMPILER=" + CC)
-        builder.add_option("-DCMAKE_CXX_COMPILER=" + CXX)
-        builder.add_option("-DCMAKE_Fortran_COMPILER=" + FC)
+        builder.add_option("-DBLAS_LIBRARIES=" + builder.env["BLAS_LIBRARIES"])
+        builder.add_option("-DLAPACK_LIBRARIES=" + builder.env["LAPACK_LIBRARIES"])
 
     def register(self, builder):
         registry = builder._registry
         registry.register_package(self.name, builder.install_dir())
-        registry.set_environment_variable("OMEGA_H_DIR", builder.install_dir())
+        registry.set_environment_variable("MMG_DIR", builder.install_dir())
+        registry.set_environment_variable("MMG_INCDIR", builder.install_dir() + "/include")
         registry.prepend_environment_variable(
             "CMAKE_PREFIX_PATH", builder.install_dir()
         )

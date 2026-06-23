@@ -69,6 +69,11 @@
 #define GOMA_MM_INPUT_C
 #include "mm_input.h"
 
+#ifdef __linux__
+#define __USE_GNU
+#include <fenv.h>
+#endif
+
 static char aprepro_command[1024];
 
 static int look_forward_optional_until(
@@ -1874,6 +1879,9 @@ void rd_timeint_specs(FILE *ifp, char *input) {
     stringup(input);
 
     if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
+#ifndef GOMA_ENABLE_MMG
+      GOMA_EH(GOMA_ERROR, "Goma not compiled with MMG, cannot use ALE Adapt");
+#endif
       tran->ale_adapt = 1;
     } else if ((strcmp(input, "OFF") == 0) || (strcmp(input, "NO") == 0)) {
       tran->ale_adapt = 0;
@@ -2035,6 +2043,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       stringup(input);
 
       if ((strcmp(input, "ON") == 0) || (strcmp(input, "YES") == 0)) {
+#ifndef GOMA_ENABLE_MMG
+        GOMA_EH(GOMA_ERROR, "Goma not compiled with MMG, cannot use Level Set Adaptive Mesh");
+#endif
         ls->adapt = TRUE;
       }
 
@@ -2044,6 +2055,10 @@ void rd_levelset_specs(FILE *ifp, char *input) {
     }
 
     if (ls->adapt) {
+      if (!Write_Initial_Solution)
+        GOMA_WH(GOMA_ERROR,
+                "Setting Write initial solution = yes because Level Set Adaptive Mesh is ON");
+      Write_Initial_Solution = TRUE;
 
       ls->adapt_width = 3.0 * ls->Length_Scale;
       iread = look_for_optional(ifp, "Level Set Adapt Width", input, '=');
@@ -2105,7 +2120,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 
         snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", input, ls->adapt_freq);
       } else {
-        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", "Level Set Adapt Outer Size",
+        snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", "Level Set Adapt Frequency",
                  ls->adapt_freq, default_string);
       }
 
@@ -2265,6 +2280,21 @@ void rd_levelset_specs(FILE *ifp, char *input) {
       } else if (strcmp(input, "Facet_Based") == 0) {
         ls->Renorm_Method = FACET_BASED;
         strcat(echo_string, "Facet_Based");
+      } else if (strcmp(input, "Facet_Based_Negative") == 0) {
+        ls->Renorm_Method = FACET_BASED_NEGATIVE;
+        strcat(echo_string, "Facet_Based_Negative");
+
+        if (fscanf(ifp, "%lf", &(ls->Mass_Value)) == 1) {
+          char *s = endofstring(echo_string);
+
+          ls->Mass_Sign = I_NEG_FILL;
+          ls->Mass_Value = ls->Mass_Value;
+
+          SPF(s, " %.4g", ls->Mass_Sign * ls->Mass_Value);
+        } else {
+          ls->Mass_Value = 0.0;
+          ls->Mass_Sign = I_NEG_FILL;
+        }
       } else if (strcmp(input, "Huygens_Constrained") == 0) {
 
         ls->Renorm_Method = HUYGENS_C;
@@ -12057,6 +12087,10 @@ void translate_command_line(int argc, char *argv[], struct Command_line_command 
         (*nclc)++;
         istr++;
         clc[*nclc]->type = WRITE_INTERMEDIATE;
+      } else if (strcmp(argv[istr], "-fpe") == 0) {
+        (*nclc)++;
+        istr++;
+        clc[*nclc]->type = FLOATING_EXCEPTION_CL;
       }
       /*
        * OPTION -time_pl: SPECIFY EXOII FILE STEP NUMBER TO READ
@@ -12301,6 +12335,9 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
     } else if (clc[i]->type == WRITE_INTERMEDIATE) {
       fprintf(stdout, "Write Intermediate Solutions request.\n\n");
       Write_Intermediate_Solutions = TRUE;
+    } else if (clc[i]->type == FLOATING_EXCEPTION_CL) {
+      fprintf(stdout, "Floating point exceptions request.\n\n");
+      Enable_Floating_Exceptions = TRUE;
     } else if (clc[i]->type == EXOII_TIME_PLANE) {
       fprintf(stdout, "Exodus Time Plane = %d\n\n", clc[i]->i_val);
       ExoTimePlane = clc[i]->i_val;
@@ -14200,12 +14237,6 @@ void echo_compiler_settings(void) {
 #else
   fprintf(echo_file, "%-30s= %s\n", "PETSC_USE_COMPLEX", "no");
 #endif
-#endif
-
-#ifdef GOMA_ENABLE_OMEGA_H
-  fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_OMEGA_H", "yes");
-#else
-  fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_OMEGA_H", "no");
 #endif
 
 #ifdef GOMA_ENABLE_STRATIMIKOS

@@ -58,7 +58,7 @@ Usage:
     usage: install-tpls.py [-h] [--cc CC] [--cxx CXX] [--fc FC] [--download-dir DOWNLOAD_DIR] [--extract-dir EXTRACT_DIR] [--build-shared]
                            [--build-static] [-j JOBS] [--netlib-blas] [--openblas] [--enable-parmetis] [--disable-parmetis] [--skip-ssl-verify]
                            [--write-dynamic-library-path] [--cmake-dir CMAKE_DIR] [--openmpi-dir OPENMPI_DIR] [--hdf5-dir HDF5_DIR]
-                           [--pnetcdf-dir PNETCDF_DIR] [--netcdf-dir NETCDF_DIR] [--omega_h-dir OMEGA_H_DIR] [--fmt-dir FMT_DIR]
+                           [--pnetcdf-dir PNETCDF_DIR] [--netcdf-dir NETCDF_DIR] [--fmt-dir FMT_DIR]
                            [--seacas-dir SEACAS_DIR] [--bison-dir BISON_DIR] [--flex-dir FLEX_DIR] [--openblas-dir OPENBLAS_DIR]
                            [--lapack-dir LAPACK_DIR] [--metis-dir METIS_DIR] [--parmetis-dir PARMETIS_DIR] [--scotch-dir SCOTCH_DIR]
                            [--arpack_ng-dir ARPACK_NG_DIR] [--scalapack-dir SCALAPACK_DIR] [--mumps-dir MUMPS_DIR]
@@ -99,8 +99,6 @@ Usage:
                             System location of package pnetcdf
       --netcdf-dir NETCDF_DIR
                             System location of package netcdf
-      --omega_h-dir OMEGA_H_DIR
-                            System location of package omega-h
       --fmt-dir FMT_DIR     System location of package fmt
       --seacas-dir SEACAS_DIR
                             System location of package seacas

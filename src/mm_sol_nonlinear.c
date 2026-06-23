@@ -196,7 +196,11 @@ assemble_prefill(struct GomaLinearSolverData *ams, double x[], Exo_DB *exo, Dpi 
   // check for multi contact line
   for (int mn = 0; mn < upd->Num_Mat; mn++) {
     if (elc_glob[mn]->lame_mu_model == MULTI_CONTACT_LINE) {
-      if (elc_glob[mn]->multi_contact_line_distances == NULL) {
+      if (elc_glob[mn]->multi_contact_line_distances == NULL || elc_glob[mn]->multi_contact_line_n_nodes != exo->num_nodes) {
+        if (elc_glob[mn]->multi_contact_line_distances != NULL) {
+          free(elc_glob[mn]->multi_contact_line_distances);
+        }
+        elc_glob[mn]->multi_contact_line_n_nodes = exo->num_nodes;
         elc_glob[mn]->multi_contact_line_distances =
             (double *)malloc(sizeof(double) * exo->num_nodes);
       }

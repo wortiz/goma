@@ -567,6 +567,10 @@ huygens_renormalization ( double *x,
                               time);
     } else if (ls->Renorm_Method == FACET_BASED) {
       facet_based_reinitialization(x, exo, cx, dpi, num_total_nodes, time);
+    } else if (ls->Renorm_Method == FACET_BASED_NEGATIVE) {
+      facet_based_reinitialization(x, exo, cx, dpi, num_total_nodes, time);
+      Hrenorm_smolianksi_only(exo, cx, dpi, x, list, num_total_nodes, num_ls_unkns, num_total_unkns,
+                              time);
     } else {
       GOMA_EH(GOMA_ERROR, "You shouldn't actually be here. \n");
     }
@@ -5444,6 +5448,189 @@ void zero_lsi_derivs(void) {
 
   memset(lsi->d_gfmaginv_dF, 0, sizeof(double) * MDE);
   memset(lsi->d_gfmaginv_dmesh, 0, sizeof(double) * DIM * MDE);
+}
+
+int load_lsi_conservative(const double width) {
+  double F = 0, alpha, *grad_F = NULL;
+
+  /* Zero things out. */
+  zero_lsi();
+
+  /* Check if we're in the mushy zone. */
+  lsi->alpha = 0.5 * width;
+  alpha = lsi->alpha;
+
+  copy_distance_function(&F, &grad_F);
+
+  dbl tol = fmin(0.0001, alpha * 0.0001);
+
+  lsi->near = ls->on_sharp_surf || (fabs(F) < (1 - tol) && fabs(F) > (0 + tol));
+
+  /* Calculate the interfacial functions we want to know even if not in mushy
+   * zone. */
+
+  lsi->gfmag = 0.0;
+  for (int a = 0; a < VIM; a++) {
+    lsi->normal[a] = grad_F[a];
+    lsi->gfmag += grad_F[a] * grad_F[a];
+  }
+  lsi->gfmag = sqrt(lsi->gfmag);
+  lsi->gfmaginv = (lsi->gfmag == 0.0) ? 1.0 : 1.0 / lsi->gfmag;
+
+  for (int a = 0; a < VIM; a++) {
+    lsi->normal[a] *= lsi->gfmaginv;
+  }
+
+  if (ls->on_sharp_surf) {
+    lsi->H = fv->F;
+    lsi->delta = 1.;
+  } else if (!lsi->near) {
+    lsi->H = fv->F;
+    lsi->delta = lsi->gfmag / alpha;
+  } else {
+    lsi->H = fv->F;
+    lsi->delta = lsi->gfmag / alpha;
+  }
+
+  return (0);
+}
+
+int load_lsi_derivs_conservative() {
+  /* This is a placeholder for the future. */
+  /* Zero things out. */
+  zero_lsi_derivs();
+  double F = 0, phi_j, grad_phi_j[DIM], *grad_F = NULL;
+
+  copy_distance_function(&F, &grad_F);
+
+  /* Initialize grad_phi_j */
+  for (int a = 0; a < DIM; a++) {
+    grad_phi_j[a] = 0;
+  }
+
+  /*
+   * If we're here, the pd->v[pg->imtrx]ar[ls->var] is true...
+   *
+   * Always compute the distance function variable derivs, even for uncoupled
+   * fill problems... see Hrenorm_constrain
+   *
+   * Derivatives w.r.t. distance function variable
+   */
+  int var = ls->var;
+  for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    /* Fetch the basis functions. */
+    phi_j = bf[var]->phi[j];
+    for (int a = 0; a < VIM; a++) {
+      grad_phi_j[a] = bf[var]->grad_phi[j][a];
+    }
+
+    /* Derivative of gfmag. */
+    lsi->d_gfmag_dF[j] = 0.0;
+    for (int a = 0; a < VIM; a++) {
+      lsi->d_gfmag_dF[j] += grad_F[a] * grad_phi_j[a] * lsi->gfmaginv;
+    }
+
+    /* Derivative of gfmaginv. */
+    lsi->d_gfmaginv_dF[j] =
+        (lsi->gfmag == 0.0) ? 0.0 : -pow(lsi->gfmaginv, 2.0) * lsi->d_gfmag_dF[j];
+
+    /* Derivative of the normal vector. */
+    for (int a = 0; a < VIM; a++) {
+      lsi->d_normal_dF[a][j] = grad_phi_j[a] * lsi->gfmaginv + lsi->d_gfmaginv_dF[j] * grad_F[a];
+    }
+
+  } /* for: j */
+
+  /*
+   * Derivatives w.r.t. MESH_DISPLACEMENTs
+   */
+  if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+
+    for (int b = 0; b < VIM; b++) {
+      int var = MESH_DISPLACEMENT1 + b;
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        /* Fetch the basis functions. */
+        phi_j = bf[var]->phi[j];
+        for (int a = 0; a < VIM; a++) {
+          grad_phi_j[a] = bf[var]->grad_phi[j][a];
+        }
+
+        /* gfmag */
+        for (int a = 0; a < VIM; a++) {
+          lsi->d_gfmag_dmesh[b][j] = grad_F[a] * fv->d_grad_F_dmesh[a][b][j] * lsi->gfmaginv;
+        }
+
+        /* gfmaginv */
+        lsi->d_gfmaginv_dmesh[b][j] =
+            (lsi->gfmag == 0.0) ? 0.0 : -pow(lsi->gfmaginv, 2.0) * lsi->d_gfmag_dmesh[b][j];
+
+        /* normal */
+        for (int a = 0; a < VIM; a++) {
+          lsi->d_normal_dmesh[a][b][j] =
+              fv->d_grad_F_dmesh[a][b][j] * lsi->gfmaginv + lsi->d_gfmaginv_dmesh[b][j] * grad_F[a];
+        }
+
+      } /* for: j */
+
+    } /* for: b */
+  }
+
+  /* DRN: this is required to get path dependence terms right */
+  var = FILL;
+  if (ls->on_sharp_surf) {
+    for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+      /* Fetch the basis functions. */
+      phi_j = bf[var]->phi[j];
+
+      /* Derivative of the delta function. */
+      lsi->d_delta_dF[j] = lsi->d_gfmag_dF[j] * lsi->gfmaginv;
+      lsi->d_H_dF[j] = phi_j * lsi->gfmaginv;
+    }
+  }
+
+  /* If we're not in the mushy zone, all remaining derivs should be zero. */
+  if (ls->on_sharp_surf || !lsi->near)
+    return (0);
+
+  lsi->dH = 1.0;
+
+  dbl alpha = lsi->alpha;
+
+  /*
+   * Derivatives w.r.t. FILL for non-zero alpha
+   */
+  var = ls->var;
+  for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+    /* Fetch the basis functions. */
+    phi_j = bf[var]->phi[j];
+
+    /* Derivative of the H function. */
+    lsi->d_H_dF[j] = phi_j * lsi->dH;
+
+    /* Derivative of the delta function. */
+    lsi->d_delta_dF[j] = lsi->d_gfmag_dF[j] / alpha;
+  } /* for: j */
+
+  /*
+   * Derivatives w.r.t. MESH_DISPLACEMENTs for non-zero alpha
+   */
+  if (pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    for (int b = 0; b < VIM; b++) {
+      var = MESH_DISPLACEMENT1 + b;
+      for (int j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+
+        /* In the current implementation, H does not depend on grad_F
+           and, hence, it doens't depend on the mesh. */
+
+        /* delta */
+        lsi->d_delta_dmesh[b][j] = lsi->d_gfmag_dmesh[b][j] / alpha;
+
+      } /* for: j */
+
+    } /* for: b */
+  }
+
+  return (0);
 }
 
 /******************************************************************************
