@@ -1747,7 +1747,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         DPRINTF(stderr, "skipping predict_solution at time: %g %d\n", time1, nonconv_roll);
       }
 #ifdef GOMA_ENABLE_MMG
-          if ((tran->ale_adapt && nt % tran->ale_adapt_freq == 0) || (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0 &&
+          if ((tran->ale_adapt && nt % tran->ale_adapt_freq == 0 && last_adapt_nt != nt) || (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0 &&
               last_adapt_nt != nt)) {
         last_adapt_nt = nt;
         adapt_mesh_with_mmg(exo, dpi, &rd, ams, &x, &x_old, &x_older, &x_oldest, &x_update, &xdot,
