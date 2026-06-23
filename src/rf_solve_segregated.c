@@ -1434,8 +1434,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           numProcUnknowns[pg->imtrx] = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
 
 #ifdef GOMA_ENABLE_MMG
-          if (ls != NULL && subcycle == 0 && ls->adapt && nt % ls->adapt_freq == 0 &&
-              last_adapt_nt != nt) {
+          if ((tran->ale_adapt && nt % tran->ale_adapt_freq == 0) || (ls != NULL && subcycle == 0 && ls->adapt && nt % ls->adapt_freq == 0 &&
+              last_adapt_nt != nt)) {
             int save = pg->imtrx;
             pg->imtrx = upd->matrix_index[FILL];
             last_adapt_nt = nt;

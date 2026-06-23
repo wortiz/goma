@@ -1747,7 +1747,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         DPRINTF(stderr, "skipping predict_solution at time: %g %d\n", time1, nonconv_roll);
       }
 #ifdef GOMA_ENABLE_MMG
-      if (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0 && last_adapt_nt != nt) {
+          if ((tran->ale_adapt && nt % tran->ale_adapt_freq == 0) || (ls != NULL && ls->adapt && nt % ls->adapt_freq == 0 &&
+              last_adapt_nt != nt)) {
         last_adapt_nt = nt;
         adapt_mesh_with_mmg(exo, dpi, &rd, ams, &x, &x_old, &x_older, &x_oldest, &x_update, &xdot,
                             &xdot_old, &resid_vector, &scale, time1, theta, delta_t, &gvec_elem);
@@ -1769,7 +1770,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         realloc_dbl_1(&gvec, Num_Node, 0);
         x_pred_static = x_pred;
         if (nt == 0) {
-          if (ls->Num_Var_Init > 0)
+          if (ls != NULL && ls->Num_Var_Init > 0)
             ls_var_initialization(&x, exo, dpi, cx);
         }
         nullify_dirichlet_bcs();

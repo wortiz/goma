@@ -1383,6 +1383,7 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
       err = ex_get_var(exoII_id, time_step, EX_NODAL, vdex + 1, 1, np, dx_values.data());
       CHECK_EX_ERROR(err, "ex_get_var");
       vdex = -1;
+      offset = 0;
       for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
         for (int i = 0; i < rd[imtrx]->nnv; i++) {
           if (rd[imtrx]->nvtype[i] == R_MESH2 &&
@@ -1403,6 +1404,7 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
       std::vector<double> dz_values(np);
       if (exo->num_dim == 3) {
         vdex = -1;
+        offset = 0;
         for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
           for (int i = 0; i < rd[imtrx]->nnv; i++) {
             if (rd[imtrx]->nvtype[i] == R_MESH3 &&
@@ -1466,6 +1468,8 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
 
     vdex = -1;
     int offset = 0;
+    std::vector<double> ls_values(np, 0.0 );
+    if (ls != NULL) {
     for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
       for (int i = 0; i < rd[imtrx]->nnv; i++) {
         if (rd[imtrx]->nvtype[i] == ls->var &&
@@ -1479,11 +1483,12 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
     if (vdex == -1) {
       GOMA_EH(GOMA_ERROR, "Level set variable not found in Goma");
     }
-    std::vector<double> ls_values(np);
     err = ex_get_var(exoII_id, time_step, EX_NODAL, vdex + 1, 1, np, ls_values.data());
     CHECK_EX_ERROR(err, "ex_get_var");
+  }
     ex_close(exoII_id);
 
+  if (ls != NULL && ls->adapt) {
     for (k = 1; k <= np; k++) {
       double ls_value = ls->adapt_outer_size;
       if (fabs(ls_values[k - 1]) < ls->adapt_width) {
@@ -1498,6 +1503,19 @@ extern "C" void adapt_mesh_with_mmg(Exo_DB *exo,
           exit(EXIT_FAILURE);
       }
     }
+  } else if (tran->ale_adapt) {
+    for (k = 1; k <= np; k++) {
+      if (exo->num_dim == 2) {
+        if (MMG2D_Set_scalarSol(mmgSol, tran->ale_adapt_iso_size, k) != 1)
+          exit(EXIT_FAILURE);
+      } else {
+        if (MMG3D_Set_scalarSol(mmgSol, tran->ale_adapt_iso_size, k) != 1)
+          exit(EXIT_FAILURE);
+      }
+    }
+  } else {
+    GOMA_EH(GOMA_ERROR, "No adaptation criteria provided for MMG mesh adaptation");
+  }
 
     /** 4) (not mandatory): check if the number of given entities match with mesh size */
     if (exo->num_dim == 2) {
