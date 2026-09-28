@@ -166,6 +166,32 @@ int ad_film_height_stress_source(int mode,
       }
     }
   } break;
+  case GIESEKUS: {
+    dbl alpha = 0;
+
+    if (ve[mode]->alphaModel == CONSTANT) {
+      alpha = ve[mode]->alpha;
+    } else if (ls != NULL && ve[mode]->alphaModel == VE_LEVEL_SET) {
+      double pos_alpha = ve[mode]->pos_ls.alpha;
+      double neg_alpha = ve[mode]->alpha;
+      double width = ls->Length_Scale;
+      goma_error err = level_set_property(neg_alpha, pos_alpha, width, &alpha, NULL);
+      GOMA_EH(err, "level_set_property() failed for mobility parameter.");
+    } else {
+      GOMA_EH(GOMA_ERROR, "Unknown mobility parameter model");
+    }
+
+    ADType S_dot_S[DIM][DIM];
+    ad_tensor_dot(S, S, S_dot_S, VIM);
+
+    ADType coeff = alpha * lambda / mup;
+    for (int ii = 0; ii < 3; ii++) {
+      for (int jj = 0; jj < 3; jj++) {
+        source_term[ii][jj] += S[ii][jj] + coeff  * S_dot_S[ii][jj];
+      }
+    }
+
+  } break;
   case PTT: {
 
     ADType trace = 0;
@@ -202,7 +228,7 @@ int ad_film_height_stress_source(int mode,
     }
   } break;
   default:
-    GOMA_EH(GOMA_ERROR, "Unknown Constitutive equation form for SQRT_CONF");
+    GOMA_EH(GOMA_ERROR, "Unknown Constitutive equation form for AD Film Height");
     break;
   }
 
