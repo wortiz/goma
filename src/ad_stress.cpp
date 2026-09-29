@@ -182,7 +182,7 @@ int ad_film_height_stress_source(int mode,
     }
 
     ADType S_dot_S[DIM][DIM];
-    ad_tensor_dot(S, S, S_dot_S, VIM);
+    ad_tensor_dot(S, S, S_dot_S, 3);
 
     ADType coeff = alpha * lambda / mup;
     for (int ii = 0; ii < 3; ii++) {
@@ -281,6 +281,39 @@ int ad_sqrt_conf_source(int mode, ADType b[DIM][DIM], ADType source_term[DIM][DI
     for (int ii = 0; ii < sdim; ii++) {
       for (int jj = 0; jj < sdim; jj++) {
         source_term[ii][jj] = -0.5 * (binv[ii][jj] - b[ii][jj]);
+      }
+    }
+  } break;
+  case GIESEKUS: {
+    double alpha = 0;
+    /* get Geisekus mobility parameter */
+    if (ve[mode]->alphaModel == CONSTANT) {
+      alpha = ve[mode]->alpha;
+    } else if (ls != NULL && ve[mode]->alphaModel == VE_LEVEL_SET) {
+      double pos_alpha = ve[mode]->pos_ls.alpha;
+      double neg_alpha = ve[mode]->alpha;
+      double width = ls->Length_Scale;
+      goma_error err = level_set_property(neg_alpha, pos_alpha, width, &alpha, NULL);
+      GOMA_EH(err, "level_set_property() failed for mobility parameter.");
+    } else {
+      GOMA_EH(GOMA_ERROR, "Unknown mobility parameter model");
+    }
+    ADType bdotb[DIM][DIM];
+    ad_tensor_dot(b, b, bdotb, sdim);
+    ADType bdotbdotb[DIM][DIM];
+    ad_tensor_dot(b, bdotb, bdotbdotb, sdim);
+
+    for (int ii = 0; ii < sdim; ii++) {
+      for (int jj = 0; jj < sdim; jj++) {
+        source_term[ii][jj] =
+            // (I + alpha * (C - I)) * (C - I)
+            // ((C-I) + alpha * (C - I)^2)
+            // ((C-I) + alpha * (C . C - 2 C + I . I))
+            // ((C-I) + alpha * (C . C - 2 C + I))
+            // 0.5 b^-1 ((b . b-I) + alpha * (b . b . b . b - 2 b . b + I))
+            // 0.5 ((b - b^-1) + alpha * (b . b . b - 2 b + b^-1))
+            0.5 * (((b[ii][jj] - binv[ii][jj])) +
+                   (alpha * (bdotbdotb[ii][jj] - 2.0 * b[ii][jj] + binv[ii][jj])));
       }
     }
   } break;
