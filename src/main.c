@@ -19,6 +19,7 @@
 #include <mpi.h>
 
 #include "goma.h"
+#include "mm_eh.h"
 
 int main(int argc, char **argv) {
   goma_context *ctx = NULL;
@@ -29,6 +30,8 @@ int main(int argc, char **argv) {
 #endif
 
   goma_library_initialize(MPI_COMM_WORLD);
+  /* the executable owns MPI, so fatal errors may finalize it */
+  Goma_Owns_MPI = TRUE;
 
   error = goma_create(&ctx, MPI_COMM_WORLD, argc, argv);
   if (error == 0) {

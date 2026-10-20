@@ -95,6 +95,8 @@ goma_error petsc_scale_matrix(struct GomaLinearSolverData *ams, double *b_, doub
 
 goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams);
 int petsc_zero_mat(struct GomaLinearSolverData *ams);
+
+void goma_petsc_reset_options(void);
 #endif
 #endif
 #endif // GOMA_SL_PETSC_H

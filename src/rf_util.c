@@ -1988,8 +1988,7 @@ void init_vec(
     }
     if (efv->exit_after_pixel_map == true) {
       P0PRINTF("Exiting early due to setting Exit after pixel map = yes\n");
-      MPI_Finalize();
-      exit(0);
+      goma_exit(0, true);
     }
   }
 

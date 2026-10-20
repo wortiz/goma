@@ -58,6 +58,14 @@ GOMA_EXTERN void logprintf /* mm_eh.c                                   */
 
 GOMA_EXTERN void smooth_stop_with_msg(const char *msg);
 
+/*
+ * TRUE when Goma owns MPI (the goma executable) and may finalize it before
+ * exiting, FALSE when a host program drives Goma through goma.h
+ */
+extern int Goma_Owns_MPI;
+
+GOMA_EXTERN void goma_exit(const int status, const bool finalize_mpi);
+
 /* This macro expands to a function call to the error handler eh() with
  * four arguments:
  *		    IERR -- an int, if IERR=-1 there is a problem

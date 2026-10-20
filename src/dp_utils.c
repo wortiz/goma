@@ -218,8 +218,7 @@ void check_parallel_error_FL(char *errstring, char *file_name, int lineno)
     if (parallel_err) {
       fprintf(stderr, "\tP_%d had a flagged error\n", ProcID);
     }
-    (void)MPI_Finalize();
-    exit(-1);
+    goma_exit(-1, true);
   }
 #else
   if (parallel_err || parallel_err_global) {
