@@ -1500,8 +1500,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
             if (mpi_byte_count != sizeof(particle_t)) {
               fprintf(stderr, "Proc %d did not have proper incoming byte count!\n", ProcID);
               fflush(stderr);
-              MPI_Finalize();
-              exit(-1);
+              goma_exit(-1, true);
             }
 
             if (recv_p.state != TERMINATION_MARKER) {
@@ -4481,10 +4480,7 @@ static void dump_fcn(
   fflush(stderr);
 
   if (exit_too) {
-#ifdef PARALLEL
-    MPI_Finalize();
-#endif
-    exit(-1);
+    goma_exit(-1, true);
   }
 }
 

@@ -20,6 +20,7 @@
  * only one goma_context may exist at a time.
  */
 
+#include <fenv.h>
 #include <limits.h>
 #include <mpi.h>
 #include <stdbool.h>
@@ -96,6 +97,8 @@ extern void handle_ieee(void);
 #include "goma.h"
 #include "rf_io.h"
 #include "rf_mp.h"
+#include "sl_petsc.h"
+#include "sl_petsc_complex.h"
 
 /* defined in globals.c */
 extern double time_goma_started;
@@ -141,6 +144,7 @@ struct goma_context {
   struct Command_line_command **clc;
   int nclc;
   double time_start;
+  fenv_t host_fenv; /* floating point environment to restore for the host */
   enum goma_stage stage;
 };
 
@@ -161,6 +165,8 @@ int goma_library_initialize(MPI_Comm comm) {
   PetscInitialized(&petsc_initialized);
   goma_petsc_preinitialized = petsc_initialized;
 #endif
+  /* MPI belongs to the host program, never finalize it on a fatal error */
+  Goma_Owns_MPI = FALSE;
   goma_library_initialized = true;
   return 0;
 }
@@ -217,6 +223,8 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
   ctx->argv = argv;
   goma_context_active = true;
   goma_context_used = true;
+  /* Goma may enable floating point exceptions, restored in goma_destroy */
+  fegetenv(&ctx->host_fenv);
 
   yo = argv[0];
   ctx->yo = yo;
@@ -920,6 +928,11 @@ int goma_destroy(goma_context **ctx_ptr) {
   free(Request);
   Status = NULL;
   Request = NULL;
+
+#ifdef GOMA_ENABLE_PETSC
+  goma_petsc_reset_options();
+#endif
+  fesetenv(&ctx->host_fenv);
 
   free(ctx);
   *ctx_ptr = NULL;

@@ -776,5 +776,11 @@ goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams) {
 
   return GOMA_SUCCESS;
 }
+
+/* Reset Goma's PETSc option state so that a later run inserts its options again */
+void goma_petsc_reset_options(void) {
+  GomaPetscOptionsInserted = false;
+  GomaPetscOptionsPrinted = false;
+}
 #endif
 #endif

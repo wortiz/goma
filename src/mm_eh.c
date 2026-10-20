@@ -94,6 +94,8 @@ static FILE *log_strm = NULL;
 static char log_filename[MAX_FNL] = DEFAULT_GOMA_LOG_FILENAME;
 #endif
 
+int Goma_Owns_MPI = TRUE;
+
 /*
  * Global variable helps to put the brakes on a parallel train wreck, but
  * only if you take time to broadcast it...
@@ -101,6 +103,26 @@ static char log_filename[MAX_FNL] = DEFAULT_GOMA_LOG_FILENAME;
 /****************************************************************************/
 /****************************************************************************/
 /****************************************************************************/
+
+/*
+ * goma_exit(): terminate the process with the given status
+ *
+ * If finalize_mpi is true and Goma owns MPI then MPI is finalized before
+ * exiting, otherwise MPI_Abort is used (MPI belongs to the host program when
+ * Goma is used as a library, so it cannot be finalized here).
+ */
+void goma_exit(const int status, const bool finalize_mpi) {
+#ifdef PARALLEL
+  if (finalize_mpi && Goma_Owns_MPI) {
+    MPI_Finalize();
+    exit(status);
+  }
+  MPI_Abort(MPI_COMM_WORLD, status);
+#endif
+  exit(status);
+}
+/****************************************************************************/
+
 void goma_eh(const int error_flag, const char *file, const int line, const char *format, ...) {
   static char yo[] = "goma_eh";
   if (error_flag == -1) {
@@ -136,12 +158,7 @@ void goma_eh(const int error_flag, const char *file, const int line, const char 
 #ifdef PRINT_STACK_TRACE_ON_EH
     print_stacktrace();
 #endif
-    if (Num_Proc == 1) {
-      MPI_Finalize();
-      exit(-1);
-    } else {
-      MPI_Abort(MPI_COMM_WORLD, -1);
-    }
+    goma_exit(-1, Num_Proc == 1);
     parallel_err = TRUE;
 #endif
   }
@@ -342,7 +359,6 @@ void smooth_stop_with_msg(const char *msg) {
     fprintf(stderr, "\n\n Proc %d -- Goma stops smoothly --\n", ProcID);
     DFPUTS(msg, stderr);
   }
-  MPI_Finalize();
-  exit(-1);
+  goma_exit(-1, true);
 #endif
 }
