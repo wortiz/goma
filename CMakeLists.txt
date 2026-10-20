@@ -538,6 +538,7 @@ set(GOMA_INCLUDES
     include/el_quality.h
     include/exo_conn.h
     include/exo_struct.h
+    include/goma.h
     include/linalg/sparse_matrix.h
     include/linalg/sparse_matrix_tpetra.h
     include/linalg/sparse_matrix_epetra.h
@@ -704,6 +705,7 @@ set(GOMA_SOURCES
     src/el_quality.c
     src/exo_conn.c
     src/globals.c
+    src/goma_api.c
     src/linalg/sparse_matrix.cpp
     src/linalg/sparse_matrix_tpetra.cpp
     src/linalg/sparse_matrix_epetra.cpp
@@ -1216,6 +1218,8 @@ if(ENABLE_WARNINGS)
 endif()
 
 include(GNUInstallDirs)
+
+install(FILES include/goma.h DESTINATION include/goma)
 
 install(
   TARGETS goma_exe fix_exe
