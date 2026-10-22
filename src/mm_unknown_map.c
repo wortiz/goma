@@ -132,6 +132,10 @@ int ***Local_Offset = NULL;
  */
 int ***Dolphin = NULL;
 
+/* sizes of Dolphin and Local_Offset, to free them in unknown_map_free_globals */
+static int dolphin_num_matrices = 0;
+static int dolphin_num_nodes = 0;
+
 /*
  * Other Globally Defined Variables
  */
@@ -286,6 +290,8 @@ void setup_local_nodal_vars(Exo_DB *exo, Dpi *dpi)
 
   Dolphin = (int ***)malloc((upd->Total_Num_Matrices) * sizeof(int **));
   Local_Offset = (int ***)malloc((upd->Total_Num_Matrices) * sizeof(int **));
+  dolphin_num_matrices = upd->Total_Num_Matrices;
+  dolphin_num_nodes = total_nodes;
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
     Dolphin[imtrx] = (int **)malloc(total_nodes * sizeof(int *));
     Local_Offset[imtrx] = (int **)malloc(total_nodes * sizeof(int *));
@@ -5750,10 +5756,31 @@ void dofname40(const int unknown, char *str)
 /*****************************************************************************/
 
 /*
+ * Free Dolphin and Local_Offset allocated by setup_local_nodal_vars
+ */
+void free_local_nodal_vars(void) {
+  if (Dolphin != NULL) {
+    for (int imtrx = 0; imtrx < dolphin_num_matrices; imtrx++) {
+      for (int i = 0; i < dolphin_num_nodes; i++) {
+        free(Dolphin[imtrx][i]);
+        free(Local_Offset[imtrx][i]);
+      }
+      free(Dolphin[imtrx]);
+      free(Local_Offset[imtrx]);
+    }
+  }
+  safer_free((void **)&Dolphin);
+  safer_free((void **)&Local_Offset);
+  dolphin_num_matrices = 0;
+  dolphin_num_nodes = 0;
+}
+
+/*
  * Reset this file's globals to their load time values, see goma_reset.h
  */
 void unknown_map_free_globals(void) {
-  /* Local_Offset and Dolphin are freed by the solvers */
+  /* still allocated after the segregated solver or a run stopped before solving */
+  free_local_nodal_vars();
   for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
     if (First_Unknown != NULL) {
       free(First_Unknown[imtrx]);
@@ -5783,8 +5810,6 @@ void unknown_map_free_globals(void) {
   num_external_dofs = NULL;
   num_universe_dofs = NULL;
   num_personal_elems = 0;
-  Local_Offset = NULL;
-  Dolphin = NULL;
   NumUnknowns = NULL;
   NumExtUnknowns = NULL;
   MaxVarPerNode = 0;

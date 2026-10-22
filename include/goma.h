@@ -25,9 +25,11 @@
  *   goma_destroy(&ctx);
  *   goma_library_finalize();
  *
- * Only one goma_context may exist at a time.  Running Goma more than once per
- * process is not yet supported (global state is not reset by goma_destroy),
- * so a second goma_create returns an error.
+ * Only one goma_context may exist at a time.  goma_destroy frees the problem
+ * and resets Goma's global state, so a later goma_create can run another
+ * (independent) problem.  While this is experimental a second goma_create in
+ * a process returns an error unless GOMA_EXPERIMENTAL_MULTIPLE_RUNS is set in
+ * the environment.
  *
  * The communicator must currently be MPI_COMM_WORLD (or congruent to it).
  * Fatal errors still terminate the process.
@@ -61,7 +63,11 @@ int goma_setup(goma_context *ctx);
 /* Solve the problem, writing results to the output files */
 int goma_solve(goma_context *ctx);
 
-/* Free the context and memory allocated for the problem, sets *ctx to NULL */
+/*
+ * Free the context and memory allocated for the problem and reset global
+ * state, sets *ctx to NULL.  May be called after any stage, including a
+ * failed one.
+ */
 int goma_destroy(goma_context **ctx);
 
 #ifdef __cplusplus

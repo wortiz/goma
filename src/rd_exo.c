@@ -1293,9 +1293,9 @@ int free_exo(Exo_DB *x) /* pointer to EXODUS II FE db structure */
     free(x->centroid_list);
   }
 
-  if (x->elem_var_tab_exists) {
-    free(x->truth_table_existance_key);
-  }
+  /* elem_var_tab_exists is cleared when the database is read again, free the key regardless */
+  free(x->truth_table_existance_key);
+  x->truth_table_existance_key = NULL;
 
   free(x->elem_var_tab);
   free(x->ghost_node_to_base);

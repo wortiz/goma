@@ -874,6 +874,7 @@ void create_truth_table(struct Results_Description *rd, Exo_DB *exo, double ***g
   i = 0;
   free(exo->elem_var_tab);
   exo->elem_var_tab = alloc_int_1((exo->num_elem_blocks * rd->nev), 0);
+  free(exo->truth_table_existance_key);
   exo->truth_table_existance_key = (int *)smalloc((V_LAST - V_FIRST) * sizeof(int));
 
   for (i = 0; i < V_LAST - V_FIRST; i++) {
@@ -1212,6 +1213,7 @@ void create_truth_table_segregated(struct Results_Description **rd,
   i = 0;
   free(exo->elem_var_tab);
   exo->elem_var_tab = (int *)smalloc((exo->num_elem_blocks * total_nev) * sizeof(int));
+  free(exo->truth_table_existance_key);
   exo->truth_table_existance_key = (int *)smalloc((V_LAST - V_FIRST) * sizeof(int));
 
   for (i = 0; i < V_LAST - V_FIRST; i++) {
