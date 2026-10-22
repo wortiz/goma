@@ -1,0 +1,7 @@
+# LeakSanitizer suppressions for the library mode tests in Asan builds.
+# Memory Open MPI allocates in MPI_Init and MPI_Finalize and never frees.
+# Needs ASAN_OPTIONS=fast_unwind_on_malloc=0 so stacks reach these frames.
+leak:MPI_Init
+leak:MPI_Finalize
+leak:libopen-pal.so
+leak:libmpi.so

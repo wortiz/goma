@@ -1168,6 +1168,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   for (i = 0; i < MAX_NUMBER_MATLS; i++) {
     for (n = 0; n < MAX_MODES; n++) {
       safer_free((void **)&(ve_glob[i][n]->gn));
+      safer_free((void **)&(ve_glob[i][n]->time_const_st));
       safer_free((void **)&(ve_glob[i][n]));
     }
     safer_free((void **)&(vn_glob[i]));
@@ -2980,6 +2981,16 @@ void perturb_solution_conwrap(double *x, double *x_old, double *scale_vec, int n
 static int soln_output_step_print = 0;
 static int soln_output_n_print = 0;
 
+/* free the coordinates and displacements saved by solution_output_conwrap */
+static void free_saved_fields(double **saved_xyz, double **saved_displacement, int num_dim) {
+  for (int p = 0; p < num_dim; p++) {
+    free(saved_xyz[p]);
+    free(saved_displacement[p]);
+  }
+  free(saved_xyz);
+  free(saved_displacement);
+}
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
@@ -3079,8 +3090,10 @@ void solution_output_conwrap(int num_soln_flag,
 #ifdef GOMA_ENABLE_ARPACK
 
   /* Decide if eigenvalues will be calculated on this step */
-  if (con->eigen_info.Num_Eigenvalues < 1)
+  if (con->eigen_info.Num_Eigenvalues < 1) {
+    free_saved_fields(saved_xyz, saved_displacement, passdown.exo->num_dim);
     return;
+  }
   i_print = FALSE;
   if (freq > 0 && nt % freq == 0)
     i_print = TRUE;
@@ -3134,12 +3147,7 @@ void solution_output_conwrap(int num_soln_flag,
    * Free up memories
    */
 
-  for (p = 0; p < passdown.exo->num_dim; p++) {
-    safer_free((void **)&(saved_xyz[p]));
-    safer_free((void **)&(saved_displacement[p]));
-  }
-  safer_free((void **)&saved_xyz);
-  safer_free((void **)&saved_displacement);
+  free_saved_fields(saved_xyz, saved_displacement, passdown.exo->num_dim);
 }
 static int eigvec_output_old_step = -1;
 static int eigvec_output_nprint = -1;

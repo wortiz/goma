@@ -46,6 +46,14 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   set_tests_properties(goma_lib_repeat goma_lib_chain goma_lib_mpi
                        PROPERTIES SKIP_RETURN_CODE 77 LABELS library)
   set_tests_properties(goma_lib_mpi PROPERTIES PROCESSORS 2)
+  if(CMAKE_BUILD_TYPE STREQUAL "Asan")
+    set_tests_properties(
+      goma_lib_repeat goma_lib_chain goma_lib_mpi
+      PROPERTIES
+        ENVIRONMENT
+        "ASAN_OPTIONS=fast_unwind_on_malloc=0;LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/library/lsan.supp"
+    )
+  endif()
 else()
   message(STATUS "GUTS problems not found, library mode tests disabled")
 endif()
