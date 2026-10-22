@@ -219,9 +219,9 @@ extern "C" goma_error find_current_distances(Exo_DB *exo,
     size_t my_count = local_side_nodes.size();
     size_t max_count = 0;
     std::vector<size_t> global_counts(dpi->num_proc);
-    MPI_Allreduce(&my_count, &max_count, 1, MPI_UINT64_T, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&my_count, &max_count, 1, MPI_UINT64_T, MPI_MAX, goma_comm);
     MPI_Allgather(&my_count, 1, MPI_UINT64_T, &proc_node_counts[0], 1, MPI_UINT64_T,
-                  MPI_COMM_WORLD);
+                  goma_comm);
     size_t total_count = 0;
     for (size_t i = 0; i < proc_node_counts.size(); i++) {
       total_count += proc_node_counts[i];
@@ -235,7 +235,7 @@ extern "C" goma_error find_current_distances(Exo_DB *exo,
       }
     }
     MPI_Allgather(my_side_coordinates.data(), max_count * dim, MPI_DOUBLE,
-                  global_coordinates.data(), max_count * dim, MPI_DOUBLE, MPI_COMM_WORLD);
+                  global_coordinates.data(), max_count * dim, MPI_DOUBLE, goma_comm);
 
     side_coordinates.resize(total_count);
     size_t offset_local = 0;

@@ -1707,7 +1707,7 @@ create_surfs_from_iso(int isovar, double isoval, double x[], Exo_DB *exo) {
   if (Num_Proc > 1) {
 #ifdef PARALLEL
     int global_bool = FALSE;
-    MPI_Allreduce(&isosurf_exists, &global_bool, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+    MPI_Allreduce(&isosurf_exists, &global_bool, 1, MPI_INT, MPI_LOR, goma_comm);
     isosurf_exists = global_bool;
 #endif
   }
@@ -1918,7 +1918,7 @@ void assemble_Global_surf_list(struct LS_Surf_List *list) {
 
   /* find out how much everybody is going to tell us
    */
-  MPI_Allgather(&my_list_size, 1, MPI_INT, list_size, 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgather(&my_list_size, 1, MPI_INT, list_size, 1, MPI_INT, goma_comm);
 
   /* handle one processor at a time */
   for (i = 0; i < Num_Proc; i++) {
@@ -1949,8 +1949,8 @@ void assemble_Global_surf_list(struct LS_Surf_List *list) {
       }
 
       /* now broadcast this info */
-      MPI_Bcast(levels, list_size[i], MPI_INT, i, MPI_COMM_WORLD);
-      MPI_Bcast(types, list_size[i], MPI_INT, i, MPI_COMM_WORLD);
+      MPI_Bcast(levels, list_size[i], MPI_INT, i, goma_comm);
+      MPI_Bcast(types, list_size[i], MPI_INT, i, goma_comm);
 
       /* now both sender and receivers march through shoving addresses
        * via ddd_add_member
@@ -1975,8 +1975,8 @@ void assemble_Global_surf_list(struct LS_Surf_List *list) {
       safer_free((void **)&types);
 
       ddd_set_commit(pkg);
-      MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Bcast(MPI_BOTTOM, 1, pkg->new_type, i, MPI_COMM_WORLD);
+      MPI_Barrier(goma_comm);
+      MPI_Bcast(MPI_BOTTOM, 1, pkg->new_type, i, goma_comm);
       ddd_free(pkg);
     }
   }
@@ -2344,7 +2344,7 @@ static int Hrenorm_simplemass(Exo_DB *exo,
   int eb, blk_id;
   double Mold;
 
-  MPI_Allreduce(&num_ls_unkns, &global_ls_unkns, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&num_ls_unkns, &global_ls_unkns, 1, MPI_INT, MPI_SUM, goma_comm);
 
 #endif
 
@@ -2444,7 +2444,7 @@ static int Hrenorm_smolianksi_only(Exo_DB *exo,
   int eb, blk_id;
   double Mold;
 
-  MPI_Allreduce(&num_ls_unkns, &global_ls_unkns, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&num_ls_unkns, &global_ls_unkns, 1, MPI_INT, MPI_SUM, goma_comm);
 
 #endif
 
@@ -2545,7 +2545,7 @@ static int Hrenorm_constrain(Exo_DB *exo,
   double global_bTR = 0.;
   double global_RTR = 0.;
 
-  MPI_Allreduce(&num_ls_unkns, &global_ls_unkns, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&num_ls_unkns, &global_ls_unkns, 1, MPI_INT, MPI_SUM, goma_comm);
 
 #endif
 
@@ -2634,13 +2634,13 @@ static int Hrenorm_constrain(Exo_DB *exo,
       local_bTR = bTR;
       local_RTR = RTR;
 
-      MPI_Allreduce(&local_bTb, &global_bTb, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&local_bTb, &global_bTb, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
       bTb = global_bTb;
 
-      MPI_Allreduce(&local_bTR, &global_bTR, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&local_bTR, &global_bTR, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
       bTR = global_bTR;
 
-      MPI_Allreduce(&local_RTR, &global_RTR, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&local_RTR, &global_RTR, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
 
       RTR = global_RTR;
     }

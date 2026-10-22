@@ -326,7 +326,7 @@ void user_aug_cond_volume_residuals(const int iAC,
   inventory = augc[iAC].evol;
 #ifdef PARALLEL
   if (Num_Proc > 1) {
-    MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
     inventory = global_inventory;
   }
 #endif

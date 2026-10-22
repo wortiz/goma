@@ -276,7 +276,7 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
   for (p = 0; p < num_neighbors; p++) {
     retn =
         MPI_Irecv((np_ptr->recv_message_buf), np_ptr->recv_message_length, MPI_BYTE,
-                  np_ptr->neighbor_ProcID, exchange_mtype, MPI_COMM_WORLD, &(np_ptr->recv_request));
+                  np_ptr->neighbor_ProcID, exchange_mtype, goma_comm, &(np_ptr->recv_request));
     if (retn != MPI_SUCCESS) {
       fprintf(stderr, "%s Proc %d: Irecv to %d failed post: %d\n", yo, ProcID,
               np_ptr->neighbor_ProcID, retn);
@@ -292,7 +292,7 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
   for (p = 0; p < num_neighbors; p++) {
     retn =
         MPI_Isend(np_ptr->send_message_buf, np_ptr->send_message_length, MPI_BYTE,
-                  np_ptr->neighbor_ProcID, exchange_mtype, MPI_COMM_WORLD, &(np_ptr->send_request));
+                  np_ptr->neighbor_ProcID, exchange_mtype, goma_comm, &(np_ptr->send_request));
     if (retn != MPI_SUCCESS) {
       fprintf(stderr, "%s Proc %d: Isend to %d failed post: %d\n", yo, ProcID,
               np_ptr->neighbor_ProcID, retn);

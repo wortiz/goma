@@ -144,7 +144,7 @@ void usr_out_hkm(int status MAYBE_UNUSED,
   num_owned_unknowns = NumUnknowns[pg->imtrx];
 
 #ifdef PARALLEL
-  (void)MPI_Barrier(MPI_COMM_WORLD);
+  (void)MPI_Barrier(goma_comm);
 #endif
   if (ProcID == 0) {
     printf("\n\n\t");
@@ -315,7 +315,7 @@ static void PRNT_SOLN_VALS(char *soln_name,
   fflush(stdout);
   print_proc = GET_PRINT_PROC_NUM(l_max, g_max);
 #ifdef PARALLEL
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
 #endif
   if (ProcID == print_proc) {
     printf("\t %s:\n", soln_name);
@@ -342,7 +342,7 @@ static void PRNT_SOLN_VALS(char *soln_name,
     fflush(stdout);
   }
 #ifdef PARALLEL
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
 #endif
 } /* PRNT_SOLN_VALS */
 /*****************************************************************************/
@@ -453,13 +453,13 @@ static void SOLN_VALUES(int var_type,
 
   if (Num_Proc > 1) {
 #ifdef PARALLEL
-    MPI_Allreduce(&s_max, g_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&s_min, g_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&s_max, g_max, 1, MPI_DOUBLE, MPI_MAX, goma_comm);
+    MPI_Allreduce(&s_min, g_min, 1, MPI_DOUBLE, MPI_MIN, goma_comm);
     /*
      * Find the total number of nodes containing the soln component
      */
-    MPI_Allreduce(&num_nodes_mn, &g_solncomp_nodes, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&s_sum, &g_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&num_nodes_mn, &g_solncomp_nodes, 1, MPI_INT, MPI_SUM, goma_comm);
+    MPI_Allreduce(&s_sum, &g_sum, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
 #endif
   } else {
     *g_max = s_max;

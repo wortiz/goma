@@ -22,7 +22,8 @@ import sys
 EXPECTED = {
     "goma_library_initialized",
     "goma_context_used",
-    "goma_petsc_preinitialized",
+    # communicator PETSc was initialized on, kept until goma_library_finalize
+    "goma_petsc_comm",
     "Goma_Owns_MPI",
     "segments",
     "num_segments",

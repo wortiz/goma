@@ -3720,7 +3720,7 @@ int exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC 
   }
 
 #ifdef PARALLEL
-  mpi_error = MPI_Allreduce(MPI_IN_PLACE, &velo_slip_root, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  mpi_error = MPI_Allreduce(MPI_IN_PLACE, &velo_slip_root, 1, MPI_INT, MPI_MAX, goma_comm);
   if (mpi_error != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "Error in MPI Allreduce");
     return -1;
@@ -3737,7 +3737,7 @@ int exchange_fvelo_slip_bc_info(int ibc /* Index into BC_Types for VELO_SLIP_BC 
 
 #ifdef PARALLEL
   /* Communicate the new values in BC_Data_Float */
-  mpi_error = MPI_Bcast(&node_coord, pd->Num_Dim, MPI_DOUBLE, velo_slip_root, MPI_COMM_WORLD);
+  mpi_error = MPI_Bcast(&node_coord, pd->Num_Dim, MPI_DOUBLE, velo_slip_root, goma_comm);
 
   if (mpi_error != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "Error in MPI Allreduce");

@@ -183,7 +183,7 @@ int ProcWithMaxInt(const int value, int *maxval)
 #ifdef PARALLEL
   in_buf[0] = value;
   in_buf[1] = ProcID;
-  MPI_Allreduce((void *)in_buf, (void *)out_buf, 1, MPI_2INT, MPI_MAXLOC, MPI_COMM_WORLD);
+  MPI_Allreduce((void *)in_buf, (void *)out_buf, 1, MPI_2INT, MPI_MAXLOC, goma_comm);
   *maxval = out_buf[0];
   return out_buf[1];
 #else
@@ -209,7 +209,7 @@ void check_parallel_error_FL(char *errstring, char *file_name, int lineno)
 {
 #ifdef PARALLEL
 
-  MPI_Allreduce(&parallel_err, &parallel_err_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  MPI_Allreduce(&parallel_err, &parallel_err_global, 1, MPI_INT, MPI_LOR, goma_comm);
   if (parallel_err_global) {
     DPRINTF(stderr, "PARALLEL ERROR: ");
     if (errstring)
@@ -257,11 +257,11 @@ void ReduceBcast_BOR(int *ivec, int length)
     GOMA_EH(GOMA_ERROR, " ReduceBcast_BOR fatal Interface error");
   }
   ivec_recv = alloc_int_1(length, INT_NOINIT);
-  err = MPI_Reduce(ivec, ivec_recv, length, MPI_INT, MPI_BOR, 0, MPI_COMM_WORLD);
+  err = MPI_Reduce(ivec, ivec_recv, length, MPI_INT, MPI_BOR, 0, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, " ReduceBcast_BOR fatal MPI Error");
   }
-  err = MPI_Bcast(ivec_recv, V_LAST, MPI_INT, 0, MPI_COMM_WORLD);
+  err = MPI_Bcast(ivec_recv, V_LAST, MPI_INT, 0, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, " ReduceBcast_BOR fatal MPI Error");
   }
@@ -302,7 +302,7 @@ int gmaxloc_int(const int value, const int local_loc, int *global_maxloc)
   int in_buf[2], out_buf[2], err;
   in_buf[0] = value;
   in_buf[1] = local_loc;
-  err = MPI_Allreduce((void *)in_buf, (void *)out_buf, 1, MPI_2INT, MPI_MAXLOC, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)in_buf, (void *)out_buf, 1, MPI_2INT, MPI_MAXLOC, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "gmaxloc_int: MPI_Allreduce returned an error");
   }
@@ -344,7 +344,7 @@ int gminloc_int(const int value, const int local_loc, int *global_minloc)
   int in_buf[2], out_buf[2], err;
   in_buf[0] = value;
   in_buf[1] = local_loc;
-  err = MPI_Allreduce((void *)in_buf, (void *)out_buf, 1, MPI_2INT, MPI_MINLOC, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)in_buf, (void *)out_buf, 1, MPI_2INT, MPI_MINLOC, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "gminloc_int: MPI_Allreduce returned an error");
   }
@@ -376,7 +376,7 @@ int gmin_int(int value)
 {
 #ifdef PARALLEL
   int out_buf, err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_MIN, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "gmin_int: MPI_Allreduce returned an error");
   }
@@ -406,7 +406,7 @@ int gmax_int(int value)
 {
 #ifdef PARALLEL
   int out_buf, err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_MAX, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "gmax_int: MPI_Allreduce returned an error");
   }
@@ -436,7 +436,7 @@ int gsum_Int(int value)
 {
 #ifdef PARALLEL
   int out_buf, err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_SUM, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "gsum_Int: MPI_Allreduce returned an error");
   }
@@ -467,7 +467,7 @@ double gavg_double(double value)
 #ifdef PARALLEL
   int err;
   double out_buf;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "gavg_double: MPI_Allreduce returned an error");
   }
@@ -494,7 +494,7 @@ void print_sync_start(int do_print)
     static int nullbuf = 0;
     static MPI_Request request;
     if (ProcID + 1 < Num_Proc) {
-      MPI_Isend(&nullbuf, 1, MPI_INT, ProcID + 1, tag, MPI_COMM_WORLD, &request);
+      MPI_Isend(&nullbuf, 1, MPI_INT, ProcID + 1, tag, goma_comm, &request);
     }
 
     if (do_print) {
@@ -519,14 +519,14 @@ void print_sync_end(int do_print)
     int nullbuf = 0;
     int tag = 155;
     if (ProcID > 0) {
-      MPI_Recv(&nullbuf, 1, MPI_INT, ProcID - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&nullbuf, 1, MPI_INT, ProcID - 1, tag, goma_comm, MPI_STATUS_IGNORE);
     }
   }
   if (do_print) {
     P0PRINTF("######################### __PRINT_SYNC_END__ #########################\n");
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
 }
 /************************************************************************/
 /************************************************************************/
@@ -536,7 +536,7 @@ double goma_gsum_double(double value) {
 #ifdef PARALLEL
   double out_buf;
   int err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "goma_gsum_double: MPI_Allreduce returned an error");
   }
@@ -549,7 +549,7 @@ double goma_gmin_double(double value) {
 #ifdef PARALLEL
   double out_buf;
   int err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_DOUBLE, MPI_MIN, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "goma_gsum_double: MPI_Allreduce returned an error");
   }
@@ -563,7 +563,7 @@ double goma_gmax_double(double value) {
 #ifdef PARALLEL
   double out_buf;
   int err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_DOUBLE, MPI_MAX, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "goma_gsum_double: MPI_Allreduce returned an error");
   }
@@ -577,7 +577,7 @@ int goma_gsum_int(int value) {
 #ifdef PARALLEL
   int out_buf;
   int err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_SUM, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "goma_gsum_int: MPI_Allreduce returned an error");
   }
@@ -591,7 +591,7 @@ int goma_gmax_int(int value) {
 #ifdef PARALLEL
   int out_buf;
   int err;
-  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  err = MPI_Allreduce((void *)&value, (void *)&out_buf, 1, MPI_INT, MPI_MAX, goma_comm);
   if (err != MPI_SUCCESS) {
     GOMA_EH(GOMA_ERROR, "goma_gsum_int: MPI_Allreduce returned an error");
   }

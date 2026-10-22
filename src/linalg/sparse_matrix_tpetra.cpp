@@ -49,11 +49,11 @@ extern "C" goma_error g_tpetra_create_graph(GomaSparseMatrix matrix,
                                             GomaGlobalOrdinal *coo_rows,
                                             GomaGlobalOrdinal *coo_cols) {
   auto *tmp = static_cast<TpetraSparseMatrix *>(matrix->data);
-  RCP<const Teuchos::MpiComm<int>> comm(new Teuchos::MpiComm<int>(MPI_COMM_WORLD));
+  RCP<const Teuchos::MpiComm<int>> comm(new Teuchos::MpiComm<int>(goma_comm));
   GomaGlobalOrdinal global_n_rows;
   GomaGlobalOrdinal global_n_cols;
-  MPI_Allreduce(&n_rows, &global_n_rows, 1, MPI_GOMA_ORDINAL, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&n_cols, &global_n_cols, 1, MPI_GOMA_ORDINAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&n_rows, &global_n_rows, 1, MPI_GOMA_ORDINAL, MPI_SUM, goma_comm);
+  MPI_Allreduce(&n_cols, &global_n_cols, 1, MPI_GOMA_ORDINAL, MPI_SUM, goma_comm);
 
   Teuchos::ArrayView<GomaGlobalOrdinal> row_list_view(row_list, n_rows);
   Teuchos::ArrayView<GomaGlobalOrdinal> col_list_view(col_list, n_cols);

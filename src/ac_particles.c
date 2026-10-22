@@ -366,7 +366,7 @@ void initialize_particles(const Exo_DB *exo,
     proc_volume = (dbl *)calloc((unsigned)Num_Proc, sizeof(dbl));
     proc_volume_local = (dbl *)calloc((unsigned)Num_Proc, sizeof(dbl));
     proc_volume_local[ProcID] = my_volume;
-    MPI_Reduce(proc_volume_local, proc_volume, Num_Proc, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(proc_volume_local, proc_volume, Num_Proc, MPI_DOUBLE, MPI_SUM, 0, goma_comm);
 
     /* Get total volume. */
     total_volume = 0.0;
@@ -478,8 +478,8 @@ void initialize_particles(const Exo_DB *exo,
         fflush(stdout);
 
         /* Now broadcast the vector containing how many particles each processor should create. */
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Barrier(goma_comm);
+        MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, goma_comm);
 
         /* Create our particles while everyone else is creating theirs. */
         rejection = 0;
@@ -489,9 +489,9 @@ void initialize_particles(const Exo_DB *exo,
         /* Now receive how many particles were created by everyone. */
         memset(local_number_created, 0, Num_Proc * sizeof(int));
         local_number_created[0] = number_to_create[0] - rejection;
-        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(goma_comm);
         MPI_Reduce(local_number_created, number_created, Num_Proc, MPI_INT, MPI_SUM, 0,
-                   MPI_COMM_WORLD);
+                   goma_comm);
 
         for (i = 0; i < Num_Proc; i++) {
           creation_count += number_created[i];
@@ -505,12 +505,12 @@ void initialize_particles(const Exo_DB *exo,
         DPRINTF(stdout, ", total C/R=%d/%d\n", creation_count, rejection_count);
       }
       number_to_create[0] = -1;
-      MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Barrier(goma_comm);
+      MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, goma_comm);
     } else {
       while (number_to_create[0] != -1) {
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Barrier(goma_comm);
+        MPI_Bcast(number_to_create, Num_Proc, MPI_INT, 0, goma_comm);
         if (number_to_create[0] == -1)
           continue;
         rejection = 0;
@@ -518,9 +518,9 @@ void initialize_particles(const Exo_DB *exo,
           rejection += rejection_sample_a_particle();
         memset(local_number_created, 0, Num_Proc * sizeof(int));
         local_number_created[ProcID] = number_to_create[ProcID] - rejection;
-        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(goma_comm);
         MPI_Reduce(local_number_created, number_created, Num_Proc, MPI_INT, MPI_SUM, 0,
-                   MPI_COMM_WORLD);
+                   goma_comm);
       }
     }
     DPRINTF(stdout, "    total R = %d, ", rejection_count);
@@ -1307,7 +1307,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
   local_particle_transfers = 0;
   communication_accum_ust = 0.0;
   num_to_send = 0;
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
 #endif
   start_ust = ust();
 
@@ -1429,9 +1429,9 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
     */
     /* Now perform send/receives and advance_a_particle()'s for the
      * particles that are moving across processors. */
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(goma_comm);
     num_to_send = 0;
-    MPI_Allreduce(&local_num_to_send, &num_to_send, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_num_to_send, &num_to_send, 1, MPI_INT, MPI_SUM, goma_comm);
     local_particle_transfers += local_num_to_send;
     if (!num_to_send)
       done = 1;
@@ -1457,7 +1457,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
             */
             memcpy(&send_p, p, sizeof(particle_t));
             mpi_retval = MPI_Send(&send_p, sizeof(particle_t), MPI_BYTE, p->owning_proc_id, 0,
-                                  MPI_COMM_WORLD);
+                                  goma_comm);
             if (mpi_retval != MPI_SUCCESS) {
               fprintf(stderr, "Proc %d failed on particle send (%d).\n", ProcID, mpi_retval);
               exit(-1);
@@ -1474,7 +1474,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
                 fflush(stderr);
               */
               mpi_retval =
-                  MPI_Send(&termination_p, sizeof(particle_t), MPI_BYTE, j, 0, MPI_COMM_WORLD);
+                  MPI_Send(&termination_p, sizeof(particle_t), MPI_BYTE, j, 0, goma_comm);
               if (mpi_retval != MPI_SUCCESS) {
                 fprintf(stderr, "Proc %d failed on TERMINATION_MARKER send (%d).\n", ProcID,
                         mpi_retval);
@@ -1485,7 +1485,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
           recv_p.state = ACTIVE;
           while (recv_p.state != TERMINATION_MARKER) {
             mpi_retval =
-                MPI_Recv(&recv_p, sizeof(particle_t), MPI_BYTE, i, 0, MPI_COMM_WORLD, &mpi_status);
+                MPI_Recv(&recv_p, sizeof(particle_t), MPI_BYTE, i, 0, goma_comm, &mpi_status);
             if (mpi_retval != MPI_SUCCESS) {
               fprintf(stderr, "Proc %d failed on particle receive (%d).\n", ProcID, mpi_retval);
               exit(-1);
@@ -1516,7 +1516,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
             }
           }
         }
-        mpi_retval = MPI_Barrier(MPI_COMM_WORLD);
+        mpi_retval = MPI_Barrier(goma_comm);
         /*
           fprintf(stderr, "Proc %d BARRIER\n", ProcID);
         */
@@ -1592,7 +1592,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
       }
 
       num_to_send = 0;
-      MPI_Allreduce(&local_num_to_send, &num_to_send, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&local_num_to_send, &num_to_send, 1, MPI_INT, MPI_SUM, goma_comm);
       local_particle_transfers += local_num_to_send;
       if (!num_to_send)
         done = 1;
@@ -1609,7 +1609,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
    * to send ust()'s between all the processors... An MPI_BARRIER
    * should do it, though. */
 #ifdef PARALLEL
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
 #endif
 
   total_accum_ust = ust() - start_ust;
@@ -1625,22 +1625,22 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
   local_particle_accum_ust = particle_accum_ust;
   local_output_accum_ust = output_accum_ust;
   temp_ust = ust();
-  MPI_Reduce(&local_num_particles, &num_particles, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&local_num_particles, &num_particles, 1, MPI_INT, MPI_SUM, 0, goma_comm);
   MPI_Reduce(&local_max_particle_iterations, &max_particle_iterations, 1, MPI_INT, MPI_MAX, 0,
-             MPI_COMM_WORLD);
+             goma_comm);
   MPI_Reduce(&local_max_newton_iterations, &max_newton_iterations, 1, MPI_INT, MPI_MAX, 0,
-             MPI_COMM_WORLD);
+             goma_comm);
   MPI_Reduce(&local_particle_transfers, &particle_transfers, 1, MPI_INT, MPI_SUM, 0,
-             MPI_COMM_WORLD);
+             goma_comm);
   MPI_Reduce(&local_particle_accum_ust, &particle_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce(&local_output_accum_ust, &output_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+             goma_comm);
+  MPI_Reduce(&local_output_accum_ust, &output_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0, goma_comm);
   communication_accum_ust += MAX((dbl)ust() - (dbl)temp_ust, 0.0);
   local_communication_accum_ust = communication_accum_ust;
   MPI_Reduce(&local_communication_accum_ust, &communication_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0,
-             MPI_COMM_WORLD);
+             goma_comm);
   local_total_accum_ust = ust() - start_ust;
-  MPI_Reduce(&local_total_accum_ust, &total_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&local_total_accum_ust, &total_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0, goma_comm);
 #endif
 
   DPRINTF(stderr, "           Number of particles = %d\n", num_particles);
@@ -2247,8 +2247,8 @@ static void create_element_particle_info_maps(void) {
                     global_elem_id, elem_id);
             fflush(fp);
           }
-          MPI_Barrier(MPI_COMM_WORLD);
-          MPI_Bcast(msg, msg_size, MPI_INT, proc_id, MPI_COMM_WORLD);
+          MPI_Barrier(goma_comm);
+          MPI_Bcast(msg, msg_size, MPI_INT, proc_id, goma_comm);
         }
         /* Otherwise we're looking for matched global node ids
          * on unmatched surfaces. */
@@ -2298,9 +2298,9 @@ static void create_element_particle_info_maps(void) {
                 fflush(fp);
               }
 
-              MPI_Barrier(MPI_COMM_WORLD);
-              MPI_Bcast(msg, msg_size, MPI_INT, proc_id, MPI_COMM_WORLD);
-              MPI_Recv(msg, 2, MPI_INT, MPI_ANY_SOURCE, msg_tag, MPI_COMM_WORLD, &mpi_status);
+              MPI_Barrier(goma_comm);
+              MPI_Bcast(msg, msg_size, MPI_INT, proc_id, goma_comm);
+              MPI_Recv(msg, 2, MPI_INT, MPI_ANY_SOURCE, msg_tag, goma_comm, &mpi_status);
               if (output) {
                 fprintf(fp, "\tproc %d claimed the other side as its local element %3d\n", msg[0],
                         msg[1]);
@@ -2316,15 +2316,15 @@ static void create_element_particle_info_maps(void) {
         fprintf(fp, "Proc %d sending termination ticket.\n", ProcID);
         fclose(fp);
       }
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(goma_comm);
       msg[0] = -2; /* Send termination */
-      MPI_Bcast(msg, msg_size, MPI_INT, proc_id, MPI_COMM_WORLD);
+      MPI_Bcast(msg, msg_size, MPI_INT, proc_id, goma_comm);
     } /* if proc_id == ProcID */
     else {
       msg[0] = 0;
       while (msg[0] != -2) {
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(msg, msg_size, MPI_INT, proc_id, MPI_COMM_WORLD);
+        MPI_Barrier(goma_comm);
+        MPI_Bcast(msg, msg_size, MPI_INT, proc_id, goma_comm);
         if (output) {
           fprintf(fp2, "Received ");
           for (i = 0; i < msg_size; i++)
@@ -2441,7 +2441,7 @@ static void create_element_particle_info_maps(void) {
             }
             msg[0] = ProcID;
             msg[1] = elem_id;
-            MPI_Send(msg, 2, MPI_INT, proc_id, msg_tag, MPI_COMM_WORLD);
+            MPI_Send(msg, 2, MPI_INT, proc_id, msg_tag, goma_comm);
           } else {
             if (output) {
               fprintf(fp2, " not found.\n");
@@ -4783,17 +4783,17 @@ static void couple_to_continuum(void) {
     for (i = 0; i < Num_Proc; i++) {
       if (i == ProcID) {
         temp_ust = ust();
-        MPI_Bcast(num_ghost_particles_to_send, Num_Proc, MPI_INT, i, MPI_COMM_WORLD);
+        MPI_Bcast(num_ghost_particles_to_send, Num_Proc, MPI_INT, i, goma_comm);
         for (j = 0; j < Num_Proc; j++)
           if (i != j && num_ghost_particles_to_send[j])
             MPI_Send(&ghost_particles_to_send[j][0],
                      num_ghost_particles_to_send[j] * sizeof(particle_t), MPI_BYTE, j, 0,
-                     MPI_COMM_WORLD);
+                     goma_comm);
 
         communication_accum_ust += MAX(ust() - temp_ust, 0.0);
       } else {
         temp_ust = ust();
-        MPI_Bcast(num_ghost_particles_to_recv, Num_Proc, MPI_INT, i, MPI_COMM_WORLD);
+        MPI_Bcast(num_ghost_particles_to_recv, Num_Proc, MPI_INT, i, goma_comm);
         communication_accum_ust += MAX(ust() - temp_ust, 0.0);
         if (num_ghost_particles_to_recv[ProcID]) {
           ghost_particles_to_recv = (particle_t *)calloc(
@@ -4801,7 +4801,7 @@ static void couple_to_continuum(void) {
           temp_ust = ust();
           MPI_Recv(ghost_particles_to_recv,
                    num_ghost_particles_to_recv[ProcID] * sizeof(particle_t), MPI_BYTE, i, 0,
-                   MPI_COMM_WORLD, &mpi_status);
+                   goma_comm, &mpi_status);
           communication_accum_ust += MAX(ust() - temp_ust, 0.0);
           for (j = 0; j < num_ghost_particles_to_recv[ProcID]; j++) {
             ghost_particles_to_recv[j].state = GHOST;
@@ -4812,13 +4812,13 @@ static void couple_to_continuum(void) {
           free(ghost_particles_to_recv);
         }
       }
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(goma_comm);
     }
   }
 
   total_num_particle_ghosts = 0;
   MPI_Reduce(&local_num_particle_ghosts, &total_num_particle_ghosts, 1, MPI_INT, MPI_SUM, 0,
-             MPI_COMM_WORLD);
+             goma_comm);
 #endif
 
   /* Model-specific initializations. */
@@ -4854,7 +4854,7 @@ static void couple_to_continuum(void) {
 
 #ifdef PARALLEL
   local_total_particles = total_particles;
-  MPI_Reduce(&local_total_particles, &total_particles, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&local_total_particles, &total_particles, 1, MPI_DOUBLE, MPI_SUM, 0, goma_comm);
 #endif
 
 #ifdef PARALLEL
@@ -4944,7 +4944,7 @@ static void test_map_integrity(void) {
       fclose(fp);
     }
     fflush(stderr);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(goma_comm);
   }
 #else
   fprintf(stderr, "No integrity may for serial.");

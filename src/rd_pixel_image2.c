@@ -330,14 +330,14 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     }
   }
 
-  MPI_Allreduce(MPI_IN_PLACE, &min_x, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &min_y, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &min_x, 1, MPI_DOUBLE, MPI_MIN, goma_comm);
+  MPI_Allreduce(MPI_IN_PLACE, &min_y, 1, MPI_DOUBLE, MPI_MIN, goma_comm);
 
-  MPI_Bcast(&pixsize, 3, MPI_INT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&pixdim, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&resolution, 3, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&x0, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&y0, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&pixsize, 3, MPI_INT, 0, goma_comm);
+  MPI_Bcast(&pixdim, 1, MPI_INT, 0, goma_comm);
+  MPI_Bcast(&resolution, 3, MPI_DOUBLE, 0, goma_comm);
+  MPI_Bcast(&x0, 1, MPI_DOUBLE, 0, goma_comm);
+  MPI_Bcast(&y0, 1, MPI_DOUBLE, 0, goma_comm);
 
   if (ProcID != 0) {
     numpix = pixsize[0] * pixsize[1] * pixsize[2];
@@ -347,7 +347,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
     resz = resolution[2];
   }
 
-  MPI_Bcast(pixdata, numpix, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(pixdata, numpix, MPI_DOUBLE, 0, goma_comm);
 
   /****************************************/
   /* Some initialization things..         */
@@ -532,7 +532,7 @@ int rd_image_to_mesh2(int N_ext, Exo_DB *exo) {
   /* Timing and error estimate */
   /*****************************/
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
   P0PRINTF("Time for pixel-to-mesh processing: %6.4lf seconds\n", MPI_Wtime() - time0);
 
   pmin = 1e20;

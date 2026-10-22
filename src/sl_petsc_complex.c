@@ -33,6 +33,7 @@
 #include "rf_solve.h"
 #include "rf_vars_const.h"
 #include "sl_petsc_complex.h"
+#include "sl_petsc_options.h"
 
 static bool GomaPetscOptionsInserted = false;
 static bool GomaPetscOptionsPrinted = false;
@@ -156,7 +157,7 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
   }
 
   local_dof = irow_index;
-  MPI_Scan(&local_dof, &global_offset, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Scan(&local_dof, &global_offset, 1, MPIU_INT, MPI_SUM, goma_comm);
   global_offset -= local_dof;
   // copy global id's and convert to double for boundary exchange
   int local_offset = 0;
@@ -182,7 +183,7 @@ static void create_complex_mapping(struct GomaLinearSolverData *ams,
   }
   matrix_data->local_dof = local_dof;
   PetscInt global_dof = 0;
-  MPI_Allreduce(&local_dof, &global_dof, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_dof, &global_dof, 1, MPIU_INT, MPI_SUM, goma_comm);
   matrix_data->global_dof = global_dof;
   matrix_data->is_imag = col_is_real;
   free(dblColGIDs);
@@ -360,8 +361,8 @@ static goma_error initialize_petsc_matrix_complex(struct GomaLinearSolverData *a
   size_t local_nnz = nnz;
   size_t global_nnz = nnz;
 
-  MPI_Allreduce(&local_dofs, &global_dofs, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&local_nnz, &global_nnz, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_dofs, &global_dofs, 1, MPI_UINT64_T, MPI_SUM, goma_comm);
+  MPI_Allreduce(&local_nnz, &global_nnz, 1, MPI_UINT64_T, MPI_SUM, goma_comm);
 
   DPRINTF(stdout, "\n%-30s= %ld\n", "Number of unknowns", global_dofs);
   DPRINTF(stdout, "\n%-30s= %ld\n", "Number of matrix nonzeroes", global_nnz);
@@ -383,20 +384,16 @@ goma_error goma_setup_petsc_matrix_complex(struct GomaLinearSolverData *ams,
                                            int boundary_dof,
                                            int external_dof,
                                            int imtrx) {
-  PetscBool petsc_initialized = PETSC_FALSE;
-  PetscErrorCode err;
-  PetscInitialized(&petsc_initialized);
-  if (!petsc_initialized) {
-    err = PetscInitializeNoArguments();
-    CHKERRQ(err);
-  }
+  PetscBool initialized_by_run = PETSC_FALSE;
+  PetscErrorCode err = goma_petsc_initialize(&initialized_by_run);
+  CHKERRQ(err);
 
   PetscMatrixData *matrix_data = calloc(1, sizeof(struct PetscMatrixData));
 
   ams->PetscMatrixData = (void *)matrix_data;
 
-  if (GomaPetscOptions != NULL && !GomaPetscOptionsInserted) {
-    err = PetscOptionsInsertString(NULL, GomaPetscOptions);
+  if (!GomaPetscOptionsInserted) {
+    err = goma_petsc_insert_run_options(initialized_by_run);
     CHKERRQ(err);
     GomaPetscOptionsInserted = true;
   }
@@ -409,17 +406,17 @@ goma_error goma_setup_petsc_matrix_complex(struct GomaLinearSolverData *ams,
   }
 
   if (imtrx == 0 && !GomaPetscOptionsPrinted) {
-    CHKERRQ(PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_WORLD));
+    CHKERRQ(PetscOptionsView(NULL, PETSC_VIEWER_STDOUT_(goma_comm)));
     GomaPetscOptionsPrinted = true;
   }
 
-  err = MatCreate(MPI_COMM_WORLD, &matrix_data->mat);
+  err = MatCreate(goma_comm, &matrix_data->mat);
   CHKERRQ(err);
-  err = VecCreate(MPI_COMM_WORLD, &matrix_data->residual);
+  err = VecCreate(goma_comm, &matrix_data->residual);
   CHKERRQ(err);
-  err = VecCreate(MPI_COMM_WORLD, &matrix_data->update);
+  err = VecCreate(goma_comm, &matrix_data->update);
   CHKERRQ(err);
-  err = KSPCreate(MPI_COMM_WORLD, &matrix_data->ksp);
+  err = KSPCreate(goma_comm, &matrix_data->ksp);
   CHKERRQ(err);
 
   char ksp_prefix[25];
@@ -482,7 +479,7 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
   if (ielem == 0) {
 
     MatDestroy(&matrix_data->mat);
-    MatCreate(MPI_COMM_WORLD, &matrix_data->mat);
+    MatCreate(goma_comm, &matrix_data->mat);
     MatSetSizes(matrix_data->mat, matrix_data->local_dof, matrix_data->local_dof,
                 matrix_data->global_dof, matrix_data->global_dof);
     MatSetFromOptions(matrix_data->mat);
@@ -702,7 +699,7 @@ void petsc_load_lec_complex(int ielem, struct GomaLinearSolverData *ams, double 
 int petsc_solve_complex(struct GomaLinearSolverData *ams, double *x_, double *b_, int *its) {
   PetscMatrixData *matrix_data = (PetscMatrixData *)ams->PetscMatrixData;
   KSPDestroy(&matrix_data->ksp);
-  KSPCreate(MPI_COMM_WORLD, &matrix_data->ksp);
+  KSPCreate(goma_comm, &matrix_data->ksp);
   KSPSetFromOptions(matrix_data->ksp);
   KSPSetOperators(matrix_data->ksp, matrix_data->mat, matrix_data->mat);
   MatAssemblyBegin(matrix_data->mat, MAT_FINAL_ASSEMBLY);
@@ -781,6 +778,7 @@ goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams) {
 
 /* Reset Goma's PETSc option state so that a later run inserts its options again */
 void goma_petsc_reset_options(void) {
+  goma_petsc_restore_options();
   GomaPetscOptionsInserted = false;
   GomaPetscOptionsPrinted = false;
 }

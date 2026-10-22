@@ -104,7 +104,7 @@ void noahs_raven(void) {
    *     Therefore, just broadcast the structure.
    */
 
-  MPI_Bcast(upd, sizeof(UPD_STRUCT), MPI_BYTE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(upd, sizeof(UPD_STRUCT), MPI_BYTE, 0, goma_comm);
 
   Noahs_Raven = ddd_alloc();
   n = Noahs_Raven;

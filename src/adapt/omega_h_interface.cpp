@@ -453,7 +453,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       }
 
       int max_nnodes;
-      MPI_Allreduce(&nnodes_owned, &max_nnodes, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&nnodes_owned, &max_nnodes, 1, MPI_INT, MPI_MAX, goma_comm);
       std::vector<int> all_owned(max_nnodes * Num_Proc);
       std::vector<int> my_owned(max_nnodes);
       std::fill(my_owned.begin(), my_owned.end(), -1);
@@ -473,7 +473,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       std::set<int> my_owned_set(my_owned.begin(), my_owned.end());
 
       MPI_Allgather(my_owned.data(), max_nnodes, MPI_INT, all_owned.data(), max_nnodes, MPI_INT,
-                    MPI_COMM_WORLD);
+                    goma_comm);
       std::set<int> owned_set(all_owned.begin(), all_owned.end());
       std::vector<int> my_nodes_sorted(mesh->nverts());
       for (int i = 0; i < mesh->nverts(); i++) {
@@ -502,7 +502,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       auto set_sides2side_tmp = collect_marked(sides_are_in_set);
       int max_sides;
       int my_size = set_sides2side_tmp.size();
-      MPI_Allreduce(&my_size, &max_sides, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&my_size, &max_sides, 1, MPI_INT, MPI_MAX, goma_comm);
       std::vector<int> send_sides(max_sides);
       std::fill(send_sides.begin(), send_sides.end(), -1);
       for (int j = 0; j < my_size; j++) {
@@ -510,7 +510,7 @@ void convert_goma_to_omega_h(Exo_DB *exo, Dpi *dpi, double **x, Mesh *mesh, bool
       }
       std::vector<int> all_sides(max_sides * Num_Proc);
       MPI_Allgather(send_sides.data(), max_sides, MPI_INT, all_sides.data(), max_sides, MPI_INT,
-                    MPI_COMM_WORLD);
+                    goma_comm);
 
       std::vector<int> sides;
 
@@ -649,7 +649,7 @@ void convert_omega_h_to_goma(
   std::sort(my_global_comm_nodes.begin(), my_global_comm_nodes.end());
   int comm_size = my_global_comm_nodes.size();
   int max_comm_size;
-  MPI_Allreduce(&comm_size, &max_comm_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&comm_size, &max_comm_size, 1, MPI_INT, MPI_MAX, goma_comm);
   std::vector<int> all_neighbors_comm_nodes(max_comm_size * Num_Proc);
 
   my_global_comm_nodes.resize(max_comm_size);
@@ -658,7 +658,7 @@ void convert_omega_h_to_goma(
   }
 
   MPI_Allgather(my_global_comm_nodes.data(), max_comm_size, MPI_INT,
-                all_neighbors_comm_nodes.data(), max_comm_size, MPI_INT, MPI_COMM_WORLD);
+                all_neighbors_comm_nodes.data(), max_comm_size, MPI_INT, goma_comm);
 
   // update our comm nodes with nodes we find in the neighbors comm nodes
   std::set<int> updated_comm_nodes_set;
@@ -669,14 +669,14 @@ void convert_omega_h_to_goma(
   }
   std::vector<int> updated_comm_nodes(updated_comm_nodes_set.begin(), updated_comm_nodes_set.end());
   comm_size = updated_comm_nodes.size();
-  MPI_Allreduce(&comm_size, &max_comm_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&comm_size, &max_comm_size, 1, MPI_INT, MPI_MAX, goma_comm);
   updated_comm_nodes.resize(max_comm_size);
   for (int i = comm_size; i < max_comm_size; i++) {
     updated_comm_nodes[i] = -1;
   }
   all_neighbors_comm_nodes.resize(max_comm_size * Num_Proc);
   MPI_Allgather(updated_comm_nodes.data(), max_comm_size, MPI_INT, all_neighbors_comm_nodes.data(),
-                max_comm_size, MPI_INT, MPI_COMM_WORLD);
+                max_comm_size, MPI_INT, goma_comm);
 
   // all_nodes_set
   std::set<int> all_comm_nodes_set;
@@ -701,7 +701,7 @@ void convert_omega_h_to_goma(
 
   std::vector<int> global_comm_owners(all_comm_owners.size());
   MPI_Allreduce(all_comm_owners.data(), global_comm_owners.data(), all_comm_owners.size(), MPI_INT,
-                MPI_MIN, MPI_COMM_WORLD);
+                MPI_MIN, goma_comm);
 
   std::unordered_map<int, int> global_to_owner;
   for (unsigned int i = 0; i < global_comm_owners.size(); i++) {
@@ -992,7 +992,7 @@ void convert_omega_h_to_goma(
     }
 
     MPI_Allgather(my_sizes.data(), surface_set_vec.size(), MPI_INT, all_sizes.data(),
-                  surface_set_vec.size(), MPI_INT, MPI_COMM_WORLD);
+                  surface_set_vec.size(), MPI_INT, goma_comm);
 
     for (size_t i = 0; i < surface_set_vec.size(); i++) {
       int max = 0;
@@ -1006,7 +1006,7 @@ void convert_omega_h_to_goma(
 
       std::vector<int> all_ns_nodes(max * Num_Proc);
       MPI_Allgather(ns_global_nodes.data(), max, MPI_INT, all_ns_nodes.data(), max, MPI_INT,
-                    MPI_COMM_WORLD);
+                    goma_comm);
 
       std::set<int> ns_nodes_set;
       for (int j = 0; j < Num_Proc; j++) {
@@ -1030,13 +1030,13 @@ void convert_omega_h_to_goma(
 
   int max_sets = surface_set_vec.size();
   int gmax_sets;
-  MPI_Allreduce(&max_sets, &gmax_sets, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&max_sets, &gmax_sets, 1, MPI_INT, MPI_MAX, goma_comm);
   std::vector<int> all_sets(gmax_sets * Num_Proc + 1);
   std::fill(all_sets.begin(), all_sets.end(), -1);
   std::vector<int> my_sets(surface_set_vec.begin(), surface_set_vec.end());
   my_sets.resize(gmax_sets);
   MPI_Allgather(my_sets.data(), my_sets.size(), MPI_INT, all_sets.data(), gmax_sets, MPI_INT,
-                MPI_COMM_WORLD);
+                goma_comm);
   std::set<int> global_set_uniq;
   for (auto c : all_sets) {
     if (c != -1) {
@@ -1056,7 +1056,7 @@ void convert_omega_h_to_goma(
     if (my_offset != my_sets.end()) {
       int index = std::distance(my_sets.begin(), my_offset);
       MPI_Allreduce(&sset_global_side[index], &global_side_counts[setidx], 1, MPI_INT, MPI_SUM,
-                    MPI_COMM_WORLD);
+                    goma_comm);
     }
   }
   CALL(ex_put_init_global(exoid, mesh->nglobal_ents(0), mesh->nglobal_ents(mesh->dim()), 1,
@@ -1345,7 +1345,11 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
   int argc = 0;
   char argv[1][8];
   char **argvptr = (char **)argv;
+#ifdef OMEGA_H_USE_MPI
+  auto lib = Omega_h::Library(&argc, &argvptr, goma_comm);
+#else
   auto lib = Omega_h::Library(&argc, &argvptr);
+#endif
   auto classify_with = goma::exodus::NODE_SETS | goma::exodus::SIDE_SETS;
   auto verbose = false;
 #ifdef DEBUG_OMEGA_H

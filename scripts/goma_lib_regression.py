@@ -15,8 +15,16 @@ Modes:
 --partial adds two runs before the full runs of each problem that stop after
 goma_create and after goma_setup, to test teardown of a partly set up problem.
 
+--extra-ranks starts that many more MPI ranks than a problem needs, Goma runs
+on a communicator of the first ranks only, to check that it does not
+communicate outside the communicator it is given.
+
 If goma was built with -DGOMA_CHECK_GLOBAL_RESET=ON, global variables that
 were not restored by goma_destroy are reported for each run.
+
+Each run's standard output is written to stdout.txt in its directory.  When
+the blessed standard output of a problem lists PETSc options, the run must
+list the same options, so options left behind by an earlier run are caught.
 
 examples:
   scripts/goma_lib_regression.py --driver build/tests/goma_lib_sequence
@@ -59,6 +67,9 @@ def parse_args():
     parser.add_argument(
         "--partial", action="store_true", help="also run stopping after create and setup"
     )
+    parser.add_argument(
+        "--extra-ranks", type=int, default=0, help="idle MPI ranks outside Goma's communicator"
+    )
     parser.add_argument("--chain-length", type=int, default=8, help="problems per chain")
     parser.add_argument("--seed", type=int, default=0, help="shuffle seed (chain mode)")
     parser.add_argument("-p", "--problem", action="append", default=[], help="problem name")
@@ -67,7 +78,9 @@ def parse_args():
     parser.add_argument("--serial", action="store_true", help="only single processor problems")
     parser.add_argument("--parallel", action="store_true", help="only multiprocessor problems")
     parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 1)
-    parser.add_argument("--timeout", type=int, default=3600, help="seconds per job")
+    parser.add_argument(
+        "--timeout", type=int, default=3600, help="seconds per run, a job gets this times its runs"
+    )
     parser.add_argument("--json", help="write results to this file")
     return parser.parse_args()
 
@@ -132,6 +145,9 @@ def run_job(args, guts_cfg, name, runs):
     from pyguts_pkg.checker import check_exodiff
 
     env = dict(guts_cfg.subprocess_env(), GOMA_EXPERIMENTAL_MULTIPLE_RUNS="1")
+    if args.extra_ranks > 0:
+        # the idle ranks may need more slots than there are cores (Open MPI)
+        env["OMPI_MCA_rmaps_base_oversubscribe"] = "1"
     work = Path(args.output_dir).resolve() / name
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
@@ -150,6 +166,7 @@ def run_job(args, guts_cfg, name, runs):
         driver_args.append(str(d))
         if stop != "solve":
             driver_args.append("--stop-after=" + stop)
+        driver_args.append("--log=" + str(d / "stdout.txt"))
         driver_args += ["-i", p.run.goma_input] + p.run.goma_opts.split()
         if p.run.use_aprepro:
             driver_args += ["-a"] + p.run.aprepro_flags.split()
@@ -158,12 +175,14 @@ def run_job(args, guts_cfg, name, runs):
     driver_args.pop()
 
     cmd = [str(Path(args.driver).resolve())] + driver_args
-    if np > 1:
-        cmd = [guts_cfg.mpirun, "-np", str(np), "--bind-to", "none"] + cmd
+    if args.extra_ranks > 0:
+        cmd = [cmd[0], "--ranks=%d" % np] + cmd[1:]
+    if np > 1 or args.extra_ranks > 0:
+        cmd = [guts_cfg.mpirun, "-np", str(np + args.extra_ranks), "--bind-to", "none"] + cmd
     with open(work / "stdout.txt", "w") as out, open(work / "stderr.txt", "w") as err:
         try:
             exit_code = subprocess.run(
-                cmd, cwd=work, env=env, stdout=out, stderr=err, timeout=args.timeout
+                cmd, cwd=work, env=env, stdout=out, stderr=err, timeout=args.timeout * len(runs)
             ).returncode
         except subprocess.TimeoutExpired:
             exit_code = "timeout"
@@ -191,10 +210,41 @@ def run_job(args, guts_cfg, name, runs):
                 "problem": p.name,
                 "dir": str(d),
                 "exodiff": code.value,
+                "petsc_options": check_petsc_options(p, d),
                 "symbols": reset_check_symbols(args.driver, d),
             }
         )
     return {"job": name, "exit": exit_code, "runs": results}
+
+
+def petsc_options(stdout_file):
+    """Options in the first PETSc option table Goma printed, None if there is none."""
+    try:
+        lines = Path(stdout_file).read_text(errors="replace").splitlines()
+    except OSError:
+        return None
+    if "#PETSc Option Table entries:" not in lines:
+        return None
+    start = lines.index("#PETSc Option Table entries:") + 1
+    options = []
+    for line in lines[start:]:
+        if line.startswith("#End of PETSc Option Table"):
+            break
+        # drop the "# (source: file)" annotation, it depends on how the option was set
+        options.append(line.split("#")[0].strip())
+    return sorted(options)
+
+
+def check_petsc_options(problem, run_dir):
+    """Compare the PETSc options of a run with the blessed standard output."""
+    blessed = petsc_options(Path(problem.source_dir) / "blessed.stdout.txt")
+    if blessed is None:
+        return "n/a"
+    actual = petsc_options(run_dir / "stdout.txt")
+    (run_dir / "petscOptions.txt").write_text(
+        "blessed: %s\nrun:     %s\n" % (" ".join(blessed), " ".join(actual or []))
+    )
+    return "OK" if actual == blessed else "FAILED"
 
 
 def reset_check_symbols(driver, run_dir):
@@ -221,7 +271,10 @@ def reset_check_symbols(driver, run_dir):
 
 def job_passed(result):
     return result["exit"] == 0 and all(
-        r["exodiff"] in ("OK", "n/a") and not r["symbols"] for r in result["runs"]
+        r["exodiff"] in ("OK", "n/a")
+        and r.get("petsc_options", "n/a") in ("OK", "n/a")
+        and not r["symbols"]
+        for r in result["runs"]
     )
 
 
@@ -252,7 +305,15 @@ def main():
             if status == "FAILED":
                 print("  exit %s" % result["exit"])
                 for r in result["runs"]:
-                    print("  %s exodiff %s symbols %s" % (Path(r["dir"]).name, r["exodiff"], r["symbols"]))
+                    print(
+                        "  %s exodiff %s petsc options %s symbols %s"
+                        % (
+                            Path(r["dir"]).name,
+                            r["exodiff"],
+                            r.get("petsc_options", "n/a"),
+                            r["symbols"],
+                        )
+                    )
 
     results.sort(key=lambda r: r["job"])
     failed = [r["job"] for r in results if not job_passed(r)]

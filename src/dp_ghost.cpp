@@ -81,7 +81,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   std::vector<int> eb_num_nodes_per_elem(exo->num_elem_blocks);
   std::fill(eb_num_nodes_per_elem.begin(), eb_num_nodes_per_elem.end(), 0);
   MPI_Allreduce(exo->eb_num_nodes_per_elem, eb_num_nodes_per_elem.data(), exo->num_elem_blocks,
-                MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+                MPI_INT, MPI_MAX, goma_comm);
   for (int i = 0; i < exo->num_elem_blocks; i++) {
     exo->eb_num_nodes_per_elem[i] = eb_num_nodes_per_elem[i];
   }
@@ -89,7 +89,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   // setup eb_num_attr
   std::vector<int> eb_num_attr(exo->num_elem_blocks);
   MPI_Allreduce(exo->eb_num_attr, eb_num_attr.data(), exo->num_elem_blocks, MPI_INT, MPI_MAX,
-                MPI_COMM_WORLD);
+                goma_comm);
   for (int i = 0; i < exo->num_elem_blocks; i++) {
     exo->eb_num_attr[i] = eb_num_attr[i];
   }
@@ -103,7 +103,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
 
   MPI_Allgather(local_elem_type.data(), MAX_STR_LENGTH * exo->num_elem_blocks, MPI_BYTE,
                 global_elem_type.data(), MAX_STR_LENGTH * exo->num_elem_blocks, MPI_BYTE,
-                MPI_COMM_WORLD);
+                goma_comm);
 
   for (int i = 0; i < exo->num_elem_blocks; i++) {
     if (strncmp((const char *)local_elem_type[i].data(), "NULL", MAX_STR_LENGTH) == 0) {
@@ -196,9 +196,9 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
       send_sizes[i][j] = sizes[j];
     }
 
-    MPI_Irecv(recv_sizes[i].data(), 3, MPI_INT, dpi->neighbor[i], 2500, MPI_COMM_WORLD,
+    MPI_Irecv(recv_sizes[i].data(), 3, MPI_INT, dpi->neighbor[i], 2500, goma_comm,
               &requests[i]);
-    MPI_Isend(send_sizes[i].data(), 3, MPI_INT, dpi->neighbor[i], 2500, MPI_COMM_WORLD,
+    MPI_Isend(send_sizes[i].data(), 3, MPI_INT, dpi->neighbor[i], 2500, goma_comm,
               &requests[dpi->num_neighbors + i]);
   }
 
@@ -213,33 +213,33 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     if (recv_sizes[i][0] > 0) {
       recv_elems_neighbor[i].resize(recv_sizes[i][0]);
       MPI_Irecv(recv_elems_neighbor[i].data(), recv_sizes[i][0] * sizeof(shared_elem), MPI_BYTE,
-                dpi->neighbor[i], 2500, MPI_COMM_WORLD, &many_requests[req_index++]);
+                dpi->neighbor[i], 2500, goma_comm, &many_requests[req_index++]);
     }
     if (send_sizes[i][0] > 0) {
       GOMA_ASSERT(send_sizes[i][0] == static_cast<int>(shared_elems_neighbor[i].size()));
       MPI_Isend(shared_elems_neighbor[i].data(), send_sizes[i][0] * sizeof(shared_elem), MPI_BYTE,
-                dpi->neighbor[i], 2500, MPI_COMM_WORLD, &many_requests[req_index++]);
+                dpi->neighbor[i], 2500, goma_comm, &many_requests[req_index++]);
     }
 
     if (recv_sizes[i][1] > 0) {
       recv_connectivity[i].resize(recv_sizes[i][1]);
       MPI_Irecv(recv_connectivity[i].data(), recv_sizes[i][1], MPI_INT, dpi->neighbor[i], 2501,
-                MPI_COMM_WORLD, &many_requests[req_index++]);
+                goma_comm, &many_requests[req_index++]);
     }
     if (send_sizes[i][1] > 0) {
       GOMA_ASSERT(send_sizes[i][1] == static_cast<int>(connectivity[i].size()));
       MPI_Isend(connectivity[i].data(), send_sizes[i][1], MPI_INT, dpi->neighbor[i], 2501,
-                MPI_COMM_WORLD, &many_requests[req_index++]);
+                goma_comm, &many_requests[req_index++]);
     }
     if (recv_sizes[i][2] > 0) {
       recv_shared_node[i].resize(recv_sizes[i][2]);
       MPI_Irecv(recv_shared_node[i].data(), recv_sizes[i][2] * sizeof(shared_node), MPI_BYTE,
-                dpi->neighbor[i], 2502, MPI_COMM_WORLD, &many_requests[req_index++]);
+                dpi->neighbor[i], 2502, goma_comm, &many_requests[req_index++]);
     }
     if (send_sizes[i][2] > 0) {
       GOMA_ASSERT(send_sizes[i][2] == static_cast<int>(shared_nodes_neighbor[i].size()));
       MPI_Isend(shared_nodes_neighbor[i].data(), send_sizes[i][2] * sizeof(shared_node), MPI_BYTE,
-                dpi->neighbor[i], 2502, MPI_COMM_WORLD, &many_requests[req_index++]);
+                dpi->neighbor[i], 2502, goma_comm, &many_requests[req_index++]);
     }
   }
 
@@ -428,7 +428,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   int my_neighbors = neighbor_list.size();
   int max_neighbors;
 
-  MPI_Allreduce(&my_neighbors, &max_neighbors, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&my_neighbors, &max_neighbors, 1, MPI_INT, MPI_MAX, goma_comm);
   std::vector<int> all_neighbors(max_neighbors * Num_Proc);
   neighbor_list.resize(max_neighbors);
   for (int i = my_neighbors; i < max_neighbors; i++) {
@@ -436,7 +436,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   }
 
   MPI_Allgather(neighbor_list.data(), max_neighbors, MPI_INT, all_neighbors.data(), max_neighbors,
-                MPI_INT, MPI_COMM_WORLD);
+                MPI_INT, goma_comm);
 
   // loop over the neighbors and decide if we have another neighbor
   for (int i = 0; i < Num_Proc; i++) {
@@ -469,7 +469,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   std::vector<std::vector<int>> global_send_nodes(dpi->num_neighbors);
   std::vector<std::vector<int>> global_recv_nodes(dpi->num_neighbors);
   for (int i = 0; i < dpi->num_neighbors; i++) {
-    MPI_Irecv(&num_send_nodes[i], 1, MPI_INT, dpi->neighbor[i], 206, MPI_COMM_WORLD,
+    MPI_Irecv(&num_send_nodes[i], 1, MPI_INT, dpi->neighbor[i], 206, goma_comm,
               &requests[dpi->num_neighbors + i]);
     // printf("Proc %d recv from Proc %d tag %d", dpi->neighbor[i], ProcID, 206);
   }
@@ -480,7 +480,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
         num_recv_nodes[i] += 1;
       }
     }
-    MPI_Isend(&num_recv_nodes[i], 1, MPI_INT, dpi->neighbor[i], 206, MPI_COMM_WORLD, &requests[i]);
+    MPI_Isend(&num_recv_nodes[i], 1, MPI_INT, dpi->neighbor[i], 206, goma_comm, &requests[i]);
     // printf("Proc %d sending to Proc %d tag %d", ProcID, dpi->neighbor[i], 206);
   }
 
@@ -489,7 +489,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   for (int i = 0; i < dpi->num_neighbors; i++) {
     global_send_nodes[i].resize(num_send_nodes[i]);
     MPI_Irecv(global_send_nodes[i].data(), num_send_nodes[i], MPI_INT, dpi->neighbor[i], 207,
-              MPI_COMM_WORLD, &requests[dpi->num_neighbors + i]);
+              goma_comm, &requests[dpi->num_neighbors + i]);
     // printf("Proc %d recv from Proc %d tag %d", dpi->neighbor[i], ProcID, 207);
   }
 
@@ -502,7 +502,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
       }
     }
     MPI_Isend(global_recv_nodes[i].data(), num_recv_nodes[i], MPI_INT, dpi->neighbor[i], 207,
-              MPI_COMM_WORLD, &requests[i]);
+              goma_comm, &requests[i]);
     // printf("Proc %d sending to Proc %d tag %d", ProcID, dpi->neighbor[i], 207);
   }
 
@@ -654,14 +654,14 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   for (int i = 0; i < dpi->num_neighbors; i++) {
     ns_recv_nodes[i].resize(exo->num_node_sets);
     MPI_Irecv(ns_recv_nodes[i].data(), exo->num_node_sets, MPI_INT, dpi->neighbor[i], 208,
-              MPI_COMM_WORLD, &ns_requests[req_offset++]);
+              goma_comm, &ns_requests[req_offset++]);
   }
   std::vector<int> num_send(exo->num_node_sets);
   for (int j = 0; j < exo->num_node_sets; j++) {
     num_send[j] = ns_boundary_nodes[j].size();
   }
   for (int i = 0; i < dpi->num_neighbors; i++) {
-    MPI_Isend(&num_send[0], exo->num_node_sets, MPI_INT, dpi->neighbor[i], 208, MPI_COMM_WORLD,
+    MPI_Isend(&num_send[0], exo->num_node_sets, MPI_INT, dpi->neighbor[i], 208, goma_comm,
               &ns_requests[req_offset++]);
   }
   MPI_Waitall(req_offset, ns_requests.data(), MPI_STATUSES_IGNORE);
@@ -673,9 +673,9 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     for (int ns = 0; ns < exo->num_node_sets; ns++) {
       ns_neighbor_external_nodes[i][ns].resize(ns_recv_nodes[i][ns]);
       MPI_Irecv(ns_neighbor_external_nodes[i][ns].data(), ns_recv_nodes[i][ns], MPI_INT,
-                dpi->neighbor[i], 208, MPI_COMM_WORLD, &ns_requests[req_offset++]);
+                dpi->neighbor[i], 208, goma_comm, &ns_requests[req_offset++]);
       MPI_Isend(ns_boundary_nodes[ns].data(), num_send[ns], MPI_INT, dpi->neighbor[i], 208,
-                MPI_COMM_WORLD, &ns_requests[req_offset++]);
+                goma_comm, &ns_requests[req_offset++]);
     }
   }
   MPI_Waitall(req_offset, ns_requests.data(), MPI_STATUSES_IGNORE);
@@ -772,11 +772,11 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
   for (int i = 0; i < dpi->num_neighbors; i++) {
     num_recv_sides[i].resize(exo->num_side_sets);
     MPI_Irecv(num_recv_sides[i].data(), exo->num_side_sets, MPI_INT, dpi->neighbor[i], 210,
-              MPI_COMM_WORLD, &ss_requests[req_offset++]);
+              goma_comm, &ss_requests[req_offset++]);
   }
   for (int i = 0; i < dpi->num_neighbors; i++) {
     MPI_Isend(&num_send_sides[0], exo->num_side_sets, MPI_INT, dpi->neighbor[i], 210,
-              MPI_COMM_WORLD, &ss_requests[req_offset++]);
+              goma_comm, &ss_requests[req_offset++]);
   }
   MPI_Waitall(req_offset, ss_requests.data(), MPI_STATUSES_IGNORE);
 
@@ -788,9 +788,9 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     for (int ss = 0; ss < exo->num_side_sets; ss++) {
       ss_neighbor_sides[i][ss].resize(num_recv_sides[i][ss]);
       MPI_Irecv(ss_neighbor_sides[i][ss].data(), num_recv_sides[i][ss], MPI_INT, dpi->neighbor[i],
-                211, MPI_COMM_WORLD, &ss_requests[req_offset++]);
+                211, goma_comm, &ss_requests[req_offset++]);
       MPI_Isend(ss_sides[ss].data(), num_send_sides[ss], MPI_INT, dpi->neighbor[i], 211,
-                MPI_COMM_WORLD, &ss_requests[req_offset++]);
+                goma_comm, &ss_requests[req_offset++]);
     }
   }
   MPI_Waitall(req_offset, ss_requests.data(), MPI_STATUSES_IGNORE);
@@ -801,9 +801,9 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     for (int ss = 0; ss < exo->num_side_sets; ss++) {
       ss_neighbor_elem[i][ss].resize(num_recv_sides[i][ss]);
       MPI_Irecv(ss_neighbor_elem[i][ss].data(), num_recv_sides[i][ss], MPI_INT, dpi->neighbor[i],
-                211, MPI_COMM_WORLD, &ss_requests[req_offset++]);
+                211, goma_comm, &ss_requests[req_offset++]);
       MPI_Isend(ss_elems[ss].data(), num_send_sides[ss], MPI_INT, dpi->neighbor[i], 211,
-                MPI_COMM_WORLD, &ss_requests[req_offset++]);
+                goma_comm, &ss_requests[req_offset++]);
     }
   }
   MPI_Waitall(req_offset, ss_requests.data(), MPI_STATUSES_IGNORE);

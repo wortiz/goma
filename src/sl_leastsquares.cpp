@@ -39,6 +39,7 @@
 #include <iostream>
 
 #include "mpi.h"
+#include "rf_mp.h"
 #include "sl_amesos_interface.h"
 
 #ifdef EPETRA_MPI
@@ -77,7 +78,7 @@ void trilinos_solve_ls(double *bf_mat_,
 
   /* Initialize MPI communications */
 #ifdef EPETRA_MPI
-  Epetra_MpiComm comm(MPI_COMM_WORLD);
+  Epetra_MpiComm comm(goma_comm);
 #else
   Epetra_SerialComm comm;
 #endif
@@ -155,7 +156,7 @@ static void bf_mat_to_Epetra(
 
 {
 #ifdef EPETRA_MPI
-  Epetra_MpiComm comm(MPI_COMM_WORLD);
+  Epetra_MpiComm comm(goma_comm);
 #else
   Epetra_SerialComm comm;
 #endif
@@ -205,7 +206,7 @@ static void bf_mat_to_Epetra(
 void *
 construct_Epetra_CrsMatrix_ls(int const txt_num_pts, int const nnz_per_row, int const num_cols) {
 #ifdef EPETRA_MPI
-  Epetra_MpiComm comm(MPI_COMM_WORLD);
+  Epetra_MpiComm comm(goma_comm);
 #else
   Epetra_SerialComm comm;
 #endif

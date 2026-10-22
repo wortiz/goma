@@ -54,14 +54,14 @@ extern "C" goma_error g_epetra_create_graph(GomaSparseMatrix matrix,
                                             GomaGlobalOrdinal *coo_cols) {
   auto *tmp = static_cast<EpetraSparseMatrix *>(matrix->data);
 #ifdef EPETRA_MPI
-  Epetra_MpiComm comm(MPI_COMM_WORLD);
+  Epetra_MpiComm comm(goma_comm);
 #else
   Epetra_SerialComm comm;
 #endif
   GomaGlobalOrdinal global_n_rows;
   GomaGlobalOrdinal global_n_cols;
-  MPI_Allreduce(&n_rows, &global_n_rows, 1, MPI_GOMA_ORDINAL, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&n_cols, &global_n_cols, 1, MPI_GOMA_ORDINAL, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&n_rows, &global_n_rows, 1, MPI_GOMA_ORDINAL, MPI_SUM, goma_comm);
+  MPI_Allreduce(&n_cols, &global_n_cols, 1, MPI_GOMA_ORDINAL, MPI_SUM, goma_comm);
 
   tmp->row_map = Teuchos::rcp(new Epetra_Map(global_n_rows, n_rows, row_list, 0, comm));
   tmp->crs_graph = Teuchos::rcp(new Epetra_CrsGraph(Copy, *(tmp->row_map), max_per_row));

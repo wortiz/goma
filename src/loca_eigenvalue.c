@@ -42,7 +42,7 @@ static char *cvs_solnonlin_id =
 #else
 #if !defined(MPI) && !defined(DLB)
 #define MPI_Comm       int
-#define MPI_COMM_WORLD 0
+#define goma_comm 0
 #else
 #include <mpi.h>
 #endif
@@ -250,7 +250,7 @@ void calc_eigenvalues_loca(struct con_struct *con, double **saved_displacement)
 
   /* Initialize some communications stuff for eig_driver */
 
-  comm = MPI_COMM_WORLD;
+  comm = goma_comm;
 
   /* space needed for residual vector even for matrix-only fills */
   rhs = alloc_vec();

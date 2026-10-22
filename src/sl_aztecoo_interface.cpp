@@ -59,7 +59,7 @@ void aztecoo_solve_epetra(struct GomaLinearSolverData *ams, double *x_, double *
 
   /* Initialize MPI communications */
 #ifdef EPETRA_MPI
-  Epetra_MpiComm comm(MPI_COMM_WORLD);
+  Epetra_MpiComm comm(goma_comm);
 #else
   Epetra_SerialComm comm;
 #endif

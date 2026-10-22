@@ -171,7 +171,7 @@ void exchange_dof_int(Comm_Ex *cx, Dpi *dpi, int *x, int imtrx)
                 cx[p].mpidt_d_dof_recv,
                 cx[p].neighbor_name,
                 555,
-                MPI_COMM_WORLD,
+                goma_comm,
                 Request + Num_Requests*p + 2 );
 
       MPI_Isend(a,
@@ -179,7 +179,7 @@ void exchange_dof_int(Comm_Ex *cx, Dpi *dpi, int *x, int imtrx)
                 cx[p].mpidt_d_dof_send,
                 cx[p].neighbor_name,
                 555,
-                MPI_COMM_WORLD,
+                goma_comm,
                 ( Request + Num_Requests*p + 3 ) );
     }
 

@@ -31,8 +31,9 @@
  * a process returns an error unless GOMA_EXPERIMENTAL_MULTIPLE_RUNS is set in
  * the environment.
  *
- * The communicator must currently be MPI_COMM_WORLD (or congruent to it).
- * Fatal errors still terminate the process.
+ * Goma runs on a duplicate of the communicator given to goma_create, which
+ * may hold any subset of the processes.  Fatal errors still terminate the
+ * process.
  *
  * All functions return 0 on success and a negative value on failure.
  */
@@ -54,7 +55,8 @@ int goma_library_initialize(MPI_Comm comm);
 /* Finalizes third-party libraries initialized by Goma (never MPI) */
 int goma_library_finalize(void);
 
-/* Parse the command line (argv[0] is the program name) and input deck */
+/* Parse the command line (argv[0] is the program name) and input deck,
+ * collective over comm */
 int goma_create(goma_context **ctx, MPI_Comm comm, int argc, char **argv);
 
 /* Read the mesh and set up the problem */

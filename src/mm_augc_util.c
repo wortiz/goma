@@ -1933,7 +1933,7 @@ int std_aug_cond(int iAC,
       inventory = augc[iAC].evol;
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -1956,9 +1956,9 @@ int std_aug_cond(int iAC,
 
 #ifdef PARALLEL
     if (Num_Proc > 1) {
-      MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
       MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
-                    MPI_COMM_WORLD);
+                    goma_comm);
       inventory = global_inventory;
       LSvel_inventory = global_LSvel_inventory;
     }
@@ -1985,7 +1985,7 @@ int std_aug_cond(int iAC,
     inventory = getPositionAC(augc + iAC, cAC[iAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
     if (Num_Proc > 1) {
-      MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
       inventory = global_inventory;
     }
 #endif
@@ -2001,7 +2001,7 @@ int std_aug_cond(int iAC,
     inventory = getAngleAC(augc + iAC, cAC[iAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
     if (Num_Proc > 1) {
-      MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
       inventory = global_inventory;
     }
 #endif
@@ -2528,7 +2528,7 @@ static int estimate_dAC_ALC(
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -2541,7 +2541,7 @@ static int estimate_dAC_ALC(
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -2552,7 +2552,7 @@ static int estimate_dAC_ALC(
       inventory = augc[jAC].evol;
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -2566,9 +2566,9 @@ static int estimate_dAC_ALC(
       LSvel_inventory = augc[jAC].lsvel;
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
-                      MPI_COMM_WORLD);
+                      goma_comm);
         inventory = global_inventory;
         LSvel_inventory = global_LSvel_inventory;
       }
@@ -2598,7 +2598,7 @@ static int estimate_dAC_ALC(
       inventory = getPositionAC(augc + jAC, dAC[jAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -2636,7 +2636,7 @@ static int estimate_dAC_ALC(
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -2649,7 +2649,7 @@ static int estimate_dAC_ALC(
                                 *(mf_args->delta_t), *(mf_args->time), 0);
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -2660,7 +2660,7 @@ static int estimate_dAC_ALC(
       inventory = augc[jAC].evol;
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -2674,9 +2674,9 @@ static int estimate_dAC_ALC(
       LSvel_inventory = augc[jAC].lsvel;
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
-                      MPI_COMM_WORLD);
+                      goma_comm);
         inventory = global_inventory;
         LSvel_inventory = global_LSvel_inventory;
       }
@@ -2702,7 +2702,7 @@ static int estimate_dAC_ALC(
       inventory = getPositionAC(augc + jAC, dAC[jAC], mf_args->x, mf_args->exo);
 #ifdef PARALLEL
       if (Num_Proc > 1) {
-        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
       }
 #endif
@@ -2819,7 +2819,7 @@ int std_lgr_cond(int iAC,
     inventory = pfd->Constraint_Integral;
 #ifdef PARALLEL
     if (Num_Proc > 1) {
-      MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
       inventory = global_inventory;
     }
 #endif

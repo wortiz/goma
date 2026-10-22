@@ -239,7 +239,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
 
       MPI_Allreduce(ss_block_count_proc, ss_block_count_global,
                     d->num_elem_blocks_global * d->num_side_sets_global, MPI_INT, MPI_MAX,
-                    MPI_COMM_WORLD);
+                    goma_comm);
 
       int ss_block_index = 0;
       for (int ss_id = 0; ss_id < d->num_side_sets_global; ss_id++) {
@@ -266,10 +266,10 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     MPI_Request request_array[2];
 
     MPI_Iallreduce(eb_num_nodes_local, d->eb_num_nodes_per_elem_global, d->num_elem_blocks_global,
-                   MPI_INT, MPI_MAX, MPI_COMM_WORLD, &(request_array[0]));
+                   MPI_INT, MPI_MAX, goma_comm, &(request_array[0]));
 
     MPI_Iallreduce(global_ss_internal, d->ss_internal_global, d->num_side_sets_global, MPI_INT,
-                   MPI_MAX, MPI_COMM_WORLD, &(request_array[1]));
+                   MPI_MAX, goma_comm, &(request_array[1]));
 
     MPI_Waitall(num_mpi_async, request_array, MPI_STATUSES_IGNORE);
 
@@ -277,7 +277,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     free(global_ss_internal);
 
     int min_external;
-    MPI_Allreduce(&d->num_external_nodes, &min_external, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&d->num_external_nodes, &min_external, 1, MPI_INT, MPI_MIN, goma_comm);
     if (min_external > 0) {
       GOMA_EH(-1, "Found > 0 external nodes, use element decomposition");
     }
@@ -346,7 +346,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     MPI_Request *requests = calloc(2 * d->num_neighbors, sizeof(MPI_Request));
 
     for (int i = 0; i < d->num_neighbors; i++) {
-      MPI_Irecv(&num_send_nodes[i], 1, MPI_INT, d->neighbor[i], 206, MPI_COMM_WORLD,
+      MPI_Irecv(&num_send_nodes[i], 1, MPI_INT, d->neighbor[i], 206, goma_comm,
                 &requests[d->num_neighbors + i]);
       // printf("Proc %d recv from Proc %d tag %d", d->neighbor[i], ProcID, 206);
     }
@@ -357,7 +357,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
           num_recv_nodes[i] += 1;
         }
       }
-      MPI_Isend(&num_recv_nodes[i], 1, MPI_INT, d->neighbor[i], 206, MPI_COMM_WORLD, &requests[i]);
+      MPI_Isend(&num_recv_nodes[i], 1, MPI_INT, d->neighbor[i], 206, goma_comm, &requests[i]);
       // printf("Proc %d sending to Proc %d tag %d", ProcID, d->neighbor[i], 206);
     }
 
@@ -366,7 +366,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     for (int i = 0; i < d->num_neighbors; i++) {
       global_send_nodes[i] = malloc(sizeof(int) * num_send_nodes[i]);
       MPI_Irecv(global_send_nodes[i], num_send_nodes[i], MPI_INT, d->neighbor[i], 207,
-                MPI_COMM_WORLD, &requests[d->num_neighbors + i]);
+                goma_comm, &requests[d->num_neighbors + i]);
       // printf("Proc %d recv from Proc %d tag %d", d->neighbor[i], ProcID, 207);
     }
 
@@ -380,7 +380,7 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
         }
       }
       MPI_Isend(global_recv_nodes[i], num_recv_nodes[i], MPI_INT, d->neighbor[i], 207,
-                MPI_COMM_WORLD, &requests[i]);
+                goma_comm, &requests[i]);
       // printf("Proc %d sending to Proc %d tag %d", ProcID, d->neighbor[i], 207);
     }
 
@@ -412,9 +412,9 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
     }
 
     MPI_Allreduce(global_owners_min, all_global_owners_min, d->num_nodes_global, MPI_INT, MPI_MIN,
-                  MPI_COMM_WORLD);
+                  goma_comm);
     MPI_Allreduce(global_owners_max, all_global_owners_max, d->num_nodes_global, MPI_INT, MPI_MAX,
-                  MPI_COMM_WORLD);
+                  goma_comm);
 
     for (int i = 0; i < d->num_nodes_global; i++) {
       if (all_global_owners_min[i] != all_global_owners_max[i]) {

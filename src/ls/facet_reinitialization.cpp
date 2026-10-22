@@ -100,7 +100,7 @@ public:
   }
 
   void print_elapsed(const char *msg) {
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(goma_comm);
     if (ProcID == 0) {
       auto precision = std::cout.precision();
       std::cout.precision(1);
@@ -502,7 +502,7 @@ static void facet_based_reinitialization_3D(
 
   std::vector<int> facet_sizes(Num_Proc, 0);
   int my_size = facet_data.size();
-  MPI_Allgather(&my_size, 1, MPI_INT, facet_sizes.data(), 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgather(&my_size, 1, MPI_INT, facet_sizes.data(), 1, MPI_INT, goma_comm);
 
   std::vector<double> all_facets(std::accumulate(facet_sizes.begin(), facet_sizes.end(), 0));
   std::vector<int> offsets(Num_Proc, 0);
@@ -513,7 +513,7 @@ static void facet_based_reinitialization_3D(
   }
 
   MPI_Allgatherv(facet_data.data(), my_size, MPI_DOUBLE, all_facets.data(), facet_sizes.data(),
-                 offsets.data(), MPI_DOUBLE, MPI_COMM_WORLD);
+                 offsets.data(), MPI_DOUBLE, goma_comm);
 
   facets.clear();
   facets.reserve(all_facets.size() / 9);
@@ -756,7 +756,7 @@ static void facet_based_reinitialization_2D(
 
   std::vector<int> facet_sizes(Num_Proc, 0);
   int my_size = facets.size() * 4;
-  MPI_Allgather(&my_size, 1, MPI_INT, facet_sizes.data(), 1, MPI_INT, MPI_COMM_WORLD);
+  MPI_Allgather(&my_size, 1, MPI_INT, facet_sizes.data(), 1, MPI_INT, goma_comm);
 
   std::vector<double> all_facets(std::accumulate(facet_sizes.begin(), facet_sizes.end(), 0));
   std::vector<int> offsets(Num_Proc, 0);
@@ -767,7 +767,7 @@ static void facet_based_reinitialization_2D(
   }
 
   MPI_Allgatherv(facet_data.data(), my_size, MPI_DOUBLE, all_facets.data(), facet_sizes.data(),
-                 offsets.data(), MPI_DOUBLE, MPI_COMM_WORLD);
+                 offsets.data(), MPI_DOUBLE, goma_comm);
 
   facets.clear();
   facets.reserve(all_facets.size() / 4);

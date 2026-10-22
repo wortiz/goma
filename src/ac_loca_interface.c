@@ -457,7 +457,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 #ifdef GOMA_ENABLE_AZTEC
   /* Set Aztec proc_config array (for many different cases) */
 #ifdef MPI
-  AZ_set_proc_config(ams[0]->proc_config, MPI_COMM_WORLD);
+  AZ_set_proc_config(ams[0]->proc_config, goma_comm);
 #else  /* MPI */
   AZ_set_proc_config(ams[0]->proc_config, 0);
 #endif /* MPI */
@@ -1395,7 +1395,7 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
           evol_local = augc[iAC].evol;
 #ifdef PARALLEL
           if (Num_Proc > 1) {
-            MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
           }
           evol_local = evol_global;
 #endif
@@ -1405,7 +1405,7 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
           evol_local = augc[iAC].evol;
 #ifdef PARALLEL
           if (Num_Proc > 1) {
-            MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
           }
           evol_local = evol_global;
 #endif

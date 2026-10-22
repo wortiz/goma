@@ -356,7 +356,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
 #ifdef GOMA_ENABLE_AZTEC
 #ifdef MPI
-  AZ_set_proc_config(ams[0]->proc_config, MPI_COMM_WORLD);
+  AZ_set_proc_config(ams[0]->proc_config, goma_comm);
 #else  /* MPI */
   AZ_set_proc_config(ams[0]->proc_config, 0);
 #endif /* MPI */
@@ -882,7 +882,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 #ifdef PARALLEL
             if (Num_Proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
                                  augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
-              MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+              MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
               evol_local = evol_global;
             }
 #endif
@@ -1223,7 +1223,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     if (step_fix != 0 && nt == step_fix) {
       /* Barrier because fix needs both files to be finished printing
          and fix always occurs on the same timestep as printing */
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(goma_comm);
       fix_output();
       /* Fix step is relative to print step */
       step_fix += cont->fix_freq * cont->print_freq;

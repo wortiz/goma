@@ -85,7 +85,7 @@ void amesos_solve(char *choice,
 
   /* Initialize MPI communications */
 #ifdef EPETRA_MPI
-  Epetra_MpiComm comm(MPI_COMM_WORLD);
+  Epetra_MpiComm comm(goma_comm);
 #else
   Epetra_SerialComm comm;
 #endif
@@ -192,7 +192,7 @@ static void GomaMsr2EpetraCsr(struct GomaLinearSolverData *ams, Epetra_CrsMatrix
 
 {
 #ifdef EPETRA_MPI
-  Epetra_MpiComm comm(MPI_COMM_WORLD);
+  Epetra_MpiComm comm(goma_comm);
 #else
   Epetra_SerialComm comm;
 #endif
@@ -265,7 +265,7 @@ static void GomaMsr2EpetraCsr(struct GomaLinearSolverData *ams, Epetra_CrsMatrix
 
 void *construct_Epetra_CrsMatrix(struct GomaLinearSolverData *ams) {
 #ifdef EPETRA_MPI
-  Epetra_MpiComm comm(MPI_COMM_WORLD);
+  Epetra_MpiComm comm(goma_comm);
 #else
   Epetra_SerialComm comm;
 #endif
