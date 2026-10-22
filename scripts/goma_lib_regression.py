@@ -144,7 +144,7 @@ def run_tool(cmd, cwd, env):
 def run_job(args, guts_cfg, name, runs):
     from pyguts_pkg.checker import check_exodiff
 
-    env = dict(guts_cfg.subprocess_env(), GOMA_EXPERIMENTAL_MULTIPLE_RUNS="1")
+    env = dict(guts_cfg.subprocess_env())
     if args.extra_ranks > 0:
         # the idle ranks may need more slots than there are cores (Open MPI)
         env["OMPI_MCA_rmaps_base_oversubscribe"] = "1"

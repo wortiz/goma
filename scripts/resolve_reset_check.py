@@ -21,7 +21,6 @@ import sys
 # error handling mode, and the reset checker's own tables
 EXPECTED = {
     "goma_library_initialized",
-    "goma_context_used",
     # communicator PETSc was initialized on, kept until goma_library_finalize
     "goma_petsc_comm",
     "Goma_Owns_MPI",

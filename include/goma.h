@@ -27,9 +27,7 @@
  *
  * Only one goma_context may exist at a time.  goma_destroy frees the problem
  * and resets Goma's global state, so a later goma_create can run another
- * (independent) problem.  While this is experimental a second goma_create in
- * a process returns an error unless GOMA_EXPERIMENTAL_MULTIPLE_RUNS is set in
- * the environment.
+ * (independent) problem.
  *
  * Goma runs on a duplicate of the communicator given to goma_create, which
  * may hold any subset of the processes.  Fatal errors still terminate the

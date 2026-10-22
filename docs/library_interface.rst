@@ -68,11 +68,6 @@ time: ``goma_create`` returns an error while another context is alive. Running
 problems concurrently in one process (for example from several threads) is not
 supported.
 
-Running more than one problem
-   Until the library interface is declared stable, a second ``goma_create`` in
-   the same process returns an error unless the environment variable
-   ``GOMA_EXPERIMENTAL_MULTIPLE_RUNS`` is set.
-
 MPI and PETSc
 #############
 
