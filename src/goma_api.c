@@ -867,6 +867,10 @@ int goma_destroy(goma_context **ctx_ptr) {
     return -1;
   }
   goma_context *ctx = *ctx_ptr;
+#ifdef GOMA_CHECK_GLOBAL_RESET
+  /* ProcID is reset below */
+  int check_rank = ProcID;
+#endif
   struct Command_line_command **clc = ctx->clc;
   char *yo = ctx->yo;
   double time_start = ctx->time_start;
@@ -877,19 +881,22 @@ int goma_destroy(goma_context **ctx_ptr) {
   /*
    *       FREE MEMORY ALLOCATED BY THE PROGRAM
    */
-  /*
-   * free the element block / element based structures
-   */
-  free_element_blocks(EXO_ptr);
+  /* the mesh and problem structures exist once goma_setup has finished */
+  if (ctx->stage != GOMA_STAGE_CREATED) {
+    /*
+     * free the element block / element based structures
+     */
+    free_element_blocks(EXO_ptr);
 
-  /* the duplicated boundary condition lists are sized from Nodes */
-  bc_conflict_free_globals();
+    /* the duplicated boundary condition lists are sized from Nodes */
+    bc_conflict_free_globals();
 
-  /*
-   * free nodal based structures
-   */
-  free_nodes();
-  free_problem(EXO_ptr, DPI_ptr);
+    /*
+     * free nodal based structures
+     */
+    free_nodes();
+    free_problem(EXO_ptr, DPI_ptr);
+  }
 
   /*
    * Free command line stuff
@@ -908,16 +915,19 @@ int goma_destroy(goma_context **ctx_ptr) {
   /*
    * Free exodus database structures
    */
-  free_exo(EXO_ptr);
-  safer_free((void **)&EXO_ptr);
-
-  if (Num_Proc > 1) {
-    free_dpi(DPI_ptr);
-  } else {
-    free_dpi_uni(DPI_ptr);
+  if (EXO_ptr != NULL) {
+    free_exo(EXO_ptr);
+    safer_free((void **)&EXO_ptr);
   }
 
-  safer_free((void **)&DPI_ptr);
+  if (DPI_ptr != NULL) {
+    if (Num_Proc > 1) {
+      free_dpi(DPI_ptr);
+    } else {
+      free_dpi_uni(DPI_ptr);
+    }
+    safer_free((void **)&DPI_ptr);
+  }
 
   /*
    * Remove front scratch file [/tmp/lu.'pid'.0]
@@ -1011,12 +1021,12 @@ int goma_destroy(goma_context **ctx_ptr) {
 
 #ifdef GOMA_CHECK_GLOBAL_RESET
   char check_file[MAX_FNL];
-  snprintf(check_file, MAX_FNL, "goma_reset_check.%d.txt", ProcID);
+  snprintf(check_file, MAX_FNL, "goma_reset_check.%d.txt", check_rank);
   FILE *check_out = fopen(check_file, "w");
   if (check_out != NULL) {
     int num_ranges = goma_reset_check_compare(check_out);
     fclose(check_out);
-    fprintf(stderr, "P_%d goma reset check: %d differing ranges written to %s\n", ProcID,
+    fprintf(stderr, "P_%d goma reset check: %d differing ranges written to %s\n", check_rank,
             num_ranges, check_file);
   }
 #endif

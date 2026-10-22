@@ -28,6 +28,8 @@
 #include "exo_struct.h"
 #include "rf_vars_const.h"
 
+extern void free_local_nodal_vars(void);
+
 extern void setup_local_nodal_vars(Exo_DB *, /* exo - ptr to FE EXODUS II database        */
                                    Dpi *);   /* dpi - ptr to parallel info                */
 

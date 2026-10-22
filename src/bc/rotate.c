@@ -69,6 +69,9 @@ struct Rotation_Vectors ****rotation = NULL;
 int **local_ROT_list = NULL;
 int dup_blks_list[MAX_MAT_PER_SS + 1];
 int rotation_allocated = FALSE;
+/* size of rotation and local_ROT_list, to free them in rotate_free_globals */
+static int rotation_num_nodes = 0;
+static int rotation_dim = 0;
 
 #define GOMA_BC_ROTATE_C
 
@@ -1989,6 +1992,8 @@ void calculate_all_rotation_vectors(Exo_DB *exo, /* the mesh */
       }
     }
     rotation_allocated = TRUE;
+    rotation_num_nodes = num_total_nodes;
+    rotation_dim = dim;
   }
 
   /* INITIALIZE */
@@ -2346,6 +2351,8 @@ void calculate_2D_rotation_vectors(Exo_DB *exo, /* the mesh */
       }
     }
     rotation_allocated = TRUE;
+    rotation_num_nodes = num_total_nodes;
+    rotation_dim = dim;
   }
 
   while (mesh_count < num_mesh_rotate[pg->imtrx] || mom_count < num_mom_rotate[pg->imtrx]) {
@@ -3446,9 +3453,28 @@ void rotate_mesh_auto(int id,  /* Elemental stiffness matrix row index */
  * Reset this file's globals to their load time values, see goma_reset.h
  */
 void rotate_free_globals(void) {
-  /* the rotation vectors are not yet freed */
+  if (rotation_allocated) {
+    for (int i = 0; i < rotation_num_nodes; i++) {
+      for (int j = 0; j < NUM_VECTOR_EQUATIONS; j++) {
+        if (rotation[i][j] != NULL) {
+          for (int k = 0; k < rotation_dim; k++) {
+            free(rotation[i][j][k]);
+          }
+          free(rotation[i][j]);
+        }
+      }
+      free(rotation[i]);
+      if (local_ROT_list != NULL) {
+        free(local_ROT_list[i]);
+      }
+    }
+    free(rotation);
+    free(local_ROT_list);
+  }
   rotation = NULL;
   local_ROT_list = NULL;
+  rotation_num_nodes = 0;
+  rotation_dim = 0;
   memset(dup_blks_list, 0, sizeof(dup_blks_list));
   rotation_allocated = FALSE;
 }

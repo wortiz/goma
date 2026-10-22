@@ -1174,8 +1174,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   }
 
   safer_free((void **)&gvec_elem);
-  safer_free((void **)&Local_Offset);
-  safer_free((void **)&Dolphin);
+  free_local_nodal_vars();
 
   safer_free((void **)&passdown.sv_index);
   safer_free((void **)&passdown.sv_count);
