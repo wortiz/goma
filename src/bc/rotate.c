@@ -27,6 +27,7 @@
 #include "el_geom.h"
 #include "exo_struct.h"
 #include "gds/gds_vector.h"
+#include "goma_reset.h"
 #include "linalg/sparse_matrix.h"
 #include "load_field_variables.h"
 #include "mm_as.h"
@@ -3440,3 +3441,14 @@ void rotate_mesh_auto(int id,  /* Elemental stiffness matrix row index */
      mesh derivatives wrt rotation vector */
 
 } /* END of rotate_mesh_eqn */
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void rotate_free_globals(void) {
+  /* the rotation vectors are not yet freed */
+  rotation = NULL;
+  local_ROT_list = NULL;
+  memset(dup_blks_list, 0, sizeof(dup_blks_list));
+  rotation_allocated = FALSE;
+}

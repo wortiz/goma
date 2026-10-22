@@ -19,6 +19,7 @@
  */
 
 /* Needed to declare POSIX function drand48 */
+#include "goma_reset.h"
 #include "load_field_variables.h"
 #define _XOPEN_SOURCE
 
@@ -5004,4 +5005,47 @@ static void load_restart_file(void) {
       store_particle_data(p_ptr);
     output_a_particle(p_ptr, 0.0, 0.0, 0, 1, 1);
   }
+}
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void particles_free_globals(void) {
+  /* the particle lists and files are released by the particle code */
+  particles_to_do = NULL;
+  particles_to_send = NULL;
+  element_particle_list_head = NULL;
+  backup_element_particle_list_head = NULL;
+  num_particles = 0;
+  last_element_loaded = 0;
+  velo_interp = 0;
+  last_elements_nodes_loaded = 0;
+  last_elements_fv_loaded = 0;
+  memset(last_fvs_xi_loaded, 0, sizeof(last_fvs_xi_loaded));
+  my_fv_old = NULL;
+  max_newton_iterations = 0;
+  max_particle_iterations = 0;
+  total_accum_ust = 0.0;
+  output_accum_ust = 0.0;
+  particle_accum_ust = 0.0;
+#ifdef PARALLEL
+  total_num_particle_ghosts = 0;
+  communication_accum_ust = 0.0;
+#endif
+  nodes_per_element = 0;
+  sides_per_element = 0;
+  node_coord = NULL;
+  static_exo = NULL;
+  static_x = NULL;
+  static_x_old = NULL;
+  static_xdot = NULL;
+  static_xdot_old = NULL;
+  static_resid_vector = NULL;
+  my_volume = 0.0;
+  el_volume = NULL;
+  pa_fp = NULL;
+  pa_full_fp = NULL;
+  pdim = 0;
+  mdim = 0;
+  Num_Impermeable_PBCs = 0;
 }

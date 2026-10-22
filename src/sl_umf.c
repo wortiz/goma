@@ -64,12 +64,14 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 
 #ifdef GOMA_ENABLE_UMFPACK
 #include <umfpack.h>
 #endif
 
 #define GOMA_SL_UMF_C
+#include "goma_reset.h"
 #include "mm_eh.h"
 #include "sl_auxutil.h"
 #include "sl_umf.h"
@@ -82,6 +84,10 @@
 #ifdef GOMA_ENABLE_UMFPACK
 
 #include "umfpack.h"
+
+/* All UMF linear systems, and the number of systems set up */
+static struct UMF_Linear_Solver_System ums_a[UMF_MAX_SYSTEMS];
+static int number_systems = 0;
 
 /* This returns an integer identifier that should be unique to your
  * system.  There were problems with UMF mixing up systems becuase it
@@ -106,11 +112,6 @@ int SL_UMF(int system_id,
            double *a,
            double *b,
            double *x) {
-  /* Static struct holds all linear systems also keep track of number
-   * of systems we have set up */
-  static struct UMF_Linear_Solver_System ums_a[UMF_MAX_SYSTEMS];
-  static int number_systems = 0;
-
   double Control[UMFPACK_CONTROL], Info[UMFPACK_INFO];
 
   struct UMF_Linear_Solver_System *ums = 0; /* pointer to current system */
@@ -370,3 +371,32 @@ int SL_UMF(int system_id,
 }
 
 #endif
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void umf_free_globals(void) {
+#ifdef GOMA_ENABLE_UMFPACK
+  int i;
+
+  /* free systems the solvers did not free (n is 0 for freed systems) */
+  for (i = 0; i < number_systems; i++) {
+    struct UMF_Linear_Solver_System *ums = &ums_a[i];
+    if (ums->n == 0) {
+      continue;
+    }
+    umfpack_di_free_symbolic(&ums->symbolic);
+    umfpack_di_free_numeric(&ums->numeric);
+    Ivector_death(ums->ap, ums->n + 1);
+    Ivector_death(ums->ai, ums->nnz);
+    Dvector_death(ums->ax, ums->nnz);
+    if (ums->atp != NULL) {
+      Ivector_death(ums->atp, ums->n + 1);
+      Ivector_death(ums->ati, ums->nnz);
+      Dvector_death(ums->atx, ums->nnz);
+    }
+  }
+  memset(ums_a, 0, sizeof(ums_a));
+  number_systems = 0;
+#endif
+}

@@ -32,6 +32,7 @@
 #include "ac_stability.h"
 #include "dpi.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -948,4 +949,18 @@ void eggroll_init(const int nj,    /* Number of equations */
       eigen->Eigen_IV_Wt; /* amount of uniform randomness to add to initial vector (0 = none) */
   for (i = 0; i < istuff[7]; i++)
     dstuff[10 + i] = eigen->Eigen_Shifts[i]; /* initial shift values. */
+}
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void stability_free_globals(void) {
+  /* LSA_wave_numbers is allocated while reading the input deck */
+  free(LSA_wave_numbers);
+  Linear_Stability = LSA_NONE;
+  LSA_3D_of_2D_pass = 0;
+  LSA_3D_of_2D_wave_number = -1.0;
+  LSA_number_wave_numbers = 0;
+  LSA_wave_numbers = NULL;
+  LSA_current_wave_number = 0;
 }

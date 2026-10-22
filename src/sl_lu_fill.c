@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 
+#include "goma_reset.h"
 #include "sl_util.h"
 #include "std.h"
 
@@ -30,6 +31,9 @@
 int first_time_fill = TRUE;
 #ifdef GOMA_ENABLE_SPARSE
 #include "spMatrix.h"
+
+static char *luf_matrix = NULL;
+static spREAL **luf_element = NULL;
 
 void luf(const int N,
          const int NExt,
@@ -90,10 +94,9 @@ void luf(const int N,
 
 */
 {
-  static char *matrix;
   int error, type;
   int j, i, n, k, nzeros, ija_col;
-  static spREAL **element, *b;
+  spREAL *b;
 #ifdef MATRIX_STATISTICS
   spREAL norm;
   static int call = 0;
@@ -113,9 +116,9 @@ void luf(const int N,
     if (first_time_fill == TRUE && factor_flag == 1) {
       /* N = order of real matrix */
       type = 0;
-      matrix = spCreate(N + NExt, type, &error);
+      luf_matrix = spCreate(N + NExt, type, &error);
 
-      element = (spREAL **)malloc((M + NExt + 2) * sizeof(spREAL *));
+      luf_element = (spREAL **)malloc((M + NExt + 2) * sizeof(spREAL *));
     }
 
     /* n = 1 produce graph of matrix, n = 2 fill matrix */
@@ -130,20 +133,20 @@ void luf(const int N,
         if (n == 1) { /* create nonzero pattern */
 
           /* diagonal element */
-          element[k++] = spGetElement(matrix, i + 1, i + 1);
+          luf_element[k++] = spGetElement(luf_matrix, i + 1, i + 1);
 
           /* nonzero off diagonal elements */
           for (j = 0; j < nzeros; j++) {
-            element[k++] = spGetElement(matrix, i + 1, ija[ija_col++] + 1);
+            luf_element[k++] = spGetElement(luf_matrix, i + 1, ija[ija_col++] + 1);
           }
         } else { /* fill in numerical values */
 
           /* diagonal element */
-          spADD_REAL_ELEMENT(element[k++], a[i]);
+          spADD_REAL_ELEMENT(luf_element[k++], a[i]);
 
           /* nonzero off diagonal elements */
           for (j = 0; j < nzeros; j++) {
-            spADD_REAL_ELEMENT(element[k++], a[ija_col++]);
+            spADD_REAL_ELEMENT(luf_element[k++], a[ija_col++]);
           }
         }
       } /* end row loop */
@@ -151,40 +154,40 @@ void luf(const int N,
       /* fill in Dirchlet equations for the interface unknowns */
       for (i = N; i < N + NExt; i++) {
         if (n == 1) { /* create nonzero pattern */
-          element[k++] = spGetElement(matrix, i + 1, i + 1);
+          luf_element[k++] = spGetElement(luf_matrix, i + 1, i + 1);
         } else { /* fill in numerical values */
-          spADD_REAL_ELEMENT(element[k++], 1.0);
+          spADD_REAL_ELEMENT(luf_element[k++], 1.0);
         }
       }
 
       if (n == 1)
-        spClear(matrix); /* zero entries in graph */
+        spClear(luf_matrix); /* zero entries in graph */
 
     } /* end of define and fill */
 #ifdef MATRIX_STATISTICS
-    norm = spNorm(matrix);
+    norm = spNorm(luf_matrix);
 #endif
 
     if (first_time_fill == TRUE && factor_flag == 1) {
 
       /*         spFileMatrix(matrix,"matrix_file","channel",0,1,1); */
-      spOrderAndFactor(matrix, b, -1.0, 0.0, 1);
+      spOrderAndFactor(luf_matrix, b, -1.0, 0.0, 1);
       first_time_fill = FALSE;
 
     } else {
 
-      spFactor(matrix);
+      spFactor(luf_matrix);
     }
 
   } /* alocate matrix and factor matrix */
 
   /* solve lu factored system */
 
-  spSolve(matrix, b, x - 1);
+  spSolve(luf_matrix, b, x - 1);
 
 #ifdef MATRIX_STATISTICS
   if (call == 4) {
-    lustat(N, M, a, ija, x, norm, matrix);
+    lustat(N, M, a, ija, x, norm, luf_matrix);
   }
 #endif
 
@@ -212,3 +215,19 @@ void luf(const int N,
 /******************************************************************************/
 /* END of file sl_lu_fill.c */
 /******************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void luf_free_globals(void) {
+#ifdef GOMA_ENABLE_SPARSE
+  /* the sparse matrix is kept between calls, see luf() */
+  if (first_time_fill == FALSE && luf_matrix != NULL) {
+    spDestroy(luf_matrix);
+  }
+  free(luf_element);
+  luf_matrix = NULL;
+  luf_element = NULL;
+#endif
+  first_time_fill = TRUE;
+}

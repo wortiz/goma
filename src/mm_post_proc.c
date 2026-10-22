@@ -46,6 +46,7 @@
 #include "el_geom.h"
 #include "exo_struct.h"
 #include "exodusII.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_alloc.h"
 #include "mm_as_const.h"
@@ -13050,3 +13051,183 @@ static bool post_process_variable_is_active(pp_Average *pp_average, int matrix_i
 /************************************************************************************/
 /************************************************************************************/
 /************************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void post_proc_free_globals(void) {
+  /* the pp_* arrays are not yet freed */
+  nn_post_fluxes = 0;
+  nn_post_fluxes_sens = 0;
+  nn_post_data = 0;
+  nn_post_data_sens = 0;
+  nn_error_metrics = 0;
+  nn_particles = 0;
+  nn_volume = 0;
+  ppvi_type = 0;
+  nn_global = 0;
+  nn_average = 0;
+  listel = NULL;
+  pp_data = NULL;
+  pp_data_sens = NULL;
+  pp_error_data = NULL;
+  pp_fluxes = NULL;
+  pp_fluxes_sens = NULL;
+  pp_particles = NULL;
+  pp_volume = NULL;
+  pp_global = NULL;
+  pp_average = NULL;
+  memset(error_presence_key, 0, sizeof(error_presence_key));
+  Num_Nodal_Post_Proc_Var = 0;
+  Num_Elem_Post_Proc_Var = 0;
+
+  CAPILLARY_PRESSURE = -1;
+  CONC_CONT = -1;
+  CONDUCTION_VECTORS = -1;
+  CURL_V = -1;
+  DARCY_VELOCITY_GAS = -1;
+  DARCY_VELOCITY_LIQ = -1;
+  DENSITY = -1;
+  POLYMER_VISCOSITY = -1;
+  POLYMER_TIME_CONST = -1;
+  PTT_XI = -1;
+  PTT_EPSILON = -1;
+  MOBILITY_PARAMETER = -1;
+  HEAVISIDE = -1;
+  DIELECTROPHORETIC_FIELD = -1;
+  DIELECTROPHORETIC_FIELD_NORM = -1;
+  DIFFUSION_VECTORS = -1;
+  DIFFUSION_VECTORS_POR_LIQ_GPHASE = -1;
+  DIFFUSION_VECTORS_POR_AIR_GPHASE = -1;
+  DIV_PVELOCITY = -1;
+  DIV_TOTAL = -1;
+  DIV_VELOCITY = -1;
+  ELECTRIC_FIELD = -1;
+  ELECTRIC_FIELD_MAG = -1;
+  ENERGY_FLUXLINES = -1;
+  ERROR_ZZ_P = -1;
+  ERROR_ZZ_P_ELSIZE = -1;
+  ERROR_ZZ_Q = -1;
+  ERROR_ZZ_Q_ELSIZE = -1;
+  ERROR_ZZ_VEL = -1;
+  ERROR_ZZ_VEL_ELSIZE = -1;
+  SAT_CURVE_TYPE = -1;
+  SAT_QP_SWITCH = -1;
+  CAP_PRESS_SWITCH = -1;
+  NUM_CURVE_SWITCH = -1;
+  SAT_HYST_MIN = -1;
+  SAT_HYST_MAX = -1;
+  EVP_DEF_GRAD_TENSOR = -1;
+  EXTERNAL_POST = -1;
+  FILL_CONT = -1;
+  FIRST_INVAR_STRAIN = -1;
+  FLUXLINES = -1;
+  LAGRANGE_CONVECTION = -1;
+  MEAN_SHEAR = -1;
+  MEAN_VORTICITY = -1;
+  MM_RESIDUALS = -1;
+  NS_RESIDUALS = -1;
+  POROUS_RHO_GAS_SOLVENTS = -1;
+  POROUS_RHO_LPHASE = -1;
+  POROUS_RHO_TOTAL_SOLVENTS = -1;
+  POROUS_SATURATION = -1;
+  POROUS_GRIDPECLET = -1;
+  POROUS_SUPGVELOCITY = -1;
+  POROUS_LIQUID_ACCUM_RATE = -1;
+  REL_LIQ_PERM = -1;
+  PRESSURE_CONT = -1;
+  SH_DIV_S_V_CONT = -1;
+  SH_CURV_CONT = -1;
+  REAL_STRESS_TENSOR = -1;
+  SEC_INVAR_STRAIN = -1;
+  STRAIN_TENSOR = -1;
+  STREAM = -1;
+  STREAM_NORMAL_STRESS = -1;
+  STREAM_SHEAR_STRESS = -1;
+  STREAM_TENSION = -1;
+  STRESS_CONT = -1;
+  STRESS_TENSOR = -1;
+  SURFACE_VECTORS = -1;
+  SHELL_NORMALS = -1;
+  THIRD_INVAR_STRAIN = -1;
+  TIME_DERIVATIVES = -1;
+  TOTAL_STRESS11 = -1;
+  TOTAL_STRESS12 = -1;
+  TOTAL_STRESS13 = -1;
+  TOTAL_STRESS22 = -1;
+  TOTAL_STRESS23 = -1;
+  TOTAL_STRESS33 = -1;
+  USER_POST = -1;
+  PP_Viscosity = -1;
+  PP_Diffusivity = -1;
+  PP_FlowingLiquid_Viscosity = -1;
+  PP_VolumeFractionGas = -1;
+  ACOUSTIC_PRESSURE = -1;
+  ACOUSTIC_PHASE_ANGLE = -1;
+  ACOUSTIC_ENERGY_DENSITY = -1;
+  LIGHT_INTENSITY = -1;
+  PRINCIPAL_STRESS = -1;
+  PRINCIPAL_REAL_STRESS = -1;
+  LUB_HEIGHT = -1;
+  LUB_HEIGHT_2 = -1;
+  LUB_VELO_UPPER = -1;
+  LUB_VELO_LOWER = -1;
+  LUB_VELO_FIELD = -1;
+  LUB_VELO_FIELD_2 = -1;
+  LUB_FLUID_SOURCE = -1;
+  DISJ_PRESS = -1;
+  SH_SAT_OPEN = -1;
+  SH_SAT_OPEN_2 = -1;
+  SH_CAP_PRES = -1;
+  SH_PORE_FLUX = -1;
+  SH_STRESS_TENSOR = -1;
+  SH_TANG = -1;
+  PP_LAME_MU = -1;
+  PP_LAME_LAMBDA = -1;
+  VON_MISES_STRESS = -1;
+  VON_MISES_STRAIN = -1;
+  UNTRACKED_SPEC = -1;
+  CONF_MAP = -1;
+  RHO_DOT = -1;
+  MOMENT_SOURCES = -1;
+  YZBETA = -1;
+  TFMP_GAS_VELO = -1;
+  TFMP_LIQ_VELO = -1;
+  TFMP_INV_PECLET = -1;
+  TFMP_KRG = -1;
+  VELO_SPEED = -1;
+  GIES_CRIT = -1;
+  J_FLUX = -1;
+  EIG = -1;
+  EIG1 = -1;
+  EIG2 = -1;
+  EIG3 = -1;
+  GRAD_SH = -1;
+  GRAD_Y = -1;
+  HELICITY = -1;
+  LAMB_VECTOR = -1;
+  Q_FCN = -1;
+  POYNTING_VECTORS = -1;
+  PSPG_PP = -1;
+  SARAMITO_YIELD = -1;
+  STRESS_NORM = -1;
+  SPECIES_SOURCES = -1;
+  VISCOUS_STRESS = -1;
+  PP_VELOCITY_GRADIENTS = -1;
+  VISCOUS_STRESS_NORM = -1;
+  VISCOUS_VON_MISES_STRESS = -1;
+  EM_CONTOURS = -1;
+  TOTAL_EM_CONTOURS = -1;
+  SCATTERED_EM_CONTOURS = -1;
+  ORIENTATION_VECTORS = -1;
+  FIRST_STRAINRATE_INVAR = -1;
+  SEC_STRAINRATE_INVAR = -1;
+  THIRD_STRAINRATE_INVAR = -1;
+  WALL_DISTANCE = -1;
+  CONTACT_DISTANCE = -1;
+  PP_FLUID_STRESS = -1;
+  LUB_CONVECTION = -1;
+  PP_MESH_VELOCITY = -1;
+  len_u_post_proc = 0;
+  u_post_proc = NULL;
+}

@@ -20,7 +20,6 @@
  * only one goma_context may exist at a time.
  */
 
-#include <fenv.h>
 #include <limits.h>
 #include <mpi.h>
 #include <stdbool.h>
@@ -94,7 +93,12 @@ extern void handle_ieee(void);
 #include <petscsys.h>
 #endif
 
+/* after the GNU extension include above, for fegetenv/fesetenv */
+#include <fenv.h>
+
 #include "goma.h"
+#include "goma_reset.h"
+#include "goma_reset_check.h"
 #include "rf_io.h"
 #include "rf_mp.h"
 #include "sl_petsc.h"
@@ -150,7 +154,10 @@ struct goma_context {
 
 static bool goma_library_initialized = false;
 static bool goma_context_active = false;
-/* Global state is not yet reset by goma_destroy, so allow one run per process */
+/*
+ * Global state is not yet fully reset by goma_destroy, so allow one run per
+ * process unless GOMA_EXPERIMENTAL_MULTIPLE_RUNS is set in the environment
+ */
 static bool goma_context_used = false;
 #ifdef GOMA_ENABLE_PETSC
 static bool goma_petsc_preinitialized = false;
@@ -160,6 +167,9 @@ int goma_library_initialize(MPI_Comm comm) {
   if (goma_library_initialized) {
     return -1;
   }
+#ifdef GOMA_CHECK_GLOBAL_RESET
+  goma_reset_check_snapshot();
+#endif
 #ifdef GOMA_ENABLE_PETSC
   PetscBool petsc_initialized = PETSC_FALSE;
   PetscInitialized(&petsc_initialized);
@@ -202,7 +212,10 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
   struct Command_line_command **clc = NULL; /* point to command line structure */
   int nclc = 0;                             /* number of command line commands */
 
-  if (!goma_library_initialized || goma_context_active || goma_context_used || ctx_out == NULL) {
+  if (!goma_library_initialized || goma_context_active || ctx_out == NULL) {
+    return -1;
+  }
+  if (goma_context_used && getenv("GOMA_EXPERIMENTAL_MULTIPLE_RUNS") == NULL) {
     return -1;
   }
 
@@ -678,7 +691,7 @@ int goma_setup(goma_context *ctx) {
    * Allocate space for each communication exchange description.
    */
 #ifdef PARALLEL
-  cx = malloc(sizeof(Comm_Ex *) * upd->Total_Num_Matrices);
+  cx = calloc(upd->Total_Num_Matrices, sizeof(Comm_Ex *));
   if (DPI_ptr->num_neighbors > 0) {
 
     int imtrx;
@@ -839,7 +852,8 @@ int goma_solve(goma_context *ctx) {
   P0PRINTF("\n-done\n\n");
 
   ctx->stage = GOMA_STAGE_SOLVED;
-  return error;
+  /* do_loca returns the number of continuation steps on success */
+  return error < 0 ? error : 0;
 }
 
 int goma_destroy(goma_context **ctx_ptr) {
@@ -868,13 +882,14 @@ int goma_destroy(goma_context **ctx_ptr) {
    */
   free_element_blocks(EXO_ptr);
 
+  /* the duplicated boundary condition lists are sized from Nodes */
+  bc_conflict_free_globals();
+
   /*
    * free nodal based structures
    */
   free_nodes();
-#ifdef FREE_PROBLEM
   free_problem(EXO_ptr, DPI_ptr);
-#endif
 
   /*
    * Free command line stuff
@@ -934,9 +949,77 @@ int goma_destroy(goma_context **ctx_ptr) {
 #endif
   fesetenv(&ctx->host_fenv);
 
+  /*
+   * Reset global state so Goma can run again, in reverse order of setup.
+   * as_free_globals frees upd, pd_glob, ... so it must be last.
+   */
+#if defined(GOMA_ENABLE_PETSC) && !(PETSC_USE_COMPLEX)
+  goma_petsc_free_post_proc_matrix();
+#endif
+  vif_free_globals();
+  assembly_free();
+  rf_solve_free_globals();
+  rf_solve_segregated_free_globals();
+  sol_nonlinear_free_globals();
+  umf_free_globals();
+  lu_free_globals();
+  luf_free_globals();
+  fill_solid_free_globals();
+  fill_porous_free_globals();
+  sl_aux_free_globals();
+  rotate_free_globals();
+  rotate_coordinates_free_globals();
+  shell_util_free_globals();
+  fill_species_free_globals();
+  fill_ls_free_globals();
+  loca_interface_free_globals();
+  loca_util_free_globals();
+  loca_bord_free_globals();
+  amesos_free_globals();
+  leastsquares_free_globals();
+  stability_free_globals();
+  side_data_free_globals();
+  pixel_image_free_globals();
+  el_quality_free_globals();
+  particles_free_globals();
+  eggrollwrap_free_globals();
+  omega_h_free_globals();
+  ad_util_free_globals();
+  stratimikos_free_globals();
+  post_proc_free_globals();
+  fill_free_globals();
+  fill_ptrs_free_globals();
+  fill_util_free_globals();
+  fill_stabilization_free_globals();
+  qtensor_free_globals();
+  bc_free_globals();
+
+  unknown_map_free_globals();
+  vars_free_globals();
+  map_comm_vec_free_globals();
+  rd_mesh_free_globals();
+  sl_util_free_globals();
+  dp_utils_free_globals();
+  input_free_globals();
+  globals_free_globals();
+  eh_free_globals();
+  as_free_globals();
+
   free(ctx);
   *ctx_ptr = NULL;
   goma_context_active = false;
+
+#ifdef GOMA_CHECK_GLOBAL_RESET
+  char check_file[MAX_FNL];
+  snprintf(check_file, MAX_FNL, "goma_reset_check.%d.txt", ProcID);
+  FILE *check_out = fopen(check_file, "w");
+  if (check_out != NULL) {
+    int num_ranges = goma_reset_check_compare(check_out);
+    fclose(check_out);
+    fprintf(stderr, "P_%d goma reset check: %d differing ranges written to %s\n", ProcID,
+            num_ranges, check_file);
+  }
+#endif
   return 0;
 }
 

@@ -67,6 +67,7 @@
 #endif
 
 #define GOMA_MM_INPUT_C
+#include "goma_reset.h"
 #include "mm_input.h"
 
 static char aprepro_command[1024];
@@ -3077,7 +3078,9 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 #endif
       }
 
-      lsi = alloc_struct_1(struct Level_Set_Interface, 1);
+      if (lsi == NULL) {
+        lsi = alloc_struct_1(struct Level_Set_Interface, 1);
+      }
 
       ECHO("\n***Phase Function Section***\n", echo_file);
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of phase functions",
@@ -11114,7 +11117,7 @@ int look_for_mat_proptable(FILE *imp,              /* ptr to input stream (in)*/
         GOMA_EH(GOMA_ERROR, "Maximum TABLE_MPs exceeded .");
       }
 
-      table_local = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+      table_local = (struct Data_Table *)calloc(1, sizeof(struct Data_Table));
       MP_Tables[num_MP_Tables] = setup_table_MP(imp, table_local, search_string);
       *tableindex = num_MP_Tables++;
 
@@ -12356,7 +12359,7 @@ setup_table_BC(FILE *ifp, char *input, struct Boundary_Condition *BC_Type, char 
 
   es = endofstring(echo_string);
 
-  BC_Type->table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+  BC_Type->table = (struct Data_Table *)calloc(1, sizeof(struct Data_Table));
 
   if (BC_Type->BC_Name == TABLE_WICV_BC) {
     BC_Type->table->columns = 3;
@@ -13163,7 +13166,7 @@ setup_gd_table_BC(FILE *ifp, char *input, struct Boundary_Condition *BC_Type, ch
 
   yo = "setup_gd_table_BC";
 
-  BC_Type->table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+  BC_Type->table = (struct Data_Table *)calloc(1, sizeof(struct Data_Table));
   BC_Type->table->columns = 2;
 
   BC_Type->table->t_index[0] = BC_Type->BC_Data_Int[2];
@@ -14820,7 +14823,7 @@ struct Data_Table *setup_table_external(char *filename, struct Data_Table *table
   FILE *datafile = NULL;
   yo = "setup_table_external";
 
-  table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+  table = (struct Data_Table *)calloc(1, sizeof(struct Data_Table));
 
   table->columns = pd->Num_Dim + 1;
 
@@ -14861,7 +14864,7 @@ setup_table_AC(char *filename, struct Data_Table *table, char *var_name, char *i
   FILE *datafile = NULL;
   yo = "setup_table_AC";
 
-  table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+  table = (struct Data_Table *)calloc(1, sizeof(struct Data_Table));
 
   /*
    * "x-axis" of table
@@ -14960,11 +14963,13 @@ setup_table_AC(char *filename, struct Data_Table *table, char *var_name, char *i
 }
 /*   end of setup_table_AC	*/
 
+/* echo files opened by handle_echo_string() */
+static FILE *echo_file_ptr[FOPEN_MAX];
+static char *open_files[FOPEN_MAX];
+static int num_open_files = 0;
+static int echo_off = FALSE;
+
 FILE *handle_echo_string(char *echo_string, char *echo_file_name) {
-  static FILE *echo_file_ptr[FOPEN_MAX];
-  static char *open_files[FOPEN_MAX];
-  static int num_open_files = 0;
-  static int echo_off = FALSE;
 
   int i = 0, len = 0;
   if ((len = strlen(echo_string)) == 0)
@@ -15063,3 +15068,70 @@ int sprintf_dbl_vec(char *string, int n, double *v) {
 
 /*****************************************************************************/
 /*****************************************************************************/
+
+/* Free a level set structure and what it owns, output_file is shared with phase functions */
+static void free_level_set_data(struct Level_Set_Data *l, int free_output_file) {
+  if (l == NULL) {
+    return;
+  }
+  while (l->embedded_bc != NULL) {
+    struct LS_Embedded_BC *next = l->embedded_bc->next;
+    free(l->embedded_bc);
+    l->embedded_bc = next;
+  }
+  free_surf_list(&l->init_surf_list);
+  free_surf_list(&l->last_surf_list);
+  if (free_output_file) {
+    free(l->output_file);
+  }
+  free(l);
+}
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ *
+ * Closes echo files that are still open and frees the hunting, continuation
+ * condition and level set structures.
+ */
+void input_free_globals(void) {
+  int i;
+
+  for (i = 0; i < num_open_files; i++) {
+    if (echo_file_ptr[i] != NULL) {
+      fclose(echo_file_ptr[i]);
+    }
+    safer_free((void **)&(open_files[i]));
+    echo_file_ptr[i] = NULL;
+  }
+  num_open_files = 0;
+  echo_off = FALSE;
+
+  memset(aprepro_command, 0, sizeof(aprepro_command));
+  memset(Num_Var_Init_Mat, 0, sizeof(Num_Var_Init_Mat));
+  memset(Var_init, 0, sizeof(Var_init));
+  memset(Var_init_mat, 0, sizeof(Var_init_mat));
+  /* the continuation drivers free cpcc and tpcc, NULLing them */
+  safer_free((void **)&hunt);
+  safer_free((void **)&cpcc);
+  safer_free((void **)&tpcc);
+  safer_free((void **)&cpuc);
+  safer_free((void **)&tpuc);
+  if (pfd != NULL) {
+    for (i = 0; i < pfd->num_phase_funcs; i++) {
+      if (pfd->ls[i] != ls) {
+        free_level_set_data(pfd->ls[i], FALSE);
+      }
+    }
+    free(pfd->ls);
+    free(pfd->jac_info);
+    free(pfd);
+  }
+  free_level_set_data(ls, TRUE);
+  free(lsi);
+  ls = NULL;
+  lsi = NULL;
+  pfd = NULL;
+  memset(search_string, 0, sizeof(search_string));
+  run_aprepro = 0;
+  memset(current_mat_file_name, 0, sizeof(current_mat_file_name));
+}

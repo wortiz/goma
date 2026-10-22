@@ -29,6 +29,7 @@
 
 #include "dp_types.h"
 #include "dp_utils.h"
+#include "goma_reset.h"
 #include "mm_eh.h"
 #include "mpi.h"
 #include "rf_allo.h"
@@ -599,3 +600,8 @@ int goma_gmax_int(int value) {
 #endif
   return out_buf;
 }
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void dp_utils_free_globals(void) { memset(Proc_Config, 0, sizeof(Proc_Config)); }

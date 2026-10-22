@@ -24,6 +24,7 @@
 #include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -303,9 +304,9 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
   action = -1;
   i_delete = -1;
 
-  BC_dup_nodes = malloc(sizeof(int *) * (size_t)upd->Total_Num_Matrices);
-  BC_dup_list = malloc(sizeof(int ***) * (size_t)upd->Total_Num_Matrices);
-  BC_dup_ptr = malloc(sizeof(int) * (size_t)upd->Total_Num_Matrices);
+  BC_dup_nodes = calloc((size_t)upd->Total_Num_Matrices, sizeof(int *));
+  BC_dup_list = calloc((size_t)upd->Total_Num_Matrices, sizeof(int ***));
+  BC_dup_ptr = calloc((size_t)upd->Total_Num_Matrices, sizeof(int));
 
   /*****************************************************************************/
   /*                              BLOCK 3                                      */
@@ -2013,6 +2014,23 @@ void check_for_bc_conflicts2D(Exo_DB *exo, Dpi *dpi)
 /*****************************************************************************/
 /*****************************************************************************/
 
+/* length of the global SS_list and ROT_list */
+static int ss_rot_list_len = 0;
+
+static void free_ss_rot_lists(void) {
+  for (int i = 0; i < ss_rot_list_len; i++) {
+    if (SS_list != NULL) {
+      safer_free((void **)(SS_list + i));
+    }
+    if (ROT_list != NULL) {
+      safer_free((void **)(ROT_list + i));
+    }
+  }
+  safer_free((void **)&SS_list);
+  safer_free((void **)&ROT_list);
+  ss_rot_list_len = 0;
+}
+
 void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
 
 /*************************************************************************
@@ -2073,9 +2091,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     }
   }
 
-  BC_dup_nodes = malloc(sizeof(int *) * (size_t)upd->Total_Num_Matrices);
-  BC_dup_list = malloc(sizeof(int ***) * (size_t)upd->Total_Num_Matrices);
-  BC_dup_ptr = malloc(sizeof(int) * (size_t)upd->Total_Num_Matrices);
+  BC_dup_nodes = calloc((size_t)upd->Total_Num_Matrices, sizeof(int *));
+  BC_dup_list = calloc((size_t)upd->Total_Num_Matrices, sizeof(int ***));
+  BC_dup_ptr = calloc((size_t)upd->Total_Num_Matrices, sizeof(int));
 
   for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
 
@@ -2175,6 +2193,9 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
     /*  Also, make a list of all SS at each node                                 */
     /*****************************************************************************/
 
+    /* SS_list and ROT_list are used by the rotation code, keep only the last matrix's lists */
+    free_ss_rot_lists();
+    ss_rot_list_len = num_total_nodes;
     SS_list = (int **)alloc_ptr_1(num_total_nodes);
     for (i = 0; i < num_total_nodes; i++) {
       SS_list[i] = alloc_int_1(MAX_SS_PER_NODE, -1);
@@ -3022,3 +3043,54 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+/*
+ * Frees the boundary condition duplication and rotation lists, the per node
+ * lists kept for duplicated nodes are sized from Nodes, so this must run
+ * before free_nodes()
+ */
+void bc_conflict_free_globals(void) {
+  free_ss_rot_lists();
+  for (int imtrx = 0; BC_dup_list != NULL && imtrx < upd->Total_Num_Matrices; imtrx++) {
+    for (int k = 0; BC_dup_list[imtrx] != NULL && k < BC_dup_ptr[imtrx]; k++) {
+      int **bc_list_node = BC_dup_list[imtrx][k];
+      if (bc_list_node == NULL) {
+        continue;
+      }
+      int num = Nodes[BC_dup_nodes[imtrx][k]]->Nodal_Vars_Info[imtrx]->Num_Unknowns;
+      for (int unk = 0; unk < num; unk++) {
+        free(bc_list_node[unk]);
+      }
+      free(bc_list_node);
+    }
+    free(BC_dup_list[imtrx]);
+    free(BC_dup_nodes[imtrx]);
+  }
+  for (int imtrx = 0; mesh_rotate_node != NULL && imtrx < upd->Total_Num_Matrices; imtrx++) {
+    free(mesh_rotate_node[imtrx]);
+    free(mesh_rotate_ss[imtrx]);
+    free(mom_rotate_node[imtrx]);
+    free(mom_rotate_ss[imtrx]);
+  }
+  free(BC_dup_nodes);
+  free(BC_dup_list);
+  free(BC_dup_ptr);
+  free(mesh_rotate_node);
+  free(mesh_rotate_ss);
+  free(num_mesh_rotate);
+  free(mom_rotate_node);
+  free(mom_rotate_ss);
+  free(num_mom_rotate);
+  BC_dup_nodes = NULL;
+  BC_dup_list = NULL;
+  BC_dup_ptr = NULL;
+  mesh_rotate_node = NULL;
+  mesh_rotate_ss = NULL;
+  num_mesh_rotate = NULL;
+  mom_rotate_node = NULL;
+  mom_rotate_ss = NULL;
+  num_mom_rotate = NULL;
+}

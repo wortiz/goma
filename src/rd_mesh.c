@@ -43,6 +43,7 @@
 #include "exo_conn.h"
 #include "exo_struct.h"
 #include "exodusII.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
@@ -1808,3 +1809,61 @@ void integer_sort(int length, int *array) {
 /************************************************************************/
 /************************************************************************/
 /************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void rd_mesh_free_globals(void) {
+  int i;
+
+  /*
+   * Proc_* and GNodes/GElems point into the Exo_DB, freed by free_exo,
+   * except Proc_SS_Node_Count which setup_old_exo allocates
+   */
+  free(Proc_SS_Node_Count);
+  free(Coor);
+  free(Matilda);
+  free(SS_Internal_Boundary);
+  for (i = 0; i < MAX_MAT_PER_SS + 1; i++) {
+    free(ss_to_blks[i]);
+    ss_to_blks[i] = NULL;
+  }
+
+  Num_Dim = 0;
+  Num_Node = 0;
+  Num_Elem = 0;
+  Max_NP_Elem = 0;
+  Num_Internal_Elems = 0;
+  GNodes = NULL;
+  GElems = NULL;
+  Proc_Connect_Ptr = NULL;
+  Proc_Num_Elem_Blk = 0;
+  Proc_Num_Elem_In_Blk = NULL;
+  Proc_Elem_Blk_Ids = NULL;
+  Proc_Elem_Blk_Types = NULL;
+  Proc_Nodes_Per_Elem = NULL;
+  Proc_Num_Attr = NULL;
+  Proc_Elem_Connect = NULL;
+  Proc_Num_Node_Sets = 0;
+  Proc_NS_List_Length = 0;
+  Proc_NS_Ids = NULL;
+  Proc_NS_Count = NULL;
+  Proc_NS_Pointers = NULL;
+  Proc_NS_List = NULL;
+  Proc_NS_Dist_Fact = NULL;
+  Proc_Num_Side_Sets = 0;
+  Proc_SS_Elem_List_Length = 0;
+  Proc_SS_Node_List_Length = 0;
+  Proc_SS_Ids = NULL;
+  Proc_SS_Elem_Count = NULL;
+  Proc_SS_Node_Count = NULL;
+  Proc_SS_Elem_Pointers = NULL;
+  Proc_SS_Elem_List = NULL;
+  Proc_SS_Dist_Fact = NULL;
+  Coor = NULL;
+  Num_Internal_Nodes = 0;
+  Num_Border_Nodes = 0;
+  Num_External_Nodes = 0;
+  Matilda = NULL;
+  SS_Internal_Boundary = NULL;
+}

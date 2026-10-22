@@ -24,6 +24,7 @@
 #define DBL_MAX 1.0E300
 #endif
 
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -34,6 +35,7 @@
 #include "rf_allo.h"
 #include "rf_bc_const.h"
 #include "rf_fem_const.h"
+#include "rf_node_const.h"
 #include "rf_vars_const.h"
 #include "std.h"
 
@@ -740,3 +742,25 @@ void assign_var_name(const int varType,
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void vars_free_globals(void) {
+  int i;
+
+  /* nodal variable structures refer to the variable descriptions */
+  for (i = 0; i < Nodal_Vars_List_Length; i++) {
+    nodal_vars_destroy(&(Nodal_Vars_List[i]));
+  }
+  free(Nodal_Vars_List);
+  for (i = 0; i < Num_Var_Info_Records; i++) {
+    variable_description_destroy(&(Var_Info[i]));
+  }
+  free(Var_Info);
+
+  Var_Info = NULL;
+  Num_Var_Info_Records = 0;
+  Nodal_Vars_List = NULL;
+  Nodal_Vars_List_Length = 0;
+}

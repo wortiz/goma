@@ -103,6 +103,7 @@
 /* Put include statements for your code here. */
 
 #include "ac_stability_util.h"
+#include "goma_reset.h"
 #ifdef GOMA_ENABLE_AZTEC
 #include "az_aztec.h"
 #endif
@@ -1138,6 +1139,8 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
     safer_free((void **)&x_sens_p);
   /*		Dmatrix_death(x_sens_p,num_pvector,numProcUnknowns);*/
 
+  /* external dof column storage, NULL when there are no external dofs */
+  safer_free((void **)&ija_attic);
   sl_free(matrix_systems_mask, ams);
   for (i = 0; i < NUM_ALSS; i++) {
     safer_free((void **)&(ams[i]));
@@ -1190,6 +1193,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   safer_free((void **)&con.hopf_info.z_vec);
 
   free(pg->matrices);
+  pg->matrices = NULL;
 
   return nstep;
 } /**************** END of do_loca() *****************************************/
@@ -1447,6 +1451,9 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
   else
     return (nits);
 }
+static int lsc_first_linear_solver_call = FALSE;
+static int lsc_Factor_Flag = 0;
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
@@ -1479,11 +1486,9 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
  */
 {
   struct GomaLinearSolverData *ams = &(passdown.ams[JAC]);
-  static int first_linear_solver_call = FALSE;
-  double *a = ams->val;   /* nonzero values of a CMSR matrix */
-  int *ija = ams->bindx;  /* column pointer array into matrix "a" */
-  static int Factor_Flag; /* For UMFPACK */
-  int matr_form;          /* 1: MSR FORMAT MATRIX FOR UMFPACK DRIVER */
+  double *a = ams->val;  /* nonzero values of a CMSR matrix */
+  int *ija = ams->bindx; /* column pointer array into matrix "a" */
+  int matr_form;         /* 1: MSR FORMAT MATRIX FOR UMFPACK DRIVER */
   int error = 0;
   char stringer[80]; /* holding format of num linear solve itns */
   dbl s_start;       /* mark start of solve */
@@ -1519,15 +1524,15 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
     if (strcmp(Matrix_Format, "msr"))
       GOMA_EH(GOMA_ERROR, "ERROR: umfpack solver needs msr matrix format");
 
-    Factor_Flag = 1;
+    lsc_Factor_Flag = 1;
     if (Linear_Solver == UMFPACK2F)
-      Factor_Flag = 0;
+      lsc_Factor_Flag = 0;
     /*  */
     matr_form = 1;
-    LOCA_UMF_ID = SL_UMF(LOCA_UMF_ID, &first_linear_solver_call, &Factor_Flag, &matr_form,
+    LOCA_UMF_ID = SL_UMF(LOCA_UMF_ID, &lsc_first_linear_solver_call, &lsc_Factor_Flag, &matr_form,
                          &NumUnknowns[pg->imtrx], &NZeros, &ija[0], &ija[0], &a[0], &xr[0], &x[0]);
     /*  */
-    first_linear_solver_call = FALSE;
+    lsc_first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
     break;
 
@@ -1537,7 +1542,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
 
     dcopy1(NumUnknowns[pg->imtrx], xr, x);
     lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], NZeros, a, ija, x, 2);
-    first_linear_solver_call = FALSE;
+    lsc_first_linear_solver_call = FALSE;
     /*
      * Note that sl_lu has static variables to keep track of
      * first call or not.
@@ -1600,7 +1605,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
       AZ_solve(x, xr, ams->options, ams->params, ams->indx, ams->bindx, ams->rpntr, ams->cpntr,
                ams->bpntr, ams->val, ams->data_org, ams->status, ams->proc_config);
 
-      first_linear_solver_call = FALSE;
+      lsc_first_linear_solver_call = FALSE;
 
       if (Debug_Flag > 0) {
         dump_aztec_status(ams->status);
@@ -2306,19 +2311,20 @@ void shifted_matrix_fill_conwrap(double sigma)
 
   return;
 }
+static int shifted_first_linear_solver_call = TRUE;
+static int shifted_stab_umf_id = -1;
+static int shifted_Factor_Flag = 0;
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
 void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double tol) {
 #ifdef GOMA_ENABLE_ARPACK
   struct GomaLinearSolverData *ams = &(passdown.ams[JAC]);
-  static int first_linear_solver_call = TRUE;
-  static int stab_umf_id = -1;
-  double *a;              /* nonzero values of a CMSR matrix */
-  int *ija = ams->bindx;  /* column pointer array into matrix "a" */
-  static int Factor_Flag; /* For UMFPACK */
-  int matr_form;          /* 1: MSR FORMAT MATRIX FOR UMFPACK DRIVER */
-  char stringer[80];      /* holding format of num linear solve itns */
+  double *a;             /* nonzero values of a CMSR matrix */
+  int *ija = ams->bindx; /* column pointer array into matrix "a" */
+  int matr_form;         /* 1: MSR FORMAT MATRIX FOR UMFPACK DRIVER */
+  char stringer[80];     /* holding format of num linear solve itns */
 #ifdef GOMA_ENABLE_AZTEC
   dbl lits;                  /* number of linear solver iterations taken */
   int linear_solver_blk;     /* count calls to AZ_solve() */
@@ -2331,9 +2337,9 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
   dbl *tmp_a;
 
   /* Allocate a separate system for stability if using UMFPACK */
-  if (first_linear_solver_call) {
+  if (shifted_first_linear_solver_call) {
     if (Linear_Solver != UMFPACK2 && Linear_Solver != UMFPACK2F)
-      first_linear_solver_call = FALSE;
+      shifted_first_linear_solver_call = FALSE;
   }
 
   /* Save some previous settings, point ams->val to the shifted matrix */
@@ -2360,15 +2366,16 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
     if (strcmp(Matrix_Format, "msr"))
       GOMA_EH(GOMA_ERROR, "ERROR: umfpack solver needs msr matrix format");
 
-    Factor_Flag = ((jac_flag == NEW_JACOBIAN) ? 0 : 3);
+    shifted_Factor_Flag = ((jac_flag == NEW_JACOBIAN) ? 0 : 3);
     if (Linear_Solver == UMFPACK2F)
-      Factor_Flag = 0;
+      shifted_Factor_Flag = 0;
     /*  */
     matr_form = 1;
-    stab_umf_id = SL_UMF(stab_umf_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                         &NumUnknowns[pg->imtrx], &NZeros, &ija[0], &ija[0], &a[0], &x[0], &y[0]);
+    shifted_stab_umf_id =
+        SL_UMF(shifted_stab_umf_id, &shifted_first_linear_solver_call, &shifted_Factor_Flag,
+               &matr_form, &NumUnknowns[pg->imtrx], &NZeros, &ija[0], &ija[0], &a[0], &x[0], &y[0]);
     /*  */
-    first_linear_solver_call = FALSE;
+    shifted_first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
     break;
 
@@ -2378,7 +2385,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
 
     dcopy1(NumUnknowns[pg->imtrx], x, y);
     lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], NZeros, a, ija, y, 2);
-    first_linear_solver_call = FALSE;
+    shifted_first_linear_solver_call = FALSE;
     /*
      * Note that sl_lu has static variables to keep track of
      * first call or not.
@@ -2393,7 +2400,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
                           "the Amesos solver suite\n");
     }
     amesos_solve(Amesos_Package, ams, y, x, 1, pg->imtrx);
-    first_linear_solver_call = FALSE;
+    shifted_first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
     break;
 #endif
@@ -2459,7 +2466,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
       AZ_solve(y, x, ams->options, ams->params, ams->indx, ams->bindx, ams->rpntr, ams->cpntr,
                ams->bpntr, ams->val, ams->data_org, ams->status, ams->proc_config);
 
-      first_linear_solver_call = FALSE;
+      shifted_first_linear_solver_call = FALSE;
 
       if (Debug_Flag > 0) {
         dump_aztec_status(ams->status);
@@ -2679,6 +2686,8 @@ void assign_bif_parameter_conwrap(double bif_param)
   }
   return;
 }
+static int scale_vec_sv_init = TRUE;
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
@@ -2702,7 +2711,6 @@ void calc_scale_vec_conwrap(double *x, double *scale_vec, int numUnks)
  * Return Value:
  */
 {
-  static int sv_init = TRUE; /* Initialize arrays on first call */
   int p = 9, ip1 = 8;
   int i, iunk, idof, index, ivd;
   double *sv_sum = NULL;            /* Running sum of each var type    */
@@ -2722,7 +2730,7 @@ void calc_scale_vec_conwrap(double *x, double *scale_vec, int numUnks)
      *	 different lists of vd's!
      */
 
-    if (sv_init) {
+    if (scale_vec_sv_init) {
 
       /* Determine if discontinuous (P1) pressure interpolation is being used */
       for (i = 0; i < upd->Num_Mat; i++) {
@@ -2766,7 +2774,7 @@ void calc_scale_vec_conwrap(double *x, double *scale_vec, int numUnks)
     }
 
     /* Reset sv_init */
-    sv_init = FALSE;
+    scale_vec_sv_init = FALSE;
 
     /* Allocate and zero summing array */
     sv_sum = (double *)array_alloc(1, passdown.nvd, sizeof(double));
@@ -2885,18 +2893,18 @@ static int park_miller_rng(int *seed) {
 
   return (int)((double)*seed / (double)m);
 }
+static int random_vector_seed = 0;
+static int random_vector_first = 1;
 
 static void random_vector(double *x, int numOwnedUnks) {
-  static int seed = 0;
-  static int first = 1;
 
-  if (first) {
-    seed = time(NULL);
-    first = 0;
+  if (random_vector_first) {
+    random_vector_seed = time(NULL);
+    random_vector_first = 0;
   }
 
   for (int i = 0; i < numOwnedUnks; i++) {
-    x[i] = park_miller_rng(&seed);
+    x[i] = park_miller_rng(&random_vector_seed);
   }
 }
 #endif
@@ -2970,6 +2978,9 @@ void perturb_solution_conwrap(double *x, double *x_old, double *scale_vec, int n
 
   exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
 }
+static int soln_output_step_print = 0;
+static int soln_output_n_print = 0;
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
@@ -2999,8 +3010,6 @@ void solution_output_conwrap(int num_soln_flag,
 {
   int error, i_print;
   int m, p;
-  static int step_print = 0;
-  static int n_print = 0;
   int displacement_somewhere;
   double **saved_xyz, **saved_displacement;
 
@@ -3018,9 +3027,9 @@ void solution_output_conwrap(int num_soln_flag,
 
   passdown.last_step = con->stepping_info.last_step;
   i_print = FALSE;
-  if (nt == step_print) {
+  if (nt == soln_output_step_print) {
     i_print = TRUE;
-    step_print += cont->print_freq;
+    soln_output_step_print += cont->print_freq;
   }
 
   /*
@@ -3042,9 +3051,9 @@ void solution_output_conwrap(int num_soln_flag,
     if (Write_Intermediate_Solutions == 0 && Unlimited_Output) {
       write_solution(ExoFileOut, passdown.resid_vector, x, passdown.x_sens_p, passdown.x_old,
                      passdown.xdot, passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv,
-                     passdown.rd, passdown.gvec, passdown.gvec_elem, &n_print, param1,
+                     passdown.rd, passdown.gvec, passdown.gvec_elem, &soln_output_n_print, param1,
                      passdown.theta, param1, NULL, passdown.exo, passdown.dpi);
-      n_print++;
+      soln_output_n_print++;
     }
   }
 
@@ -3133,6 +3142,9 @@ void solution_output_conwrap(int num_soln_flag,
   safer_free((void **)&saved_xyz);
   safer_free((void **)&saved_displacement);
 }
+static int eigvec_output_old_step = -1;
+static int eigvec_output_nprint = -1;
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
@@ -3160,8 +3172,6 @@ void eigenvector_output_conwrap(int j,
  * Return Value:
  */
 {
-  static int old_step = -1;
-  static int nprint = -1;
   int i_print;
   /*  int n = LSA_current_wave_number; */
   int freq = eigen->Eigen_Write_Freq;
@@ -3181,8 +3191,8 @@ void eigenvector_output_conwrap(int j,
     return;
 
   /* Determine if this is a new step number, increment step counter if so */
-  if (step_num != old_step)
-    nprint++;
+  if (step_num != eigvec_output_old_step)
+    eigvec_output_nprint++;
 
   /* Get the eigenvector file name */
   strcpy(efile, eigen->Eigen_Output_File);
@@ -3202,8 +3212,8 @@ void eigenvector_output_conwrap(int j,
   /* Write the real vector using the real eigenvalue part as the time stamp */
   write_solution(efile, passdown.resid_vector, xr, passdown.x_sens_p, passdown.x_old, passdown.xdot,
                  passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv, passdown.rd,
-                 passdown.gvec, passdown.gvec_elem, &nprint, 0.0, passdown.theta, evr, NULL,
-                 passdown.exo, passdown.dpi);
+                 passdown.gvec, passdown.gvec_elem, &eigvec_output_nprint, 0.0, passdown.theta, evr,
+                 NULL, passdown.exo, passdown.dpi);
 
   if (displacement_somewhere) {
     undo_add_displacement_LSA(xr, passdown.exo, saved_displacement);
@@ -3226,8 +3236,8 @@ void eigenvector_output_conwrap(int j,
       get_eigen_outfile_name(efile, j + 1, LSA_current_wave_number);
       write_solution(efile, passdown.resid_vector, xi, passdown.x_sens_p, passdown.x_old,
                      passdown.xdot, passdown.xdot_old, passdown.tev, passdown.tev_post, passdown.gv,
-                     passdown.rd, passdown.gvec, passdown.gvec_elem, &nprint, 0.0, passdown.theta,
-                     evi, NULL, passdown.exo, passdown.dpi);
+                     passdown.rd, passdown.gvec, passdown.gvec_elem, &eigvec_output_nprint, 0.0,
+                     passdown.theta, evi, NULL, passdown.exo, passdown.dpi);
 
       if (displacement_somewhere) {
         undo_add_displacement_LSA(xi, passdown.exo, saved_displacement);
@@ -3240,7 +3250,7 @@ void eigenvector_output_conwrap(int j,
   }
 
   /* Save current step_num for next call */
-  old_step = step_num;
+  eigvec_output_old_step = step_num;
   return;
 }
 /*****************************************************************************/
@@ -3290,3 +3300,25 @@ static void print_final(double param, int step_num, int mat_fills, int res_fills
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void loca_interface_free_globals(void) {
+  /* arrays referenced by passdown are owned by the solvers */
+  memset(&passdown, 0, sizeof(passdown));
+  lsc_first_linear_solver_call = FALSE;
+  lsc_Factor_Flag = 0;
+  shifted_first_linear_solver_call = TRUE;
+  shifted_stab_umf_id = -1;
+  shifted_Factor_Flag = 0;
+  scale_vec_sv_init = TRUE;
+#ifndef GOMA_ENABLE_AZTEC
+  random_vector_seed = 0;
+  random_vector_first = 1;
+#endif
+  soln_output_step_print = 0;
+  soln_output_n_print = 0;
+  eigvec_output_old_step = -1;
+  eigvec_output_nprint = -1;
+}

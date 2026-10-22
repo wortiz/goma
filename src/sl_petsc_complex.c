@@ -773,6 +773,8 @@ goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams) {
   free(matrix_data->local_to_global_complex);
   free(matrix_data->local_to_global);
   free(matrix_data->is_imag);
+  free(matrix_data);
+  ams->PetscMatrixData = NULL;
 
   return GOMA_SUCCESS;
 }

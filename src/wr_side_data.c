@@ -22,6 +22,7 @@
  */
 
 /* Needed to declare POSIX function drand48 */
+#include "goma_reset.h"
 #include "load_field_variables.h"
 #define _XOPEN_SOURCE
 
@@ -711,3 +712,12 @@ int nsid2nn(int psid)
 /******************************************************************************/
 /* END of file wr_side_data */
 /******************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void side_data_free_globals(void) {
+  memset(err_msg, 0, sizeof(err_msg));
+  /* opened and closed around each write */
+  uf = NULL;
+}

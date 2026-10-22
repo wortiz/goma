@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "density.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -849,6 +850,8 @@ void get_supg_tau(SUPG_terms *supg_terms, int dim, dbl diffusivity, PG_DATA *pg_
   }
 }
 
+static int calc_pspg_initialized = FALSE;
+
 int calc_pspg(dbl pspg[DIM],
               PSPG_DEPENDENCE_STRUCT *d_pspg,
               dbl time_value, /* current time */
@@ -946,8 +949,6 @@ int calc_pspg(dbl pspg[DIM],
   dbl d_tau_p_dmesh[DIM][DIM][DIM][MDE];
   dbl d_tau_p_dp[DIM][DIM][MDE];
 
-  static int is_initialized = FALSE;
-
   dim = pd->Num_Dim;
 
   /* initialize */
@@ -959,7 +960,7 @@ int calc_pspg(dbl pspg[DIM],
     d_mu = NULL;
     d_rho = NULL;
     df = NULL;
-  } else if (!is_initialized) {
+  } else if (!calc_pspg_initialized) {
 
     memset(d_pspg->v, 0, sizeof(dbl) * DIM * DIM * MDE);
     memset(d_pspg->X, 0, sizeof(dbl) * DIM * DIM * MDE);
@@ -1206,7 +1207,7 @@ int calc_pspg(dbl pspg[DIM],
     }
   }
 
-  if (!is_initialized) {
+  if (!calc_pspg_initialized) {
     memset(tau_p, 0, sizeof(dbl) * DIM * DIM);
     memset(d_tau_p_dv, 0, sizeof(dbl) * DIM * DIM * DIM * MDE);
     memset(d_tau_p_dvd, 0, sizeof(dbl) * DIM * DIM * DIM * MDE);
@@ -1586,9 +1587,11 @@ int calc_pspg(dbl pspg[DIM],
       }
     }
   }
-  is_initialized = TRUE;
+  calc_pspg_initialized = TRUE;
   return 0;
 }
+
+static int calc_cont_gls_initialized = FALSE;
 
 int calc_cont_gls(dbl *cont_gls,
                   CONT_GLS_DEPENDENCE_STRUCT *d_cont_gls,
@@ -1601,7 +1604,6 @@ int calc_cont_gls(dbl *cont_gls,
   int eqn;
   int var, dim, b, j, p;
   int advection_on = 0;
-  static int is_initialized = FALSE;
 
   // Density terms
   dbl rho;
@@ -1627,7 +1629,7 @@ int calc_cont_gls(dbl *cont_gls,
 
   if (d_cont_gls == NULL) {
     d_rho = NULL;
-  } else if (!is_initialized) {
+  } else if (!calc_cont_gls_initialized) {
     memset(d_cont_gls->v, 0, sizeof(dbl) * DIM * MDE);
     memset(d_cont_gls->X, 0, sizeof(dbl) * DIM * MDE);
   }
@@ -1754,6 +1756,14 @@ int calc_cont_gls(dbl *cont_gls,
     }
   }
 
-  is_initialized = TRUE;
+  calc_cont_gls_initialized = TRUE;
   return 0;
+}
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void fill_stabilization_free_globals(void) {
+  calc_pspg_initialized = FALSE;
+  calc_cont_gls_initialized = FALSE;
 }

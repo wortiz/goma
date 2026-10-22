@@ -22,6 +22,7 @@
 #include <time.h>
 
 #define GOMA_MM_EH_C
+#include "goma_reset.h"
 #include "mm_eh.h"
 #include "mpi.h"
 #include "rd_mesh.h"
@@ -95,6 +96,8 @@ static char log_filename[MAX_FNL] = DEFAULT_GOMA_LOG_FILENAME;
 #endif
 
 int Goma_Owns_MPI = TRUE;
+
+int goma_wh_generation = 0;
 
 /*
  * Global variable helps to put the brakes on a parallel train wreck, but
@@ -361,4 +364,18 @@ void smooth_stop_with_msg(const char *msg) {
   }
   goma_exit(-1, true);
 #endif
+}
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void eh_free_globals(void) {
+  memset(current_routine, 0, sizeof(current_routine));
+  memset(current_file, 0, sizeof(current_file));
+  strcpy(current_routine, "?");
+  strcpy(current_file, "?");
+  current_line = -1;
+  current_severity = 0;
+  memset(Err_Msg, 0, sizeof(Err_Msg));
+  goma_wh_generation++;
 }

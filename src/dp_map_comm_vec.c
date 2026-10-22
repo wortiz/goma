@@ -40,6 +40,7 @@
 #include "dpi.h"
 #include "el_elm_info.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
@@ -245,6 +246,9 @@ void setup_nodal_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
 /*********************************************************************************/
 /*********************************************************************************/
 
+/* message tag for exchange_neighbor_proc_info(), cycles through 115-200 */
+static int exchange_mtype = 115;
+
 void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
 
 /****************************************************************************
@@ -261,7 +265,6 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
  *  However, so will aztec, so this is no loss in current generality.
  ****************************************************************************/
 {
-  static int mtype = 115;
   char *yo = "exchange_neighbor_proc_info ERROR: ";
 #ifdef PARALLEL
   int p, retn;
@@ -271,8 +274,9 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
    * Post receives for all messages
    */
   for (p = 0; p < num_neighbors; p++) {
-    retn = MPI_Irecv((np_ptr->recv_message_buf), np_ptr->recv_message_length, MPI_BYTE,
-                     np_ptr->neighbor_ProcID, mtype, MPI_COMM_WORLD, &(np_ptr->recv_request));
+    retn =
+        MPI_Irecv((np_ptr->recv_message_buf), np_ptr->recv_message_length, MPI_BYTE,
+                  np_ptr->neighbor_ProcID, exchange_mtype, MPI_COMM_WORLD, &(np_ptr->recv_request));
     if (retn != MPI_SUCCESS) {
       fprintf(stderr, "%s Proc %d: Irecv to %d failed post: %d\n", yo, ProcID,
               np_ptr->neighbor_ProcID, retn);
@@ -286,8 +290,9 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
    */
   np_ptr = np_base;
   for (p = 0; p < num_neighbors; p++) {
-    retn = MPI_Isend(np_ptr->send_message_buf, np_ptr->send_message_length, MPI_BYTE,
-                     np_ptr->neighbor_ProcID, mtype, MPI_COMM_WORLD, &(np_ptr->send_request));
+    retn =
+        MPI_Isend(np_ptr->send_message_buf, np_ptr->send_message_length, MPI_BYTE,
+                  np_ptr->neighbor_ProcID, exchange_mtype, MPI_COMM_WORLD, &(np_ptr->send_request));
     if (retn != MPI_SUCCESS) {
       fprintf(stderr, "%s Proc %d: Isend to %d failed post: %d\n", yo, ProcID,
               np_ptr->neighbor_ProcID, retn);
@@ -321,9 +326,9 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
     GOMA_EH(GOMA_ERROR, "MPI failure");
   }
 #endif
-  mtype++;
-  if (mtype > 200)
-    mtype = 115;
+  exchange_mtype++;
+  if (exchange_mtype > 200)
+    exchange_mtype = 115;
 }
 /*********************************************************************************/
 /*********************************************************************************/
@@ -382,7 +387,7 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *  The pth entry points to the first entry in list_dof_send that
    *  gets sent to the pth processor.
    *
-   *    ptr_dof_send[] gets allocated here, and is never freed.
+   *    ptr_dof_send[] gets allocated here, and is freed by map_comm_vec_free_globals().
    */
   ptr_dof_send = malloc(sizeof(int *) * upd->Total_Num_Matrices);
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
@@ -399,9 +404,9 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *  solution vector to the i'th dof that needs to be sent to
    *  a neighboring processor.
    *
-   *     list_dof_send[] is allocated here, and is never freed.
+   *     list_dof_send[] is allocated here, and is freed by map_comm_vec_free_globals().
    */
-  list_dof_send = malloc(sizeof(int *) * upd->Total_Num_Matrices);
+  list_dof_send = calloc(upd->Total_Num_Matrices, sizeof(int *));
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
     if (ptr_dof_send[imtrx][dpi->num_neighbors] > 0) {
       list_dof_send[imtrx] = alloc_int_1(ptr_dof_send[imtrx][dpi->num_neighbors], -1);
@@ -550,3 +555,38 @@ void output_comm_stats(Dpi *dpi, Comm_Ex **cx)
 /***********************************************************************/
 /***********************************************************************/
 /***********************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void map_comm_vec_free_globals(void) {
+  for (int imtrx = 0; upd != NULL && imtrx < upd->Total_Num_Matrices; imtrx++) {
+    if (ptr_dof_send != NULL) {
+      free(ptr_dof_send[imtrx]);
+    }
+    if (list_dof_send != NULL) {
+      free(list_dof_send[imtrx]);
+    }
+  }
+  free(ptr_dof_send);
+  free(list_dof_send);
+  free(ptr_node_send);
+  free(list_node_send);
+  free(ptr_node_recv);
+  node_index_fill = NULL;
+  fill_node_list = NULL;
+  num_fill_unknowns = 0;
+  owned_fill_unknowns = 0;
+  internal_fill_unknowns = 0;
+  boundary_fill_unknowns = 0;
+  external_fill_unknowns = 0;
+  ptr_node_recv = NULL;
+  ptr_fill_node_recv = NULL;
+  ptr_dof_send = NULL;
+  list_dof_send = NULL;
+  ptr_node_send = NULL;
+  list_node_send = NULL;
+  ptr_fill_node_send = NULL;
+  list_fill_node_send = NULL;
+  exchange_mtype = 115;
+}

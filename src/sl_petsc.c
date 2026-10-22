@@ -995,7 +995,7 @@ goma_error goma_setup_petsc_post_proc_matrix(
     CHKERRQ(err);
   }
 
-  PetscMatrixData *matrix_data = malloc(sizeof(struct PetscMatrixData));
+  PetscMatrixData *matrix_data = calloc(1, sizeof(struct PetscMatrixData));
 
   upd->petsc_post_proc_data = (void *)matrix_data;
 
@@ -1819,6 +1819,41 @@ goma_error goma_petsc_free_matrix(struct GomaLinearSolverData *ams) {
   CHKERRQ(err);
   err = KSPDestroy(&matrix_data->ksp);
   CHKERRQ(err);
+  err = MatDestroy(&matrix_data->SchurS);
+  CHKERRQ(err);
+  err = PetscFree(matrix_data->pcd_ss_remove);
+  CHKERRQ(err);
+  err = PetscFree(matrix_data->pcd_ns_remove);
+  CHKERRQ(err);
+
+  free(matrix_data->local_to_global);
+  free(matrix_data->schur_s_local_to_global);
+  free(matrix_data);
+  ams->PetscMatrixData = NULL;
+
+  return GOMA_SUCCESS;
+}
+
+/* Free the post processing projection matrix from goma_setup_petsc_post_proc_matrix */
+goma_error goma_petsc_free_post_proc_matrix(void) {
+  PetscMatrixData *matrix_data = (PetscMatrixData *)upd->petsc_post_proc_data;
+  if (matrix_data == NULL) {
+    return GOMA_SUCCESS;
+  }
+  PetscErrorCode err;
+
+  err = MatDestroy(&matrix_data->mat);
+  CHKERRQ(err);
+  err = VecDestroy(&matrix_data->residual);
+  CHKERRQ(err);
+  err = VecDestroy(&matrix_data->update);
+  CHKERRQ(err);
+  err = KSPDestroy(&matrix_data->ksp);
+  CHKERRQ(err);
+
+  free(matrix_data->local_to_global);
+  free(matrix_data);
+  upd->petsc_post_proc_data = NULL;
 
   return GOMA_SUCCESS;
 }

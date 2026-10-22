@@ -32,6 +32,7 @@
 #define GOMA_MM_FILL_SPECIES_C
 #include "density.h"
 #include "el_elm.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -11215,6 +11216,14 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
   } /* end of if Jacobian */
   return 0;
 }
+/* Stefan_Maxwell_diff_flux() work arrays, allocated on the first call */
+static unsigned int sm_A_allocated = FALSE;
+static double **sm_A = NULL;     /* Coef. Matrix in Stefan_Maxwell Matrix Equation */
+static double **sm_A_inv = NULL; /* inverse of Coef. Matrix */
+static double *sm_B = NULL;      /* driving force vector in Stefan-Maxwell Equation */
+static double *sm_bbb = NULL;    /* reused for repeated */
+static int *sm_indx = NULL;      /* scaling array used in lu decomposition */
+
 /******************************************************************************
  *
  *  Function that computes the Residuals and Jacobian sensitivities
@@ -11249,15 +11258,6 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
   int volume_flag;
   dbl correction;
 
-  static unsigned int A_allocated = FALSE; /* Boolean - allocation flag         */
-  static double **A;                       /* Coef. Matrix in Stefan_Maxwell Matrix
-                                              Equation                                 */
-  static double **A_inv;                   /*  inverse of Coef. Matrix                 */
-  static double *B;                        /* driving force vector in Stefan-Maxwell
-                                              Equation                                 */
-  static double *bbb;                      /*    reused for repeated                   */
-  static int *indx;                        /*  scaling array used in lu decomposition  */
-
   dbl D[MAX_CONC][MAX_CONC];  /* Stefan_Maxwell diffusivities       */
   dbl grad_mu[MAX_CONC][DIM]; /* electrochemical potential gradient */
   dbl grad_phi2[DIM];         /* gradient of electrical potential   */
@@ -11284,26 +11284,26 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
   n = n_species * VIM;
   mn = ei[pg->imtrx]->mn;
 
-  if (!A_allocated) {
-    A = (double **)smalloc(MAX_CONC * DIM * sizeof(double *));
-    A_inv = (double **)smalloc(MAX_CONC * DIM * sizeof(double *));
-    bbb = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
-    B = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
-    indx = (int *)smalloc(MAX_CONC * DIM * sizeof(int));
+  if (!sm_A_allocated) {
+    sm_A = (double **)smalloc(MAX_CONC * DIM * sizeof(double *));
+    sm_A_inv = (double **)smalloc(MAX_CONC * DIM * sizeof(double *));
+    sm_bbb = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
+    sm_B = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
+    sm_indx = (int *)smalloc(MAX_CONC * DIM * sizeof(int));
     for (i = 0; i < MAX_CONC * DIM; i++) {
-      A[i] = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
-      A_inv[i] = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
+      sm_A[i] = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
+      sm_A_inv[i] = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
     }
-    A_allocated = TRUE;
+    sm_A_allocated = TRUE;
   }
 
   for (i = 0; i < (MAX_CONC * DIM); i++) {
-    memset(A[i], 0, sizeof(double) * MAX_CONC * DIM);
-    memset(A_inv[i], 0, sizeof(double) * MAX_CONC * DIM);
+    memset(sm_A[i], 0, sizeof(double) * MAX_CONC * DIM);
+    memset(sm_A_inv[i], 0, sizeof(double) * MAX_CONC * DIM);
   }
-  memset(indx, 0, sizeof(int) * MAX_CONC * DIM);
-  memset(B, 0, sizeof(double) * MAX_CONC * DIM);
-  memset(bbb, 0, sizeof(double) * MAX_CONC * DIM);
+  memset(sm_indx, 0, sizeof(int) * MAX_CONC * DIM);
+  memset(sm_B, 0, sizeof(double) * MAX_CONC * DIM);
+  memset(sm_bbb, 0, sizeof(double) * MAX_CONC * DIM);
 
   /*
    * Put in a warning about these species variable types until
@@ -11463,20 +11463,20 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
     switch (VIM) {
     case 1: /* 1-D approximation */
-      B[0] = 0.0;
+      sm_B[0] = 0.0;
       for (j = 0; j < n_species; j++) {
-        A[0][j] = M[j];
+        sm_A[0][j] = M[j];
       }
       for (i = 1; i < n_species; i++) {
-        B[i] = x[i] * grad_mu[i][0] / R / T;
+        sm_B[i] = x[i] * grad_mu[i][0] / R / T;
         for (j = 0; j < n_species; j++) {
           if (j != i) {
-            A[i][j] = x[i] / (c * e * D[i][j]);
+            sm_A[i][j] = x[i] / (c * e * D[i][j]);
           } else if (j == i) {
-            A[i][i] = 0.0;
+            sm_A[i][i] = 0.0;
             for (k = 0; k < n_species; k++) {
               if (k != i)
-                A[i][i] -= x[k] / (c * e * D[i][k]);
+                sm_A[i][i] -= x[k] / (c * e * D[i][k]);
             }
           }
         }
@@ -11484,100 +11484,100 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
       break;
 
     case 2: /* 2-D approximation */
-      B[0] = 0.0;
-      B[1] = 0.0;
+      sm_B[0] = 0.0;
+      sm_B[1] = 0.0;
       for (k = 0; k < n_species; k++) {
         j1 = k * VIM;
         j2 = k * VIM + 1;
-        A[0][j1] = M[k];
-        A[0][j2] = 0.0;
-        A[1][j1] = 0.0;
-        A[1][j2] = M[k];
+        sm_A[0][j1] = M[k];
+        sm_A[0][j2] = 0.0;
+        sm_A[1][j1] = 0.0;
+        sm_A[1][j2] = M[k];
       }
 
       for (k = 1; k < n_species; k++) {
         i1 = k * VIM;
         i2 = k * VIM + 1;
-        B[i1] = x[k] * grad_mu[k][0] / R / T;
-        B[i2] = x[k] * grad_mu[k][1] / R / T;
+        sm_B[i1] = x[k] * grad_mu[k][0] / R / T;
+        sm_B[i2] = x[k] * grad_mu[k][1] / R / T;
         for (l = 0; l < n_species; l++) {
           j1 = l * VIM;
           j2 = l * VIM + 1;
           if (l != k) {
-            A[i1][j1] = x[k] / (c * e * D[k][l]);
-            A[i1][j2] = 0.0;
-            A[i2][j1] = 0.0;
-            A[i2][j2] = A[i1][j1];
+            sm_A[i1][j1] = x[k] / (c * e * D[k][l]);
+            sm_A[i1][j2] = 0.0;
+            sm_A[i2][j1] = 0.0;
+            sm_A[i2][j2] = sm_A[i1][j1];
           } else if (l == k) {
-            A[i1][i1] = 0.0;
+            sm_A[i1][i1] = 0.0;
             for (m = 0; m < n_species; m++) {
               if (m != k) {
-                A[i1][i1] -= x[m] / (c * e * D[k][m]);
+                sm_A[i1][i1] -= x[m] / (c * e * D[k][m]);
               }
             }
-            A[i2][i2] = A[i1][i1];
-            A[i1][i2] = 0.0;
-            A[i2][i1] = 0.0;
+            sm_A[i2][i2] = sm_A[i1][i1];
+            sm_A[i1][i2] = 0.0;
+            sm_A[i2][i1] = 0.0;
           }
         }
       }
       break;
 
     case 3: /* 3-D: full dimensions */
-      B[0] = 0.0;
-      B[1] = 0.0;
-      B[2] = 0.0;
+      sm_B[0] = 0.0;
+      sm_B[1] = 0.0;
+      sm_B[2] = 0.0;
       for (k = 0; k < n_species; k++) {
         j1 = k * VIM;
         j2 = k * VIM + 1;
         j3 = k * VIM + 2;
-        A[0][j1] = M[k];
-        A[0][j2] = 0.0;
-        A[0][j3] = 0.0;
-        A[1][j1] = 0.0;
-        A[1][j2] = M[k];
-        A[1][j3] = 0.0;
-        A[2][j1] = 0.0;
-        A[2][j2] = 0.0;
-        A[2][j3] = M[k];
+        sm_A[0][j1] = M[k];
+        sm_A[0][j2] = 0.0;
+        sm_A[0][j3] = 0.0;
+        sm_A[1][j1] = 0.0;
+        sm_A[1][j2] = M[k];
+        sm_A[1][j3] = 0.0;
+        sm_A[2][j1] = 0.0;
+        sm_A[2][j2] = 0.0;
+        sm_A[2][j3] = M[k];
       }
 
       for (k = 1; k < n_species; k++) {
         i1 = k * VIM;
         i2 = k * VIM + 1;
         i3 = k * VIM + 2;
-        B[i1] = x[k] * grad_mu[k][0] / R / T;
-        B[i2] = x[k] * grad_mu[k][1] / R / T;
-        B[i3] = x[k] * grad_mu[k][2] / R / T;
+        sm_B[i1] = x[k] * grad_mu[k][0] / R / T;
+        sm_B[i2] = x[k] * grad_mu[k][1] / R / T;
+        sm_B[i3] = x[k] * grad_mu[k][2] / R / T;
         for (l = 0; l < n_species; l++) {
           j1 = l * VIM;
           j2 = l * VIM + 1;
           j3 = l * VIM + 2;
           if (l != k) {
-            A[i1][j1] = x[k] / (c * e * D[k][l]);
-            A[i1][j2] = 0.0;
-            A[i1][j3] = 0.0;
-            A[i2][j1] = 0.0;
-            A[i2][j2] = A[i1][j1];
-            A[i2][j3] = 0.0;
-            A[i3][j1] = 0.0;
-            A[i3][j2] = 0.0;
-            A[i3][j3] = A[i1][j1];
+            sm_A[i1][j1] = x[k] / (c * e * D[k][l]);
+            sm_A[i1][j2] = 0.0;
+            sm_A[i1][j3] = 0.0;
+            sm_A[i2][j1] = 0.0;
+            sm_A[i2][j2] = sm_A[i1][j1];
+            sm_A[i2][j3] = 0.0;
+            sm_A[i3][j1] = 0.0;
+            sm_A[i3][j2] = 0.0;
+            sm_A[i3][j3] = sm_A[i1][j1];
           } else if (l == k) {
-            A[i1][i1] = 0.0;
+            sm_A[i1][i1] = 0.0;
             for (m = 0; m < n_species; m++) {
               if (m != k) {
-                A[i1][i1] -= x[m] / (c * e * D[k][m]);
+                sm_A[i1][i1] -= x[m] / (c * e * D[k][m]);
               }
             }
-            A[i2][i2] = A[i1][i1];
-            A[i3][i3] = A[i1][i1];
-            A[i1][i2] = 0.0;
-            A[i1][i3] = 0.0;
-            A[i2][i1] = 0.0;
-            A[i2][i3] = 0.0;
-            A[i3][i1] = 0.0;
-            A[i3][i2] = 0.0;
+            sm_A[i2][i2] = sm_A[i1][i1];
+            sm_A[i3][i3] = sm_A[i1][i1];
+            sm_A[i1][i2] = 0.0;
+            sm_A[i1][i3] = 0.0;
+            sm_A[i2][i1] = 0.0;
+            sm_A[i2][i3] = 0.0;
+            sm_A[i3][i1] = 0.0;
+            sm_A[i3][i2] = 0.0;
           }
         }
       }
@@ -11587,24 +11587,24 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
     /* LU decomposition of matrix A[1..n][1..n], then  */
     /* forward and back substitution to get solution vector B */
 
-    lu_decomp_backsub_driver(A, B, indx, n, 1);
+    lu_decomp_backsub_driver(sm_A, sm_B, sm_indx, n, 1);
 
     for (i = 0; i < n; i++) {
-      J[i] = B[i]; /* assign the solution vector bb to the flux vector */
-                   /* put the Stefan-Maxwell flux in the global fv structure */
-      fv->SM_flux[i] = B[i];
+      J[i] = sm_B[i]; /* assign the solution vector bb to the flux vector */
+                      /* put the Stefan-Maxwell flux in the global fv structure */
+      fv->SM_flux[i] = sm_B[i];
     }
 
     for (j = 0; j < n; j++) /* calculate the inverse of aa; KSC: 10/98 */
     {
       for (i = 0; i < n; i++)
-        bbb[i] = 0.0;
-      bbb[j] = 1.0;
+        sm_bbb[i] = 0.0;
+      sm_bbb[j] = 1.0;
 
-      lu_decomp_backsub_driver(A, bbb, indx, n, 0);
+      lu_decomp_backsub_driver(sm_A, sm_bbb, sm_indx, n, 0);
 
       for (i = 0; i < n; i++)
-        A_inv[i][j] = bbb[i];
+        sm_A_inv[i][j] = sm_bbb[i];
     }
 
     /* printf("In mm_fill_species.c: the coeff. matrix A:\n");
@@ -11618,7 +11618,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
 
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++) {
-        fv->SM_matrix_inv[i][j] = A_inv[i][j];
+        fv->SM_matrix_inv[i][j] = sm_A_inv[i][j];
       }
       /* printf("%g %g %g %g %g %g\n", A_inv[i][0], A_inv[i][1], A_inv[i][2],
                                        A_inv[i][3], A_inv[i][4], A_inv[i][5]); */
@@ -11684,18 +11684,18 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
     for (w = 0; w < n_species - 1; w++) {
       switch (VIM) {
       case 1:
-        st->diff_flux[w][0] = B[w];
+        st->diff_flux[w][0] = sm_B[w];
         break;
 
       case 2:
-        st->diff_flux[w][0] = B[VIM * w];
-        st->diff_flux[w][1] = B[VIM * w + 1];
+        st->diff_flux[w][0] = sm_B[VIM * w];
+        st->diff_flux[w][1] = sm_B[VIM * w + 1];
         break;
 
       case 3:
-        st->diff_flux[w][0] = B[VIM * w];
-        st->diff_flux[w][1] = B[VIM * w + 1];
-        st->diff_flux[w][2] = B[VIM * w + 2];
+        st->diff_flux[w][0] = sm_B[VIM * w];
+        st->diff_flux[w][1] = sm_B[VIM * w + 1];
+        st->diff_flux[w][2] = sm_B[VIM * w + 2];
         break;
       }
     }
@@ -11728,7 +11728,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
                   dA[wi][wj] = bf[var]->phi[j] / (c * e * D[wi][wj]);
                   if (!volume_flag) /* RSL 8/24/00 */
                   {
-                    dA[wi][wj] -= correction * A[wi][wj];
+                    dA[wi][wj] -= correction * sm_A[wi][wj];
                   }
                 }
               } else if (wj == wi && w1 != wi) {
@@ -11736,13 +11736,13 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
                 dA[wi][wi] += bf[var]->phi[j] / (c * e * D[wi][n_species - 1]); /* RSL 8/24/00 */
                 if (!volume_flag)                                               /* RSL 8/24/00 */
                 {
-                  dA[wi][wi] -= correction * A[wi][wi];
+                  dA[wi][wi] -= correction * sm_A[wi][wi];
                 }
               } else /* RSL 8/24/00 */
               {
                 dA[wi][wi] = bf[var]->phi[j] / (c * e * D[wi][n_species - 1]);
                 if (!volume_flag) {
-                  dA[wi][wi] -= correction * A[wi][wi];
+                  dA[wi][wi] -= correction * sm_A[wi][wi];
                 }
               }
             }
@@ -11753,14 +11753,14 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
             dA[n - 1][wj] = -bf[var]->phi[j] / (c * e * D[n_species - 1][wj]);
             if (!volume_flag) /* RSL 8/24/00 */
             {
-              dA[n - 1][wj] -= correction * A[n - 1][wj];
+              dA[n - 1][wj] -= correction * sm_A[n - 1][wj];
             }
           }
           /*		  dA[n-1][n-1] = -bf[var]->phi[j]/(c*e*D[n_species-1][n_species-2]); */
           dA[n - 1][n - 1] = -bf[var]->phi[j] / (c * e * D[n_species - 1][w1]); /* RSL 8/24/00 */
           if (!volume_flag)                                                     /* RSL 8/24/00 */
           {
-            dA[n - 1][n - 1] -= correction * A[n - 1][n - 1];
+            dA[n - 1][n - 1] -= correction * sm_A[n - 1][n - 1];
           }
           break;
 
@@ -11792,7 +11792,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
                   dA[i1][j1] = bf[var]->phi[j] / (c * e * D[k][l]);
                   if (!volume_flag) /* RSL 8/24/00 */
                   {
-                    dA[i1][j1] -= correction * A[i1][j1];
+                    dA[i1][j1] -= correction * sm_A[i1][j1];
                   }
                   dA[i2][j2] = dA[i1][j1];
                 }
@@ -11801,14 +11801,14 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
                 dA[i1][i1] += bf[var]->phi[j] / (c * e * D[k][n_species - 1]); /* RSL 8/24/00 */
                 if (!volume_flag)                                              /* RSL 8/24/00 */
                 {
-                  dA[i1][i1] -= correction * A[i1][i1];
+                  dA[i1][i1] -= correction * sm_A[i1][i1];
                 }
                 dA[i2][i2] = dA[i1][i1];
               } else /* RSL 8/24/00 */
               {
                 dA[i1][i1] = bf[var]->phi[j] / (c * e * D[k][n_species - 1]);
                 if (!volume_flag) {
-                  dA[i1][i1] -= correction * A[i1][i1];
+                  dA[i1][i1] -= correction * sm_A[i1][i1];
                 }
                 dA[i2][i2] = dA[i1][i1];
               }
@@ -11825,7 +11825,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
             dA[n - 2][j1] = -bf[var]->phi[j] / (c * e * D[n_species - 1][l]);
             if (!volume_flag) /* RSL 8/24/00 */
             {
-              dA[n - 2][j1] -= correction * A[n - 2][j1];
+              dA[n - 2][j1] -= correction * sm_A[n - 2][j1];
             }
             dA[n - 1][j2] = dA[n - 2][j1];
           }
@@ -11833,7 +11833,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
           dA[n - 2][n - 2] = -bf[var]->phi[j] / (c * e * D[n_species - 1][w1]); /* RSL 8/24/00 */
           if (!volume_flag)                                                     /* RSL 8/24/00 */
           {
-            dA[n - 2][n - 2] -= correction * A[n - 2][n - 2];
+            dA[n - 2][n - 2] -= correction * sm_A[n - 2][n - 2];
           }
           dA[n - 1][n - 1] = dA[n - 2][n - 2];
           break;
@@ -11868,7 +11868,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
                   dA[i1][j1] = bf[var]->phi[j] / (c * e * D[k][l]);
                   if (!volume_flag) /* RSL 8/24/00 */
                   {
-                    dA[i1][j1] -= correction * A[i1][j1];
+                    dA[i1][j1] -= correction * sm_A[i1][j1];
                   }
                   dA[i2][j2] = dA[i1][j1];
                   dA[i3][j3] = dA[i1][j1];
@@ -11878,7 +11878,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
                 dA[i1][i1] += bf[var]->phi[j] / (c * e * D[k][n_species - 1]); /* RSL 8/24/00 */
                 if (!volume_flag)                                              /* RSL 8/24/00 */
                 {
-                  dA[i1][i1] -= correction * A[i1][i1];
+                  dA[i1][i1] -= correction * sm_A[i1][i1];
                 }
                 dA[i2][i2] = dA[i1][i1];
                 dA[i3][i3] = dA[i1][i1];
@@ -11886,7 +11886,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
               {
                 dA[i1][i1] = bf[var]->phi[j] / (c * e * D[k][n_species - 1]);
                 if (!volume_flag) {
-                  dA[i1][i1] -= correction * A[i1][i1];
+                  dA[i1][i1] -= correction * sm_A[i1][i1];
                 }
                 dA[i2][i2] = dA[i1][i1];
                 dA[i3][i3] = dA[i1][i1];
@@ -11907,7 +11907,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
             dA[n - 3][j1] = -bf[var]->phi[j] / (c * e * D[n_species - 1][l]);
             if (!volume_flag) /* RSL 8/24/00 */
             {
-              dA[n - 3][j1] -= correction * A[n - 3][j1];
+              dA[n - 3][j1] -= correction * sm_A[n - 3][j1];
             }
             dA[n - 2][j2] = dA[n - 3][j1];
             dA[n - 1][j3] = dA[n - 3][j1];
@@ -11916,7 +11916,7 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
           dA[n - 3][n - 3] = -bf[var]->phi[j] / (c * e * D[n_species - 1][w1]); /* RSL 8/24/00 */
           if (!volume_flag)                                                     /* RSL 8/24/00 */
           {
-            dA[n - 3][n - 3] -= correction * A[n - 3][n - 3];
+            dA[n - 3][n - 3] -= correction * sm_A[n - 3][n - 3];
           }
           dA[n - 2][n - 2] = dA[n - 3][n - 3];
           dA[n - 1][n - 1] = dA[n - 3][n - 3];
@@ -11952,31 +11952,31 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
           for (k = 0; k < n; k++) {
             dAJ[wi] += dA[wi][k] * J[k];
           }
-          B[wi] = dB[wi] - dAJ[wi];
+          sm_B[wi] = dB[wi] - dAJ[wi];
         }
 
         /* forward and back substitution to get solution vector B */
-        lu_decomp_backsub_driver(A, B, indx, n, 0);
+        lu_decomp_backsub_driver(sm_A, sm_B, sm_indx, n, 0);
 
         switch (VIM) {
         case 1:
           for (w = 0; w < n_species - 1; w++) {
-            st->d_diff_flux_dc[w][0][w1][j] = B[w];
+            st->d_diff_flux_dc[w][0][w1][j] = sm_B[w];
           }
           break;
 
         case 2:
           for (w = 0; w < n_species - 1; w++) {
-            st->d_diff_flux_dc[w][0][w1][j] = B[VIM * w];
-            st->d_diff_flux_dc[w][1][w1][j] = B[VIM * w + 1];
+            st->d_diff_flux_dc[w][0][w1][j] = sm_B[VIM * w];
+            st->d_diff_flux_dc[w][1][w1][j] = sm_B[VIM * w + 1];
           }
           break;
 
         case 3:
           for (w = 0; w < n_species - 1; w++) {
-            st->d_diff_flux_dc[w][0][w1][j] = B[VIM * w];
-            st->d_diff_flux_dc[w][1][w1][j] = B[VIM * w + 1];
-            st->d_diff_flux_dc[w][2][w1][j] = B[VIM * w + 2];
+            st->d_diff_flux_dc[w][0][w1][j] = sm_B[VIM * w];
+            st->d_diff_flux_dc[w][1][w1][j] = sm_B[VIM * w + 1];
+            st->d_diff_flux_dc[w][2][w1][j] = sm_B[VIM * w + 2];
           }
           break;
         }
@@ -12046,31 +12046,31 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
             break;
           }
           for (wi = 0; wi < n; wi++) {
-            B[wi] = dB[wi];
+            sm_B[wi] = dB[wi];
           }
 
           /* forward and back substitution to get solution vector B */
-          lu_decomp_backsub_driver(A, B, indx, n, 0);
+          lu_decomp_backsub_driver(sm_A, sm_B, sm_indx, n, 0);
 
           switch (VIM) {
           case 1:
             for (w = 0; w < n_species - 1; w++) {
-              st->d_diff_flux_dmesh[w][0][q][j] = B[w];
+              st->d_diff_flux_dmesh[w][0][q][j] = sm_B[w];
             }
             break;
 
           case 2:
             for (w = 0; w < n_species - 1; w++) {
-              st->d_diff_flux_dmesh[w][0][q][j] = B[VIM * w];
-              st->d_diff_flux_dmesh[w][1][q][j] = B[VIM * w + 1];
+              st->d_diff_flux_dmesh[w][0][q][j] = sm_B[VIM * w];
+              st->d_diff_flux_dmesh[w][1][q][j] = sm_B[VIM * w + 1];
             }
             break;
 
           case 3:
             for (w = 0; w < n_species - 1; w++) {
-              st->d_diff_flux_dmesh[w][0][q][j] = B[VIM * w];
-              st->d_diff_flux_dmesh[w][1][q][j] = B[VIM * w + 1];
-              st->d_diff_flux_dmesh[w][2][q][j] = B[VIM * w + 2];
+              st->d_diff_flux_dmesh[w][0][q][j] = sm_B[VIM * w];
+              st->d_diff_flux_dmesh[w][1][q][j] = sm_B[VIM * w + 1];
+              st->d_diff_flux_dmesh[w][2][q][j] = sm_B[VIM * w + 2];
             }
             break;
           }
@@ -13462,3 +13462,26 @@ void fickian_charged_gradient_bc(double func[],
 }
 
 /* End of fickian_charged_surf_gradient_bc */
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void fill_species_free_globals(void) {
+  if (sm_A_allocated) {
+    for (int i = 0; i < MAX_CONC * DIM; i++) {
+      free(sm_A[i]);
+      free(sm_A_inv[i]);
+    }
+    free(sm_A);
+    free(sm_A_inv);
+    free(sm_B);
+    free(sm_bbb);
+    free(sm_indx);
+  }
+  sm_A_allocated = FALSE;
+  sm_A = NULL;
+  sm_A_inv = NULL;
+  sm_B = NULL;
+  sm_bbb = NULL;
+  sm_indx = NULL;
+}

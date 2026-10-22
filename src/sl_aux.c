@@ -25,6 +25,7 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "goma_reset.h"
 #include "rf_allo.h"
 #include "sl_aux.h"
 
@@ -68,18 +69,19 @@
    Randy R. Lober 9/98.
 */
 
+static double *backsub_driver_d = NULL;
+static int backsub_driver_first_call = 1;
+
 int lu_decomp_backsub_driver(
     double **coeff_matrix, double *rhs_vector, int *indx, int sys_size, int lu_dcmp_flag) {
-  static double *d = NULL;
-  static int first_call = 1;
 
-  if (first_call) {
-    d = (double *)smalloc(1 * sizeof(double));
-    first_call = 0;
+  if (backsub_driver_first_call) {
+    backsub_driver_d = (double *)smalloc(1 * sizeof(double));
+    backsub_driver_first_call = 0;
   }
 
   if (lu_dcmp_flag == 1) {
-    if (lu_decomp(coeff_matrix, sys_size, indx, d) == -1) {
+    if (lu_decomp(coeff_matrix, sys_size, indx, backsub_driver_d) == -1) {
       fprintf(stdout, " Error occurred in lu_decomp_backsub_driver\n");
 
       return (-1);
@@ -118,17 +120,18 @@ int lu_decomp_backsub_driver(
    Randy R. Lober 9/98.
 */
 
+/* lu_decomp() stores the implicit scaling of each row in lu_decomp_vv */
+static double *lu_decomp_vv = NULL;
+static int lu_decomp_n_max = 0;
+
 int lu_decomp(double **a, const int n, int *indx, double *d) {
   int i, imax = -1, j, k;
   double big, dum, sum, temp;
-  /* vv stores the implicit scaling of each row */
-  static double *vv = NULL;
-  static int n_max = 0;
 
-  if (n > n_max) {
-    safer_free((void **)&vv);
-    vv = alloc_dbl_1(n, DBL_NOINIT);
-    n_max = n;
+  if (n > lu_decomp_n_max) {
+    safer_free((void **)&lu_decomp_vv);
+    lu_decomp_vv = alloc_dbl_1(n, DBL_NOINIT);
+    lu_decomp_n_max = n;
   }
 
   *d = 1.0;                 /* No row interchanges yet */
@@ -144,7 +147,7 @@ int lu_decomp(double **a, const int n, int *indx, double *d) {
       printf("Singular matrix in routine lu_decomp - aborting\n");
       return (-1);
     }
-    vv[i] = 1.0 / big; /* save the implicit scaling info */
+    lu_decomp_vv[i] = 1.0 / big; /* save the implicit scaling info */
   }
 
   for (j = 0; j < n; j++) {   /* Looping over columns (Crout's method) */
@@ -163,8 +166,8 @@ int lu_decomp(double **a, const int n, int *indx, double *d) {
         sum -= a[i][k] * a[k][j];
       }
       a[i][j] = sum;
-      if ((dum = vv[i] * fabs(sum)) >= big) { /* Is the figure of merit for the pivot */
-        big = dum;                            /* better than the best so far? */
+      if ((dum = lu_decomp_vv[i] * fabs(sum)) >= big) { /* Is the figure of merit for the pivot */
+        big = dum;                                      /* better than the best so far? */
         imax = i;
       }
     }
@@ -175,8 +178,8 @@ int lu_decomp(double **a, const int n, int *indx, double *d) {
         a[imax][k] = a[j][k];
         a[j][k] = dum;
       }
-      (*d) = -(*d);     /* ...and change the parity of d */
-      vv[imax] = vv[j]; /* also change the scale factor */
+      (*d) = -(*d);                         /* ...and change the parity of d */
+      lu_decomp_vv[imax] = lu_decomp_vv[j]; /* also change the scale factor */
     }
 
     indx[j] = imax;
@@ -262,3 +265,15 @@ void lu_backsub(double **a, int n, int *indx, double *b) {
 /******************************************************************************/
 /* END of file sl_aux.c */
 /******************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void sl_aux_free_globals(void) {
+  free(backsub_driver_d);
+  backsub_driver_d = NULL;
+  backsub_driver_first_call = 1;
+  free(lu_decomp_vv);
+  lu_decomp_vv = NULL;
+  lu_decomp_n_max = 0;
+}

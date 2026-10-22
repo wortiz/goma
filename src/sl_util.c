@@ -75,6 +75,7 @@
 #include "az_aztec.h"
 #endif
 #include "dp_types.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h" /* Error handler. */
@@ -1417,3 +1418,8 @@ void amesos_solve_msr(
 /******************************************************************************/
 /* END of file sl_util.c */
 /******************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void sl_util_free_globals(void) { Num_Calls = 0; }

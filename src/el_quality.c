@@ -27,6 +27,7 @@
 #include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
@@ -81,6 +82,8 @@ static double sidelength(int,           /* One vertex */
                          int,           /* Other vertex */
                          double **);    /* Vertex coordinates */
 
+static int element_quality_first_call = TRUE;
+
 int element_quality(Exo_DB *exo, double *x, int *proc_config)
 
 /*
@@ -108,7 +111,6 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
 {
   double mavg = 0.0, tavg = 0.0, quality = 0.0;
   double qmin = 999.9, wt_sum = 0.0, wt_min = 0.0;
-  static int first_call = TRUE;
 
   /* Quick exit if no metrics were specified */
   if (nEQM == 0)
@@ -127,7 +129,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
     if (eqm->eq_jac < qmin)
       qmin = eqm->eq_jac;
   }
-  if (eqm->do_vol && !first_call) {
+  if (eqm->do_vol && !element_quality_first_call) {
     mavg = volume_metric(proc_config);
     DPRINTF(stderr, "               Volume change    %8g         %8g\n", mavg, eqm->eq_vol);
     tavg += eqm->wt_vol * mavg;
@@ -181,7 +183,7 @@ int element_quality(Exo_DB *exo, double *x, int *proc_config)
   }
 
   /* Check quality against tolerance and return */
-  first_call = FALSE;
+  element_quality_first_call = FALSE;
   if (quality < eqm->eq_tol) {
     DPRINTF(stderr, "Element quality below tolerance of %g\n", eqm->eq_tol);
     DPRINTF(stderr, "\tREMESHING IS REQUIRED!\n");
@@ -275,6 +277,7 @@ static double jacobian_metric(Exo_DB *exo, double *x, int *proc_config) {
   }
   eqavg = eqsum / els;
   eqm->eq_jac = eqmin;
+  safe_free(xy);
   return eqavg;
 } /* End of function jacobian_metric */
 
@@ -574,3 +577,8 @@ static double sidelength(int v1, int v2, double **xy) {
 
 /* END of file el_quality.c  */
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void el_quality_free_globals(void) { element_quality_first_call = TRUE; }

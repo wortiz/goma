@@ -99,13 +99,15 @@ GOMA_EXTERN void goma_exit(const int status, const bool finalize_mpi);
 
 #define GOMA_EH(IERR, FORMAT, ...) goma_eh(IERR, __FILE__, __LINE__, FORMAT, ##__VA_ARGS__)
 // We wrap in a do while with a static variable to only print warnings once
-// at a location
+// at a location, goma_wh_generation is incremented by goma_destroy so that
+// warnings are printed again in the next run
+extern int goma_wh_generation;
 #define GOMA_WH(IERR, FORMAT, ...)                              \
   do {                                                          \
-    static bool print = true;                                   \
-    if (print) {                                                \
+    static int printed_generation = -1;                         \
+    if (printed_generation != goma_wh_generation) {             \
       goma_wh(IERR, __FILE__, __LINE__, FORMAT, ##__VA_ARGS__); \
-      print = false;                                            \
+      printed_generation = goma_wh_generation;                  \
     }                                                           \
   } while (0)
 

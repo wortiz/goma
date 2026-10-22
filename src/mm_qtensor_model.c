@@ -45,6 +45,7 @@
 #include "std.h"
 
 #define GOMA_MM_QTENSOR_MODEL_C
+#include "goma_reset.h"
 #include "mm_qtensor_model.h"
 
 /*********** R O U T I N E S   I N   T H I S   F I L E ************************
@@ -3178,3 +3179,12 @@ int bias_eigenvector_to(dbl *v, dbl *target) {
 /*****************************************************************************/
 /* END of file mm_qtensor_model.c */
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void qtensor_free_globals(void) {
+  MMH_ip = 0;
+  memset(vort_dir, 0, sizeof(vort_dir));
+  memset(qtensor, 0, sizeof(qtensor));
+}

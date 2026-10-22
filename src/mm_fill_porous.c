@@ -28,6 +28,7 @@
 #include "el_elm.h"
 #include "el_elm_info.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -990,6 +991,12 @@ int assemble_pore_sink_mass(double time, /* present time valuel; KSC           *
 /***************************************************************************/
 /***************************************************************************/
 
+/*
+ * Set TRUE after the first pass through load_porous_properties() to avoid the
+ * overhead of reinitializing the mp, pmt, pmv structures
+ */
+static int load_porous_properties_is_initialized = FALSE;
+
 /***************************************************************************/
 /***************************************************************************/
 int load_porous_properties(void)
@@ -1029,11 +1036,6 @@ int load_porous_properties(void)
   int siz;
   int MTV; /* maximum number of variables types plus species unknowns */
 
-  static int is_initialized = FALSE; /* This static flag is set TRUE after the first pass through.
-                                      * This is to reduce the tremendous overhead associated with
-                                      * unnecessarily reinializing the mp, pmt, pmv structures
-                                      */
-
   if (mp->PorousMediaType == CONTINUOUS)
     return 0; /* shouldn't get here */
   // if (mp->PorousMediaType == POROUS_SHELL) return 0;
@@ -1063,7 +1065,7 @@ int load_porous_properties(void)
   /*
    * Collect and Store the porosity into the materials property structure
    */
-  if (!is_initialized) {
+  if (!load_porous_properties_is_initialized) {
     siz = MTV * sizeof(double);
     memset(mp->d_porosity, 0, siz);
   }
@@ -1104,7 +1106,7 @@ int load_porous_properties(void)
   /*
    * Calculate permeability
    */
-  if (!is_initialized) {
+  if (!load_porous_properties_is_initialized) {
     siz = MTV * sizeof(double);
     memset(mp->d_permeability, 0, siz);
   }
@@ -1248,7 +1250,7 @@ int load_porous_properties(void)
    */
 
   /* initialize the saturation derivatives */
-  if (!is_initialized) {
+  if (!load_porous_properties_is_initialized) {
     siz = MTV * sizeof(double);
     memset(mp->d_saturation, 0, siz);
     memset(mp_old->d_saturation, 0, siz);
@@ -1272,7 +1274,7 @@ int load_porous_properties(void)
 
   if (pd->e[pg->imtrx][R_POR_ENERGY]) {
 
-    if (!is_initialized) {
+    if (!load_porous_properties_is_initialized) {
       siz = 3 * MTV * sizeof(double);
       memset(pmv->d_enthalpy, 0, siz);
       memset(pmv_old->d_enthalpy, 0, siz);
@@ -1291,7 +1293,7 @@ int load_porous_properties(void)
   /*
    * initialize the liquid & gas phase concentration derivatives
    */
-  if (!is_initialized) {
+  if (!load_porous_properties_is_initialized) {
     /* this section really should be masked by some if( pd->v[pg->imtrx][ var ] ).  But which one ?.
      * I cannot tell */
     siz = MAX_PMV * sizeof(double);
@@ -1396,7 +1398,7 @@ int load_porous_properties(void)
   }
 
   /* initialize the bulk mass concentration derivatives */
-  if (!is_initialized) {
+  if (!load_porous_properties_is_initialized) {
     siz = MAX_PMV * sizeof(double);
     memset(pmv->bulk_density, 0, siz);
     memset(pmv_old->bulk_density, 0, siz);
@@ -1418,7 +1420,7 @@ int load_porous_properties(void)
 
   /* initialize the relative permeabilities derivatives */
 
-  if (!is_initialized) {
+  if (!load_porous_properties_is_initialized) {
     siz = MTV * sizeof(double);
     memset(mp->d_rel_liq_perm, 0, siz);
     memset(mp->d_rel_gas_perm, 0, siz);
@@ -1477,7 +1479,7 @@ int load_porous_properties(void)
     h_elem_siz(Stab->hsquared, Stab->hhv, Stab->dhv_dxnode, pd->e[pg->imtrx][R_MESH1]);
     Stab->Grid_Peclet_Number[POR_LIQ_PRES] = get_supg_terms_porous(Stab->hsquared, Stab->hhv);
   }
-  is_initialized = TRUE;
+  load_porous_properties_is_initialized = TRUE;
   return 0;
 } /*    end load_porous_properties  */
 /**************************************************************************/
@@ -11505,3 +11507,8 @@ double por_mass_source_model(double d_MassSource[MAX_VARIABLE_TYPES + MAX_CONC][
 
   return (MassSource);
 }
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void fill_porous_free_globals(void) { load_porous_properties_is_initialized = FALSE; }

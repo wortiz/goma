@@ -44,6 +44,7 @@
 #include "dp_utils.h"
 #include "dp_vif.h"
 #include "el_elm.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -211,8 +212,7 @@ void raven_landing(void) {
   }
 
   if (Num_BC > 0) {
-    BC_Types =
-        (struct Boundary_Condition *)array_alloc(1, Num_BC, sizeof(struct Boundary_Condition));
+    BC_Types = (struct Boundary_Condition *)calloc(Num_BC, sizeof(struct Boundary_Condition));
   }
 
   /* Broadcast input wave number array for 3D of 2D LSA */
@@ -247,7 +247,7 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < num_AC_Tables; i++) {
-    AC_Tables[i] = smalloc(sizeof(struct Data_Table));
+    AC_Tables[i] = calloc(1, sizeof(struct Data_Table));
   }
 
   /*
@@ -255,7 +255,7 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < num_BC_Tables; i++) {
-    BC_Tables[i] = smalloc(sizeof(struct Data_Table));
+    BC_Tables[i] = calloc(1, sizeof(struct Data_Table));
   }
 
   /*
@@ -263,7 +263,7 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < num_MP_Tables; i++) {
-    MP_Tables[i] = smalloc(sizeof(struct Data_Table));
+    MP_Tables[i] = calloc(1, sizeof(struct Data_Table));
   }
 
   /*
@@ -271,7 +271,7 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < num_ext_Tables; i++) {
-    ext_Tables[i] = smalloc(sizeof(struct Data_Table));
+    ext_Tables[i] = calloc(1, sizeof(struct Data_Table));
   }
 
   /*
@@ -309,7 +309,7 @@ void raven_landing(void) {
         1, nn_post_fluxes, sizeof(struct Post_Processing_Fluxes *));
     for (i = 0; i < nn_post_fluxes; i++) {
       pp_fluxes[i] =
-          (struct Post_Processing_Fluxes *)array_alloc(1, 1, sizeof(struct Post_Processing_Fluxes));
+          (struct Post_Processing_Fluxes *)calloc(1, sizeof(struct Post_Processing_Fluxes));
     }
   }
 
@@ -318,8 +318,8 @@ void raven_landing(void) {
         1, nn_post_fluxes_sens, sizeof(struct Post_Processing_Fluxes_Sens *));
 
     for (i = 0; i < nn_post_fluxes_sens; i++) {
-      pp_fluxes_sens[i] = (struct Post_Processing_Fluxes_Sens *)array_alloc(
-          1, 1, sizeof(struct Post_Processing_Fluxes_Sens));
+      pp_fluxes_sens[i] = (struct Post_Processing_Fluxes_Sens *)calloc(
+          1, sizeof(struct Post_Processing_Fluxes_Sens));
     }
   }
 
@@ -327,8 +327,7 @@ void raven_landing(void) {
     pp_data = (struct Post_Processing_Data **)array_alloc(1, nn_post_data,
                                                           sizeof(struct Post_Processing_Data *));
     for (i = 0; i < nn_post_data; i++) {
-      pp_data[i] =
-          (struct Post_Processing_Data *)array_alloc(1, 1, sizeof(struct Post_Processing_Data));
+      pp_data[i] = (struct Post_Processing_Data *)calloc(1, sizeof(struct Post_Processing_Data));
     }
   }
 
@@ -337,8 +336,8 @@ void raven_landing(void) {
         1, nn_post_data_sens, sizeof(struct Post_Processing_Data_Sens *));
 
     for (i = 0; i < nn_post_data_sens; i++) {
-      pp_data_sens[i] = (struct Post_Processing_Data_Sens *)array_alloc(
-          1, 1, sizeof(struct Post_Processing_Data_Sens));
+      pp_data_sens[i] =
+          (struct Post_Processing_Data_Sens *)calloc(1, sizeof(struct Post_Processing_Data_Sens));
     }
   }
   /*
@@ -350,8 +349,8 @@ void raven_landing(void) {
         1, nn_volume, sizeof(struct Post_Processing_Volumetric *));
 
     for (i = 0; i < nn_volume; i++) {
-      pp_volume[i] = (struct Post_Processing_Volumetric *)array_alloc(
-          1, 1, sizeof(struct Post_Processing_Volumetric));
+      pp_volume[i] =
+          (struct Post_Processing_Volumetric *)calloc(1, sizeof(struct Post_Processing_Volumetric));
     }
   }
 
@@ -360,7 +359,7 @@ void raven_landing(void) {
         1, nn_global, sizeof(struct Post_Processing_Global *));
     for (i = 0; i < nn_global; i++) {
       pp_global[i] =
-          (struct Post_Processing_Global *)array_alloc(1, 1, sizeof(struct Post_Processing_Global));
+          (struct Post_Processing_Global *)calloc(1, sizeof(struct Post_Processing_Global));
     }
   }
 
@@ -368,8 +367,8 @@ void raven_landing(void) {
     pp_average = (struct Post_Processing_Averages **)array_alloc(
         1, nn_average, sizeof(struct Post_Processing_Averages *));
     for (i = 0; i < nn_average; i++) {
-      pp_average[i] = (struct Post_Processing_Averages *)array_alloc(
-          1, 1, sizeof(struct Post_Processing_Averages));
+      pp_average[i] =
+          (struct Post_Processing_Averages *)calloc(1, sizeof(struct Post_Processing_Averages));
     }
   }
   /*
@@ -3665,4 +3664,265 @@ void noahs_dove(void) {
 
 #endif
   return;
+}
+
+/*
+ * Frees the parser owned memory that ark_landing allocates on the other
+ * processors, along with the tables, dynamic BC descriptions and post
+ * processing structures. Processor 0 allocates the same members while
+ * parsing, so this runs on every processor. Called by goma_destroy before
+ * the structures holding these pointers are freed.
+ */
+void vif_free_globals(void) {
+  int i;
+  int j;
+  struct Elastic_Constitutive *e;
+  struct Material_Properties *m;
+  struct Viscoelastic_Nonmodal *v;
+
+  if (upd != NULL) {
+    if (upd->turbulent_info != NULL) {
+      free(upd->turbulent_info->node_set_ids);
+      free(upd->turbulent_info->side_set_ids);
+      free(upd->turbulent_info->wall_distances);
+      free(upd->turbulent_info);
+      upd->turbulent_info = NULL;
+    }
+    free(upd->solver_info);
+    upd->solver_info = NULL;
+    free(upd->mesh_correction_damping);
+    free(upd->mesh_correction_tolerances);
+    upd->mesh_correction_damping = NULL;
+    upd->mesh_correction_tolerances = NULL;
+  }
+
+  for (i = 0; BC_Types != NULL && i < Num_BC; i++) {
+    free(BC_Types[i].u_BC);
+    BC_Types[i].u_BC = NULL;
+  }
+  for (i = 0; i < num_new_BC_Desc; i++) {
+    free(new_BC_Desc[i]);
+  }
+  free(new_BC_Desc);
+  new_BC_Desc = NULL;
+  num_new_BC_Desc = 0;
+
+  struct Data_Table **tables[] = {BC_Tables, MP_Tables, ext_Tables, AC_Tables};
+  int table_sizes[] = {MAX_BC_TABLES, MAX_MP_TABLES, MAX_EXT_TABLES, MAX_AC_TABLES};
+  for (int k = 0; k < 4; k++) {
+    for (i = 0; i < table_sizes[k]; i++) {
+      struct Data_Table *table = tables[k][i];
+      if (table == NULL) {
+        continue;
+      }
+      free(table->t);
+      free(table->t2);
+      free(table->t3);
+      free(table->f);
+      free(table);
+      tables[k][i] = NULL;
+    }
+  }
+
+  for (i = 0; upd != NULL && mp_glob != NULL && i < upd->Num_Mat; i++) {
+    m = mp_glob[i];
+    propertyJac_destroy(&m->DensityJac);
+    free(m->Matrl_Elem_Blk_Ids);
+    free(m->Species_Names);
+    free(m->Porous_Names);
+    free(m->u_Volume_Expansion);
+    free(m->u_current_source);
+    free(m->u_moment_source);
+    free(m->u_density);
+    free(m->u_electrical_conductivity);
+    free(m->u_permittivity);
+    free(m->u_magnetic_permeability);
+    free(m->u_incident_wave);
+    free(m->u_elect_surf_diffusivity);
+    free(m->u_heat_capacity);
+    free(m->u_heat_source);
+    free(m->u_mass_source);
+    free(m->u_mesh_source);
+    free(m->u_momentum_source);
+    free(m->u_porosity);
+    free(m->u_porous_compressibility);
+    free(m->u_permeability);
+    free(m->u_rel_gas_perm);
+    free(m->u_rel_liq_perm);
+    free(m->u_saturation);
+    free(m->u_cap_pres);
+    free(m->u_surface_tension);
+    free(m->u_thermal_conductivity);
+    free(m->u_viscosity);
+    free(m->u_dilationalViscosity);
+    if (gn_glob[i] != NULL) {
+      free(gn_glob[i]->u_mu0);
+      free(gn_glob[i]->u_nexp);
+      free(gn_glob[i]->u_muinf);
+      free(gn_glob[i]->u_aexp);
+      free(gn_glob[i]->u_atexp);
+      free(gn_glob[i]->u_T_shift);
+      free(gn_glob[i]->u_wlfc2);
+      free(gn_glob[i]->u_lam);
+      free(gn_glob[i]->u_tau_y);
+      free(gn_glob[i]->u_thixo_factor);
+    }
+    free(m->u_FlowingLiquid_viscosity);
+    free(m->u_reaction_rate);
+    free(m->u_solution_temperature);
+    free(m->u_thermodynamic_potential);
+    free(m->u_interfacial_area);
+    free(m->u_shell_user_par);
+    free(m->u_acoustic_impedance);
+    free(m->u_wave_number);
+    free(m->u_acoustic_absorption);
+    free(m->u_refractive_index);
+    free(m->u_light_absorption);
+    free(m->u_extinction_index);
+    free(m->tfmp_density_const);
+    free(m->tfmp_viscosity_const);
+    free(m->tfmp_diff_const);
+    free(m->tfmp_rel_perm_const);
+    free(m->tfmp_dissolution_const);
+    free(m->tfmp_drop_lattice_const);
+    free(m->shell_tangent_seed_vec_const);
+    for (j = 0; j < pd_glob[i]->Num_Species; j++) {
+      free(m->u_diffusivity[j]);
+      free(m->u_gadiffusivity[j]);
+      free(m->u_cdiffusivity[j]);
+      free(m->u_mdiffusivity[j]);
+      free(m->u_fdiffusivity[j]);
+      free(m->u_gdiffusivity[j]);
+      free(m->SBM_Lengths2[j]);
+      free(m->u_nscoeff[j]);
+      free(m->u_qdiffusivity[j]);
+      free(m->u_settling[j]);
+      free(m->u_species_source[j]);
+      free(m->u_species_vol_expansion[j]);
+      free(m->u_vapor_pressure[j]);
+      free(m->u_reference_concn[j]);
+    }
+    for (j = 0; j < pd_glob[i]->Num_Porous_Eqn; j++) {
+      free(m->u_porous_diffusivity[j]);
+      free(m->u_porous_vol_expansion[j]);
+      free(m->u_porous_vapor_pressure[j]);
+    }
+    for (j = 0; j < pd_glob[i]->Num_Porous_Shell_Eqn; j++) {
+      free(m->u_PorousShellPorosity[j]);
+      free(m->u_PorousShellHeight[j]);
+      free(m->u_PorousShellPermeability[j]);
+      free(m->u_PorousShellCrossPermeability[j]);
+      free(m->u_PorousShellRelPerm[j]);
+      free(m->u_PorousShellCapPres[j]);
+    }
+    free(m->u_porous_gas_constants);
+    free(m->u_porous_sink_constants);
+    free(m->u_heightU_function_constants);
+    free(m->u_heightL_function_constants);
+    free(m->u_veloU_function_constants);
+    free(m->u_veloL_function_constants);
+    free(m->u_dcaU_function_constants);
+    free(m->u_dcaL_function_constants);
+    free(m->u_lubsource_function_constants);
+    free(m->u_PorousShellClosedPorosity_function_constants);
+    free(m->u_PorousShellClosedRadius_function_constants);
+    free(m->u_PorousShellClosedHeight_function_constants);
+    free(m->u_PorousShellClosedP0_function_constants);
+    free(m->u_PorousShellPatm_function_constants);
+    free(m->u_PorousShellPref_function_constants);
+    free(m->u_PorousShellCrossKappa_function_constants);
+    free(m->u_PorousShellInitPorePres_function_constants);
+    free(m->u_PorousShellDiffusivity_function_constants);
+    free(m->u_PorousShellRT_function_constants);
+    free(m->u_PorousShellHenry_function_constants);
+    free(m->u_FilmEvap_function_constants);
+    free(m->u_DisjPress_function_constants);
+    free(m->u_DiffCoeff_function_constants);
+    free(m->mp2nd);
+    e = elc_glob[i];
+    if (e != NULL) {
+      /* allocated by assemble_prefill for MULTI_CONTACT_LINE */
+      free(e->multi_contact_line_distances);
+      free(e->u_mu);
+      free(e->u_mu_ns);
+      free(e->u_lambda);
+      free(e->u_lame_TempShift);
+      free(e->u_v_mesh_sfs);
+      free(e->u_fxi);
+      free(e->u_geta);
+      free(e->u_hzeta);
+      free(e->u_thermal_expansion);
+      free(e->u_solid_viscosity);
+      free(e->u_solid_dil_viscosity);
+      free(e->u_solid_retardation);
+    }
+    e = elc_rs_glob[i];
+    if (e != NULL) {
+      free(e->u_mu);
+      free(e->u_mu_ns);
+      free(e->u_lambda);
+      free(e->u_lame_TempShift);
+      free(e->u_v_mesh_sfs);
+      free(e->u_thermal_expansion);
+      free(e->u_solid_viscosity);
+      free(e->u_solid_dil_viscosity);
+      free(e->u_solid_retardation);
+    }
+    if (evpl_glob[i] != NULL) {
+      free(evpl_glob[i]->u_plastic_mu);
+      free(evpl_glob[i]->u_yield);
+    }
+    /* the solvers free vn_glob[i] at the end of a solve */
+    v = vn_glob[i];
+    if (v != NULL) {
+      free(v->dg_J_model_wt);
+      free(v->shift);
+    }
+  }
+  for (i = 0; i < MAX_NUMBER_MATLS; i++) {
+    for (j = 0; j < MAX_VARIABLE_TYPES + MAX_CONC; j++) {
+      free(Var_init_mat[i][j].u_pars);
+      Var_init_mat[i][j].u_pars = NULL;
+    }
+  }
+  for (j = 0; j < MAX_VARIABLE_TYPES + MAX_CONC; j++) {
+    free(Var_init[j].u_pars);
+    Var_init[j].u_pars = NULL;
+  }
+
+  /* u_post_proc points to a local when no values are given */
+  if (len_u_post_proc > 0) {
+    free(u_post_proc);
+  }
+  u_post_proc = NULL;
+  len_u_post_proc = 0;
+
+  for (i = 0; augc != NULL && i < nAC; i++) {
+    free(augc[i].DataFlt);
+    free(augc[i].Aprepro_lib_string);
+    augc[i].DataFlt = NULL;
+    augc[i].Aprepro_lib_string = NULL;
+  }
+
+  for (i = 0; pp_volume != NULL && i < nn_volume; i++) {
+    free(pp_volume[i]->params);
+  }
+#define FREE_PP_LIST(list, count) \
+  if (list != NULL) {             \
+    for (i = 0; i < count; i++) { \
+      free(list[i]);              \
+    }                             \
+    free(list);                   \
+    list = NULL;                  \
+  }
+  FREE_PP_LIST(pp_fluxes, nn_post_fluxes);
+  FREE_PP_LIST(pp_fluxes_sens, nn_post_fluxes_sens);
+  FREE_PP_LIST(pp_data, nn_post_data);
+  FREE_PP_LIST(pp_data_sens, nn_post_data_sens);
+  FREE_PP_LIST(pp_particles, nn_particles);
+  FREE_PP_LIST(pp_volume, nn_volume);
+  FREE_PP_LIST(pp_global, nn_global);
+  FREE_PP_LIST(pp_average, nn_average);
+#undef FREE_PP_LIST
+  /* pp_error_data is freed by post_process_elem */
 }
