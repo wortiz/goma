@@ -53,6 +53,7 @@
 
 extern dbl *p0; /* Defined in mm_as_alloc.c */
 
+#include "goma_reset.h"
 #include "mm_eh.h"
 
 #define GOMA_MM_FILL_PTRS_C
@@ -167,6 +168,8 @@ linkParent_ei(const int elem, const int relatedElem, const int v, const Exo_DB *
 }
 /***************************************************************************/
 
+static int load_ei_first_time = TRUE;
+
 int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fill, int imtrx)
 
 /***********************************************************************
@@ -196,7 +199,6 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
 
   int MFdofSVNE0, j_vdesc;
   int n_eb, n_mn, mn_retn;
-  static int first_time = TRUE;
   int not_matched, iLv_found, i_vd, i_vdesc, iLv_start, lvdesc;
   VARIABLE_DESCRIPTION_STRUCT *vd0;
   NODAL_VARS_STRUCT *nv;
@@ -322,8 +324,8 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    *  HKM -> Later, we need to figure out whether we can completely
    *         cut this section.
    */
-  if (first_time) {
-    first_time = FALSE;
+  if (load_ei_first_time) {
+    load_ei_first_time = FALSE;
     for (v = V_FIRST; v < V_LAST; v++) {
       ei_ptr->Num_Lvdesc_Per_Var_Type[v] = 0;
       ei_ptr->Lvdesc_First_Var_Type[v] = -1;
@@ -3147,3 +3149,17 @@ static void print_ei_index_desc()
 /*************************************************************************/
 /*************************************************************************/
 /*************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void fill_ptrs_free_globals(void) {
+  x_static = NULL;
+  x_old_static = NULL;
+  xdot_static = NULL;
+  xdot_old_static = NULL;
+  x_dbl_dot_static = NULL;
+  x_dbl_dot_old_static = NULL;
+  x_pred_static = NULL;
+  load_ei_first_time = TRUE;
+}

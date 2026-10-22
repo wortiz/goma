@@ -1,3 +1,5 @@
+#include "goma_reset.h"
+
 #ifdef GOMA_ENABLE_STRATIMIKOS
 
 #ifdef GOMA_ENABLE_CPP_FILESYSTEM
@@ -167,6 +169,7 @@ static void stratimikos_solve_setup(RCP<const Thyra::LinearOpBase<double>> A,
   //   Thyra::initializeAndReuseOp(*(solver_data->solverFactory), A, solver_data->solver.ptr());
   // }
 }
+static bool tpetra_param_echo[MAX_NUM_MATRICES] = {true};
 
 extern "C" {
 #ifdef GOMA_ENABLE_TPETRA
@@ -181,7 +184,6 @@ int stratimikos_solve_tpetra(struct GomaLinearSolverData *ams,
   auto *tpetra_data = static_cast<TpetraSparseMatrix *>(matrix->data);
   bool success = true;
   bool verbose = true;
-  static bool param_echo[MAX_NUM_MATRICES] = {true};
 
   if (ams->SolverData == NULL) {
     ams->SolverData = new Stratimikos_Solver_Data();
@@ -232,8 +234,8 @@ int stratimikos_solve_tpetra(struct GomaLinearSolverData *ams,
     }
 
     stratimikos_solve_setup(solver_data->A, solver_data, stratimikos_file[imtrx],
-                            param_echo[imtrx]);
-    param_echo[imtrx] = false;
+                            tpetra_param_echo[imtrx]);
+    tpetra_param_echo[imtrx] = false;
 
     Thyra::SolveStatus<double> status =
         Thyra::solve<double>(*(solver_data->solver), Thyra::NOTRANS, *b, x.ptr());
@@ -276,6 +278,7 @@ int stratimikos_solve_tpetra(struct GomaLinearSolverData *ams,
   return -1;
 }
 #endif /* GOMA_ENABLE_TPETRA */
+static bool epetra_param_echo[MAX_NUM_MATRICES] = {false};
 
 #ifdef GOMA_ENABLE_EPETRA
 int stratimikos_solve(struct GomaLinearSolverData *ams,
@@ -287,7 +290,6 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
   using Teuchos::RCP;
   bool success = true;
   bool verbose = true;
-  static bool param_echo[MAX_NUM_MATRICES] = {false};
 
   GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
   EpetraSparseMatrix *epetra_matrix = static_cast<EpetraSparseMatrix *>(matrix->data);
@@ -325,8 +327,8 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
     }
 
     stratimikos_solve_setup(solver_data->A, solver_data, stratimikos_file[imtrx],
-                            param_echo[imtrx]);
-    param_echo[imtrx] = true;
+                            epetra_param_echo[imtrx]);
+    epetra_param_echo[imtrx] = true;
 
     Thyra::SolveStatus<double> status =
         Thyra::solve<double>(*(solver_data->solver), Thyra::NOTRANS, *b, x.ptr());
@@ -359,6 +361,20 @@ int stratimikos_solve(struct GomaLinearSolverData *ams,
 }
 #endif
 
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void stratimikos_free_globals(void) {
+  for (int i = 0; i < MAX_NUM_MATRICES; i++) {
+    tpetra_param_echo[i] = (i == 0); /* initialized to {true} */
+    epetra_param_echo[i] = false;
+  }
+}
+
 } /* End extern "C" */
+
+#else
+
+void stratimikos_free_globals(void) {}
 
 #endif /* GOMA_ENABLE_STRATIMIKOS */

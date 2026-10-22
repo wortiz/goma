@@ -21,6 +21,7 @@
  */
 
 #include "rf_solve.h"
+#include "goma_reset.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -293,6 +294,40 @@ void initial_guess_stress_to_log_conf(double *x, int num_total_nodes) {
   } /* Loop over materials */
 }
 
+/*
+ * solve_problem() state kept between calls (LIBRARY_MODE calls solve_problem
+ * repeatedly), reset by rf_solve_free_globals()
+ */
+static double *x = NULL;              /* solution vector                          */
+static double *x_save = NULL;         /* solution vector for reset */
+static double *x_AC = NULL;           /* Solution vector of extra unknowns          */
+static double *x_AC_old = NULL;       /* old solution vector of extra unknowns      */
+static double *x_AC_older = NULL;     /* older solution vector of extra unknowns    */
+static double *x_AC_oldest = NULL;    /* oldest solution vector of extra unknowns   */
+static double *x_AC_dot = NULL;       /* current time derivative of extra unknowns  */
+static double *x_AC_dot_old = NULL;   /* old time derivative of extra unknowns      */
+static double *x_AC_dot_older = NULL; /* Older time derivative of extra unknowns    */
+static double *x_AC_pred = NULL;      /* predicted extraunknowns */
+static double *x_old = NULL;          /* old solution vector               */
+static double *x_older = NULL;        /* older solution vector             */
+static double *x_oldest = NULL;       /* oldest solution vector saved      */
+static double *xdot = NULL;           /* current time derivative of soln   */
+static double *xdot_save = NULL;      /* current time derivative of soln for reset  */
+static double *xdot_old = NULL;       /* old time derivative of soln       */
+static double *xdot_older = NULL;     /* old time derivative of soln       */
+static struct GomaLinearSolverData *ams[NUM_ALSS] = {NULL};
+static int nprint = 0;
+static double time1 =
+    0.0; /* Current time that the simulation is trying  to find the solution for */
+static double *gvec = NULL;
+static double ***gvec_elem = NULL;
+static struct Results_Description *rd;
+static int *xp_id = NULL; /* Post-proc variable ID */
+static int callnum = 1;   /* solve_problem call counter */
+#ifdef LIBRARY_MODE
+static double delta_t_save = 0.0;
+#endif
+
 void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                    Dpi *dpi,    /* distributed processing information       */
                    dbl *te_out) /* te_out - return actual end time */
@@ -309,21 +344,11 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
    * (MSR format.  See "SPARSKIT: a basic tool kit for sparse matrix
    * computations" by Youcef Saad)
    */
-  int *ija = NULL;              /* column pointer array                     */
-  double *a = NULL;             /* nonzero array                            */
-  double *a_old = NULL;         /* nonzero array                            */
-  static double *x = NULL;      /* solution vector                          */
-  static double *x_save = NULL; /* solution vector for reset */
+  int *ija = NULL;      /* column pointer array                     */
+  double *a = NULL;     /* nonzero array                            */
+  double *a_old = NULL; /* nonzero array                            */
 
-  int iAC;                              /* Counter                                  */
-  static double *x_AC = NULL;           /* Solution vector of extra unknowns          */
-  static double *x_AC_old = NULL;       /* old solution vector of extra unknowns      */
-  static double *x_AC_older = NULL;     /* older solution vector of extra unknowns    */
-  static double *x_AC_oldest = NULL;    /* oldest solution vector of extra unknowns   */
-  static double *x_AC_dot = NULL;       /* current time derivative of extra unknowns  */
-  static double *x_AC_dot_old = NULL;   /* old time derivative of extra unknowns      */
-  static double *x_AC_dot_older = NULL; /* Older time derivative of extra unknowns    */
-  static double *x_AC_pred = NULL;      /* predicted extraunknowns */
+  int iAC; /* Counter                                  */
 
   int *ija_attic = NULL; /* storage for external dofs                  */
 
@@ -332,14 +357,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   /*
    * Variables
    */
-  double *x_pred = NULL;            /* prediction of solution vector     */
-  static double *x_old = NULL;      /* old solution vector               */
-  static double *x_older = NULL;    /* older solution vector             */
-  static double *x_oldest = NULL;   /* oldest solution vector saved      */
-  static double *xdot = NULL;       /* current time derivative of soln   */
-  static double *xdot_save = NULL;  /* current time derivative of soln for reset  */
-  static double *xdot_old = NULL;   /* old time derivative of soln       */
-  static double *xdot_older = NULL; /* old time derivative of soln       */
+  double *x_pred = NULL; /* prediction of solution vector     */
 
   double *x_sens = NULL;    /* solution sensitivity                     */
   double **x_sens_p = NULL; /* solution sensitivity for parameters      */
@@ -350,8 +368,6 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   int last_adapt_nt = 0;
 
   /* sparse variables for fill equation subcycling */
-
-  static struct GomaLinearSolverData *ams[NUM_ALSS] = {NULL};
 
   /* "sl_util_structs.h" */
 
@@ -381,14 +397,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   int step_fix = 0, i_fix = 0; /* What step to fix the problem on */
   int good_mesh = TRUE;
   int w; /* counter for looping external variables */
-  static int nprint = 0;
   double time_print, i_print;
   double theta = 0.0, time;
-  static double time1 =
-      0.0; /* Current time that the simulation is trying  to find the solution for */
-#ifdef LIBRARY_MODE
-  static double delta_t_save = 0.0;
-#endif
   double delta_t, delta_t_new = 0.0;
   double delta_t_old, delta_t_older, delta_t_oldest = 0.0;
   double timeValueRead = 0.0; /* time value read from an exodus input file
@@ -405,10 +415,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   int error, err, is_steady_state, inewton;
   int *gindex = NULL, gsize;
   int *p_gsize;
-  static double *gvec = NULL;
-  static double ***gvec_elem = NULL;
   FILE *file = NULL;
-  static struct Results_Description *rd;
   struct Level_Set_Data *ls_old;
 
   int tnv;      /* total number of nodal variables and kinds */
@@ -420,7 +427,6 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
   double *gv;                   /* Global variable values */
   double *x_pp = NULL;          /* Post-proc variables for export */
-  static int *xp_id = NULL;     /* Post-proc variable ID */
   double *base_p_por = NULL;    /* Base values for porosity updates */
   double *base_p_liq = NULL;    /* Base values for porosity updates */
   int update_porosity = FALSE;  /* Flag for external porosity updates */
@@ -438,8 +444,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   double lsvel_global = 0.0;
 #endif /* PARALLEL */
 
-  static int callnum = 1; /* solve_problem call counter */
-  int last_call = TRUE;   /* Indicates final rf_solve call */
+  int last_call = TRUE; /* Indicates final rf_solve call */
 #ifdef LIBRARY_MODE
   int last_step = FALSE; /* Indicates final time step on this call */
 #endif
@@ -2710,6 +2715,7 @@ free_and_clear:
 
   if (last_call) {
     GomaSparseMatrix goma_matrix = ams[JAC]->GomaMatrixData;
+    amesos_free_solvers();
     GomaSparseMatrix_Destroy(&goma_matrix);
 #ifdef GOMA_ENABLE_PETSC
     if (strcmp(Matrix_Format, "petsc") == 0) {
@@ -3757,3 +3763,39 @@ int variable_stats(double *x, const double time, const int coord_linear) {
 /*****************************************************************************/
 /*  end of file rf_solve.c  */
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ *
+ * The solution vectors and ams are freed at the end of solve_problem().
+ */
+void rf_solve_free_globals(void) {
+  x = NULL;
+  x_save = NULL;
+  x_AC = NULL;
+  x_AC_old = NULL;
+  x_AC_older = NULL;
+  x_AC_oldest = NULL;
+  x_AC_dot = NULL;
+  x_AC_dot_old = NULL;
+  x_AC_dot_older = NULL;
+  x_AC_pred = NULL;
+  x_old = NULL;
+  x_older = NULL;
+  x_oldest = NULL;
+  xdot = NULL;
+  xdot_save = NULL;
+  xdot_old = NULL;
+  xdot_older = NULL;
+  memset(ams, 0, sizeof(ams));
+  nprint = 0;
+  time1 = 0.0;
+  gvec = NULL;
+  gvec_elem = NULL;
+  rd = NULL;
+  xp_id = NULL;
+  callnum = 1;
+#ifdef LIBRARY_MODE
+  delta_t_save = 0.0;
+#endif
+}

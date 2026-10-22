@@ -986,6 +986,8 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     }
   }
 
+  MPI_Type_free(&shared_elem_mpi);
+  MPI_Type_free(&shared_node_mpi);
   return GOMA_SUCCESS;
 }
 

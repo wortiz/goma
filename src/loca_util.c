@@ -30,6 +30,7 @@ static char *cvs_util_id =
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "goma_reset.h"
 #include "loca_const.h"
 #include "loca_util_const.h"
 #include "mm_eh.h"
@@ -461,3 +462,12 @@ void sort_by_real(int nconv, int ncv, int ldv, double *d, double *v) {
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void loca_util_free_globals(void) {
+  N_o = -1;
+  N_t = -1;
+  N_g = -1;
+}

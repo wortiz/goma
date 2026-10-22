@@ -13,6 +13,9 @@
 \************************************************************************/
 
 #include <cstddef>
+
+#include "goma_reset.h"
+
 #ifdef GOMA_ENABLE_OMEGA_H
 #include "adapt/omega_h_interface.h"
 
@@ -1321,6 +1324,9 @@ void copy_solution(Exo_DB *exo, Dpi *dpi, double **x, Omega_h::Mesh &mesh) {
   }
 }
 
+static std::string adapt_base_name;
+static bool adapt_first_call = true;
+
 // start with just level set field
 void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
                         Exo_DB *exo,
@@ -1336,8 +1342,6 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
                         double **scale,
                         int step) {
 
-  static std::string base_name;
-  static bool first_call = true;
   int argc = 0;
   char argv[1][8];
   char **argvptr = (char **)argv;
@@ -1351,17 +1355,17 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
   goma::exodus::convert_goma_to_omega_h(exo, dpi, x, &mesh, verbose);
   adapt_mesh(mesh);
 
-  if (first_call) {
-    base_name = std::string(ExoFileOutMono);
-    first_call = false;
+  if (adapt_first_call) {
+    adapt_base_name = std::string(ExoFileOutMono);
+    adapt_first_call = false;
   }
 
   std::stringstream ss2;
 
   if (step == 0) {
-    ss2 << base_name;
+    ss2 << adapt_base_name;
   } else if (step > 0) {
-    ss2 << base_name << "-s." << step - 1;
+    ss2 << adapt_base_name << "-s." << step - 1;
   } else {
     GOMA_EH(GOMA_ERROR, "Adapt step given < 0: %d", step);
   }
@@ -1402,7 +1406,19 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
   step++;
 }
 
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void omega_h_free_globals(void) {
+  adapt_base_name.clear();
+  adapt_first_call = true;
+}
+
 } // extern "C"
+#else
+
+extern "C" void omega_h_free_globals(void) {}
+
 #endif
 
 // vim: expandtab sw=2 ts=8

@@ -118,6 +118,7 @@ dbl zero = 0.0;
  * space to hold the relevent information.
  */
 
+#include "goma_reset.h"
 #include "mm_eh.h"
 
 /****************************************************************************/
@@ -351,6 +352,7 @@ int ve_alloc(void) {
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
     vn_glob[mn] = (struct Viscoelastic_Nonmodal *)smalloc(sz);
+    memset(vn_glob[mn], 0, sz);
     init_Viscoelastic_Nonmodal(vn_glob[mn]);
   }
 
@@ -447,6 +449,7 @@ int evp_alloc(void) {
   sz = sizeof(struct Viscoplastic_Constitutive);
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
     evpl_glob[mn] = (struct Viscoplastic_Constitutive *)smalloc(sz);
+    memset(evpl_glob[mn], 0, sz);
     init_Viscoplastic_Constitutive(evpl_glob[mn]);
   }
 
@@ -556,6 +559,7 @@ int elc_rs_alloc(void) {
   sz = sizeof(struct Elastic_Constitutive);
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
     elc_rs_glob[mn] = (struct Elastic_Constitutive *)smalloc(sz);
+    memset(elc_rs_glob[mn], 0, sz);
     init_Elastic_Constitutive(elc_rs_glob[mn]);
   }
 
@@ -1922,3 +1926,276 @@ static int shape_list(Exo_DB *exo)
 }
 
 /* end of file mm_as_alloc.c */
+
+static void Element_Indices_free(struct Element_Indices *ei_ptr) {
+  /* the arrays allocated by Element_Indices_alloc(), each a single block */
+  free(ei_ptr->Baby_Dolphin);
+  free(ei_ptr->VDindex_to_Lvdesc); /* allocated by setup_problem */
+  free(ei_ptr->Lvdesc_First_Var_Type);
+  free(ei_ptr->Lvdesc_Lnn_Numdof);
+  free(ei_ptr->Lvdesc_Lnn_to_Offset);
+  free(ei_ptr->Lvdesc_Lnn_to_lvdof);
+  free(ei_ptr->Lvdesc_Numdof);
+  free(ei_ptr->Lvdesc_to_Gnn);
+  free(ei_ptr->Lvdesc_to_Gun);
+  free(ei_ptr->Lvdesc_to_Lnn);
+  free(ei_ptr->Lvdesc_to_MFSubvar);
+  free(ei_ptr->Lvdesc_to_MatID);
+  free(ei_ptr->Lvdesc_to_Var_Type);
+  free(ei_ptr->Lvdesc_to_ledof);
+  free(ei_ptr->Lvdesc_to_lvdof);
+  free(ei_ptr->Lvdesc_vd_ptr);
+  free(ei_ptr->MFsubvar_Offset);
+  free(ei_ptr->Num_Lvdesc_Per_Var_Type);
+  free(ei_ptr->active_interp_ledof);
+  free(ei_ptr->dof);
+  free(ei_ptr->dof_ext);
+  free(ei_ptr->dof_list);
+  free(ei_ptr->gnn_list);
+  free(ei_ptr->gun_list);
+  free(ei_ptr->ieqn_ledof);
+  free(ei_ptr->ln_to_dof);
+  free(ei_ptr->ln_to_first_dof);
+  free(ei_ptr->lvdof_to_ledof);
+  free(ei_ptr->lvdof_to_lvdesc);
+  free(ei_ptr->lvdof_to_lvdesc_dof);
+  free(ei_ptr->lvdof_to_row_lvdof);
+  free(ei_ptr->matID_ledof);
+  free(ei_ptr->owned_ledof);
+  free(ei_ptr->owningElementForColVar);
+  free(ei_ptr);
+}
+
+/*
+ * Free the structures allocated by assembly_alloc() and bf_init().  Called by
+ * goma_destroy before as_free_globals(), while upd, pd_glob and the basis
+ * function counts are still set.
+ */
+void assembly_free(void) {
+  int i, ipore;
+
+  if (ei != NULL) {
+    for (i = 0; i < upd->Total_Num_Matrices; i++) {
+      if (ei[i] != NULL)
+        Element_Indices_free(ei[i]);
+    }
+    free(ei);
+  }
+  if (eiRelated != NULL) {
+    for (i = 0; i < MAX_ELEMENT_INDICES_RELATED; i++) {
+      if (eiRelated[i] != NULL)
+        Element_Indices_free(eiRelated[i]);
+    }
+    free(eiRelated);
+  }
+  free(esp_old);
+  free(esp_dot);
+  free(esp_dbl_dot);
+  free(evp);
+
+  /*
+   * Every member of Element_Stiffness_Pointers is a pointer to a single block
+   * from alloc_ptr_1/alloc_ptr_2/array_alloc, or NULL
+   */
+  if (esp != NULL) {
+    void **member = (void **)esp;
+    for (i = 0; i < (int)(sizeof(struct Element_Stiffness_Pointers) / sizeof(void *)); i++) {
+      free(member[i]);
+    }
+    free(esp);
+  }
+
+  if (bfd != NULL) {
+    for (i = 0; i < Num_Basis_Functions; i++) {
+      if (bfd[i] != NULL) {
+        free(bfd[i]->Var_Type_MatID);
+        free(bfd[i]);
+      }
+    }
+    free(bfd);
+  }
+  /* bfi and bf point into bfd */
+  free(bfi);
+  free(bf);
+  free(bfex);
+
+  free(fv);
+  free(fv_sens);
+  free(fv_old);
+  free(fv_dot);
+  free(fv_dot_dot);
+  free(fv_dot_old);
+  free(fv_dot_dot_old);
+  free(pmv);
+  free(pmv_old);
+  free(pmv_ml);
+  if (pmv_hyst != NULL) {
+    for (ipore = 0; ipore < MAX_POR_SHELL; ipore++) {
+      free(pmv_hyst->curve_type[ipore]);
+      free(pmv_hyst->curve_type_old[ipore]);
+      free(pmv_hyst->curve_switch[ipore]);
+      free(pmv_hyst->num_switch[ipore]);
+      free(pmv_hyst->sat_switch[ipore]);
+      free(pmv_hyst->cap_pres_switch[ipore]);
+      free(pmv_hyst->sat_min_imbibe[ipore]);
+      free(pmv_hyst->sat_max_drain[ipore]);
+    }
+    free(pmv_hyst);
+  }
+  free(af);
+  free(Stab);
+  if (lec != NULL) {
+    /* allocated in setup_problem() */
+    free(lec->R);
+    free(lec->J);
+    free(lec->J_stress_neighbor);
+  }
+  free(lec);
+  free(LubAux);
+  free(LubAux_old);
+
+  ei = NULL;
+  eiRelated = NULL;
+  esp_old = esp_dot = esp_dbl_dot = evp = NULL;
+  esp = NULL;
+  bfd = bfi = bf = bfex = NULL;
+  fv = fv_sens = NULL;
+  fv_old = fv_dot = fv_dot_dot = fv_dot_old = fv_dot_dot_old = NULL;
+  pmv = pmv_old = NULL;
+  pmv_ml = NULL;
+  pmv_hyst = NULL;
+  af = NULL;
+  Stab = NULL;
+  lec = NULL;
+  LubAux = LubAux_old = NULL;
+}
+
+/*
+ * Free the structures allocated by the *_alloc routines above and reset this
+ * file's global pointers to their load time values.  Used by goma_destroy so
+ * that Goma can be run again in the same process.
+ *
+ * Arrays hanging off these structures that are allocated while reading the
+ * input deck are not yet freed.
+ */
+void as_free_globals(void) {
+  int mn, mode;
+
+  /* the solvers free some of these at the end of a solve and NULL them */
+  if (ve_glob != NULL) {
+    for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
+      for (mode = 0; mode < MAX_MODES; mode++) {
+        if (ve_glob[mn][mode] == NULL)
+          continue;
+        free(ve_glob[mn][mode]->gn);
+        free(ve_glob[mn][mode]->time_const_st);
+        free(ve_glob[mn][mode]);
+      }
+    }
+    free(ve_glob);
+  }
+  free(ve);
+
+  for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
+    if (pd_glob != NULL)
+      free(pd_glob[mn]);
+    if (mp_glob != NULL)
+      free(mp_glob[mn]);
+    if (cr_glob != NULL)
+      free(cr_glob[mn]);
+    if (gn_glob != NULL)
+      free(gn_glob[mn]);
+    if (vn_glob != NULL)
+      free(vn_glob[mn]);
+    if (elc_glob != NULL)
+      free(elc_glob[mn]);
+    if (elc_rs_glob != NULL)
+      free(elc_rs_glob[mn]);
+    if (evpl_glob != NULL)
+      free(evpl_glob[mn]);
+  }
+  free(pd_glob);
+  free(mp_glob);
+  free(cr_glob);
+  free(gn_glob);
+  free(vn_glob);
+  free(elc_glob);
+  free(elc_rs_glob);
+  free(evpl_glob);
+  free(mp_old);
+  free(upd);
+  if (pg != NULL)
+    free(pg->matrices);
+  free(pg);
+  free(efv);
+  free(tran);
+  free(eqm);
+  free(libio);
+  free(eigen);
+  free(cont);
+  free(loca_in);
+  free(augc);
+  free(huntc);
+
+  upd = NULL;
+  pd_glob = NULL;
+  pd = NULL;
+  pg = NULL;
+  ei = NULL;
+  eiRelated = NULL;
+  esp = NULL;
+  eqm = NULL;
+  esp_old = NULL;
+  esp_dot = NULL;
+  esp_dbl_dot = NULL;
+  evp = NULL;
+  af = NULL;
+  bf = NULL;
+  bfd = NULL;
+  bfi = NULL;
+  bfex = NULL;
+  shell_blocks = NULL;
+  fv = NULL;
+  fv_sens = NULL;
+  fv_dot_dot = NULL;
+  fv_dot_dot_old = NULL;
+  fv_old = NULL;
+  fv_dot = NULL;
+  fv_dot_old = NULL;
+  cr_glob = NULL;
+  cr = NULL;
+  lec = NULL;
+  pmv = NULL;
+  pmv_old = NULL;
+  pmv_ml = NULL;
+  pmv_ml_old = NULL;
+  pmv_hyst = NULL;
+  mp = NULL;
+  mp_glob = NULL;
+  mp_old = NULL;
+  gn = NULL;
+  gn_glob = NULL;
+  ve = NULL;
+  ve_glob = NULL;
+  vn = NULL;
+  vn_glob = NULL;
+  elc = NULL;
+  elc_glob = NULL;
+  elc_rs = NULL;
+  elc_rs_glob = NULL;
+  evpl = NULL;
+  evpl_glob = NULL;
+  tran = NULL;
+  libio = NULL;
+  eigen = NULL;
+  cont = NULL;
+  loca_in = NULL;
+  augc = NULL;
+  huntc = NULL;
+  efv = NULL;
+  Stab = NULL;
+  LubAux = NULL;
+  LubAux_old = NULL;
+  p0 = NULL;
+  zero = 0.0;
+}

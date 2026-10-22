@@ -51,6 +51,9 @@ void free_solver_data(struct GomaLinearSolverData *data) {
   if (data->SolverData != NULL) {
     struct MUMPS_data *mumps_data = (struct MUMPS_data *)data->SolverData;
     if (mumps_data != NULL) {
+      /* release MUMPS internal storage, JOB_INIT is done when SolverData is created */
+      mumps_data->mumps.job = JOB_END;
+      dmumps_c(&mumps_data->mumps);
       free(mumps_data->irhs_loc);
       free(mumps_data->irn);
       free(mumps_data->jcn);

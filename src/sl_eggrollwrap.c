@@ -25,6 +25,7 @@
 #include "dpi.h"
 #include "el_elm_info.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -41,6 +42,9 @@
 #include "std.h"
 #include "wr_dpi.h"
 #include "wr_exo.h"
+
+/* Used to uniquely identify the explicit fill system to solve from the other UMF systems */
+static int eggrollwrap_UMF_system_id = 0;
 
 /* Routines that handle the eigensolver.
  *
@@ -111,9 +115,6 @@ void eggrollwrap(int *istuff, /* info for eigenvalue extraction */
   dbl *ev_e, *ev_i, *ev_r, *ev_x, *v1, *v2, *mat, **evect, **schur;
   char save_ExoFileOut[MAX_FNL];
 
-  static int UMF_system_id; /* Used to uniquely identify the
-                             * explicit fill system to solve from
-                             * the other UMF systems. */
   /* Initialize
    */
   ic = error = rcflag = action = 0;
@@ -200,7 +201,7 @@ void eggrollwrap(int *istuff, /* info for eigenvalue extraction */
       /* Invert step - get LU for later */
       if (first_linear_solver_call == 1) {
         Factor_Flag = -2;
-        UMF_system_id = -1;
+        eggrollwrap_UMF_system_id = -1;
       } else
         Factor_Flag = -1;
 
@@ -209,16 +210,17 @@ void eggrollwrap(int *istuff, /* info for eigenvalue extraction */
              first_linear_solver_call, Factor_Flag); fflush(stdout);
       */
 
-      UMF_system_id = SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                             &nj, &nnz_j, &ija[0], &ija[0], &mat[0], &v1[0], &v2[0]);
+      eggrollwrap_UMF_system_id =
+          SL_UMF(eggrollwrap_UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
+                 &nj, &nnz_j, &ija[0], &ija[0], &mat[0], &v1[0], &v2[0]);
       first_linear_solver_call = 0;
       break;
     case 4: /* v2 = inv(J-sM)*M*v1 */
       Factor_Flag = 3;
       if (first_linear_solver_call)
         GOMA_EH(GOMA_ERROR, "Tried to transform eigenvectors before a solve!");
-      gevp_transformation(UMF_system_id, first_linear_solver_call, Factor_Flag, matr_form, 1, nj,
-                          nnz_j, &ija[0], &jac[0], &mas[0], &mat[0],
+      gevp_transformation(eggrollwrap_UMF_system_id, first_linear_solver_call, Factor_Flag,
+                          matr_form, 1, nj, nnz_j, &ija[0], &jac[0], &mas[0], &mat[0],
                           /*			  soln_tech, */
                           &v2[0], &v1[0], dwork[0], dwork[1]);
       break;
@@ -249,8 +251,9 @@ void eggrollwrap(int *istuff, /* info for eigenvalue extraction */
    */
   Factor_Flag = -3;
 
-  UMF_system_id = SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form, &nj,
-                         &nnz_j, ija, ija, mat, &v1[0], &v2[0]);
+  eggrollwrap_UMF_system_id =
+      SL_UMF(eggrollwrap_UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form, &nj,
+             &nnz_j, ija, ija, mat, &v1[0], &v2[0]);
 
   /* Display results
    */
@@ -361,3 +364,8 @@ void eggrollwrap(int *istuff, /* info for eigenvalue extraction */
   Dvector_death(&ev_x[0], mm + 5);
   printf("done.\n");
 }
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void eggrollwrap_free_globals(void) { eggrollwrap_UMF_system_id = 0; }

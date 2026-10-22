@@ -15,3 +15,8 @@ target_include_directories(goma_unit_tests PRIVATE ${MPI_C_INCLUDE_PATH})
 include(CTest)
 include(Catch)
 catch_discover_tests(goma_unit_tests)
+
+# Runs goma several times in one process through goma.h
+add_executable(goma_lib_sequence library/goma_lib_sequence.c)
+target_link_libraries(goma_lib_sequence goma goma_user goma_util ${MPI_C_LIBRARIES})
+target_include_directories(goma_lib_sequence PRIVATE ${MPI_C_INCLUDE_PATH})

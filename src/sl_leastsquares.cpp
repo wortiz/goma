@@ -11,6 +11,8 @@
 * This software is distributed under the GNU General Public License.      *
 * See LICENSE file.                                                       *
 \************************************************************************/
+#include "goma_reset.h"
+
 /* This removes the entire file if Amesos & Trilinos are not defined */
 #if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
 #include <stdlib.h>
@@ -57,6 +59,12 @@
 
 static void bf_mat_to_Epetra(double *, int *, Epetra_CrsMatrix *, int, int, int);
 
+static int ls_FirstRun = 1;
+static int ls_err = 0;
+static std::string ls_Pkg_Name;
+static Epetra_CrsMatrix *ls_A = nullptr;
+static Epetra_LinearProblem ls_Problem;
+
 void trilinos_solve_ls(double *bf_mat_,
                        int *j_map_,
                        double *f_rhs_,
@@ -80,24 +88,19 @@ void trilinos_solve_ls(double *bf_mat_,
   double params[AZ_PARAMS_SIZE];
 
   /* Define internal variables */
-  static int FirstRun = 1;
-  static int err;
-  static std::string Pkg_Name;
-  static Epetra_CrsMatrix *A;
-  static Epetra_LinearProblem Problem;
   bool transA = true;
   bool notransA = false;
 
   /* Convert to Epetra format */
   if (NewMatrix) {
-    if (!FirstRun)
-      delete A;
-    A = (Epetra_CrsMatrix *)construct_Epetra_CrsMatrix_ls(txt_num_pts, nnz_per_row, num_cols);
-    bf_mat_to_Epetra(bf_mat_, j_map_, A, txt_num_pts, nnz_per_row, num_cols);
+    if (!ls_FirstRun)
+      delete ls_A;
+    ls_A = (Epetra_CrsMatrix *)construct_Epetra_CrsMatrix_ls(txt_num_pts, nnz_per_row, num_cols);
+    bf_mat_to_Epetra(bf_mat_, j_map_, ls_A, txt_num_pts, nnz_per_row, num_cols);
   }
 
-  const Epetra_Map &map = (*A).RowMatrixRowMap();
-  const Epetra_Map &Colmap = (*A).RowMatrixColMap();
+  const Epetra_Map &map = (*ls_A).RowMatrixRowMap();
+  const Epetra_Map &Colmap = (*ls_A).RowMatrixColMap();
   Epetra_Vector f_rhs(Copy, map, f_rhs_);
   Epetra_Vector x(Copy, Colmap, x_);
 
@@ -106,23 +109,23 @@ void trilinos_solve_ls(double *bf_mat_,
 
   // Form Normal Equations
 
-  err = EpetraExt::MatrixMatrix::Multiply(*A, transA, *A, notransA, A_T_A);
-  if (err != 0) {
-    std::cout << "MatrixMatrix" << err << std::endl;
+  ls_err = EpetraExt::MatrixMatrix::Multiply(*ls_A, transA, *ls_A, notransA, A_T_A);
+  if (ls_err != 0) {
+    std::cout << "MatrixMatrix" << ls_err << std::endl;
     abort();
   }
-  (*A).Multiply(transA, f_rhs, A_T_f);
+  (*ls_A).Multiply(transA, f_rhs, A_T_f);
 
   /* Assemble linear problem */
   // if (NewMatrix) Epetra_LinearProblem Problem(&A_T_A, &x, &A_T_f);
   if (NewMatrix) {
-    Problem.SetOperator(&A_T_A);
-    Problem.SetLHS(&x);
-    Problem.SetRHS(&A_T_f);
-    Problem.CheckInput();
+    ls_Problem.SetOperator(&A_T_A);
+    ls_Problem.SetLHS(&x);
+    ls_Problem.SetRHS(&A_T_f);
+    ls_Problem.CheckInput();
   }
 
-  AztecOO Solver(Problem);
+  AztecOO Solver(ls_Problem);
   /* Set aztec params to default */
   AZ_defaults(options, params);
 
@@ -144,7 +147,7 @@ void trilinos_solve_ls(double *bf_mat_,
   }
 
   /* Cleanup problem */
-  FirstRun = 0;
+  ls_FirstRun = 0;
 }
 
 static void bf_mat_to_Epetra(
@@ -227,5 +230,23 @@ construct_Epetra_CrsMatrix_ls(int const txt_num_pts, int const nnz_per_row, int 
 
   return (A);
 }
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ *
+ * ls_Problem is given its operator and vectors on every call.
+ */
+void leastsquares_free_globals(void) {
+  if (!ls_FirstRun)
+    delete ls_A;
+  ls_A = nullptr;
+  ls_FirstRun = 1;
+  ls_err = 0;
+  ls_Pkg_Name.clear();
+}
+
+#else
+
+void leastsquares_free_globals(void) {}
 
 #endif // if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)

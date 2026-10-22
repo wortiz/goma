@@ -12,10 +12,12 @@
 * This software is distributed under the GNU General Public License.      *
 * See LICENSE file.                                                       *
 \************************************************************************/
+#include "goma_reset.h"
+
 #ifdef GOMA_ENABLE_SACADO
 
-#include "ad/util.h"
 #include "ad/structs.h"
+#include "ad/util.h"
 #include "el_elm_info.h"
 #include "el_geom.h"
 #include "mm_as.h"
@@ -48,6 +50,9 @@ int ad_calc_shearrate(ADType &gammadot,             /* strain rate invariant */
   gammadot = sqrt(0.5 * fabs(gammadot) + 1e-14);
   return 0;
 }
+static int ad_beer_belly_is_initialized = FALSE;
+static int ad_beer_belly_elem_blk_id_save = -123;
+
 int ad_beer_belly(void) {
   if (ad_fv == NULL) {
     ad_fv = new AD_Field_Variables();
@@ -56,9 +61,6 @@ int ad_beer_belly(void) {
   int DeformingMesh, ShapeVar;
   struct Basis_Functions *MapBf;
   int imtrx = upd->matrix_index[pd->ShapeVar];
-
-  static int is_initialized = FALSE;
-  static int elem_blk_id_save = -123;
 
   dim = ei[imtrx]->ielem_dim;
   pdim = pd->Num_Dim;
@@ -96,13 +98,13 @@ int ad_beer_belly(void) {
    * initialize appropriate arrays...
    */
 
-  if (ei[imtrx]->elem_blk_id != elem_blk_id_save) {
-    is_initialized = FALSE;
+  if (ei[imtrx]->elem_blk_id != ad_beer_belly_elem_blk_id_save) {
+    ad_beer_belly_is_initialized = FALSE;
   }
 
-  if (!is_initialized) {
-    is_initialized = TRUE;
-    elem_blk_id_save = ei[imtrx]->elem_blk_id;
+  if (!ad_beer_belly_is_initialized) {
+    ad_beer_belly_is_initialized = TRUE;
+    ad_beer_belly_elem_blk_id_save = ei[imtrx]->elem_blk_id;
   }
 
   /*
@@ -817,4 +819,18 @@ extern "C" void fill_ad_field_variables() {
   }
 #endif
 }
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void ad_util_free_globals(void) {
+  delete ad_fv;
+  ad_fv = NULL;
+  ad_beer_belly_is_initialized = FALSE;
+  ad_beer_belly_elem_blk_id_save = -123;
+}
+
+#else
+
+void ad_util_free_globals(void) {}
+
 #endif // GOMA_ENABLE_SACADO

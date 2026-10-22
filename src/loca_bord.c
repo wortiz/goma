@@ -29,6 +29,7 @@ static char *cvs_contbord_id =
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "goma_reset.h"
 #include "loca_const.h"
 #include "loca_util_const.h"
 
@@ -143,6 +144,7 @@ int arc_length_bordering_alg(
   else
     return (FALSE);
 }
+static int turning_point_first = TRUE;
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -171,7 +173,6 @@ int turning_point_alg(
   double param_update, r_update, vecnorm, gnum_unks, tmp, RayQ;
   double *y = cpi->x_tang;      /* null vector */
   double *phi = cpi->scale_vec; /* vector for normalizing the null vector */
-  static int first = TRUE;
 
   /* This flag can be 0 or 1 and effects scaling */
   /* Seems to work better as 0 for TP calcs      */
@@ -211,7 +212,7 @@ int turning_point_alg(
    * If using a previous null vector, it has already been read in.
    */
 
-  if (first) {
+  if (turning_point_first) {
     /* Commented out by EDW 1/28/2002:
         vecnorm = ltransnorm(b, b);
 
@@ -255,7 +256,7 @@ int turning_point_alg(
         y[i] /= vecnorm;
     }
 
-    first = FALSE;
+    turning_point_first = FALSE;
   }
 
   else {
@@ -423,6 +424,8 @@ int turning_point_alg(
   else
     return (FALSE);
 }
+static int pitchfork_first = TRUE;
+static double pitchfork_eps = 0.0;
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -449,8 +452,6 @@ pitchfork_alg(double *x, double *delta_x, struct con_struct *con, double reltol,
   double eps_update, d_eps, ipa, ipb, ipc, ipx, ltd, lte, ltf;
   double t1, t2, t3, t4;
   double *psi = con->pitchfork_info.psi;
-  static int first = TRUE;
-  static double eps;
 
   /* This flag can be 0 or 1 and effects scaling */
   /* Seems to work better as 1 for PF calcs      */
@@ -461,10 +462,10 @@ pitchfork_alg(double *x, double *delta_x, struct con_struct *con, double reltol,
   /* first time through this routine, set psi asymmetric vector to con-tang
      and set epsilon "asymmetry variable" to 0.0 */
 
-  if (first) {
+  if (pitchfork_first) {
     if (cgi->printproc > 7)
       printf("\n\tIn pitchfork alg, AGS_option=%d\n", AGS_option);
-    eps = 0.0;
+    pitchfork_eps = 0.0;
     tmp = sqrt(ip(psi, psi));
     if (tmp == 0.0) {
       if (cgi->printproc > 1) {
@@ -479,7 +480,7 @@ pitchfork_alg(double *x, double *delta_x, struct con_struct *con, double reltol,
 
     vec_copy(psi, phi);
 
-    first = FALSE;
+    pitchfork_first = FALSE;
 
     t1 = ip(x, psi);
     t2 = ip(x, x);
@@ -583,18 +584,18 @@ pitchfork_alg(double *x, double *delta_x, struct con_struct *con, double reltol,
   lte = ltransnorm(e, cpi->scale_vec);
   ltf = ltransnorm(f, cpi->scale_vec);
 
-  d_eps = -eps + ((ipx + ipa) * lte + ipb * (1.0 - ltd)) / (ipb * ltf - ipc * lte);
+  d_eps = -pitchfork_eps + ((ipx + ipa) * lte + ipb * (1.0 - ltd)) / (ipb * ltf - ipc * lte);
 
-  dt_p = (1.0 - ltd - ltf * (d_eps + eps)) / lte;
+  dt_p = (1.0 - ltd - ltf * (d_eps + pitchfork_eps)) / lte;
 
   /* Negative of update vector here */
   for (i = 0; i < cgi->numUnks; i++)
-    delta_x[i] = -a[i] - c[i] * (eps + d_eps) - b[i] * dt_p;
+    delta_x[i] = -a[i] - c[i] * (pitchfork_eps + d_eps) - b[i] * dt_p;
 
   /* use c space for delta phi */
 
   for (i = 0; i < cgi->numUnks; i++)
-    c[i] = -phi[i] + d[i] + e[i] * dt_p + f[i] * (eps + d_eps);
+    c[i] = -phi[i] + d[i] + e[i] * dt_p + f[i] * (pitchfork_eps + d_eps);
 
   /*
    * Update the bif_param, eps,  and the null vector phi
@@ -609,7 +610,7 @@ pitchfork_alg(double *x, double *delta_x, struct con_struct *con, double reltol,
     solution_output_conwrap(c,       1, 0, 9, 0);
   */
 
-  eps += d_eps;
+  pitchfork_eps += d_eps;
 
   con->pitchfork_info.bif_param += dt_p;
   assign_bif_parameter_conwrap(con->pitchfork_info.bif_param);
@@ -623,7 +624,7 @@ pitchfork_alg(double *x, double *delta_x, struct con_struct *con, double reltol,
    */
 
   param_update = fabs(dt_p) / (reltol * fabs(con->pitchfork_info.bif_param) + abstol);
-  eps_update = fabs(d_eps) / (reltol * fabs(eps) + abstol);
+  eps_update = fabs(d_eps) / (reltol * fabs(pitchfork_eps) + abstol);
 
   /* get update norm of phi, to check for convergence */
 
@@ -649,7 +650,7 @@ pitchfork_alg(double *x, double *delta_x, struct con_struct *con, double reltol,
     printf("\t***********************************************************\n");
     printf("\tparameter    %e        %e    %g\n", param_update, dt_p,
            con->pitchfork_info.bif_param);
-    printf("\teps          %e        %e    %g\n", eps_update, d_eps, eps);
+    printf("\teps          %e        %e    %g\n", eps_update, d_eps, pitchfork_eps);
     printf("\tNull vector  %e\n", r_update);
     printf("\t***********************************************************\n");
   }
@@ -669,6 +670,8 @@ pitchfork_alg(double *x, double *delta_x, struct con_struct *con, double reltol,
   else
     return (FALSE);
 }
+static int hopf_first = TRUE;
+static int hopf_first2 = TRUE;
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -690,7 +693,6 @@ hopf_alg(double *x, double *delta_x, struct con_struct *con, double reltol, doub
   int i;
   double x_update, param_update, gnum_unks, tmp, RayQ, tmp2, alpha, beta;
   double omega_update, y_update, z_update, y_tmp, z_tmp;
-  static int first = TRUE, first2 = TRUE;
   double test, count;
 
   double ltc, ltd, lte, ltf, ltg, lth, delta_omega, delta_y, delta_z;
@@ -713,7 +715,7 @@ hopf_alg(double *x, double *delta_x, struct con_struct *con, double reltol, doub
    * non-zero and (2) the functional dependence of the Mass Matrix.
    */
 
-  if (first) {
+  if (hopf_first) {
     if (cgi->printproc > 4)
       printf("\n\tEntering Hopf Algorithm\n");
     tmp = sqrt(dp(chi->y_vec, chi->y_vec));
@@ -811,7 +813,7 @@ hopf_alg(double *x, double *delta_x, struct con_struct *con, double reltol, doub
       exit(-1);
     }
 
-    first = FALSE;
+    hopf_first = FALSE;
   }
 
   if (cgi->printproc > 7) {
@@ -831,7 +833,7 @@ hopf_alg(double *x, double *delta_x, struct con_struct *con, double reltol, doub
     M_2 = alloc_vec();
   }
 
-  if (first2) {
+  if (hopf_first2) {
     /* calculate variable averages, to be used in ltransnorm calls below */
     /* calc_scale_vec_conwrap(x, cpi->scale_vec, cgi->numUnks); */
     for (i = 0; i < cgi->numOwnedUnks; i++)
@@ -846,7 +848,7 @@ hopf_alg(double *x, double *delta_x, struct con_struct *con, double reltol, doub
       chi->y_vec[i] = (alpha * y_tmp + beta * z_tmp) / (alpha * alpha + beta * beta);
       chi->z_vec[i] = -(beta * y_tmp - alpha * z_tmp) / (alpha * alpha + beta * beta);
     }
-    first2 = FALSE;
+    hopf_first2 = FALSE;
   }
 
   /* construct "a" vector from delta_x */
@@ -1051,7 +1053,7 @@ hopf_alg(double *x, double *delta_x, struct con_struct *con, double reltol, doub
   /* return convergence status of the parameters and vectors */
   if ((x_update < 1.0) && (param_update < 1.0) && (omega_update < 1.0) && (y_update < 100.0) &&
       (z_update < 100.0)) {
-    first2 = TRUE;
+    hopf_first2 = TRUE;
     return (TRUE);
   } else
     return (FALSE);
@@ -1531,3 +1533,15 @@ int continuation_hook(double *x, double *delta_x, void *con_void, double reltol,
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void loca_bord_free_globals(void) {
+  AGS_option = 0;
+  turning_point_first = TRUE;
+  pitchfork_first = TRUE;
+  pitchfork_eps = 0.0;
+  hopf_first = TRUE;
+  hopf_first2 = TRUE;
+}

@@ -36,6 +36,7 @@
 #include <string.h>
 
 /* Include C libraries */
+#include "goma_reset.h"
 #include "std.h"
 /* Include exodus libraries for writing out image */
 #include "exodusII.h"
@@ -560,3 +561,8 @@ extern int find_xi(int elem_id,               /*known element id number*/
 }
 
 /*** end program *************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void pixel_image_free_globals(void) { first_time_fopen = TRUE; }

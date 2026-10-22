@@ -1311,6 +1311,8 @@ free_and_clear:
     safer_free((void **)&(vn_glob[i]));
   }
 
+  /* external dof column storage, NULL when there are no external dofs */
+  safer_free((void **)&ija_attic);
   sl_free(matrix_systems_mask, ams);
 
   for (i = 0; i < NUM_ALSS; i++)
@@ -1344,6 +1346,7 @@ free_and_clear:
   safer_free((void **)&Dolphin);
 
   free(pg->matrices);
+  pg->matrices = NULL;
 
   if (file != NULL)
     fclose(file);

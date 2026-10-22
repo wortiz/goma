@@ -105,6 +105,7 @@
 #include "sl_petsc.h"
 #endif
 #include "density.h"
+#include "goma_reset.h"
 #include "mm_fill_continuity.h"
 #include "mm_fill_energy.h"
 #include "mm_fill_split.h"
@@ -5827,3 +5828,11 @@ int load_pf_constraint(double pf_constraint, double d_pf_lm[][MDE], double d_lm_
   return (TRUE);
 }
 /****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void fill_free_globals(void) {
+  /* the CA_* statics in matrix_fill are reinitialized on every fill */
+  mm_fill_total = 0.0;
+}

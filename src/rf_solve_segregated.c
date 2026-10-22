@@ -75,6 +75,7 @@
 #endif
 
 #define GOMA_RF_SOLVE_SEGREGATED_C
+#include "goma_reset.h"
 #include "rf_solve_segregated.h"
 
 #define ROUND_TO_ONE 0.9999999
@@ -184,6 +185,26 @@ static double vector_distance_pres(int size, double *vec1, double *vec2) {
  *
  * ******************************************************************************/
 
+/*
+ * solve_problem_segregated() state kept between calls, reset by
+ * rf_solve_segregated_free_globals()
+ */
+static double **x = NULL;          /* solution vector                   */
+static double **x_old = NULL;      /* old solution vector               */
+static double **x_older = NULL;    /* older solution vector             */
+static double **x_oldest = NULL;   /* oldest solution vector saved      */
+static double **xdot = NULL;       /* current time derivative of soln   */
+static double **xdot_old = NULL;   /* old time derivative of soln       */
+static double **xdot_older = NULL; /* old time derivative of soln       */
+static struct GomaLinearSolverData **ams;
+static double time1 =
+    0.0; /* Current time that the simulation is trying  to find the solution for */
+static int nprint = 0;
+static double **gvec = NULL;
+static double ****gvec_elem = NULL;
+static struct Results_Description **rd;
+static int callnum = 1; /* solve_problem_segregated call counter */
+
 void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh database  */
                               Dpi *dpi,    /* distributed processing information       */
                               dbl *te_out) /* te_out - return actual end time */
@@ -203,14 +224,6 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
    * Variables
    */
 
-  static double **x = NULL; /* solution vector                   */
-
-  static double **x_old = NULL;      /* old solution vector               */
-  static double **x_older = NULL;    /* older solution vector             */
-  static double **x_oldest = NULL;   /* oldest solution vector saved      */
-  static double **xdot = NULL;       /* current time derivative of soln   */
-  static double **xdot_old = NULL;   /* old time derivative of soln       */
-  static double **xdot_older = NULL; /* old time derivative of soln       */
   double **x_previous = NULL;
 
   double **x_pred = NULL;
@@ -224,7 +237,6 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
   int *node_to_fill = NULL;
 
-  static struct GomaLinearSolverData **ams;
   /*
    * Variables for time integration
    */
@@ -232,8 +244,6 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   double timeValueReadTrans = 0.0;
   double time_print, i_print;
   double theta = 0.0, time = 0;
-  static double time1 = 0.0; /* Current time that the simulation is trying  to
-                                find the solution for */
   double delta_t_new = 0, delta_t = 0, delta_t_old = 0, delta_t_older = 0, delta_t_oldest = 0;
   char tspstring[MAX_FNL];
   int n;
@@ -241,7 +251,6 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   int last_renorm_nt;   /* time step at which last renorm occured   */
   int time_step_reform; /* counter for jacobian reformation stride  */
   int converged = TRUE; /* success or failure of Newton iteration   */
-  static int nprint = 0;
   int step_fix = 0;
   int const_delta_t, const_delta_ts, step_print;
   int success_dt;
@@ -252,9 +261,6 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
    */
   int good_mesh;
   int error, err = 0;
-  static double **gvec = NULL;
-  static double ****gvec_elem = NULL;
-  static struct Results_Description **rd;
 
   double *gv = NULL; /* Global variable values for ExoII database */
   int *tnv;          /* total number of nodal variables and kinds */
@@ -277,6 +283,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 #endif
 
   int totalnAC;
+  struct AC_Information *total_augc; /* augc for all matrices, restored on return */
   int *matrix_nAC;
   int iAC;                        /* Counter                                  */
   double **x_AC = NULL;           /* Solution vector of extra unknowns          */
@@ -298,7 +305,6 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   double time2 = 0.0;
   struct Extended_Shape_Fcn_Basics **matrix_xfem = NULL;
   tran->solid_inertia = 0;
-  static int callnum = 1; /* solve_problem_segregated call counter */
 
   static const char yo[] = "solve_problem_segregated"; /* So my name is in a string.        */
 
@@ -710,6 +716,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   }
 
   totalnAC = nAC;
+  total_augc = augc;
   matrix_augc = malloc(sizeof(struct AC_Information *) * upd->Total_Num_Matrices);
   matrix_nAC = calloc(upd->Total_Num_Matrices, sizeof(int));
 
@@ -2654,6 +2661,9 @@ free_and_clear:
   free(resid_vector_sens);
   free(scale);
 
+  /* augc and nAC were set to the per matrix copies, which are freed here */
+  augc = total_augc;
+  nAC = totalnAC;
   for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
     free(gvec[pg->imtrx]);
     free(matrix_augc[pg->imtrx]);
@@ -2714,4 +2724,27 @@ void predict_solution_u_star(int N,
     x[0][i] = x_old[2][i] + c1 * (x_old[0][i] - x_older[2][i]) / delta_t_old -
               c2 * (x_older[0][i] - x_oldest[2][i]) / delta_t_older;
   }
+}
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ *
+ * The solution vectors and ams are freed at the end of
+ * solve_problem_segregated().
+ */
+void rf_solve_segregated_free_globals(void) {
+  x = NULL;
+  x_old = NULL;
+  x_older = NULL;
+  x_oldest = NULL;
+  xdot = NULL;
+  xdot_old = NULL;
+  xdot_older = NULL;
+  ams = NULL;
+  time1 = 0.0;
+  nprint = 0;
+  gvec = NULL;
+  gvec_elem = NULL;
+  rd = NULL;
+  callnum = 1;
 }

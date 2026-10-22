@@ -26,6 +26,7 @@
 #include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -35,6 +36,7 @@
 #include "mm_names.h"
 #include "mm_ns_bc.h"
 #include "mm_post_proc.h"
+#include "mm_qp_storage.h"
 #include "mm_unknown_map.h"
 #include "rd_mesh.h"
 #include "rf_allo.h"
@@ -1303,17 +1305,24 @@ void free_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo_D
   struct elem_side_bc_struct *current_bc;
   struct elem_side_bc_struct *next_bc;
 
+  if (First_Elem_Side_BC_Array == NULL) {
+    return;
+  }
   e_start = exo->eb_ptr[0];
   e_end = exo->eb_ptr[exo->num_elem_blocks];
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    if (First_Elem_Side_BC_Array[imtrx] == NULL) {
+      continue;
+    }
     for (ielem = e_start; ielem < e_end; ielem++) {
       if (First_Elem_Side_BC_Array[imtrx][ielem] != NULL) {
+        elem_qp_storage_free(First_Elem_Side_BC_Array[imtrx][ielem]);
         current_bc = First_Elem_Side_BC_Array[imtrx][ielem];
 
         do {
           safer_free((void **)&current_bc->local_node_id);
           safer_free((void **)&current_bc->local_elem_node_id);
-          /*				elem_qp_storage_free( current_bc );*/
+          safer_free((void **)&current_bc->BC_input_id);
 
           next_bc = current_bc->next_side_bc;
 
@@ -1323,9 +1332,10 @@ void free_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo_D
         } while (current_bc != NULL);
       }
     }
+    safer_free((void **)&First_Elem_Side_BC_Array[imtrx]);
   }
 
-  safer_free((void **)&First_Elem_Side_BC_Array);
+  free(First_Elem_Side_BC_Array);
 }
 
 void free_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[], Exo_DB *exo, Dpi *dpi) {
@@ -1335,21 +1345,33 @@ void free_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[], Exo_D
   struct elem_edge_bc_struct *current_bc;
   struct elem_edge_bc_struct *next_bc;
 
+  if (First_Elem_Edge_BC_Array == NULL) {
+    return;
+  }
   e_start = exo->eb_ptr[0];
   e_end = exo->eb_ptr[exo->num_elem_blocks];
   for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    if (First_Elem_Edge_BC_Array[imtrx] == NULL) {
+      continue;
+    }
     for (ielem = e_start; ielem < e_end; ielem++) {
       if (First_Elem_Edge_BC_Array[imtrx][ielem] != NULL) {
         current_bc = First_Elem_Edge_BC_Array[imtrx][ielem];
 
         do {
-          safer_free((void **)&current_bc->elem_side_bc_1->local_node_id);
-          safer_free((void **)&current_bc->elem_side_bc_1->local_elem_node_id);
-          safer_free((void **)&current_bc->elem_side_bc_2->local_node_id);
-          safer_free((void **)&current_bc->elem_side_bc_2->local_elem_node_id);
-
-          safer_free((void **)&current_bc->elem_side_bc_1);
-          safer_free((void **)&current_bc->elem_side_bc_2);
+          /* the side structures are never set by setup_Elem_Edge_BC, free them if present */
+          if (current_bc->elem_side_bc_1 != NULL) {
+            safer_free((void **)&current_bc->elem_side_bc_1->local_node_id);
+            safer_free((void **)&current_bc->elem_side_bc_1->local_elem_node_id);
+            safer_free((void **)&current_bc->elem_side_bc_1->BC_input_id);
+            safer_free((void **)&current_bc->elem_side_bc_1);
+          }
+          if (current_bc->elem_side_bc_2 != NULL) {
+            safer_free((void **)&current_bc->elem_side_bc_2->local_node_id);
+            safer_free((void **)&current_bc->elem_side_bc_2->local_elem_node_id);
+            safer_free((void **)&current_bc->elem_side_bc_2->BC_input_id);
+            safer_free((void **)&current_bc->elem_side_bc_2);
+          }
           next_bc = current_bc->next_edge_bc;
 
           safer_free((void **)&current_bc);
@@ -1358,8 +1380,9 @@ void free_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[], Exo_D
         } while (current_bc != NULL);
       }
     }
+    safer_free((void **)&First_Elem_Edge_BC_Array[imtrx]);
   }
-  safer_free((void **)&First_Elem_Edge_BC_Array);
+  free(First_Elem_Edge_BC_Array);
 }
 
 void setup_Point_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[],
@@ -2794,3 +2817,30 @@ int exchange_bc_info(void) {
 /************************************************************************/
 /*			END of mm_bc.c			                */
 /************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void bc_free_globals(void) {
+  ROT_list = NULL;
+  SS_list = NULL;
+  Use_2D_Rotation_Vectors = FALSE;
+  PRESSURE_DATUM = FALSE;
+  pressure_datum_element = 0;
+  pressure_datum_value = 0.0;
+
+  /* globals defined in mm_names.h, the descriptions and tables are not yet freed */
+  for (int k = 0; k < Num_Post_Var_Names; k++) {
+    Post_Var_Name[k].Index = -1;
+  }
+  new_BC_Desc = NULL;
+  num_new_BC_Desc = 0;
+  num_BC_Tables = 0;
+  memset(BC_Tables, 0, sizeof(BC_Tables));
+  num_MP_Tables = 0;
+  memset(MP_Tables, 0, sizeof(MP_Tables));
+  num_ext_Tables = 0;
+  memset(ext_Tables, 0, sizeof(ext_Tables));
+  num_AC_Tables = 0;
+  memset(AC_Tables, 0, sizeof(AC_Tables));
+}

@@ -11,6 +11,8 @@
 * This software is distributed under the GNU General Public License.      *
 * See LICENSE file.                                                       *
 \************************************************************************/
+#include "goma_reset.h"
+
 /* This removes the entire file if Amesos & Trilinos are not defined */
 #if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
 #include <Amesos_config.h>
@@ -65,6 +67,15 @@
 #include "sl_util_structs.h"
 
 static void GomaMsr2EpetraCsr(struct GomaLinearSolverData *ams, Epetra_CrsMatrix *A, int newmatrix);
+
+/* amesos_solve() state kept between calls, reset by amesos_free_globals() */
+static std::string Pkg_Name;
+static Epetra_CrsMatrix *A[MAX_NUM_MATRICES]{nullptr};
+/* A[imtrx] is owned here (legacy MSR path) or borrowed from ams->GomaMatrixData */
+static bool A_owned[MAX_NUM_MATRICES]{false};
+static Epetra_LinearProblem Problem[MAX_NUM_MATRICES];
+static Amesos_BaseSolver *A_Base[MAX_NUM_MATRICES] = {nullptr};
+
 void amesos_solve(char *choice,
                   struct GomaLinearSolverData *ams,
                   double *x_,
@@ -79,24 +90,24 @@ void amesos_solve(char *choice,
   Epetra_SerialComm comm;
 #endif
   /* Define internal variables */
-  static std::string Pkg_Name;
-  static Epetra_CrsMatrix *A[MAX_NUM_MATRICES]{nullptr};
-  static Epetra_LinearProblem Problem[MAX_NUM_MATRICES];
-  static Amesos_BaseSolver *A_Base[MAX_NUM_MATRICES] = {nullptr};
   Amesos A_Factory;
 
   /* Convert to Epetra format */
   if (ams->GomaMatrixData == NULL) {
     if (!ams->solveSetup) {
-      if (A[imtrx] != nullptr)
+      if (A_owned[imtrx])
         delete A[imtrx];
       A[imtrx] = (Epetra_CrsMatrix *)construct_Epetra_CrsMatrix(ams);
+      A_owned[imtrx] = true;
     }
     GomaMsr2EpetraCsr(ams, A[imtrx], !ams->solveSetup);
   } else {
     GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
     EpetraSparseMatrix *epetra_matrix = static_cast<EpetraSparseMatrix *>(matrix->data);
+    if (A_owned[imtrx])
+      delete A[imtrx];
     A[imtrx] = dynamic_cast<Epetra_CrsMatrix *>(epetra_matrix->matrix.get());
+    A_owned[imtrx] = false;
   }
   const Epetra_Map &map = A[imtrx]->RowMatrixRowMap();
   Epetra_Vector x(Copy, map, x_);
@@ -314,3 +325,32 @@ amesos_solve_msr(char *choice,
 
 /* End of if statement for Amesos and Trilinos */
 #endif
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ *
+ * Problem[] is given its operator and vectors on every call to amesos_solve().
+ */
+void amesos_free_globals(void) {
+  amesos_free_solvers();
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
+  Pkg_Name.clear();
+#endif
+}
+
+/*
+ * Free the Amesos solvers and the matrices owned here.  The solvers refer to
+ * their matrix, so this must be called before ams->GomaMatrixData is destroyed.
+ */
+void amesos_free_solvers(void) {
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
+  for (int i = 0; i < MAX_NUM_MATRICES; i++) {
+    delete A_Base[i];
+    A_Base[i] = nullptr;
+    if (A_owned[i])
+      delete A[i];
+    A[i] = nullptr;
+    A_owned[i] = false;
+  }
+#endif
+}

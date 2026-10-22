@@ -15,11 +15,15 @@
 
 #include <limits.h>
 #include <mpi.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "ac_particles.h"
 #include "dp_types.h"
 #include "dpi.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
+#include "mm_as.h"
 #include "mm_elem_block_structs.h"
 #include "rf_fem.h"
 #include "rf_fem_const.h"
@@ -512,3 +516,283 @@ ELEM_BLK_STRUCT *Element_Blocks = NULL; /* Pointer to array of global
 ELEM_BLK_STRUCT *Current_EB_ptr = NULL; /* Pointer to the current element block
                                            structure. This is calculated in the
                                            fill */
+
+/* ddd_free() without MPI_Type_free() */
+static void free_ddd_members(DDD p) {
+  if (p == NULL)
+    return;
+  free(p->block_count);
+  free(p->data_type);
+  free(p->address);
+  free(p);
+}
+
+/*
+ * Reset the globals defined in this file to their load time values, freeing
+ * arrays owned by them that are not freed elsewhere.  Used by goma_destroy so
+ * that Goma can be run again in the same process.  Keep in sync with the
+ * definitions above.
+ */
+void globals_free_globals(void) {
+  int i;
+
+  /* not freed elsewhere, arrays inside BC_Types are not yet freed */
+  free(BC_Types);
+  if (cx != NULL && upd != NULL) {
+    for (i = 0; i < upd->Total_Num_Matrices; i++) {
+      free(cx[i]);
+    }
+  }
+  free(cx);
+  free(GomaPetscOptions);
+  /* the MPI types were already freed after the broadcast in goma_setup */
+  free_ddd_members(Noahs_Raven);
+  free_ddd_members(Noahs_Ark);
+  free_ddd_members(Noahs_Dove);
+
+  CoordinateSystem = 0;
+  VelocityPressure = 0;
+  Velocity = 0;
+  Pressure = 0;
+  Temperature = 0;
+  MeshDisplacement = 0;
+  MassFraction = 0;
+  nEQM = 0;
+  Use_DG = 0;
+  Do_Overlap = 0;
+  ProblemType = 0;
+  ProblemCoupling = 0;
+  StateEq = 0;
+  Multicomponent = 0;
+  VIM = 0;
+  WIM = 0;
+  Num_BC = 0;
+  Num_Interface_Srcs = 0;
+  memset(IntSrc_BCID, 0, sizeof(IntSrc_BCID));
+  Num_ROT = 0;
+  Num_Import_NV = 0;
+  Num_Import_EV = 0;
+  Num_Export_XS = 0;
+  Num_Export_XP = 0;
+  memset(Export_XS_ID, 0, sizeof(Export_XS_ID));
+  memset(Export_XP_ID, 0, sizeof(Export_XP_ID));
+  Num_Basis_Functions = 0;
+  memset(Unique_Basis_Functions, 0, sizeof(Unique_Basis_Functions));
+  Num_Element_Types = 0;
+  memset(Unique_Element_Types, 0, sizeof(Unique_Element_Types));
+  Num_Interpolations = 0;
+  memset(Unique_Interpolations, 0, sizeof(Unique_Interpolations));
+  Highest_Interpolation = 0;
+  Num_Shapes = 0;
+  memset(Unique_Shapes, 0, sizeof(Unique_Shapes));
+  TimeIntegration = 0;
+  Use_Level_Set = 0;
+  Use_Phase_Field = 0;
+  eps = 0.0;
+  print_freq = 0;
+  print_delt = 0.0;
+  print_delt2_time = 0.0;
+  print_delt2 = 0.0;
+  Continuation = 0;
+  ContType = 0;
+  BdyCondID = 0;
+  DataFltID = 0;
+  MatID = 0;
+  MatPropID = 0;
+  MatPropSIID = 0;
+  MaxPathSteps = 0;
+  Delta_s0 = 0.0;
+  Delta_s_min = 0.0;
+  Delta_s_max = 0.0;
+  PathMax = 0.0;
+  print_delt2_path = 0.0;
+  BegParameterValue = 0.0;
+  EndParameterValue = 0.0;
+  nAC = 0;
+  nCC = 0;
+  nTC = 0;
+  nUC = 0;
+  nUTC = 0;
+  memset(Matrix_Solver, 0, sizeof(String_line));
+  memset(Matrix_Format, 0, sizeof(String_line));
+  memset(Matrix_Scaling, 0, sizeof(String_line));
+  memset(Matrix_Preconditioner, 0, sizeof(String_line));
+  memset(Matrix_Subdomain_Solver, 0, sizeof(String_line));
+  memset(Matrix_Residual_Norm_Type, 0, sizeof(String_line));
+  memset(Matrix_Output_Type, 0, sizeof(String_line));
+  memset(Matrix_Factorization_Reuse, 0, sizeof(String_line));
+  memset(Matrix_Graph_Fillin, 0, sizeof(String_line));
+  memset(Matrix_Maximum_Iterations, 0, sizeof(String_line));
+  memset(Matrix_Polynomial_Order, 0, sizeof(String_line));
+  memset(Matrix_Factor_Overlap, 0, sizeof(String_line));
+  memset(Matrix_Overlap_Type, 0, sizeof(String_line));
+  memset(Matrix_Krylov_Subspace, 0, sizeof(String_line));
+  memset(Matrix_Orthogonalization, 0, sizeof(String_line));
+  memset(Matrix_Auxiliary_Vector, 0, sizeof(String_line));
+  memset(Matrix_Convergence_Tolerance, 0, sizeof(String_line));
+  memset(Matrix_Drop_Tolerance, 0, sizeof(String_line));
+  memset(Matrix_Factorization_Save, 0, sizeof(String_line));
+  memset(Matrix_ILUT_Fill_Factor, 0, sizeof(String_line));
+  memset(Matrix_RILU_Relax_Factor, 0, sizeof(String_line));
+  memset(Matrix_BILU_Threshold, 0, sizeof(String_line));
+  memset(Matrix_Relative_Threshold, 0, sizeof(String_line));
+  memset(Matrix_Absolute_Threshold, 0, sizeof(String_line));
+  memset(Amesos_Package, 0, sizeof(String_line));
+  memset(Amesos2_Package, 0, sizeof(String_line));
+  memset(AztecOO_Solver, 0, sizeof(String_line));
+  memset(Stratimikos_File, 0, sizeof(Stratimikos_File));
+  memset(Amesos2_File, 0, sizeof(Amesos2_File));
+  memset(Matrix_Reorder, 0, sizeof(String_line));
+  Linear_Solver = 0;
+  UMFPACK_IDIM = 0;
+  UMFPACK_XDIM = 0;
+  LOCA_UMF_ID = 0;
+  Max_Newton_Steps = 0;
+  Guess_Flag = 0;
+  Conformation_Flag = 0;
+  Print3DBCDup = 0;
+  damp_factor = 0.0;
+  damp_factor1 = 0.0;
+  damp_factor2 = 0.0;
+  damp_factor3 = 0.0;
+  custom_tol1 = 0.0;
+  custom_tol2 = 0.0;
+  custom_tol3 = 0.0;
+  memset(var_damp, 0, sizeof(var_damp));
+  Newt_Jacobian_Reformation_stride = 0;
+  Time_Jacobian_Reformation_stride = 0;
+  Newton_Line_Search_Type = 0;
+  Line_Search_Minimum_Damping = 0.0;
+  modified_newton = 0;
+  save_old_A = 0;
+  convergence_rate_tolerance = 0.0;
+  modified_newt_norm_tol = 0.0;
+  memset(Epsilon, 0, sizeof(Epsilon));
+  Solver_Output_Format = 0;
+  Output_Variable_Stats = 0;
+  Output_Variable_Regression = 0;
+  NZeros = 0;
+  nnz_own = 0;
+  nnz_total = 0;
+  GNZeros = 0;
+  fill_zeros = 0;
+  Gfill_zeros = 0;
+  PSPG = 0;
+  PSPP = 0;
+  PS_scaling = 0.0;
+  Cont_GLS = 0;
+  Filter_Species = 0;
+  filter_species_material_number = 0;
+  c_min = 0.0;
+  c_max = 0.0;
+  Include_Visc_Sens = 0;
+  Visc_Sens_Copy = 0;
+  Visc_Sens_Factor = 0;
+  nHC = 0;
+  PRS_mat_ielem = 0;
+  BC_Types = NULL;
+  ROT_Types = NULL;
+  Nodes = NULL;
+  First_Elem_Side_BC_Array = NULL;
+  First_Elem_Edge_BC_Array = NULL;
+
+  /* particle arrays are freed by the particle code */
+  Particle_Dynamics = 0;
+  Particle_Model = 0;
+  memset(Particle_Model_Data, 0, sizeof(Particle_Model_Data));
+  Particle_Number = 0;
+  memset(Particle_Restart_Filename, 0, sizeof(particle_filename_s));
+  Particle_Output_Stride = 0;
+  Particle_Output_Time_Step = 0.0;
+  Particle_Max_Time_Steps = 0;
+  Particle_Output_Format = 0;
+  Particle_Full_Output_Stride = 0;
+  memset(Particle_Full_Output_Filename, 0, sizeof(particle_filename_s));
+  Particle_Number_Sample_Types = 0;
+  Particle_Number_Samples_Existing = NULL;
+  Particle_Number_Samples = NULL;
+  Particle_Number_Output_Variables = NULL;
+  Particle_Output_Variables = NULL;
+  Particle_Filename_Template = NULL;
+  Particle_Density = 0.0;
+  Particle_Radius = 0.0;
+  Particle_Ratio = 0.0;
+  Particle_Show_Debug_Info = 0;
+  Particle_Creation_Domain = 0;
+  Particle_Move_Domain = 0;
+  memset(Particle_Creation_Domain_Filename, 0, sizeof(particle_filename_s));
+  memset(Particle_Creation_Domain_Name, 0, sizeof(particle_s));
+  memset(Particle_Move_Domain_Filename, 0, sizeof(particle_filename_s));
+  memset(Particle_Move_Domain_Name, 0, sizeof(particle_s));
+  memset(Particle_Creation_Domain_Reals, 0, sizeof(Particle_Creation_Domain_Reals));
+  memset(Particle_Move_Domain_Reals, 0, sizeof(Particle_Move_Domain_Reals));
+  xi_boundary_tolerances[0] = XI_BOUNDARY_TOLERANCE0;
+  xi_boundary_tolerances[1] = XI_BOUNDARY_TOLERANCE1;
+  xi_boundary_tolerances[2] = XI_BOUNDARY_TOLERANCE2;
+  Particle_Number_PBCs = 0;
+  PBCs = NULL;
+  element_particle_info = NULL;
+
+  DPI_ptr = NULL;
+  EXO_ptr = NULL;
+  memset(Input_File, 0, sizeof(Input_File));
+  memset(ExoFile, 0, sizeof(ExoFile));
+  memset(Exo_LB_File, 0, sizeof(Exo_LB_File));
+  memset(ExoFileOut, 0, sizeof(ExoFileOut));
+  memset(ExoFileOutMono, 0, sizeof(ExoFileOutMono));
+  memset(ExoAuxFile, 0, sizeof(ExoAuxFile));
+  ExoTimePlane = INT_MAX;
+  memset(Echo_Input_File, 0, sizeof(Echo_Input_File));
+  Decompose_Flag = 1;
+  Decompose_Type = 0;
+  Skip_Fix = 0;
+  GomaPetscOptions = NULL;
+  GomaPetscOptionsStrLen = 0;
+  memset(DomainMappingFile, 0, sizeof(DomainMappingFile));
+  CPU_word_size = 0;
+  IO_word_size = 0;
+  memset(Init_GuessFile, 0, sizeof(Init_GuessFile));
+  memset(Soln_OutFile, 0, sizeof(Soln_OutFile));
+  Debug_Flag = 0;
+  New_Parser_Flag = 0;
+#ifdef MATRIX_DUMP
+  Number_Jac_Dump = 0;
+#endif
+  Iout = 0;
+  Write_Intermediate_Solutions = FALSE;
+  Write_Initial_Solution = FALSE;
+  Num_Var_Init = 0;
+  Num_Var_Bound = 0;
+  Num_Var_LS_Init = 0;
+  Num_Var_External = 0;
+  Num_Var_External_pix = 0;
+  Anneal_Mesh = 0;
+  Porous_liq_inventory = 0.0;
+  /* freed by the solvers */
+  Spec_source_inventory = NULL;
+  Spec_source_lumped_mass = NULL;
+  memset(front_scratch_directory, 0, sizeof(front_scratch_directory));
+  strcpy(front_scratch_directory, FRONT_SCRATCH_DIRECTORY);
+
+  parallel_err = FALSE;
+  parallel_err_global = FALSE;
+  Unlimited_Output = TRUE;
+  Num_Proc = 1;
+  ProcID = 0;
+  Dim = -1;
+  unlerr = 0;
+  /* Request and Status are freed by goma_destroy */
+  Request = NULL;
+  Status = NULL;
+  type_extent = 0;
+  Num_Requests = 6;
+  Noahs_Raven = NULL;
+  Noahs_Ark = NULL;
+  Noahs_Dove = NULL;
+  cx = NULL;
+  time_goma_started = 0.0;
+  Argv = NULL;
+  Argc = 0;
+  Element_Blocks = NULL;
+  Current_EB_ptr = NULL;
+}

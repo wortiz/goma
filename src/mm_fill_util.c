@@ -34,6 +34,7 @@
 #include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -137,6 +138,10 @@ static int var_if_interp_type_enabled(PROBLEM_DESCRIPTION_STRUCT *pd_ptr, int in
  *   It would appear that MapBF is set wrong for shell equations. However,
  *   it doesn't make a difference.
  */
+/* beer_belly() caches, keyed by element block */
+static int beer_belly_initialized = FALSE;
+static int beer_belly_elem_blk_id_save = -123;
+
 int beer_belly(void) {
   int status = 0, i, j, k, n, t, dim, pdim, mdof, index, node, si;
   int DeformingMesh, ShapeVar;
@@ -144,9 +149,6 @@ int beer_belly(void) {
   size_t v_length;
   dbl f, g, sum;
   int imtrx = upd->matrix_index[pd->ShapeVar];
-
-  static int is_initialized = FALSE;
-  static int elem_blk_id_save = -123;
 
   dim = ei[imtrx]->ielem_dim;
   pdim = pd->Num_Dim;
@@ -184,8 +186,8 @@ int beer_belly(void) {
    * initialize appropriate arrays...
    */
 
-  if (ei[imtrx]->elem_blk_id != elem_blk_id_save) {
-    is_initialized = FALSE;
+  if (ei[imtrx]->elem_blk_id != beer_belly_elem_blk_id_save) {
+    beer_belly_initialized = FALSE;
   }
 
   for (t = 0; t < Num_Basis_Functions; t++) {
@@ -194,7 +196,7 @@ int beer_belly(void) {
     memset(&(bfd[t]->J[0][0]), 0, v_length);
     memset(&(bfd[t]->B[0][0]), 0, v_length);
 
-    if (DeformingMesh && !is_initialized) {
+    if (DeformingMesh && !beer_belly_initialized) {
       v_length = DIM * MDE * sizeof(double);
       memset(&(bfd[t]->d_det_J_dm[0][0]), 0, v_length);
 
@@ -204,9 +206,9 @@ int beer_belly(void) {
     }
   }
 
-  if (!is_initialized) {
-    is_initialized = TRUE;
-    elem_blk_id_save = ei[imtrx]->elem_blk_id;
+  if (!beer_belly_initialized) {
+    beer_belly_initialized = TRUE;
+    beer_belly_elem_blk_id_save = ei[imtrx]->elem_blk_id;
   }
 
   /*
@@ -5567,4 +5569,12 @@ goma_error zero_strong_resid_side(struct Local_Element_Contributions *lec,
     }
   }
   return GOMA_SUCCESS;
+}
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void fill_util_free_globals(void) {
+  beer_belly_initialized = FALSE;
+  beer_belly_elem_blk_id_save = -123;
 }

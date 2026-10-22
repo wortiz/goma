@@ -14,6 +14,7 @@
 #include "el_geom.h"
 #include "exo_struct.h"
 #include "gds/gds_vector.h"
+#include "goma_reset.h"
 #include "load_field_variables.h"
 #include "mm_as.h"
 #include "mm_as_alloc.h"
@@ -953,4 +954,21 @@ int first_equation_from_vector_equation(int eqn) {
   default:
     return -1;
   }
+}
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void rotate_coordinates_free_globals(void) {
+  /* allocated with one entry per node of the mesh, Num_Node is still set */
+  if (goma_automatic_rotations.rotation_nodes != NULL) {
+    for (int i = 0; i < Num_Node; i++) {
+      for (int j = 0; j < DIM; j++) {
+        goma_normal_free((goma_automatic_rotations.rotation_nodes)[i].rotated_coord[j]);
+      }
+    }
+    free(goma_automatic_rotations.rotation_nodes);
+  }
+  goma_automatic_rotations.automatic_rotations = false;
+  goma_automatic_rotations.rotation_nodes = NULL;
 }

@@ -40,6 +40,7 @@
 #include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
@@ -5747,3 +5748,51 @@ void dofname40(const int unknown, char *str)
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void unknown_map_free_globals(void) {
+  /* Local_Offset and Dolphin are freed by the solvers */
+  for (int imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    if (First_Unknown != NULL) {
+      free(First_Unknown[imtrx]);
+    }
+    if (idv != NULL) {
+      free(idv[imtrx]);
+    }
+    if (dofname != NULL) {
+      free(dofname[imtrx]);
+    }
+    if (resname != NULL) {
+      free(resname[imtrx]);
+    }
+  }
+  free(First_Unknown);
+  free(idv);
+  free(dofname);
+  free(resname);
+  free(num_internal_dofs);
+  free(num_boundary_dofs);
+  free(num_external_dofs);
+  free(num_universe_dofs);
+  free(NumUnknowns);
+  free(NumExtUnknowns);
+  num_internal_dofs = NULL;
+  num_boundary_dofs = NULL;
+  num_external_dofs = NULL;
+  num_universe_dofs = NULL;
+  num_personal_elems = 0;
+  Local_Offset = NULL;
+  Dolphin = NULL;
+  NumUnknowns = NULL;
+  NumExtUnknowns = NULL;
+  MaxVarPerNode = 0;
+  memset(Num_Var_In_Type, 0, sizeof(Num_Var_In_Type));
+  First_Unknown = NULL;
+  idv = NULL;
+  dofname = NULL;
+  resname = NULL;
+  memset(Inter_Mask, 0, sizeof(Inter_Mask));
+  memset(Ignore_Deps, 0, sizeof(Ignore_Deps));
+}

@@ -25,6 +25,7 @@
 #include "el_elm_info.h"
 #include "el_geom.h"
 #include "exo_struct.h"
+#include "goma_reset.h"
 #include "load_field_variables.h"
 #include "mm_as.h"
 #include "mm_as_const.h"
@@ -74,6 +75,8 @@
  *
  */
 
+static int belly_flop_is_initialized = FALSE;
+
 int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
 {
   int status;
@@ -102,7 +105,6 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
   dbl cauchy_green_old[DIM][DIM];
   dbl cauchy_green_dot[DIM][DIM];
   dbl d_cauchy_green_dot_dx[DIM][DIM][DIM][MDE]; /* sensitivity */
-  static int is_initialized = FALSE;
   int transient_run = pd->TimeIntegration != STEADY;
 
   struct Basis_Functions *bfv;
@@ -134,7 +136,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
     memset(ddet2d_dx, 0, sizeof(double) * DIM * MDE);
     memset(d_grad_d_dot, 0, sizeof(double) * DIM * DIM * DIM * MDE);
 
-    if (!is_initialized) {
+    if (!belly_flop_is_initialized) {
       memset(fv->d_volume_change_dx, 0, sizeof(double) * DIM * MDE);
       memset(fv->d_volume_strain_dx, 0, sizeof(double) * DIM * MDE);
       memset(fv->d_volume_change_dp, 0, sizeof(double) * MDE);
@@ -143,7 +145,7 @@ int belly_flop(dbl mu) /* elastic modulus (plane stress case) */
       memset(fv->d_strain_dp, 0, sizeof(double) * DIM * DIM * MDE);
       memset(fv->d_deform_grad_dx, 0, sizeof(double) * DIM * DIM * DIM * MDE);
       memset(d_invdeform_grad_dx, 0, sizeof(double) * DIM * DIM * DIM * MDE);
-      is_initialized = TRUE;
+      belly_flop_is_initialized = TRUE;
     }
   }
 
@@ -5491,3 +5493,8 @@ int check_for_neg_elem_volume(int eb,
 /*****************************************************************************/
 /* end of file mm_fill_solid.c */
 /*****************************************************************************/
+
+/*
+ * Reset this file's globals to their load time values, see goma_reset.h
+ */
+void fill_solid_free_globals(void) { belly_flop_is_initialized = FALSE; }
