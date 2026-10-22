@@ -2666,6 +2666,9 @@ free_and_clear:
   nAC = totalnAC;
   for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
     free(gvec[pg->imtrx]);
+    for (int iAC = 0; iAC < matrix_nAC[pg->imtrx]; iAC++) {
+      free(matrix_augc[pg->imtrx][iAC].d_evol_dx);
+    }
     free(matrix_augc[pg->imtrx]);
   }
   free(matrix_augc);

@@ -3900,8 +3900,11 @@ void vif_free_globals(void) {
   for (i = 0; augc != NULL && i < nAC; i++) {
     free(augc[i].DataFlt);
     free(augc[i].Aprepro_lib_string);
+    /* allocated by the solver */
+    free(augc[i].d_evol_dx);
     augc[i].DataFlt = NULL;
     augc[i].Aprepro_lib_string = NULL;
+    augc[i].d_evol_dx = NULL;
   }
 
   for (i = 0; pp_volume != NULL && i < nn_volume; i++) {
