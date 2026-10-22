@@ -1123,9 +1123,7 @@ void current_BV_surf(double func[DIM],
 
       d_func[0][var][j_id] -= d_i[VOLTAGE] * phi_j;
 
-      for (kdir = 0; kdir < dim; kdir++) {
-        d_func[0][var][j_id] += c * d_vconv->T[kdir][j_id] * fv->snormal[kdir];
-      }
+      /* the convection velocity does not depend on the voltage */
     }
   }
 

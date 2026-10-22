@@ -678,7 +678,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   }
 #ifdef GOMA_ENABLE_AZTEC
 #ifdef MPI
-  AZ_set_proc_config(ams[0]->proc_config, MPI_COMM_WORLD);
+  AZ_set_proc_config(ams[0]->proc_config, goma_comm);
 #else  /* MPI */
   AZ_set_proc_config(ams[0]->proc_config, 0);
 #endif /* MPI */
@@ -1017,7 +1017,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 #ifdef PARALLEL
         if (Num_Proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
                              augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
-          MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
           evol_local = evol_global;
         }
 #endif
@@ -1041,8 +1041,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
 #ifdef PARALLEL
           if (Num_Proc > 1) {
-            MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            MPI_Allreduce(&lsvel_local, &lsvel_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
+            MPI_Allreduce(&lsvel_local, &lsvel_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
             evol_local = evol_global;
             lsvel_local = lsvel_global;
           }
@@ -1989,7 +1989,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
           }
 
           int global_floored = 0;
-          MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, goma_comm);
 
           if (global_floored > 0)
             P0PRINTF("Floored %d values\n", global_floored);
@@ -2173,7 +2173,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
               if (Num_Proc > 1 &&
                   (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
                    augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
-                MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
                 evol_local = evol_global;
               }
 #endif
@@ -2208,7 +2208,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         if ((step_fix != 0 && nt == step_fix) || ((i_fix == 1) && (tran->fix_freq > 0))) {
           /* Barrier because fix needs both files to be finished printing
              and fix always occurs on the same timestep as printing */
-          MPI_Barrier(MPI_COMM_WORLD);
+          MPI_Barrier(goma_comm);
           fix_output();
           /* Fix step is relative to print step */
           step_fix += tran->fix_freq * tran->print_freq;
@@ -3187,7 +3187,7 @@ int anneal_mesh(double x[],
     fclose(anneal_dat);
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
 
   if (!Skip_Fix && Num_Proc > 1 && ProcID == 0) {
     DPRINTF(stdout, "\nFixing exodus file %s\n", anneal_file);
@@ -3554,28 +3554,28 @@ int variable_stats(double *x, const double time, const int coord_linear) {
  */
 #ifdef PARALLEL
   MPI_Reduce((void *)max, (void *)max_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_MAX, 0,
-             MPI_COMM_WORLD);
+             goma_comm);
   MPI_Reduce((void *)min, (void *)min_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_MIN, 0,
-             MPI_COMM_WORLD);
+             goma_comm);
   MPI_Reduce((void *)mean, (void *)mean_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
+             goma_comm);
   MPI_Reduce((void *)sqr, (void *)sqr_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_SUM, 0,
-             MPI_COMM_WORLD);
-  MPI_Reduce((void *)ncp, (void *)ncp_buf, MAX_VARIABLE_TYPES, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+             goma_comm);
+  MPI_Reduce((void *)ncp, (void *)ncp_buf, MAX_VARIABLE_TYPES, MPI_INT, MPI_SUM, 0, goma_comm);
   if (coord_linear) {
     int j;
-    MPI_Reduce((void *)crd_sum, (void *)crd_sum_buf, DIM, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce((void *)crd_sum, (void *)crd_sum_buf, DIM, MPI_DOUBLE, MPI_SUM, 0, goma_comm);
     MPI_Reduce((void *)crd_sqr, (void *)crd_sqr_buf, 2 * DIM, MPI_DOUBLE, MPI_SUM, 0,
-               MPI_COMM_WORLD);
+               goma_comm);
     MPI_Reduce((void *)crd_cross, (void *)crd_cross_buf, DIM * MAX_VARIABLE_TYPES, MPI_DOUBLE,
-               MPI_SUM, 0, MPI_COMM_WORLD);
+               MPI_SUM, 0, goma_comm);
     MPI_Reduce((void *)fcn_sum, (void *)fcn_sum_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_SUM, 0,
-               MPI_COMM_WORLD);
+               goma_comm);
     MPI_Reduce((void *)fcn_sqr, (void *)fcn_sqr_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_SUM, 0,
-               MPI_COMM_WORLD);
-    MPI_Reduce((void *)crd_ncp, (void *)crd_ncp_buf, DIM, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+               goma_comm);
+    MPI_Reduce((void *)crd_ncp, (void *)crd_ncp_buf, DIM, MPI_INT, MPI_SUM, 0, goma_comm);
     MPI_Reduce((void *)fcn_ncp, (void *)fcn_ncp_buf, MAX_VARIABLE_TYPES, MPI_INT, MPI_SUM, 0,
-               MPI_COMM_WORLD);
+               goma_comm);
     for (i = 0; i < pdim; i++) {
       crd_sum[i] = crd_sum_buf[i];
       crd_sqr[i] = crd_sqr_buf[i];

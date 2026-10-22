@@ -4046,11 +4046,11 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
 
 #ifdef PARALLEL
   if (Num_Proc > 1) {
-    MPI_Allreduce(&proc_flux, &global_flux, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&proc_flux_conv, &global_flux_conv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&proc_flux, &global_flux, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
+    MPI_Allreduce(&proc_flux_conv, &global_flux_conv, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
 
-    MPI_Allreduce(&proc_area, &global_area, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(proc_Torque, global_Torque, DIM, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&proc_area, &global_area, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
+    MPI_Allreduce(proc_Torque, global_Torque, DIM, MPI_DOUBLE, MPI_SUM, goma_comm);
     local_flux = global_flux;
     local_flux_conv = global_flux_conv;
     local_area = global_area;
@@ -4426,7 +4426,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
 
 #ifdef PARALLEL
   if (Num_Proc > 1) {
-    MPI_Allreduce(&proc_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&proc_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
 
     sum = global_sum;
   }
@@ -5736,7 +5736,7 @@ double evaluate_global_flux(const Exo_DB *exo,
 #ifdef PARALLEL
   if (Num_Proc > 1) {
 
-    MPI_Allreduce(&proc_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&proc_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
 
     sum = global_sum;
   }
@@ -7181,10 +7181,10 @@ double evaluate_flux_sens(const Exo_DB *exo,       /* ptr to basic exodus ii mes
   }
 
 #ifdef PARALLEL
-  MPI_Allreduce(&local_flux, &global_flux, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&local_flux_conv, &global_flux_conv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_flux, &global_flux, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
+  MPI_Allreduce(&local_flux_conv, &global_flux_conv, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
 
-  MPI_Allreduce(&local_area, &global_area, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_area, &global_area, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
 
   local_flux = global_flux;
   local_flux_conv = global_flux_conv;

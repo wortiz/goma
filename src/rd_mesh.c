@@ -701,9 +701,9 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
 
   if (num_proc > 1) {
     MPI_Allreduce(&num_local_node, &num_global_node, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
-                  MPI_COMM_WORLD);
+                  goma_comm);
     MPI_Allreduce(&num_local_elem, &num_global_elem, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
-                  MPI_COMM_WORLD);
+                  goma_comm);
   } else {
     num_global_elem = Num_Elem;
     num_global_node = Num_Node;

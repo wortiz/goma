@@ -667,8 +667,8 @@ double global_velocity_norm(const dbl x[],     /* solution vector */
    * likewise sum up the actual number of nodal contributions
    * from each processor.
    */
-  MPI_Allreduce(&U_norm, &global_U_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&norm_unknowns, &global_norm_unknowns, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&U_norm, &global_U_norm, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
+  MPI_Allreduce(&norm_unknowns, &global_norm_unknowns, 1, MPI_INT, MPI_SUM, goma_comm);
   U_norm = global_U_norm;
   norm_unknowns = global_norm_unknowns;
 #endif
@@ -1200,7 +1200,7 @@ dbl global_h_elem_siz(dbl x[], dbl x_old[], dbl xdot[], dbl resid_vector[], Exo_
     h += weight * h_elem * smele_mun;
   }
 #ifdef PARALLEL
-  MPI_Allreduce(&h, &h_global_really_i_mean_it, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&h, &h_global_really_i_mean_it, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   h = h_global_really_i_mean_it;
 #endif
   return (h);

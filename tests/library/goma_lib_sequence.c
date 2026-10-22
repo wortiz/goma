@@ -15,8 +15,8 @@
 /*
  * Runs Goma several times in one process through the goma.h interface
  *
- * usage: goma_lib_sequence <dir> [--stop-after=create|setup] <goma args>
- *                          [-- <dir> ...] ...
+ * usage: goma_lib_sequence [--ranks=<n>] <dir> [--stop-after=create|setup]
+ *                          [--log=<file>] <goma args> [-- <dir> ...] ...
  *
  * Each run changes to <dir> and runs Goma with the given arguments, for
  * example:
@@ -24,7 +24,13 @@
  *   goma_lib_sequence problemA -i input -- problemB -i input
  *
  * --stop-after destroys the context after goma_create or goma_setup instead
- * of solving, to test teardown of a partly set up problem.
+ * of solving, to test teardown of a partly set up problem.  --log writes
+ * the standard output of rank 0 during the run to <file> (relative to the
+ * starting directory).
+ *
+ * --ranks runs Goma on a communicator split from MPI_COMM_WORLD that holds
+ * only its first <n> ranks, the other ranks wait, to check that Goma does not
+ * communicate outside the communicator it is given.
  *
  * Requires GOMA_EXPERIMENTAL_MULTIPLE_RUNS=1 in the environment until
  * goma_destroy fully resets Goma's global state.
@@ -39,6 +45,7 @@
 #include <malloc.h>
 #endif
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -47,9 +54,9 @@
 
 enum stop_after { STOP_AFTER_CREATE, STOP_AFTER_SETUP, STOP_AFTER_SOLVE };
 
-static int run_goma(int argc, char **argv, enum stop_after stop) {
+static int run_goma(MPI_Comm comm, int argc, char **argv, enum stop_after stop) {
   goma_context *ctx = NULL;
-  int error = goma_create(&ctx, MPI_COMM_WORLD, argc, argv);
+  int error = goma_create(&ctx, comm, argc, argv);
   if (error == 0 && stop >= STOP_AFTER_SETUP) {
     error = goma_setup(ctx);
   }
@@ -68,15 +75,33 @@ int main(int argc, char **argv) {
 
   char start_dir[4096];
   if (getcwd(start_dir, sizeof(start_dir)) == NULL || argc < 2) {
-    fprintf(stderr, "usage: %s <dir> [--stop-after=create|setup] <goma args> [-- <dir> ...] ...\n",
+    fprintf(stderr,
+            "usage: %s [--ranks=<n>] <dir> [--stop-after=create|setup] [--log=<file>] <goma args> "
+            "[-- <dir> ...] ...\n",
             argv[0]);
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
-  goma_library_initialize(MPI_COMM_WORLD);
-
   int run = 0;
   int first = 1;
+  MPI_Comm comm = MPI_COMM_WORLD;
+  if (strncmp(argv[1], "--ranks=", 8) == 0) {
+    int world_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    int color = world_rank < atoi(argv[1] + 8) ? 0 : MPI_UNDEFINED;
+    MPI_Comm_split(MPI_COMM_WORLD, color, world_rank, &comm);
+    first = 2;
+  }
+  if (comm == MPI_COMM_NULL) {
+    /* not one of the ranks running Goma */
+    MPI_Finalize();
+    return 0;
+  }
+
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  goma_library_initialize(comm);
+
   while (first < argc) {
     int last = first;
     while (last < argc && strcmp(argv[last], "--") != 0) {
@@ -84,14 +109,23 @@ int main(int argc, char **argv) {
     }
     const char *dir = argv[first];
     enum stop_after stop = STOP_AFTER_SOLVE;
-    if (first + 1 < last && strncmp(argv[first + 1], "--stop-after=", 13) == 0) {
-      const char *stage = argv[first + 1] + 13;
-      if (strcmp(stage, "create") == 0) {
-        stop = STOP_AFTER_CREATE;
-      } else if (strcmp(stage, "setup") == 0) {
-        stop = STOP_AFTER_SETUP;
+    const char *log = NULL;
+    while (first + 1 < last && strncmp(argv[first + 1], "--", 2) == 0) {
+      const char *opt = argv[first + 1];
+      if (strncmp(opt, "--stop-after=", 13) == 0) {
+        const char *stage = opt + 13;
+        if (strcmp(stage, "create") == 0) {
+          stop = STOP_AFTER_CREATE;
+        } else if (strcmp(stage, "setup") == 0) {
+          stop = STOP_AFTER_SETUP;
+        } else {
+          fprintf(stderr, "unknown stage %s\n", stage);
+          MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+      } else if (strncmp(opt, "--log=", 6) == 0) {
+        log = opt + 6;
       } else {
-        fprintf(stderr, "unknown stage %s\n", stage);
+        fprintf(stderr, "unknown option %s\n", opt);
         MPI_Abort(MPI_COMM_WORLD, 1);
       }
       first++;
@@ -104,6 +138,18 @@ int main(int argc, char **argv) {
     }
     run_argv[last - first] = NULL;
 
+    int saved_stdout = -1;
+    if (log != NULL && rank == 0) {
+      int fd = open(log, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      if (fd < 0) {
+        fprintf(stderr, "could not open %s\n", log);
+        MPI_Abort(MPI_COMM_WORLD, 1);
+      }
+      fflush(stdout);
+      saved_stdout = dup(STDOUT_FILENO);
+      dup2(fd, STDOUT_FILENO);
+      close(fd);
+    }
     if (chdir(dir) != 0) {
       fprintf(stderr, "could not change to directory %s\n", dir);
       MPI_Abort(MPI_COMM_WORLD, 1);
@@ -118,9 +164,14 @@ int main(int argc, char **argv) {
     int trace = leaktrace_enable != NULL && trace_run != NULL && atoi(trace_run) == run;
     if (trace)
       leaktrace_enable(1);
-    int error = run_goma(last - first, run_argv, stop);
+    int error = run_goma(comm, last - first, run_argv, stop);
     if (trace)
       leaktrace_enable(0);
+    if (saved_stdout >= 0) {
+      fflush(stdout);
+      dup2(saved_stdout, STDOUT_FILENO);
+      close(saved_stdout);
+    }
     fprintf(stderr, "goma_lib_sequence: run %d in %s returned %d\n", run, dir, error);
 #ifdef __GLIBC__
     /* heap still in use after goma_destroy, growth between runs is leaked memory */
@@ -138,6 +189,9 @@ int main(int argc, char **argv) {
   }
 
   goma_library_finalize();
+  if (comm != MPI_COMM_WORLD) {
+    MPI_Comm_free(&comm);
+  }
   MPI_Finalize();
   return status;
 }

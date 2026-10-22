@@ -85,10 +85,10 @@ void canine_chaos(int local_order,        /* (in) */
    */
 
 #ifdef PARALLEL
-  MPI_Allreduce(&local_order, global_order, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&local_order_plus, global_order_plus, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&local_nnz, global_nnz, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&local_nnz_plus, global_nnz_plus, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_order, global_order, 1, MPI_INT, MPI_SUM, goma_comm);
+  MPI_Allreduce(&local_order_plus, global_order_plus, 1, MPI_INT, MPI_SUM, goma_comm);
+  MPI_Allreduce(&local_nnz, global_nnz, 1, MPI_INT, MPI_SUM, goma_comm);
+  MPI_Allreduce(&local_nnz_plus, global_nnz_plus, 1, MPI_INT, MPI_SUM, goma_comm);
 #endif
 
   return;
@@ -333,7 +333,7 @@ matrix_stats (double a[],
    */
 
 #ifdef PARALLEL
-  MPI_Allreduce(&N, global_num_unknowns, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&N, global_num_unknowns, 1, MPI_INT, MPI_SUM, goma_comm);
 #endif
 #ifndef PARALLEL
   *global_num_unknowns = N;
@@ -347,7 +347,7 @@ matrix_stats (double a[],
 
 #ifdef PARALLEL
   MPI_Allreduce(global_num_nonzeroes, local_num_nonzeroes, 1, MPI_INT, MPI_SUM,
-		MPI_COMM_WORLD);
+		goma_comm);
 #endif
 #ifndef PARALLEL
   *global_num_nonzeroes = *local_num_nonzeroes;
@@ -482,7 +482,7 @@ void row_sum_scaling_scale_AC(double **cAC, double **dAC, double *gAC, int nAC) 
     local_sums = alloc_dbl_1(nAC, 0.0);
     for (iAC = 0; iAC < nAC; iAC++)
       local_sums[iAC] = row_sums[iAC];
-    MPI_Allreduce(local_sums, row_sums, nAC, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(local_sums, row_sums, nAC, MPI_DOUBLE, MPI_SUM, goma_comm);
     safe_free(local_sums);
   }
 #endif /* PARALLEL */

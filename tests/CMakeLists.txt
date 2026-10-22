@@ -43,12 +43,19 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   # two MPI ranks
   add_test(NAME goma_lib_mpi COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_mpi --partial
                                      -p p_lub_pore)
-  set_tests_properties(goma_lib_repeat goma_lib_chain goma_lib_mpi
+  # each run must use its own petscrc, not the options of the run before
+  add_test(NAME goma_lib_petsc COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_petsc --mode chain
+                                       -p p_C_T_U_petsc_gamg -p p_C_T_U_petsc)
+  # Goma on a communicator holding only some of the ranks
+  add_test(NAME goma_lib_subcomm COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_subcomm --mode chain
+                                         --extra-ranks 1 -p ldc -p p_lub_pore -p p_C_T_U_petsc)
+  set_tests_properties(goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm
                        PROPERTIES SKIP_RETURN_CODE 77 LABELS library)
-  set_tests_properties(goma_lib_mpi PROPERTIES PROCESSORS 2)
+  set_tests_properties(goma_lib_mpi goma_lib_petsc PROPERTIES PROCESSORS 2)
+  set_tests_properties(goma_lib_subcomm PROPERTIES PROCESSORS 3)
   if(CMAKE_BUILD_TYPE STREQUAL "Asan")
     set_tests_properties(
-      goma_lib_repeat goma_lib_chain goma_lib_mpi
+      goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm
       PROPERTIES
         ENVIRONMENT
         "ASAN_OPTIONS=fast_unwind_on_malloc=0;LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/library/lsan.supp"

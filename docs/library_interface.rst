@@ -79,16 +79,28 @@ MPI and PETSc
 The host program owns MPI. It calls ``MPI_Init`` and ``MPI_Finalize``; *Goma*
 never does in library mode, including on error.
 
-The communicator passed to ``goma_library_initialize`` and ``goma_create`` must
-currently be ``MPI_COMM_WORLD`` or congruent to it (for example a duplicate of
-it), because *Goma* still communicates over ``MPI_COMM_WORLD`` internally.
-``goma_create`` returns an error for any other communicator.
+Each run communicates only over its own duplicate of the communicator passed
+to ``goma_create``, which can hold any subset of the processes, for example one
+made with ``MPI_Comm_split``. The other processes are free to do other work,
+including running their own *Goma* problem on another communicator. File names
+of a parallel run are numbered by rank in that communicator.
 
-If PETSc is already initialized when ``goma_library_initialize`` is called,
-the host owns it and *Goma* leaves it initialized. Otherwise *Goma* initializes
-PETSc the first time a problem uses it and ``goma_library_finalize`` calls
-``PetscFinalize``. PETSc options inserted by one input deck stay in the PETSc
-options database for later runs; an option set by a later deck overrides them.
+If PETSc is already initialized when a problem first uses it, the host owns
+it and *Goma* leaves it initialized; *Goma*'s PETSc objects then live on the
+run's communicator, which must contain only processes of ``PETSC_COMM_WORLD``.
+Otherwise *Goma* initializes PETSc with ``PETSC_COMM_WORLD`` set to a duplicate
+of the communicator of that run, and ``goma_library_finalize`` calls
+``PetscFinalize``. Later runs that use PETSc must then use the same processes
+or a subset of them.
+
+Each run reads the ``.petscrc`` and ``petscrc`` files in its directory and the
+``-petsc`` command-line option, as a standalone ``goma`` run does, even when
+PETSc was initialized by an earlier run or by the host. ``goma_destroy``
+restores the options that the run set to their previous values, so options of
+one problem do not carry over to the next, and options set by the host,
+``PETSC_OPTIONS`` or ``~/.petscrc`` are kept. One exception: in the run that
+initializes PETSc, an option in the problem's ``petscrc`` that also appears in
+``PETSC_OPTIONS`` or ``~/.petscrc`` is removed when the run ends.
 
 Errors
 ######
@@ -160,10 +172,15 @@ Testing
 ``goma_lib_sequence`` and compares the output of every run with the blessed
 results the same way GUTS does. By default each problem is run twice in one
 process; ``--mode chain`` runs shuffled chains of different problems in one
-process instead::
+process instead. When a problem's blessed standard output lists PETSc options,
+the run must list the same ones::
 
    scripts/goma_lib_regression.py --driver build/tests/goma_lib_sequence
    scripts/goma_lib_regression.py --driver build/tests/goma_lib_sequence --mode chain
+
+``--extra-ranks 1`` starts one more MPI process than each problem needs and
+runs *Goma* on a communicator without it, to check that *Goma* does not
+communicate outside the communicator it is given.
 
 With ``-DENABLE_TESTING=ON`` and the ``guts`` submodule checked out, ctest runs
 a few of these problems (label ``library``)::

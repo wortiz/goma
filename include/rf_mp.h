@@ -38,6 +38,10 @@ extern int Num_Proc; /* Total number of processors */
 
 extern int ProcID; /* This processor's number */
 
+/* Communicator of the current run (a duplicate of the one given to goma_create),
+ * MPI_COMM_WORLD outside of a run */
+extern MPI_Comm goma_comm;
+
 extern int Dim; /* Dimension of logical hypercube */
 
 extern MPI_Request *Request;

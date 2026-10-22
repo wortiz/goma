@@ -106,7 +106,7 @@ vector_distance_squared(int size, double *vec1, double *vec2, int ignore_pressur
     distance_sq += x * x;
   }
 #ifdef PARALLEL
-  MPI_Allreduce(&distance_sq, &global_distance, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&distance_sq, &global_distance, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   distance_sq = global_distance;
 #endif /* PARALLEL */
   return distance_sq;
@@ -124,7 +124,7 @@ double vector_distance(int size, double *vec1, double *vec2) {
     distance += x * x;
   }
 #ifdef PARALLEL
-  MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   distance = global_distance;
 #endif /* PARALLEL */
   return sqrt(distance);
@@ -144,7 +144,7 @@ static double vector_distance_vel(int size, double *vec1, double *vec2) {
     }
   }
 #ifdef PARALLEL
-  MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   distance = global_distance;
 #endif /* PARALLEL */
   return sqrt(distance);
@@ -164,7 +164,7 @@ static double vector_distance_pres(int size, double *vec1, double *vec2) {
     }
   }
 #ifdef PARALLEL
-  MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&distance, &global_distance, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   distance = global_distance;
 #endif /* PARALLEL */
   return sqrt(distance);
@@ -471,7 +471,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
 #ifdef GOMA_ENABLE_AZTEC
   for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-    AZ_set_proc_config(ams[pg->imtrx]->proc_config, MPI_COMM_WORLD);
+    AZ_set_proc_config(ams[pg->imtrx]->proc_config, goma_comm);
   }
 #endif
 
@@ -940,7 +940,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                               #ifdef PARALLEL
                               if( Num_Proc > 1 ) {
                               MPI_Allreduce( &evol_local, &evol_global, 1,
-                              MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                              MPI_DOUBLE, MPI_SUM, goma_comm);
 
                               evol_local = evol_global;
                               }
@@ -958,9 +958,9 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                               #ifdef PARALLEL
                               if( Num_Proc > 1 ) {
                               MPI_Allreduce( &evol_local, &evol_global, 1,
-                              MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                              MPI_DOUBLE, MPI_SUM, goma_comm);
                               MPI_Allreduce( &lsvel_local, &lsvel_global, 1,
-                              MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                              MPI_DOUBLE, MPI_SUM, goma_comm);
                               evol_local = evol_global;
                               lsvel_local = lsvel_global;
                               }
@@ -1693,7 +1693,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
                 int global_floored = 0;
                 MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM,
-                              MPI_COMM_WORLD);
+                              goma_comm);
 
                 P0PRINTF("Floored %d moment values\n", global_floored);
               }
@@ -1717,7 +1717,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
                 int global_floored = 0;
                 MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM,
-                              MPI_COMM_WORLD);
+                              goma_comm);
 
                 if (global_floored > 0)
                   P0PRINTF("Floored %d values\n", global_floored);
@@ -1946,7 +1946,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                     tran->relaxation[pg->imtrx] * (x[pg->imtrx][i] - x_prev[pg->imtrx][i]);
               }
               dbl global_diff;
-              MPI_Allreduce(&sol_norm_diff, &global_diff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+              MPI_Allreduce(&sol_norm_diff, &global_diff, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
               P0PRINTF("Relax diff current: %g target: %g\n", sqrt(global_diff),
                        tran->relaxation_tolerance[pg->imtrx]);
               relaxation_diff[pg->imtrx] = sqrt(global_diff);
@@ -1998,7 +1998,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               }
 
               int global_floored = 0;
-              MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+              MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, goma_comm);
 
               for (int i = 0; i < 4; i++) {
                 if (moment_floored[i]) {
@@ -2032,7 +2032,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               }
 
               int global_floored = 0;
-              MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+              MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, goma_comm);
 
               if (global_floored > 0)
                 P0PRINTF("Floored %d values\n", global_floored);
@@ -2064,7 +2064,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
             //   int global_limited = 0;
             //   MPI_Allreduce(&limited_values, &global_limited, 1, MPI_INT, MPI_SUM,
-            //   MPI_COMM_WORLD);
+            //   goma_comm);
 
             //   if (global_limited > 0)
             //     P0PRINTF("Limited %d values\n", global_limited);
@@ -2110,7 +2110,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
                               #ifdef PARALLEL
                               if (Num_Proc > 1) {
                               MPI_Allreduce(&evol_local, &evol_global, 1,
-                   MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); evol_local =
+                   MPI_DOUBLE, MPI_SUM, goma_comm); evol_local =
                    evol_global;
                               }
                               #endif
@@ -2315,7 +2315,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
         if (step_fix != 0 && nt == step_fix) {
           /* Barrier because fix needs both files to be finished printing
            and fix always occurs on the same timestep as printing */
-          MPI_Barrier(MPI_COMM_WORLD);
+          MPI_Barrier(goma_comm);
           fix_output();
           /* Fix step is relative to print step */
           step_fix += tran->fix_freq * tran->print_freq;

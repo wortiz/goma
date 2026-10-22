@@ -681,10 +681,10 @@ double time_step_control(const double delta_t,
  */
 #ifdef PARALLEL
   MPI_Allreduce((void *)ecp, (void *)ecp_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_SUM,
-                MPI_COMM_WORLD);
+                goma_comm);
   MPI_Allreduce((void *)max, (void *)max_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_MAX,
-                MPI_COMM_WORLD);
-  MPI_Allreduce((void *)ncp, (void *)ncp_buf, MAX_VARIABLE_TYPES, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+                goma_comm);
+  MPI_Allreduce((void *)ncp, (void *)ncp_buf, MAX_VARIABLE_TYPES, MPI_INT, MPI_SUM, goma_comm);
 
   for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
     ecp[i] = ecp_buf[i];
@@ -1980,7 +1980,7 @@ void init_vec(
 #endif
     }
     if (map_pix_fast_called) {
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(goma_comm);
       if (ProcID == 0) {
         DPRINTF(stdout, "\nFixing exodus file %s\n", "map_pix_fast.exoII");
         fix_exo_file(Num_Proc, "map_pix_fast.exoII");

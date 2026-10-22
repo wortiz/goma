@@ -1159,10 +1159,10 @@ void bc_matrl_index(Exo_DB *exo)
 #ifdef PARALLEL
 
     k = ProcWithMaxInt(node_count, &i);
-    MPI_Bcast(&(bc_ptr->BC_matrl_index_1), 1, MPI_INT, k, MPI_COMM_WORLD);
-    MPI_Bcast(&(bc_ptr->BC_matrl_index_2), 1, MPI_INT, k, MPI_COMM_WORLD);
-    MPI_Bcast(&(bc_ptr->BC_matrl_index_3), 1, MPI_INT, k, MPI_COMM_WORLD);
-    MPI_Bcast(&(bc_ptr->BC_matrl_index_4), 1, MPI_INT, k, MPI_COMM_WORLD);
+    MPI_Bcast(&(bc_ptr->BC_matrl_index_1), 1, MPI_INT, k, goma_comm);
+    MPI_Bcast(&(bc_ptr->BC_matrl_index_2), 1, MPI_INT, k, goma_comm);
+    MPI_Bcast(&(bc_ptr->BC_matrl_index_3), 1, MPI_INT, k, goma_comm);
+    MPI_Bcast(&(bc_ptr->BC_matrl_index_4), 1, MPI_INT, k, goma_comm);
 
 #endif
   }

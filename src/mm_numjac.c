@@ -665,15 +665,15 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
 
 #ifdef PARALLEL
   neg_elem_volume_global = FALSE;
-  MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_LOR, goma_comm);
   neg_elem_volume = neg_elem_volume_global;
 
   neg_lub_height_global = FALSE;
-  MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_LOR, goma_comm);
   neg_lub_height = neg_lub_height_global;
 
   zero_detJ_global = FALSE;
-  MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_LOR, goma_comm);
   zero_detJ = zero_detJ_global;
 #endif
 
@@ -1134,15 +1134,15 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 
 #ifdef PARALLEL
     neg_elem_volume_global = FALSE;
-    MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+    MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_LOR, goma_comm);
     neg_elem_volume = neg_elem_volume_global;
 
     neg_lub_height_global = FALSE;
-    MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+    MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_LOR, goma_comm);
     neg_lub_height = neg_lub_height_global;
 
     zero_detJ_global = FALSE;
-    MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+    MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_LOR, goma_comm);
     zero_detJ = zero_detJ_global;
 #endif
 

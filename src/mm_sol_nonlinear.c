@@ -455,7 +455,7 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
   for (int j = 0; j < numProcUnknowns; j++) {
     slope += w[j] * R[j];
   }
-  MPI_Allreduce(MPI_IN_PLACE, &slope, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &slope, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   if (slope > 0) {
     slope = -slope;
   } else if (slope == 0) {
@@ -998,7 +998,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   fflush(stdout);
   fflush(stderr);
 #ifdef PARALLEL
-  (void)MPI_Barrier(MPI_COMM_WORLD);
+  (void)MPI_Barrier(goma_comm);
 #endif /* PARALLEL */
   fflush(stdout);
   fflush(stderr);
@@ -2138,7 +2138,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         for (iAC = 0; iAC < nAC; iAC++) {
           for (jAC = 0; jAC < nAC; jAC++)
             tempAC[jAC] = sAC[iAC][jAC];
-          MPI_Allreduce(tempAC, sAC[iAC], nAC, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_Allreduce(tempAC, sAC[iAC], nAC, MPI_DOUBLE, MPI_SUM, goma_comm);
         }
       }
 #endif /* PARALLEL */
@@ -2161,7 +2161,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (Num_Proc > 1) {
         for (jAC = 0; jAC < nAC; jAC++)
           tempAC[jAC] = tAC[jAC];
-        MPI_Allreduce(tempAC, tAC, nAC, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(tempAC, tAC, nAC, MPI_DOUBLE, MPI_SUM, goma_comm);
       }
 #endif /* PARALLEL */
 
@@ -2419,7 +2419,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         subelement_mesh_output(x, exo);
 #endif
 
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(goma_comm);
     }
 
     fflush(NULL);
@@ -3211,7 +3211,7 @@ double L2_norm(double *vector, int nloc) {
   }
 
 #ifdef PARALLEL
-  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   local_value = global_value;
 #endif /* PARALLEL */
 
@@ -3237,7 +3237,7 @@ double L2_norm_mesh(double *vector, int *variable_types, int nloc) {
   }
 
 #ifdef PARALLEL
-  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   local_value = global_value;
 #endif /* PARALLEL */
 
@@ -3258,7 +3258,7 @@ double L2_norm_diff(double *v1, double *v2, const int nloc) {
     local_value += (*v1 - *v2) * (*v1 - *v2);
   }
 #ifdef PARALLEL
-  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   local_value = global_value;
 #endif /* PARALLEL */
 
@@ -3283,7 +3283,7 @@ double L2_norm_r(double *vector, double *vecscal, int nloc) {
   }
 
 #ifdef PARALLEL
-  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   local_value = global_value;
 #endif /* PARALLEL */
 
@@ -3308,7 +3308,7 @@ double L1_norm(double *vector, int nloc) {
     local_value += fabs(*vector);
   }
 #ifdef PARALLEL
-  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   local_value = global_value;
 #endif /* PARALLEL */
 
@@ -3331,7 +3331,7 @@ double L1_norm_r(double *vector, double *vecscal, int nloc) {
     local_value += fabs(*vector) / (1 + fabs(*vecscal));
   }
 #ifdef PARALLEL
-  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_value, &global_value, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
   local_value = global_value;
 #endif /* PARALLEL */
 
@@ -3379,7 +3379,7 @@ double Loo_norm(double *vector, int nloc, int *num_unk, char *dofname_x)
 #ifdef PARALLEL
   in.d = local_value;
   in.i = ProcID;
-  MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+  MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, goma_comm);
   local_value = out.d;
   if (out.i == ProcID) {
     dofname40(*num_unk, dofname_x);
@@ -3437,7 +3437,7 @@ double Loo_norm_r(double *vector, double *vecscal, int nloc, int *num_unk, char 
 #ifdef PARALLEL
   in.d = local_value;
   in.i = ProcID;
-  MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+  MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, goma_comm);
   local_value = out.d;
   if (out.i == ProcID) {
     dofname40(*num_unk, dofname_r);
@@ -4097,7 +4097,7 @@ static int soln_sens(double lambda,  /*  parameter */
 
   time_local = a_end - a_start;
 #ifdef PARALLEL
-  MPI_Allreduce(&time_local, &time_global, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&time_local, &time_global, 1, MPI_DOUBLE, MPI_MAX, goma_comm);
   time_local = time_global;
 #endif
   fflush(stdout);

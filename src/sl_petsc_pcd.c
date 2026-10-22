@@ -35,7 +35,7 @@ static goma_error initialize_PCD_matrices(PetscMatrixData *matrix_data,
                                           PetscInt global_nodes) {
   PetscInt global_offset = 0;
   if (Num_Proc > 1) {
-    MPI_Scan(&local_nodes, &global_offset, 1, MPIU_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Scan(&local_nodes, &global_offset, 1, MPIU_INT, MPI_SUM, goma_comm);
     global_offset -= local_nodes;
   }
   PetscInt num_rows = dpi->num_internal_nodes + dpi->num_boundary_nodes;
@@ -161,13 +161,13 @@ PetscErrorCode petsc_PCD_setup(PC pc,
   count_pressure_nodes(matrix_data, exo, dpi, x, x_old, xdot, xdot_old, &local_nodes,
                        &global_nodes);
 
-  PetscErrorCode err = MatCreate(PETSC_COMM_WORLD, &data->Fp);
+  PetscErrorCode err = MatCreate(goma_comm, &data->Fp);
   CHKERRQ(err);
-  err = MatCreate(PETSC_COMM_WORLD, &data->Mp);
+  err = MatCreate(goma_comm, &data->Mp);
   CHKERRQ(err);
-  err = MatCreate(PETSC_COMM_WORLD, &data->Mp_mu);
+  err = MatCreate(goma_comm, &data->Mp_mu);
   CHKERRQ(err);
-  err = MatCreate(PETSC_COMM_WORLD, &data->Ap);
+  err = MatCreate(goma_comm, &data->Ap);
   CHKERRQ(err);
   err =
       MatSetSizes(matrix_data->pcd_data->Mp, local_nodes, local_nodes, global_nodes, global_nodes);
@@ -182,11 +182,11 @@ PetscErrorCode petsc_PCD_setup(PC pc,
       MatSetSizes(matrix_data->pcd_data->Fp, local_nodes, local_nodes, global_nodes, global_nodes);
   CHKERRQ(err);
 
-  err = KSPCreate(MPI_COMM_WORLD, &data->ksp_Mp);
+  err = KSPCreate(goma_comm, &data->ksp_Mp);
   CHKERRQ(err);
-  err = KSPCreate(MPI_COMM_WORLD, &data->ksp_Mp_mu);
+  err = KSPCreate(goma_comm, &data->ksp_Mp_mu);
   CHKERRQ(err);
-  err = KSPCreate(MPI_COMM_WORLD, &data->ksp_Ap);
+  err = KSPCreate(goma_comm, &data->ksp_Ap);
   CHKERRQ(err);
   err = MatSetOptionsPrefix(data->Mp, "pcdMp_");
   CHKERRQ(err);

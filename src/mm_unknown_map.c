@@ -745,7 +745,7 @@ int find_MaxUnknownNode(void)
 
 #ifdef PARALLEL
   if (Num_Proc > 1) {
-    retn = MPI_Allreduce(&maxUnknowns, &gmax, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+    retn = MPI_Allreduce(&maxUnknowns, &gmax, 1, MPI_INT, MPI_MAX, goma_comm);
     if (retn != MPI_SUCCESS) {
       fprintf(stderr, "find_MaxUnknownNode MPI error, P_%d, error = %d\n", ProcID, retn);
     }

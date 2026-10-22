@@ -21,7 +21,6 @@
 #define JOB_FACTORIZATION           2
 #define JOB_SOLVE                   3
 #define JOB_FACTORIZATION_AND_SOLVE 5
-#define USE_COMM_WORLD              -987654
 
 // C to Fortran macros for MUMPS
 #define ICNTL(I)  icntl[(I) - 1]
@@ -75,7 +74,7 @@ static void msr_to_triplet(struct GomaLinearSolverData *data) {
   int local_nnz = data->nnz;
 
   int RowOffset;
-  MPI_Scan(&N, &RowOffset, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Scan(&N, &RowOffset, 1, MPI_INT, MPI_SUM, goma_comm);
   RowOffset -= N;
   int *colgids = (int *)malloc((N + num_external_dofs[pg->imtrx]) * sizeof(int));
   for (int i = 0; i < N; i++) {
@@ -84,12 +83,12 @@ static void msr_to_triplet(struct GomaLinearSolverData *data) {
 
   if (ProcID == 0) {
     mumps_data->row_offsets = (int *)malloc((Num_Proc + 1) * sizeof(int));
-    MPI_Gather(&RowOffset, 1, MPI_INT, mumps_data->row_offsets, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&RowOffset, 1, MPI_INT, mumps_data->row_offsets, 1, MPI_INT, 0, goma_comm);
   } else {
-    MPI_Gather(&RowOffset, 1, MPI_INT, NULL, 0, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&RowOffset, 1, MPI_INT, NULL, 0, MPI_INT, 0, goma_comm);
   }
 
-  MPI_Allreduce(&N, &(mumps_data->N_global), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&N, &(mumps_data->N_global), 1, MPI_INT, MPI_SUM, goma_comm);
   if (ProcID == 0) {
     mumps_data->row_counts = (int *)malloc(Num_Proc * sizeof(int));
     mumps_data->row_offsets[Num_Proc] = mumps_data->N_global;
@@ -182,7 +181,7 @@ static goma_error check_mumps_error(DMUMPS_STRUC_C *mumps) {
         fprintf(stderr, "INFOG[2]: %d\n", mumps->infog[1]);
       }
       fflush(stderr);
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier(goma_comm);
       if (mumps->info[0] < 0) {
         fprintf(stderr, "P%d INFO[1]: %d\n", ProcID, mumps->info[0]);
         fprintf(stderr, "P%d INFO[2]: %d\n", ProcID, mumps->info[1]);
@@ -218,7 +217,7 @@ static void set_icntl_and_cntl(DMUMPS_STRUC_C *mumps) {
   }
 }
 static void mumps_job_initialize(DMUMPS_STRUC_C *mumps) {
-  mumps->comm_fortran = USE_COMM_WORLD;
+  mumps->comm_fortran = (MUMPS_INT)MPI_Comm_c2f(goma_comm);
   mumps->job = JOB_INIT;
   mumps->par = 1;
   mumps->sym = 0;
@@ -248,7 +247,7 @@ static void mumps_set_matrix_structure(struct GomaLinearSolverData *data, DMUMPS
   } else {
     mumps->n = mumps_data->N_global;
     mumps->nnz_loc = mumps_data->nnz;
-    MPI_Allreduce(&(mumps->nnz_loc), &(mumps->nnz), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&(mumps->nnz_loc), &(mumps->nnz), 1, MPI_INT, MPI_SUM, goma_comm);
     mumps->irn_loc = mumps_data->irn;
     mumps->jcn_loc = mumps_data->jcn;
     mumps->a_loc = mumps_data->val;
@@ -319,7 +318,7 @@ goma_error mumps_solve(struct GomaLinearSolverData *data, dbl *x, dbl *b) {
     }
 
     MPI_Scatterv(rhs, mumps_data->row_counts, mumps_data->row_offsets, MPI_DOUBLE, rhs,
-                 mumps_data->N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                 mumps_data->N, MPI_DOUBLE, 0, goma_comm);
 
     for (int i = 0; i < mumps_data->N; i++) {
       x[i] = rhs[i];

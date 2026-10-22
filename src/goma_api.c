@@ -103,6 +103,7 @@ extern void handle_ieee(void);
 #include "rf_mp.h"
 #include "sl_petsc.h"
 #include "sl_petsc_complex.h"
+#include "sl_petsc_options.h"
 
 /* defined in globals.c */
 extern double time_goma_started;
@@ -149,6 +150,7 @@ struct goma_context {
   int nclc;
   double time_start;
   fenv_t host_fenv; /* floating point environment to restore for the host */
+  MPI_Comm comm;    /* duplicate of the host's communicator, goma_comm during the run */
   enum goma_stage stage;
 };
 
@@ -159,9 +161,6 @@ static bool goma_context_active = false;
  * process unless GOMA_EXPERIMENTAL_MULTIPLE_RUNS is set in the environment
  */
 static bool goma_context_used = false;
-#ifdef GOMA_ENABLE_PETSC
-static bool goma_petsc_preinitialized = false;
-#endif
 
 int goma_library_initialize(MPI_Comm comm) {
   if (goma_library_initialized) {
@@ -169,11 +168,6 @@ int goma_library_initialize(MPI_Comm comm) {
   }
 #ifdef GOMA_CHECK_GLOBAL_RESET
   goma_reset_check_snapshot();
-#endif
-#ifdef GOMA_ENABLE_PETSC
-  PetscBool petsc_initialized = PETSC_FALSE;
-  PetscInitialized(&petsc_initialized);
-  goma_petsc_preinitialized = petsc_initialized;
 #endif
   /* MPI belongs to the host program, never finalize it on a fatal error */
   Goma_Owns_MPI = FALSE;
@@ -186,11 +180,7 @@ int goma_library_finalize(void) {
     return -1;
   }
 #ifdef GOMA_ENABLE_PETSC
-  PetscBool petsc_initialized = PETSC_FALSE;
-  PetscInitialized(&petsc_initialized);
-  if (petsc_initialized && !goma_petsc_preinitialized) {
-    PetscFinalize();
-  }
+  goma_petsc_finalize();
 #endif
   goma_library_initialized = false;
   return 0;
@@ -219,21 +209,17 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
     return -1;
   }
 
-#ifdef PARALLEL
-  /* Goma still communicates over MPI_COMM_WORLD internally */
-  int comm_compare;
-  MPI_Comm_compare(comm, MPI_COMM_WORLD, &comm_compare);
-  if (comm_compare != MPI_IDENT && comm_compare != MPI_CONGRUENT) {
-    return -1;
-  }
-#endif
-
   goma_context *ctx = calloc(1, sizeof(goma_context));
   if (ctx == NULL) {
     return -1;
   }
   ctx->argc = argc;
   ctx->argv = argv;
+#ifdef PARALLEL
+  /* Goma communicates over its own duplicate of the host's communicator */
+  MPI_Comm_dup(comm, &ctx->comm);
+  goma_comm = ctx->comm;
+#endif
   goma_context_active = true;
   goma_context_used = true;
   /* Goma may enable floating point exceptions, restored in goma_destroy */
@@ -262,8 +248,8 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
    * pretty early if we're "one of many" or the only process.
    */
 
-  error = MPI_Comm_size(MPI_COMM_WORLD, &Num_Proc);
-  error = MPI_Comm_rank(MPI_COMM_WORLD, &ProcID);
+  error = MPI_Comm_size(goma_comm, &Num_Proc);
+  error = MPI_Comm_rank(goma_comm, &ProcID);
 
 #ifdef GOMA_ENABLE_AZTEC
   /*
@@ -271,7 +257,7 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
    * from Aztec
    */
 
-  AZ_set_proc_config(Proc_Config, MPI_COMM_WORLD);
+  AZ_set_proc_config(Proc_Config, goma_comm);
 #endif
 
   /* set the output limit flag if need be */
@@ -427,7 +413,7 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
 
   noahs_raven();
 
-  MPI_Bcast(MPI_BOTTOM, 1, Noahs_Raven->new_type, 0, MPI_COMM_WORLD);
+  MPI_Bcast(MPI_BOTTOM, 1, Noahs_Raven->new_type, 0, goma_comm);
 
 #endif
 
@@ -453,7 +439,7 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
    */
 
   noahs_ark();
-  MPI_Bcast(MPI_BOTTOM, 1, Noahs_Ark->new_type, 0, MPI_COMM_WORLD);
+  MPI_Bcast(MPI_BOTTOM, 1, Noahs_Ark->new_type, 0, goma_comm);
 
   /*
    * Chemkin was initialized on processor zero during the input file
@@ -474,7 +460,7 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
   ark_landing();
 
   noahs_dove();
-  MPI_Bcast(MPI_BOTTOM, 1, Noahs_Dove->new_type, 0, MPI_COMM_WORLD);
+  MPI_Bcast(MPI_BOTTOM, 1, Noahs_Dove->new_type, 0, goma_comm);
 
 #endif /* End of ifdef PARALLEL */
 
@@ -533,7 +519,7 @@ int goma_setup(goma_context *ctx) {
   }
   check_parallel_error("Error in decomposing exodus files");
 #endif
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
 
   /*
    * For parallel execution, assume the following variables will be changed
@@ -661,7 +647,7 @@ int goma_setup(goma_context *ctx) {
    */
   log_msg("Pre processing of mesh...");
 #ifdef PARALLEL
-  error = MPI_Barrier(MPI_COMM_WORLD);
+  error = MPI_Barrier(goma_comm);
 #endif
   pre_process(EXO_ptr);
 
@@ -838,7 +824,7 @@ int goma_solve(goma_context *ctx) {
   }
 
 #ifdef PARALLEL
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(goma_comm);
 #endif
 
   fix_output();
@@ -1015,6 +1001,10 @@ int goma_destroy(goma_context **ctx_ptr) {
   eh_free_globals();
   as_free_globals();
 
+#ifdef PARALLEL
+  /* goma_comm was reset by eh_free_globals */
+  MPI_Comm_free(&ctx->comm);
+#endif
   free(ctx);
   *ctx_ptr = NULL;
   goma_context_active = false;

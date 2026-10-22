@@ -270,16 +270,16 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
    * volume in an element and negative lubrication height
    */
 #ifdef PARALLEL
-  MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&neg_elem_volume, &neg_elem_volume_global, 1, MPI_INT, MPI_MAX, goma_comm);
   neg_elem_volume = neg_elem_volume_global;
 
-  MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&neg_lub_height, &neg_lub_height_global, 1, MPI_INT, MPI_MAX, goma_comm);
   neg_lub_height = neg_lub_height_global;
 
-  MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&zero_detJ, &zero_detJ_global, 1, MPI_INT, MPI_MAX, goma_comm);
   zero_detJ = zero_detJ_global;
 
-  MPI_Allreduce(&err, &err_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&err, &err_global, 1, MPI_INT, MPI_SUM, goma_comm);
   err = err_global;
 
 #endif

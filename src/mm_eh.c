@@ -97,6 +97,9 @@ static char log_filename[MAX_FNL] = DEFAULT_GOMA_LOG_FILENAME;
 
 int Goma_Owns_MPI = TRUE;
 
+/* declared in rf_mp.h, defined here because goma_exit aborts on it */
+MPI_Comm goma_comm = MPI_COMM_WORLD;
+
 int goma_wh_generation = 0;
 
 /*
@@ -120,7 +123,7 @@ void goma_exit(const int status, const bool finalize_mpi) {
     MPI_Finalize();
     exit(status);
   }
-  MPI_Abort(MPI_COMM_WORLD, status);
+  MPI_Abort(goma_comm, status);
 #endif
   exit(status);
 }
@@ -378,4 +381,6 @@ void eh_free_globals(void) {
   current_severity = 0;
   memset(Err_Msg, 0, sizeof(Err_Msg));
   goma_wh_generation++;
+  /* the duplicated communicator is freed by goma_destroy */
+  goma_comm = MPI_COMM_WORLD;
 }
