@@ -31,9 +31,6 @@
  * --ranks runs Goma on a communicator split from MPI_COMM_WORLD that holds
  * only its first <n> ranks, the other ranks wait, to check that Goma does not
  * communicate outside the communicator it is given.
- *
- * Requires GOMA_EXPERIMENTAL_MULTIPLE_RUNS=1 in the environment until
- * goma_destroy fully resets Goma's global state.
  */
 
 #ifndef _GNU_SOURCE

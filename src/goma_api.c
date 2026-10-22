@@ -156,11 +156,6 @@ struct goma_context {
 
 static bool goma_library_initialized = false;
 static bool goma_context_active = false;
-/*
- * Global state is not yet fully reset by goma_destroy, so allow one run per
- * process unless GOMA_EXPERIMENTAL_MULTIPLE_RUNS is set in the environment
- */
-static bool goma_context_used = false;
 
 int goma_library_initialize(MPI_Comm comm) {
   if (goma_library_initialized) {
@@ -205,9 +200,6 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
   if (!goma_library_initialized || goma_context_active || ctx_out == NULL) {
     return -1;
   }
-  if (goma_context_used && getenv("GOMA_EXPERIMENTAL_MULTIPLE_RUNS") == NULL) {
-    return -1;
-  }
 
   goma_context *ctx = calloc(1, sizeof(goma_context));
   if (ctx == NULL) {
@@ -221,7 +213,6 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
   goma_comm = ctx->comm;
 #endif
   goma_context_active = true;
-  goma_context_used = true;
   /* Goma may enable floating point exceptions, restored in goma_destroy */
   fegetenv(&ctx->host_fenv);
 
