@@ -1109,25 +1109,6 @@ struct External_Field_Variables {
   int exit_after_pixel_map; // stop running after we have done pixel mapping
 };
 
-/*
- * Library_IO: Information passed into Goma from an external host code
- *		(applicable only when compiled with LIBRARY_MODE flag)
- */
-struct Library_IO {
-  double *xnv_in;     /* Imported nodal variables */
-  double *xev_in;     /* Imported element variables */
-  double *xsoln;      /* Exported solution variables */
-  double *xpost;      /* Exported post-processing variables */
-  int animas_step;    /* Call number to Goma */
-  int print_flag;     /* How often to write ExodusII solution in Goma */
-  int solve_steps;    /* How many Goma time steps to take per call */
-  int goma_first;     /* Indicates if Goma is called before other code */
-  double t_start;     /* Start time passed in from driver */
-  double t_end;       /* End time passed in from driver */
-  double last_step;   /* Size of last Animas time step */
-  double decelerator; /* Decleration factor applied to Goma time step */
-};
-
 struct Transient_Information {
   /*
    * Contains constants used for transient analysis

@@ -680,10 +680,8 @@ double time_step_control(const double delta_t,
  * Find global quantities
  */
 #ifdef PARALLEL
-  MPI_Allreduce((void *)ecp, (void *)ecp_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_SUM,
-                goma_comm);
-  MPI_Allreduce((void *)max, (void *)max_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_MAX,
-                goma_comm);
+  MPI_Allreduce((void *)ecp, (void *)ecp_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_SUM, goma_comm);
+  MPI_Allreduce((void *)max, (void *)max_buf, MAX_VARIABLE_TYPES, MPI_DOUBLE, MPI_MAX, goma_comm);
   MPI_Allreduce((void *)ncp, (void *)ncp_buf, MAX_VARIABLE_TYPES, MPI_INT, MPI_SUM, goma_comm);
 
   for (i = 0; i < MAX_VARIABLE_TYPES; i++) {
@@ -1971,13 +1969,12 @@ void init_vec(
         } else {
           GOMA_EH(-1, "something wrong with efv->ipix");
         }
+      } else {
+        /* IMPORT or IMPORT_EV, set by the host program */
+        err = load_import_field(w, exo, dpi, cx);
+        GOMA_EH(err, "External field %s has no values, set them with goma_set_external_field()",
+                efv->name[w]);
       }
-#ifndef LIBRARY_MODE
-      else if (strcmp(efv->file_nm[w], "IMPORT") == 0 ||
-               strcmp(efv->file_nm[w], "IMPORT_EV") == 0) {
-        GOMA_EH(-1, "External fields can only be imported in LIBRARY_MODE!");
-      }
-#endif
     }
     if (map_pix_fast_called) {
       MPI_Barrier(goma_comm);
@@ -3592,282 +3589,95 @@ int find_first_elem_with_var(Exo_DB *e, int var) {
   return (first_elem);
 }
 
-#ifdef LIBRARY_MODE
-int load_import_fields(dbl *base_p_por, const Exo_DB *exo, int callnum) {
-  int i, w;
-  int nv_start, ev_start, nv_count = 0, ev_count = 0;
-  int ne = exo->num_elems;
-  int nn = exo->num_nodes;
-  int doing_ev = FALSE;
-  dbl *ev_tmp = NULL;
+/*
+ * External fields with IMPORT (nodal values) or IMPORT_EV (element values)
+ * in place of a file name get their values from the host program through
+ * goma_set_external_field(). The values are kept here and loaded into
+ * efv->ext_fld_ndl_val by init_vec() and before each solve_problem_advance().
+ */
+static double *import_values[MAX_EXTERNAL_FIELD];
 
-  /* Make sure there are fields to load */
-  if (Num_Import_NV == 0 && Num_Import_EV == 0)
-    return 0;
-  if (libio->xnv_in == NULL || libio->xev_in == NULL) {
-    fprintf(stderr, "Invalid import vector(s)!\n");
+/* TRUE if external field w is set by the host program, not read from a file */
+int is_import_field(int w) {
+  return strcmp(efv->file_nm[w], "IMPORT") == 0 || strcmp(efv->file_nm[w], "IMPORT_EV") == 0;
+}
+
+/* Index of the imported external field name, -1 if there is none. *element
+ * is TRUE for an IMPORT_EV field */
+int import_field_index(const char *name, int *element) {
+  for (int w = 0; w < efv->Num_external_field; w++) {
+    if (is_import_field(w) && strcmp(efv->name[w], name) == 0) {
+      *element = strcmp(efv->file_nm[w], "IMPORT_EV") == 0;
+      return w;
+    }
+  }
+  return -1;
+}
+
+/* Keep a copy of the n values of imported external field w */
+void set_import_field(int w, const double *values, int n) {
+  import_values[w] = realloc(import_values[w], sizeof(double) * n);
+  memcpy(import_values[w], values, sizeof(double) * n);
+}
+
+/* Name of an imported external field that has no values yet, NULL if all have */
+const char *unset_import_field(void) {
+  for (int w = 0; w < efv->Num_external_field; w++) {
+    if (is_import_field(w) && import_values[w] == NULL) {
+      return efv->name[w];
+    }
+  }
+  return NULL;
+}
+
+/*
+ * Load imported external field w into efv->ext_fld_ndl_val[w]: the values of
+ * the owned nodes, or of each node the average of the elements around it,
+ * then the ghost nodes from their owners. Returns -1 if the field has no
+ * values.
+ */
+int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
+  if (!is_import_field(w) || import_values[w] == NULL) {
     return -1;
   }
-  if (Num_Import_EV > 0)
-    ev_tmp = alloc_dbl_1(nn, 0.0);
-
-  /* Loop over all defined external fields */
-  for (w = 0; w < efv->Num_external_field; w++) {
-
-    /* Import the nodal vars */
-    if (!strcmp(efv->file_nm[w], "IMPORT")) {
-      fprintf(stderr, " Importing external #%d nvar field %s...\n", w, efv->name[w]);
-      efv->ext_fld_ndl_val[w] = alloc_dbl_1(nn, 0.0);
-      nv_start = nn * nv_count;
-      if (doing_ev)
-        GOMA_WH(-1, "Problem with order of external field cards!\n");
-      for (i = 0; i < nn; i++) {
-        efv->ext_fld_ndl_val[w][i] = libio->xnv_in[nv_start + i];
-
-        if (base_p_por != NULL && w == efv->ev_porous_index) {
-          base_p_por[i] = efv->ext_fld_ndl_val[w][i];
-        }
+  int element = strcmp(efv->file_nm[w], "IMPORT_EV") == 0;
+  if (efv->ext_fld_ndl_val[w] == NULL) {
+    efv->ext_fld_ndl_val[w] = alloc_dbl_1(exo->num_nodes, 0.0);
+  }
+  double *nodal = efv->ext_fld_ndl_val[w];
+  for (int i = 0; i < exo->num_nodes; i++) {
+    if (!element) {
+      nodal[i] = import_values[w][i];
+    } else {
+      int first = exo->node_elem_pntr[i];
+      int last = exo->node_elem_pntr[i + 1];
+      double sum = 0.0;
+      for (int j = first; j < last; j++) {
+        sum += import_values[w][exo->node_elem_list[j]];
       }
-      nv_count++;
+      nodal[i] = last > first ? sum / (last - first) : 0.0;
     }
   }
-
-  /****************************Anneal from external***********************/
-  if (efv->ev_porous_decouple) {
-    anneal_mesh_with_external_field(exo);
-  }
-
-  for (w = 0; w < efv->Num_external_field; w++) {
-    /*
-     * Element vars loaded second because they have to projected to nodes.  For this
-     *   we may need the external nodal displacements to already have been imported
-     */
-    if (!strcmp(efv->file_nm[w], "IMPORT_EV")) {
-      fprintf(stderr, " Importing external #%d evar field %s...\n", w, efv->name[w]);
-      efv->ext_fld_ndl_val[w] = alloc_dbl_1(nn, 0.0);
-      doing_ev = TRUE;
-      vzero(nn, &ev_tmp[0]);
-      interp_ev_to_nodes(exo, ev_tmp, ev_count);
-      for (i = 0; i < nn; i++) {
-        efv->ext_fld_ndl_val[w][i] = ev_tmp[i];
-
-        /* Save base porosity for updates if applicable */
-        if (base_p_por != NULL && w == efv->ev_porous_index) {
-          base_p_por[i] = efv->ext_fld_ndl_val[w][i];
-        }
-      }
-      ev_count++;
-    }
-
-    /* All other cases: var has already been read in from Exodus file! */
-  }
-
-  fprintf(stderr, " Imported %d of %d nodal vars and %d of %d elem vars.\n", nv_count,
-          Num_Import_NV, ev_count, Num_Import_EV);
-  safer_free((void **)&ev_tmp);
+  exchange_node(cx, dpi, nodal);
   return 0;
 }
 
-void interp_ev_to_nodes(const Exo_DB *exo, dbl *ev_tmp, int iev) {
-  int ne1, ne2, nel;
-  int i, j, n, el;
-  int nn = exo->num_nodes;
-  int ne = exo->num_elems;
-  dbl sum, avg;
-
-  dbl hsquared[DIM] = {0., 0., 0.}, hh[DIM][DIM], dhh[DIM][MDE];
-
-  dbl h_siz, h_siz_sum = 0.0;
-
-  /* Set index into xev_in */
-  n = iev * ne;
-
-  /* Loop over all nodes */
-  for (i = 0; i < nn; i++) {
-    ne1 = exo->node_elem_pntr[i];
-    ne2 = exo->node_elem_pntr[i + 1];
-    nel = ne2 - ne1;
-    sum = avg = 0.0;
-
-    h_siz_sum = 0.0;
-
-    /* Sum var value over elements containing this node */
-    for (j = ne1; j < ne2; j++) {
-      el = exo->node_elem_list[j];
-
-      ei[pg->imtrx]->ielem = el;
-      ei[pg->imtrx]->ielem_type = Elem_Type(exo, el);
-      ei[pg->imtrx]->num_local_nodes = elem_info(NNODES, ei[pg->imtrx]->ielem_type);
-
-      h_elem_siz(hsquared, hh, dhh, FALSE);
-
-      h_siz = hsquared[0] * hsquared[1];
-      if (pd->Num_Dim > 2)
-        h_siz *= hsquared[2];
-
-      h_siz = sqrt(h_siz);
-
-      h_siz_sum += h_siz;
-
-      sum += libio->xev_in[n + el] * h_siz;
-    }
-    avg = sum / h_siz_sum;
-
-    /* Write nodal value */
-    ev_tmp[i] = avg;
-  }
-
-  /* Done */
-  return;
-}
-
-int advance_porosity_ev(const int time_step, const int nn, dbl *x, dbl *base_p_por, dbl *base_p_liq)
-
-/*
- * Function updates the external field corresponding to imported nodal
- * porosity at each time step (after the first) according to the
- * following constitutive relation:
- *
- *         n+1        n             0             n+1          n
- *    (por)    = (por)  + Cr * (por)   * [ (p_liq)    - (p_liq)  ]
- * where:
- *        Cr = porous ("rock") compressibility of solid
- *       por = porosity
- *     p_liq = porous liquid pressure
- * and superscripts denote the time steps:
- *       n+1 = current
- *         n = first in current Goma call
- *         0 = start of problem (not current Goma call)
- *
- * This update is done here on a node-by-node basis, rather than
- * doing at assembly time.
- */
-{
-  static int previous_step = -1;
-  double cr, por0, delta;
-  int i, n, mn, i_por_ev;
-  int eq = POR_LIQ_PRES;
-
-  /* Bail out if update not needed */
-  if (time_step == previous_step)
-    return 0;
-  previous_step = time_step;
-  if (time_step == 0)
-    return 0;
-
-  /* check for valid porosity external field index */
-  i_por_ev = efv->ev_porous_index;
-  GOMA_EH(i_por_ev, "Porosity external field not found!");
-
-  /* Loop over nodes in problem */
-  for (n = 0; n < nn; n++) {
-
-    /*
-     * Get block number and DOF index for porous liquid pressure at node
-     * EDW note: This will only work for nodes along an element block
-     * boundary when the porous material has the smaller material index!
-     */
-    mn = first_matID_at_node(n);
-    i = Index_Solution(n, eq, 0, 0, -1, pg->imtrx);
-
-    /* Proceed if eq is active at node */
-    if (i > -1) {
-      cr = mp_glob[mn]->porous_compressibility;
-      por0 = mp_glob[mn]->initial_porosity;
-      delta = cr * por0 * (x[i] - base_p_liq[n]);
-      efv->ext_fld_ndl_val[i_por_ev][n] = base_p_por[n] + delta;
+/* Load all imported external fields, see load_import_field() */
+int load_import_fields(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
+  for (int w = 0; w < efv->Num_external_field; w++) {
+    if (is_import_field(w) && load_import_field(w, exo, dpi, cx) != 0) {
+      return -1;
     }
   }
-
   return 0;
 }
 
-int advance_porosity_goma_first(
-    const int time_step, const int nn, dbl *x, dbl *base_p_por, dbl *base_p_liq)
-
-/*
- * Function updates the external field corresponding to imported nodal
- * porosity at each time step (after the first) according to the
- * following constitutive relation:
- *
- *         n+1        n             0             n+1          n
- *    (por)    = (por)  + Cr * (por)   * [ (p_liq)    - (p_liq)  ]
- * where:
- *        Cr = porous ("rock") compressibility of solid
- *       por = porosity
- *     p_liq = porous liquid pressure
- * and superscripts denote the time steps:
- *       n+1 = current
- *         n = first in current Goma call
- *         0 = start of problem (not current Goma call)
- *
- * This update is done here on a node-by-node basis, rather than
- * doing at assembly time.
- */
-{
-  static int previous_step = -1;
-  double cr, por0, delta;
-  int i, n, mn, i_por_ev;
-  int eq = POR_LIQ_PRES;
-
-  /* Bail out if update not needed */
-  if (time_step == previous_step)
-    return 0;
-  previous_step = time_step;
-  if (time_step == 0)
-    return 0;
-
-  /* check for valid porosity external field index */
-  i_por_ev = efv->ev_porous_index;
-  GOMA_EH(i_por_ev, "Porosity external field not found!");
-
-  /* Loop over nodes in problem */
-  for (n = 0; n < nn; n++) {
-
-    /*
-     * Get block number and DOF index for porous liquid pressure at node
-     * EDW note: This will only work for nodes along an element block
-     * boundary when the porous material has the smaller material index!
-     */
-    mn = first_matID_at_node(n);
-    i = Index_Solution(n, eq, 0, 0, -1, pg->imtrx);
-
-    /* Proceed if eq is active at node */
-    if (i > -1) {
-      cr = mp_glob[mn]->porous_compressibility;
-      por0 = mp_glob[mn]->initial_porosity;
-      delta = cr * por0 * (x[i] - base_p_liq[n]);
-      efv->ext_fld_ndl_val[i_por_ev][n] = base_p_por[n] + delta;
-    }
+/* Reset this file's globals to their load time values, see goma_reset.h */
+void rf_util_free_globals(void) {
+  for (int w = 0; w < MAX_EXTERNAL_FIELD; w++) {
+    safer_free((void **)&import_values[w]);
   }
-
-  return 0;
 }
-
-int advance_porosity_jas_leads(const int time_step,
-                               double current_gtime,
-                               dbl starting_gtime,
-                               dbl animas_time_step,
-                               const int nn,
-                               dbl *p_por_final,
-                               dbl *p_por_dot) {
-  int i, n, mn, i_por_ev;
-  int eq = POR_LIQ_PRES;
-
-  /* check for valid porosity external field index */
-  i_por_ev = efv->ev_porous_index;
-  GOMA_EH(i_por_ev, "Porosity external field not found!");
-
-  /* Loop over nodes in problem */
-  for (n = 0; n < nn; n++) {
-    efv->ext_fld_ndl_val[i_por_ev][n] =
-        p_por_final[n] - p_por_dot[n] * (animas_time_step + current_gtime - starting_gtime);
-  }
-
-  return 0;
-}
-
-#endif /* LIBRARY_MODE */
 
 int init_pmv_hyst(const Exo_DB *exo)
 

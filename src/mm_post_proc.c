@@ -4322,6 +4322,10 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
 
 /*****************************************************************************/
 
+/* post_process_nodal_var() asks post_process_nodal() for one variable */
+static int capture_index = -1;
+static double *capture_values = NULL;
+
 void post_process_nodal(double x[],            /* Solution vector for the current processor */
                         double **x_sens_p,     /* solution sensitivities */
                         double x_old[],        /* Solution vector at last time step */
@@ -5819,6 +5823,10 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
       }
   */
 
+  if (capture_values != NULL) {
+    memcpy(capture_values, post_proc_vect[capture_index], sizeof(double) * exo->num_nodes);
+  }
+
   if (Num_Export_XP > 0 && x_pp != NULL) {
     idex = 0;
     for (j = 0; j < Num_Export_XP; j++) {
@@ -5853,6 +5861,50 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
   /*****************************************************************************/
 } /*   END OF post_process_nodal                                             */
 /*****************************************************************************/
+
+/*
+ * Compute the nodal post processing variables without writing them, and
+ * return post processing variable index (0 .. rd->TotalNVPostOutput-1, in
+ * the order of the output file) in values[exo->num_nodes].  Particles are
+ * not traced.  Collective, like post_process_nodal().
+ */
+void post_process_nodal_var(double x[],
+                            double **x_sens_p,
+                            double x_old[],
+                            double xdot[],
+                            double xdot_old[],
+                            double resid_vector[],
+                            double time,
+                            double delta_t,
+                            double theta,
+                            Exo_DB *exo,
+                            Dpi *dpi,
+                            RESULTS_DESCRIPTION_STRUCT *rd,
+                            int index,
+                            double *values) {
+  /* the element loads point these at the vectors passed here, the solver (overlap
+   * augmenting conditions, for example) expects them to point at its own */
+  double *save_x = x_static, *save_x_old = x_old_static;
+  double *save_xdot = xdot_static, *save_xdot_old = xdot_old_static;
+  double *save_x_dbl_dot = x_dbl_dot_static, *save_x_dbl_dot_old = x_dbl_dot_old_static;
+  PROBLEM_DESCRIPTION_STRUCT *save_pd = pd;
+  int save_nn_particles = nn_particles;
+  nn_particles = 0;
+  capture_index = index;
+  capture_values = values;
+  post_process_nodal(x, x_sens_p, x_old, xdot, xdot_old, resid_vector, 0, &time, delta_t, theta,
+                     NULL, exo, dpi, rd, NULL, 0);
+  capture_index = -1;
+  capture_values = NULL;
+  nn_particles = save_nn_particles;
+  x_static = save_x;
+  x_old_static = save_x_old;
+  xdot_static = save_xdot;
+  xdot_old_static = save_xdot_old;
+  x_dbl_dot_static = save_x_dbl_dot;
+  x_dbl_dot_old_static = save_x_dbl_dot_old;
+  pd = save_pd;
+}
 
 void post_process_elem(double x[],     /* soln vector */
                        double x_old[], /* soln vector at previous time step */
@@ -9397,12 +9449,11 @@ static int look_for_post_proc(FILE *ifp,           /* pointer to file           
     ECHO(echo_string, echo_file);
   }
 
-#ifndef LIBRARY_MODE
   if (Num_Export_XP > 0) {
-    GOMA_WH(-1, "Post-process exp option only available in LIBRARY_MODE!");
+    GOMA_WH(-1, "Post-process exp option is ignored, a host program reads post processing "
+                "variables with goma_get_post_field()");
     Num_Export_XP = 0;
   }
-#endif
   return iread;
 }
 /******************************************************************************/
@@ -13057,6 +13108,8 @@ static bool post_process_variable_is_active(pp_Average *pp_average, int matrix_i
  */
 void post_proc_free_globals(void) {
   /* the pp_* arrays are not yet freed */
+  capture_index = -1;
+  capture_values = NULL;
   nn_post_fluxes = 0;
   nn_post_fluxes_sens = 0;
   nn_post_data = 0;

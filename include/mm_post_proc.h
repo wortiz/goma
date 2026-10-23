@@ -69,6 +69,21 @@ EXTERN void post_process_nodal     /* mm_post_proc.c                            
      char[],                       /* exodus filename   */
      int);                         /* matrix offset */
 
+EXTERN void post_process_nodal_var(double[],                     /* x */
+                                   double **,                    /* x_sens_p */
+                                   double[],                     /* x_old */
+                                   double[],                     /* xdot */
+                                   double[],                     /* xdot_old */
+                                   double[],                     /* resid_vector */
+                                   double,                       /* time */
+                                   double,                       /* delta_t */
+                                   double,                       /* theta */
+                                   Exo_DB *,                     /* exo */
+                                   Dpi *,                        /* dpi */
+                                   RESULTS_DESCRIPTION_STRUCT *, /* rd */
+                                   int,                          /* index - post variable */
+                                   double *);                    /* values[num_nodes] */
+
 EXTERN void post_process_elem /* mm_post_proc.c                            */
     (double[],                /* x - soln vector                           */
      double[],                /* x_old - soln vector at previous time step */

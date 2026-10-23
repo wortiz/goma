@@ -9,7 +9,9 @@ runs a different input deck at each step. Each run is independent: *Goma*
 reads its input deck and mesh, solves, writes its output files and then frees
 everything before the next run starts. Problems do not exchange data in
 memory; a later run can read an earlier run's output files like any other
-*Goma* input.
+*Goma* input. Within a run, the host can advance the problem in steps and
+exchange fields with it, to couple *Goma* to another code (see `Solving in
+steps`_ and `Mesh and fields`_).
 
 Building
 ########
@@ -67,6 +69,148 @@ All functions return 0 on success and a negative value on failure.
 time: ``goma_create`` returns an error while another context is alive. Running
 problems concurrently in one process (for example from several threads) is not
 supported.
+
+Solving in steps
+################
+
+::
+
+   int goma_advance_steps(goma_context *ctx, int num_steps);
+   int goma_advance_to(goma_context *ctx, double time);
+   int goma_get_time(goma_context *ctx, double *time, double *delta_t);
+   int goma_finish(goma_context *ctx);
+
+Instead of ``goma_solve``, a host can advance a problem a few time steps at a
+time, for example to run *Goma* alongside another code. Output is written at
+the deck's print frequency as usual. A problem advanced with
+``goma_advance_steps`` gives the same results as ``goma_solve``.
+
+``goma_advance_steps``
+   Takes ``num_steps`` (at least 1) successful time steps.
+
+``goma_advance_to``
+   Takes time steps until the simulation time reaches ``time``, shortening the
+   last step to land on it exactly. The following step goes back to the size
+   the time step control chose before it was shortened. A ``time`` at or
+   before the current time takes no step.
+
+``goma_get_time``
+   The simulation time of the last converged step and the size of the next
+   time step.
+
+``goma_finish``
+   Frees the solver and finishes the output files. ``goma_destroy`` calls it
+   when the host did not. Calling it before the problem has reached its end
+   stops the problem at the current time.
+
+Both advance functions return 0 when the problem can be advanced further and
+1 when it has reached its end (the maximum time or number of time steps, or a
+steady state); further calls then return 1 without doing anything. A steady
+problem is solved by the first call. The time step size carries over from one
+call to the next, and ``goma_solve`` called after them solves the rest of the
+problem.
+
+Only problems that *Goma* solves with its fully coupled solver can be advanced
+in steps: steady or transient problems with a single matrix and no
+continuation, hunting or LOCA. For other problems the first call returns an
+error and the problem can still be solved with ``goma_solve``.
+
+A host loop that advances a transient problem every 0.1 time units:
+
+.. code-block:: c
+
+   double t, dt;
+   int status = goma_advance_to(ctx, -HUGE_VAL); /* starts the problem */
+   goma_get_time(ctx, &t, &dt);
+   while (status == 0) {
+     t += 0.1;
+     status = goma_advance_to(ctx, t);
+     /* ... work with the other code at time t ... */
+   }
+   goma_finish(ctx);
+
+Mesh and fields
+###############
+
+::
+
+   int goma_mesh_get_info(goma_context *ctx, goma_mesh_info *info);
+   int goma_mesh_get_coordinates(goma_context *ctx, double *xyz);
+   int goma_mesh_get_node_global_ids(goma_context *ctx, long long *ids);
+   int goma_mesh_get_elem_global_ids(goma_context *ctx, long long *ids);
+   int goma_mesh_get_elem_owners(goma_context *ctx, int *owners);
+   int goma_mesh_get_block(goma_context *ctx, int block, int *block_id, int *num_elems,
+                           int *nodes_per_elem, const int **connectivity);
+   int goma_get_field(goma_context *ctx, const char *name, int component, double *values);
+   int goma_get_post_field(goma_context *ctx, const char *name, double *values);
+   int goma_set_external_field(goma_context *ctx, const char *name,
+                               goma_field_location location, const double *values);
+
+A host that couples *Goma* to another code exchanges values at *Goma*'s nodes
+and elements; mapping them to and from the other code's mesh is the host's
+job. The mesh functions describe the part of the mesh on the calling process,
+after ``goma_setup``:
+
+* Nodes are numbered locally from 0. The nodes the process owns come first
+  (``num_owned_nodes`` of them), then ghost nodes owned by other processes.
+* Elements are numbered locally from 0, element block by element block. In
+  parallel, elements along a processor boundary are on both processes;
+  ``goma_mesh_get_elem_owners`` gives the process that owns each one.
+* Global ids are the 1-based node and element numbers of the undecomposed
+  mesh, and match the node and element maps of *Goma*'s parallel output files
+  (which number their nodes differently).
+* Coordinates are those of the mesh as read, without mesh displacements, which
+  are solution variables (``MESH_DISPLACEMENT1`` ...).
+
+A problem with mesh adaptation changes the mesh while it advances.
+
+After ``goma_advance_steps`` or ``goma_advance_to``, ``goma_get_field``
+returns a solution variable at every local node as it would be written to the
+output file. The name is a variable name (``VELOCITY1`` or ``VX``; for
+``MASS_FRACTION`` or ``Y`` the species number is ``component``) or a nodal
+variable name of the output file. ``goma_get_post_field`` returns a nodal post
+processing variable that the deck asks for, named as in the output file; it
+computes the post processing variables and must be called on all processes.
+The values are those of the last converged step: a level set renormalization
+or a stability analysis that runs after the output of a step can make them
+differ from the output file.
+
+``goma_set_external_field`` sets an external field that the deck declares
+with ``IMPORT`` or ``IMPORT_EV`` in place of a file name (see
+:doc:`/problem_description_file/general_specifications/external_field`)::
+
+   External Field = SOURCE Q1 IMPORT
+
+``GOMA_NODAL`` values are given at every local node, but only the owned
+nodes' values are used; *Goma* copies them to the ghost nodes. ``GOMA_ELEMENT``
+values are given at every local element (owned and ghost) and averaged to the
+nodes. Call it after ``goma_setup`` and again whenever the values change;
+*Goma* uses them from the next ``goma_advance_*`` call on. ``goma_solve`` and
+``goma_advance_*`` return an error while an imported field has no values.
+
+A coupling loop that sends *Goma*'s temperature to another code and gets a
+source term back every 0.1 time units:
+
+.. code-block:: c
+
+   goma_mesh_info mesh;
+   goma_mesh_get_info(ctx, &mesh);
+   double *temperature = malloc(mesh.num_nodes * sizeof(double));
+   double *source = malloc(mesh.num_nodes * sizeof(double));
+
+   other_code_source(source);           /* host maps the other code's values to Goma's nodes */
+   goma_set_external_field(ctx, "SOURCE", GOMA_NODAL, source);
+   double t, dt;
+   int status = goma_advance_to(ctx, -HUGE_VAL);
+   goma_get_time(ctx, &t, &dt);
+   while (status == 0) {
+     t += 0.1;
+     status = goma_advance_to(ctx, t);
+     goma_get_field(ctx, "TEMPERATURE", 0, temperature);
+     other_code_advance(t, temperature, source);
+     goma_set_external_field(ctx, "SOURCE", GOMA_NODAL, source);
+   }
+   goma_finish(ctx);
 
 MPI and PETSc
 #############
@@ -173,6 +317,24 @@ the run must list the same ones::
    scripts/goma_lib_regression.py --driver build/tests/goma_lib_sequence
    scripts/goma_lib_regression.py --driver build/tests/goma_lib_sequence --mode chain
 
+``--advance-steps N`` solves every problem with ``goma_advance_steps(N)``
+instead of ``goma_solve``, and ``--advance-to DT`` with ``goma_advance_to`` at
+every ``DT`` of simulation time; problems that cannot be advanced in steps are
+solved with ``goma_solve`` and listed at the end. ``--advance-to`` changes the
+time steps, so its output only matches the blessed results when every ``DT``
+falls on a time step.
+
+``--check-fields`` (with ``--advance-steps`` or ``--advance-to``) compares
+``goma_get_field`` and ``goma_get_post_field`` after every call with each
+nodal variable of the output file when its last step is the current time.
+``--import-fields`` replaces the file of every ``External Field`` card that
+reads a fixed field from a mesh file with ``IMPORT``; the host reads the field
+from the file and sets it with ``goma_set_external_field`` instead. With
+``--feedback NAME:FIELD:SCALE`` the host adds ``SCALE`` times *Goma*'s
+``FIELD`` to the imported field ``NAME`` before every advance, a coupling loop
+whose results differ from the blessed ones; ``--compare-runs`` then checks that
+the runs of a problem give exactly the same results instead.
+
 ``--extra-ranks 1`` starts one more MPI process than each problem needs and
 runs *Goma* on a communicator without it, to check that *Goma* does not
 communicate outside the communicator it is given.
@@ -193,7 +355,10 @@ function (see ``include/goma_reset.h``) for these tests to pass.
 ``LIBRARY_MODE``
 ################
 
-The ``LIBRARY_MODE`` preprocessor macro found in some source files is an older,
-unrelated interface for coupling *Goma* to another code, which calls
-``solve_problem`` repeatedly for the same problem. It is not used by the
-interface described here.
+The ``LIBRARY_MODE`` preprocessor macro of earlier versions, an interface for
+coupling *Goma* to the ANIMAS code that called ``solve_problem`` repeatedly
+for the same problem, has been removed; this interface replaces it. Its
+``Export Field`` card and the ``exp`` option of the post processing cards are
+ignored with a warning (use ``goma_get_field`` and ``goma_get_post_field``),
+and the update of an imported porosity field with the porous liquid pressure
+is no longer available.

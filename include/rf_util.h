@@ -224,22 +224,13 @@ extern void dcopy1(const int, const double *, double *);
 
 extern int find_first_elem_with_var(Exo_DB *, int);
 
-#ifdef LIBRARY_MODE
-extern int load_import_fields(dbl *base_p_por,   /* Base porosity for updates */
-                              const Exo_DB *exo, /* Ptr to ExodusII database */
-                              int callnum);      /* Indicates first solver call */
-
-extern void interp_ev_to_nodes(const Exo_DB *exo, /* Ptr to Exodus database */
-                               dbl *ev_tmp,       /* Destination array */
-                               int iev);          /* Import elem var ID */
-#endif
-
-extern int advance_porosity_ev(const int time_step, /* Time step number in current pass */
-                               const int nn,        /* Number of nodes on this proc */
-                               dbl *x,              /* Solution at current time step */
-                               dbl *base_p_por,     /* Porosity at start of Goma call */
-                               dbl *base_p_liq);    /* Porous liquid pressure
-                                                        at start of Goma call */
+/* external fields imported from the host program, see goma_set_external_field() */
+extern int is_import_field(int w);
+extern int import_field_index(const char *name, int *element);
+extern void set_import_field(int w, const double *values, int n);
+extern const char *unset_import_field(void);
+extern int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx);
+extern int load_import_fields(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx);
 
 extern int init_pmv_hyst(const Exo_DB * /* exo - ptr to finite element mesh database */
 );

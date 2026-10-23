@@ -49,13 +49,31 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   # Goma on a communicator holding only some of the ranks
   add_test(NAME goma_lib_subcomm COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_subcomm --mode chain
                                          --extra-ranks 1 -p ldc -p p_lub_pore -p p_C_T_U_petsc)
+  # solved in steps by goma_advance_steps, the output must match goma_solve's and the
+  # fields Goma returns the output's; steady (2_phase_diff) and transient problems, and a
+  # continuation problem that cannot be advanced
+  add_test(NAME goma_lib_advance
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_advance --mode chain --advance-steps 2
+                   --check-fields -p tbc -p current -p 2_phase_diff -p heat_box_fcont)
+  # external fields set by the host instead of read from a file, serial and two ranks
+  add_test(NAME goma_lib_import
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_import --runs 1 --import-fields
+                   --advance-steps 1 -p lub_film -p lub_CYmold)
+  # a coupling loop: before each time step the host sets the imported field from Goma's
+  # solution, two runs in one process must give the same results
+  add_test(NAME goma_lib_coupling
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_coupling --runs 2 --import-fields
+                   --advance-steps 1 --feedback THETA:SH_FH:1000 --compare-runs -p lub_film)
   set_tests_properties(goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm
+                       goma_lib_advance goma_lib_import goma_lib_coupling
                        PROPERTIES SKIP_RETURN_CODE 77 LABELS library)
+  set_tests_properties(goma_lib_import PROPERTIES PROCESSORS 2)
   set_tests_properties(goma_lib_mpi goma_lib_petsc PROPERTIES PROCESSORS 2)
   set_tests_properties(goma_lib_subcomm PROPERTIES PROCESSORS 3)
   if(CMAKE_BUILD_TYPE STREQUAL "Asan")
     set_tests_properties(
-      goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm
+      goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm goma_lib_advance
+      goma_lib_import goma_lib_coupling
       PROPERTIES
         ENVIRONMENT
         "ASAN_OPTIONS=fast_unwind_on_malloc=0;LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/library/lsan.supp"

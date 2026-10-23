@@ -85,6 +85,7 @@ extern void handle_ieee(void);
 #include "rf_solve_segregated.h"
 #include "rf_solver.h"
 #include "rf_solver_const.h"
+#include "rf_util.h"
 #include "std.h"
 #include "wr_dpi.h"
 #include "wr_exo.h"
@@ -139,6 +140,7 @@ static char *legal_notice[] = {
 enum goma_stage {
   GOMA_STAGE_CREATED,
   GOMA_STAGE_SETUP,
+  GOMA_STAGE_ADVANCING, /* goma_advance_* started solve_problem() */
   GOMA_STAGE_SOLVED,
 };
 
@@ -152,6 +154,7 @@ struct goma_context {
   fenv_t host_fenv; /* floating point environment to restore for the host */
   MPI_Comm comm;    /* duplicate of the host's communicator, goma_comm during the run */
   enum goma_stage stage;
+  bool finished; /* GOMA_STAGE_ADVANCING: the problem reached its end */
 };
 
 static bool goma_library_initialized = false;
@@ -493,7 +496,7 @@ int goma_setup(goma_context *ctx) {
 
     if (efv->Num_external_field != 0) {
       for (i = 0; i < efv->Num_external_field; i++) {
-        if (efv->ipix[i] == 1 || efv->ipix[i] == 2)
+        if (efv->ipix[i] == 1 || efv->ipix[i] == 2 || is_import_field(i))
           continue;
         filenames[n_files] = malloc(sizeof(char) * MAX_FNL);
         memcpy(filenames[n_files], efv->file_nm[i], MAX_FNL);
@@ -621,7 +624,9 @@ int goma_setup(goma_context *ctx) {
 
     if (efv->Num_external_field != 0) {
       for (i = 0; i < efv->Num_external_field; i++) {
-        multiname(efv->file_nm[i], ProcID, Num_Proc);
+        if (!is_import_field(i)) {
+          multiname(efv->file_nm[i], ProcID, Num_Proc);
+        }
       }
     }
   }
@@ -737,13 +742,46 @@ int goma_setup(goma_context *ctx) {
   return 0;
 }
 
+/* Final output after the problem is solved */
+static void goma_solve_done(goma_context *ctx) {
+#ifdef PARALLEL
+  MPI_Barrier(goma_comm);
+#endif
+
+  fix_output();
+
+  /***********************************************************************/
+  /***********************************************************************/
+  /***********************************************************************/
+  /*
+   *  PRINT A MESSAGE TO STDOUT SAYING WE ARE DONE
+   */
+  P0PRINTF("\n-done\n\n");
+
+  ctx->stage = GOMA_STAGE_SOLVED;
+}
+
 int goma_solve(goma_context *ctx) {
   int error = 0;
 
-  if (ctx == NULL || ctx->stage != GOMA_STAGE_SETUP) {
+  if (ctx == NULL) {
+    return -1;
+  }
+  if (ctx->stage == GOMA_STAGE_ADVANCING) {
+    if (!ctx->finished) {
+      solve_problem_advance(EXO_ptr, DPI_ptr, 0, NULL);
+    }
+    return goma_finish(ctx);
+  }
+  if (ctx->stage != GOMA_STAGE_SETUP) {
     return -1;
   }
   char *yo = ctx->yo;
+  const char *unset = unset_import_field();
+  if (unset != NULL) {
+    P0PRINTF("goma_solve: imported external field %s has no values\n", unset);
+    return -1;
+  }
 
   /***********************************************************************/
   /***********************************************************************/
@@ -814,23 +852,204 @@ int goma_solve(goma_context *ctx) {
     solve_problem_segregated(EXO_ptr, DPI_ptr, NULL);
   }
 
-#ifdef PARALLEL
-  MPI_Barrier(goma_comm);
-#endif
-
-  fix_output();
-
-  /***********************************************************************/
-  /***********************************************************************/
-  /***********************************************************************/
-  /*
-   *  PRINT A MESSAGE TO STDOUT SAYING WE ARE DONE
-   */
-  P0PRINTF("\n-done\n\n");
-
-  ctx->stage = GOMA_STAGE_SOLVED;
+  goma_solve_done(ctx);
   /* do_loca returns the number of continuation steps on success */
   return error < 0 ? error : 0;
+}
+
+/*
+ * Start solve_problem() on the first call, then advance it. Only problems
+ * that goma_solve() hands to solve_problem() can be advanced in steps.
+ */
+static int goma_advance(goma_context *ctx, int num_steps, const double *t_stop) {
+  if (ctx == NULL) {
+    return -1;
+  }
+  if (ctx->stage == GOMA_STAGE_SETUP) {
+    const char *unset = unset_import_field();
+    if (unset != NULL) {
+      P0PRINTF("goma_advance: imported external field %s has no values\n", unset);
+      return -1;
+    }
+    if (upd->Total_Num_Matrices != 1 || loca_in->Cont_Alg == LOCA_LSA_ONLY ||
+        (TimeIntegration != TRANSIENT && Continuation != ALC_NONE)) {
+      P0PRINTF("goma_advance: only problems solved by solve_problem() can be advanced, not "
+               "segregated, continuation, hunting or LOCA problems\n");
+      return -1;
+    }
+    pg->imtrx = 0;
+    if (TimeIntegration == TRANSIENT) {
+      Continuation = ALC_NONE;
+    }
+    char *yo = ctx->yo;
+    log_msg("Solving problem in steps");
+    solve_problem_init(EXO_ptr, DPI_ptr);
+    ctx->stage = GOMA_STAGE_ADVANCING;
+    ctx->finished = false;
+  } else if (ctx->stage != GOMA_STAGE_ADVANCING) {
+    return -1;
+  }
+
+  if (!ctx->finished) {
+    /* values set since the last call */
+    load_import_fields(EXO_ptr, DPI_ptr, cx[0]);
+    ctx->finished = solve_problem_advance(EXO_ptr, DPI_ptr, num_steps, t_stop);
+  }
+  return ctx->finished ? 1 : 0;
+}
+
+int goma_advance_steps(goma_context *ctx, int num_steps) {
+  if (num_steps < 1) {
+    return -1;
+  }
+  return goma_advance(ctx, num_steps, NULL);
+}
+
+int goma_advance_to(goma_context *ctx, double time) { return goma_advance(ctx, 0, &time); }
+
+int goma_get_time(goma_context *ctx, double *time, double *delta_t) {
+  if (ctx == NULL || ctx->stage != GOMA_STAGE_ADVANCING || time == NULL || delta_t == NULL) {
+    return -1;
+  }
+  solve_problem_get_time(time, delta_t);
+  return 0;
+}
+
+int goma_set_external_field(goma_context *ctx,
+                            const char *name,
+                            goma_field_location location,
+                            const double *values) {
+  if (ctx == NULL || (ctx->stage != GOMA_STAGE_SETUP && ctx->stage != GOMA_STAGE_ADVANCING) ||
+      name == NULL || values == NULL) {
+    return -1;
+  }
+  int element;
+  int w = import_field_index(name, &element);
+  if (w < 0 || element != (location == GOMA_ELEMENT)) {
+    return -1;
+  }
+  set_import_field(w, values, element ? EXO_ptr->num_elems : EXO_ptr->num_nodes);
+  return 0;
+}
+
+int goma_get_field(goma_context *ctx, const char *name, int component, double *values) {
+  if (ctx == NULL || ctx->stage != GOMA_STAGE_ADVANCING || name == NULL || values == NULL) {
+    return -1;
+  }
+  return solve_problem_get_field(name, component, values);
+}
+
+int goma_get_post_field(goma_context *ctx, const char *name, double *values) {
+  if (ctx == NULL || ctx->stage != GOMA_STAGE_ADVANCING || name == NULL || values == NULL) {
+    return -1;
+  }
+  return solve_problem_get_post_field(name, values);
+}
+
+int goma_finish(goma_context *ctx) {
+  if (ctx == NULL) {
+    return -1;
+  }
+  if (ctx->stage == GOMA_STAGE_SOLVED) {
+    return 0;
+  }
+  if (ctx->stage != GOMA_STAGE_ADVANCING) {
+    return -1;
+  }
+  solve_problem_finish(EXO_ptr, DPI_ptr);
+  goma_solve_done(ctx);
+  return 0;
+}
+
+/* The mesh exists from goma_setup until goma_destroy */
+static bool goma_has_mesh(goma_context *ctx) {
+  return ctx != NULL && ctx->stage != GOMA_STAGE_CREATED && EXO_ptr != NULL && DPI_ptr != NULL;
+}
+
+int goma_mesh_get_info(goma_context *ctx, goma_mesh_info *info) {
+  if (!goma_has_mesh(ctx) || info == NULL) {
+    return -1;
+  }
+  info->dim = EXO_ptr->num_dim;
+  info->num_nodes = EXO_ptr->num_nodes;
+  info->num_owned_nodes = DPI_ptr->num_internal_nodes + DPI_ptr->num_boundary_nodes;
+  info->num_elems = EXO_ptr->num_elems;
+  info->num_owned_elems = 0;
+  for (int e = 0; e < EXO_ptr->num_elems; e++) {
+    if (DPI_ptr->elem_owner[e] == ProcID) {
+      info->num_owned_elems++;
+    }
+  }
+  info->num_elem_blocks = EXO_ptr->num_elem_blocks;
+  return 0;
+}
+
+int goma_mesh_get_coordinates(goma_context *ctx, double *xyz) {
+  if (!goma_has_mesh(ctx) || xyz == NULL) {
+    return -1;
+  }
+  int dim = EXO_ptr->num_dim;
+  double *coord[3] = {EXO_ptr->x_coord, EXO_ptr->y_coord, EXO_ptr->z_coord};
+  for (int i = 0; i < EXO_ptr->num_nodes; i++) {
+    for (int d = 0; d < dim; d++) {
+      xyz[i * dim + d] = coord[d][i];
+    }
+  }
+  return 0;
+}
+
+int goma_mesh_get_node_global_ids(goma_context *ctx, long long *ids) {
+  if (!goma_has_mesh(ctx) || ids == NULL) {
+    return -1;
+  }
+  for (int i = 0; i < EXO_ptr->num_nodes; i++) {
+    ids[i] = DPI_ptr->node_index_global[i] + 1;
+  }
+  return 0;
+}
+
+int goma_mesh_get_elem_global_ids(goma_context *ctx, long long *ids) {
+  if (!goma_has_mesh(ctx) || ids == NULL) {
+    return -1;
+  }
+  for (int i = 0; i < EXO_ptr->num_elems; i++) {
+    ids[i] = DPI_ptr->elem_index_global[i] + 1;
+  }
+  return 0;
+}
+
+int goma_mesh_get_elem_owners(goma_context *ctx, int *owners) {
+  if (!goma_has_mesh(ctx) || owners == NULL) {
+    return -1;
+  }
+  for (int i = 0; i < EXO_ptr->num_elems; i++) {
+    owners[i] = DPI_ptr->elem_owner[i];
+  }
+  return 0;
+}
+
+int goma_mesh_get_block(goma_context *ctx,
+                        int block,
+                        int *block_id,
+                        int *num_elems,
+                        int *nodes_per_elem,
+                        const int **connectivity) {
+  if (!goma_has_mesh(ctx) || block < 0 || block >= EXO_ptr->num_elem_blocks) {
+    return -1;
+  }
+  if (block_id != NULL) {
+    *block_id = EXO_ptr->eb_id[block];
+  }
+  if (num_elems != NULL) {
+    *num_elems = EXO_ptr->eb_num_elems[block];
+  }
+  if (nodes_per_elem != NULL) {
+    *nodes_per_elem = EXO_ptr->eb_num_nodes_per_elem[block];
+  }
+  if (connectivity != NULL) {
+    *connectivity = EXO_ptr->eb_conn[block];
+  }
+  return 0;
 }
 
 int goma_destroy(goma_context **ctx_ptr) {
@@ -844,6 +1063,9 @@ int goma_destroy(goma_context **ctx_ptr) {
     return -1;
   }
   goma_context *ctx = *ctx_ptr;
+  if (ctx->stage == GOMA_STAGE_ADVANCING) {
+    goma_finish(ctx);
+  }
 #ifdef GOMA_CHECK_GLOBAL_RESET
   /* ProcID is reset below */
   int check_rank = ProcID;
@@ -946,6 +1168,7 @@ int goma_destroy(goma_context **ctx_ptr) {
   vif_free_globals();
   assembly_free();
   rf_solve_free_globals();
+  rf_util_free_globals();
   rf_solve_segregated_free_globals();
   sol_nonlinear_free_globals();
   umf_free_globals();

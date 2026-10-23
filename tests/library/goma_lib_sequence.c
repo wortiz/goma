@@ -16,6 +16,7 @@
  * Runs Goma several times in one process through the goma.h interface
  *
  * usage: goma_lib_sequence [--ranks=<n>] <dir> [--stop-after=create|setup]
+ *                          [--advance-steps=<n> | --advance-to=<dt>]
  *                          [--log=<file>] <goma args> [-- <dir> ...] ...
  *
  * Each run changes to <dir> and runs Goma with the given arguments, for
@@ -24,7 +25,24 @@
  *   goma_lib_sequence problemA -i input -- problemB -i input
  *
  * --stop-after destroys the context after goma_create or goma_setup instead
- * of solving, to test teardown of a partly set up problem.  --log writes
+ * of solving, to test teardown of a partly set up problem.
+ *
+ * --advance-steps solves with goma_advance_steps(<n>) in a loop and
+ * --advance-to with goma_advance_to() at every <dt> of simulation time,
+ * checking that each call lands on its target, instead of goma_solve.
+ * --check-fields compares goma_get_field/goma_get_post_field after each of
+ * these calls with every nodal variable of the last time step in output
+ * file <file> when that step is the current time (with .<np>.<rank> added
+ * in parallel).
+ *
+ * --import=<name>:<file> (repeatable) sets imported external field <name>
+ * (External Field = <name> ... IMPORT in the deck) with goma_set_external_field
+ * to the nodal variable <name> of the last time step in mesh file <file>,
+ * matched to Goma's nodes by global node id.  With --advance-*, it is set again
+ * before each call; --feedback=<name>:<field>:<scale> then adds <scale> times
+ * Goma's current <field> (goma_get_field), like a coupled code would.
+ *
+ * --log writes
  * the standard output of rank 0 during the run to <file> (relative to the
  * starting directory).
  *
@@ -43,22 +61,288 @@
 #endif
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include "exodusII.h"
 #include "goma.h"
 
 enum stop_after { STOP_AFTER_CREATE, STOP_AFTER_SETUP, STOP_AFTER_SOLVE };
 
-static int run_goma(MPI_Comm comm, int argc, char **argv, enum stop_after stop) {
+struct solve_mode {
+  int advance_steps;        /* > 0: goma_advance_steps(advance_steps) */
+  double advance_to;        /* > 0: goma_advance_to() at multiples of advance_to */
+  const char *check_fields; /* output file to compare the fields with */
+  int num_imports;          /* --import=<name>:<file> options */
+  const char **imports;
+  const char *feedback; /* --feedback=<name>:<field>:<scale> */
+};
+
+#define MAX_IMPORTS 8
+
+/* Set imported external field name to its values in mesh file file, plus scale times
+ * Goma's field feedback if feedback is not NULL */
+static int import_field(
+    goma_context *ctx, const char *name, const char *file, const char *feedback, double scale) {
+  int cpu_ws = 8, io_ws = 0;
+  float version;
+  int exoid = ex_open(file, EX_READ, &cpu_ws, &io_ws, &version);
+  if (exoid < 0) {
+    fprintf(stderr, "goma_lib_sequence: could not open %s\n", file);
+    return -1;
+  }
+  int num_steps = ex_inquire_int(exoid, EX_INQ_TIME);
+  int num_file_nodes = ex_inquire_int(exoid, EX_INQ_NODES);
+  int num_vars = 0, var = 0;
+  ex_get_variable_param(exoid, EX_NODAL, &num_vars);
+  for (int v = 1; v <= num_vars; v++) {
+    char var_name[MAX_STR_LENGTH + 1];
+    ex_get_variable_name(exoid, EX_NODAL, v, var_name);
+    if (strcmp(var_name, name) == 0) {
+      var = v;
+    }
+  }
+  if (num_steps < 1 || var == 0) {
+    fprintf(stderr, "goma_lib_sequence: no variable %s in %s\n", name, file);
+    ex_close(exoid);
+    return -1;
+  }
+  double *file_values = malloc(sizeof(double) * num_file_nodes);
+  int *file_ids = malloc(sizeof(int) * num_file_nodes);
+  ex_get_var(exoid, num_steps, EX_NODAL, var, 1, num_file_nodes, file_values);
+  ex_get_id_map(exoid, EX_NODE_MAP, file_ids);
+  ex_close(exoid);
+
+  /* the file is the undecomposed mesh, its node ids are the global ids */
+  long long max_id = 0;
+  for (int i = 0; i < num_file_nodes; i++) {
+    max_id = file_ids[i] > max_id ? file_ids[i] : max_id;
+  }
+  double *by_id = calloc(max_id + 1, sizeof(double));
+  for (int i = 0; i < num_file_nodes; i++) {
+    by_id[file_ids[i]] = file_values[i];
+  }
+  goma_mesh_info mi;
+  goma_mesh_get_info(ctx, &mi);
+  long long *ids = malloc(sizeof(long long) * mi.num_nodes);
+  double *values = malloc(sizeof(double) * mi.num_nodes);
+  goma_mesh_get_node_global_ids(ctx, ids);
+  for (int i = 0; i < mi.num_nodes; i++) {
+    values[i] = ids[i] <= max_id ? by_id[ids[i]] : 0.0;
+  }
+  int error = 0;
+  if (feedback != NULL) {
+    double *field = malloc(sizeof(double) * mi.num_nodes);
+    error = goma_get_field(ctx, feedback, 0, field);
+    for (int i = 0; i < mi.num_nodes && error == 0; i++) {
+      values[i] += scale * field[i];
+    }
+    free(field);
+  }
+  if (error == 0) {
+    error = goma_set_external_field(ctx, name, GOMA_NODAL, values);
+  }
+  free(file_values);
+  free(file_ids);
+  free(by_id);
+  free(ids);
+  free(values);
+  return error;
+}
+
+/* Compare the fields Goma returns with the output file when its last step is
+ * the current time, returns the number of differing values or -1 */
+static int check_fields(goma_context *ctx, MPI_Comm comm, const char *file, int *checked) {
+  int rank, np;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &np);
+  char path[4096];
+  if (np > 1) {
+    snprintf(path, sizeof(path), "%s.%d.%d", file, np, rank);
+  } else {
+    snprintf(path, sizeof(path), "%s", file);
+  }
+  double t, dt;
+  goma_mesh_info mi;
+  if (goma_get_time(ctx, &t, &dt) != 0 || goma_mesh_get_info(ctx, &mi) != 0) {
+    return -1;
+  }
+  int cpu_ws = 8, io_ws = 0;
+  float version;
+  int exoid = ex_open(path, EX_READ, &cpu_ws, &io_ws, &version);
+  int num_steps = exoid < 0 ? 0 : ex_inquire_int(exoid, EX_INQ_TIME);
+  double t_file = 0.0;
+  int num_vars = 0;
+  if (num_steps > 0) {
+    ex_get_time(exoid, num_steps, &t_file);
+  }
+  /* a parallel output file holds the owned nodes, numbered first */
+  int num_nodes = exoid < 0 ? 0 : ex_inquire_int(exoid, EX_INQ_NODES);
+  /* all ranks must agree, goma_get_post_field is collective */
+  /* a steady problem that writes its Newton iterations numbers them as times */
+  int steady = t == 0.0 && dt == 0.0;
+  int here = num_steps > 0 && (t_file == t || steady) &&
+             (num_nodes == mi.num_nodes || num_nodes == mi.num_owned_nodes);
+  int all;
+  MPI_Allreduce(&here, &all, 1, MPI_INT, MPI_MIN, comm);
+  if (all) {
+    ex_get_variable_param(exoid, EX_NODAL, &num_vars);
+  }
+  int bad = 0;
+  double *expected = malloc(sizeof(double) * (mi.num_nodes + 1));
+  double *values = malloc(sizeof(double) * (mi.num_nodes + 1));
+  /* the file may order the nodes differently, match them by global id */
+  int *local = malloc(sizeof(int) * (mi.num_nodes + 1));
+  if (num_vars > 0) {
+    long long *ids = malloc(sizeof(long long) * mi.num_nodes);
+    int *file_ids = malloc(sizeof(int) * (num_nodes + 1));
+    goma_mesh_get_node_global_ids(ctx, ids);
+    ex_get_id_map(exoid, EX_NODE_MAP, file_ids);
+    for (int i = 0; i < num_nodes; i++) {
+      local[i] = -1;
+      for (int j = 0; j < mi.num_nodes && local[i] < 0; j++) {
+        if (ids[j] == file_ids[i]) {
+          local[i] = j;
+        }
+      }
+      if (local[i] < 0) {
+        fprintf(stderr, "goma_lib_sequence: rank %d node id %d of %s not found\n", rank,
+                file_ids[i], path);
+        bad++;
+        local[i] = 0;
+      }
+    }
+    free(ids);
+    free(file_ids);
+  }
+  for (int v = 1; v <= num_vars; v++) {
+    char name[MAX_STR_LENGTH + 1];
+    ex_get_variable_name(exoid, EX_NODAL, v, name);
+    ex_get_var(exoid, num_steps, EX_NODAL, v, 1, num_nodes, expected);
+    /* post processing names first: PRESSURE, for example, is a post processing variable
+     * in the file, but goma_get_field takes it as the variable name of P */
+    int error = goma_get_post_field(ctx, name, values);
+    if (error != 0) {
+      error = goma_get_field(ctx, name, 0, values);
+    }
+    if (error != 0) {
+      /* time derivatives, for example, are not available */
+      continue;
+    }
+    (*checked)++;
+    int differ = 0;
+    for (int i = 0; i < num_nodes; i++) {
+      differ += values[local[i]] != expected[i];
+    }
+    if (differ > 0) {
+      fprintf(stderr, "goma_lib_sequence: rank %d %s at t=%g differs at %d of %d nodes\n", rank,
+              name, t, differ, num_nodes);
+    }
+    bad += differ;
+  }
+  free(expected);
+  free(values);
+  free(local);
+  if (exoid >= 0) {
+    ex_close(exoid);
+  }
+  return exoid < 0 ? -1 : bad;
+}
+
+/* Set the imported external fields, see import_field() */
+static int set_imports(goma_context *ctx, struct solve_mode mode, int started) {
+  int error = 0;
+  for (int i = 0; i < mode.num_imports && error == 0; i++) {
+    char name[256];
+    const char *colon = strchr(mode.imports[i], ':');
+    if (colon == NULL || colon - mode.imports[i] >= (long)sizeof(name)) {
+      return -1;
+    }
+    snprintf(name, colon - mode.imports[i] + 1, "%s", mode.imports[i]);
+    error = import_field(ctx, name, colon + 1, NULL, 0.0);
+    /* a coupled code computes the field from Goma's solution, once Goma has one */
+    char field[256];
+    double scale;
+    if (error == 0 && mode.feedback != NULL && started &&
+        sscanf(mode.feedback, "%255[^:]:%255[^:]:%lf", name, field, &scale) == 3 &&
+        strncmp(mode.imports[i], name, strlen(name)) == 0 && mode.imports[i][strlen(name)] == ':') {
+      error = import_field(ctx, name, colon + 1, field, scale);
+    }
+  }
+  return error;
+}
+
+/* Solve in steps, setting the imported fields again before each call as a coupled
+ * code would, returns 0 on success */
+static int advance_goma(goma_context *ctx, MPI_Comm comm, struct solve_mode mode) {
+  /* the first call starts the problem, a stop time before the start only starts it (so
+   * that feedback applies from the first step) */
+  int result = mode.advance_steps > 0 && mode.feedback == NULL
+                   ? goma_advance_steps(ctx, mode.advance_steps)
+                   : goma_advance_to(ctx, -HUGE_VAL);
+  if (result < 0) {
+    /* the first call fails for problems that cannot be advanced in steps */
+    fprintf(stderr, "goma_lib_sequence: cannot advance, using goma_solve\n");
+    return goma_solve(ctx);
+  }
+
+  int calls = 1;
+  int checked = 0, bad = 0;
+  double t0, t, dt;
+  goma_get_time(ctx, &t0, &dt);
+  for (int k = 1; result >= 0; k++, calls++) {
+    if (mode.check_fields != NULL) {
+      int differ = check_fields(ctx, comm, mode.check_fields, &checked);
+      bad += differ < 0 ? 1 : differ;
+    }
+    if (result == 1) {
+      break;
+    }
+    if (set_imports(ctx, mode, 1) != 0) {
+      return -1;
+    }
+    if (mode.advance_steps > 0) {
+      result = goma_advance_steps(ctx, mode.advance_steps);
+    } else {
+      double target = t0 + k * mode.advance_to;
+      result = goma_advance_to(ctx, target);
+      if (result == 0 && (goma_get_time(ctx, &t, &dt) != 0 || t != target)) {
+        fprintf(stderr, "goma_lib_sequence: goma_advance_to(%.17g) stopped at %.17g\n", target, t);
+        return -1;
+      }
+    }
+  }
+  fprintf(stderr, "goma_lib_sequence: advanced in %d calls\n", calls);
+  if (mode.check_fields != NULL) {
+    fprintf(stderr, "goma_lib_sequence: checked %d fields, %d differing values\n", checked, bad);
+    if (bad > 0 || checked == 0) {
+      return -1;
+    }
+  }
+  if (result < 0) {
+    return result;
+  }
+  return goma_finish(ctx);
+}
+
+static int
+run_goma(MPI_Comm comm, int argc, char **argv, enum stop_after stop, struct solve_mode mode) {
   goma_context *ctx = NULL;
   int error = goma_create(&ctx, comm, argc, argv);
   if (error == 0 && stop >= STOP_AFTER_SETUP) {
     error = goma_setup(ctx);
   }
+  if (error == 0 && stop >= STOP_AFTER_SETUP) {
+    error = set_imports(ctx, mode, 0);
+  }
   if (error == 0 && stop >= STOP_AFTER_SOLVE) {
-    error = goma_solve(ctx);
+    if (mode.advance_steps > 0 || mode.advance_to > 0) {
+      error = advance_goma(ctx, comm, mode);
+    } else {
+      error = goma_solve(ctx);
+    }
   }
   if (ctx != NULL) {
     goma_destroy(&ctx);
@@ -73,7 +357,8 @@ int main(int argc, char **argv) {
   char start_dir[4096];
   if (getcwd(start_dir, sizeof(start_dir)) == NULL || argc < 2) {
     fprintf(stderr,
-            "usage: %s [--ranks=<n>] <dir> [--stop-after=create|setup] [--log=<file>] <goma args> "
+            "usage: %s [--ranks=<n>] <dir> [--stop-after=create|setup] "
+            "[--advance-steps=<n> | --advance-to=<dt>] [--log=<file>] <goma args> "
             "[-- <dir> ...] ...\n",
             argv[0]);
     MPI_Abort(MPI_COMM_WORLD, 1);
@@ -107,6 +392,9 @@ int main(int argc, char **argv) {
     const char *dir = argv[first];
     enum stop_after stop = STOP_AFTER_SOLVE;
     const char *log = NULL;
+    struct solve_mode mode = {0, 0.0, NULL, 0, NULL, NULL};
+    const char *imports[MAX_IMPORTS];
+    int num_imports = 0;
     while (first + 1 < last && strncmp(argv[first + 1], "--", 2) == 0) {
       const char *opt = argv[first + 1];
       if (strncmp(opt, "--stop-after=", 13) == 0) {
@@ -119,6 +407,16 @@ int main(int argc, char **argv) {
           fprintf(stderr, "unknown stage %s\n", stage);
           MPI_Abort(MPI_COMM_WORLD, 1);
         }
+      } else if (strncmp(opt, "--advance-steps=", 16) == 0) {
+        mode.advance_steps = atoi(opt + 16);
+      } else if (strncmp(opt, "--advance-to=", 13) == 0) {
+        mode.advance_to = atof(opt + 13);
+      } else if (strncmp(opt, "--import=", 9) == 0 && num_imports < MAX_IMPORTS) {
+        imports[num_imports++] = opt + 9;
+      } else if (strncmp(opt, "--feedback=", 11) == 0) {
+        mode.feedback = opt + 11;
+      } else if (strncmp(opt, "--check-fields=", 15) == 0) {
+        mode.check_fields = opt + 15;
       } else if (strncmp(opt, "--log=", 6) == 0) {
         log = opt + 6;
       } else {
@@ -127,6 +425,8 @@ int main(int argc, char **argv) {
       }
       first++;
     }
+    mode.num_imports = num_imports;
+    mode.imports = imports;
     /* goma expects argv[0] to be the program name */
     char *run_argv[last - first + 1];
     run_argv[0] = argv[0];
@@ -161,7 +461,7 @@ int main(int argc, char **argv) {
     int trace = leaktrace_enable != NULL && trace_run != NULL && atoi(trace_run) == run;
     if (trace)
       leaktrace_enable(1);
-    int error = run_goma(comm, last - first, run_argv, stop);
+    int error = run_goma(comm, last - first, run_argv, stop, mode);
     if (trace)
       leaktrace_enable(0);
     if (saved_stdout >= 0) {

@@ -89,7 +89,6 @@ struct Viscoelastic_Nonmodal *vn = NULL, **vn_glob = NULL;
 struct Elastic_Constitutive *elc = NULL, **elc_glob = NULL, *elc_rs = NULL, **elc_rs_glob = NULL;
 struct Viscoplastic_Constitutive *evpl = NULL, **evpl_glob = NULL;
 struct Transient_Information *tran = NULL;
-struct Library_IO *libio = NULL;
 struct Eigensolver_Info *eigen = NULL;
 struct Continuation_Information *cont = NULL;
 struct Loca_Input *loca_in = NULL;
@@ -610,34 +609,6 @@ int tran_alloc(void) {
   if (eqm == NULL) {
     status = -1;
     GOMA_EH(status, "Problem getting memory for Element_Quality_Metrics");
-  }
-
-  return (status);
-}
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-
-int libio_alloc(void) {
-  int sz;
-  int status;
-  static char yo[] = "libio_alloc";
-
-  status = 0;
-
-  /*
-   * Library_IO
-   */
-
-  sz = sizeof(struct Library_IO);
-  libio = (struct Library_IO *)array_alloc(1, 1, sz);
-  if (Debug_Flag) {
-    DPRINTF(stdout, "%s: Library_IO @ %p has %d bytes", yo, (void *)libio, sz);
-  }
-
-  if (libio == NULL) {
-    status = -1;
-    GOMA_EH(status, "Problem getting memory for Library_IO");
   }
 
   return (status);
@@ -2130,7 +2101,6 @@ void as_free_globals(void) {
   free(efv);
   free(tran);
   free(eqm);
-  free(libio);
   free(eigen);
   free(cont);
   free(loca_in);
@@ -2186,7 +2156,6 @@ void as_free_globals(void) {
   evpl = NULL;
   evpl_glob = NULL;
   tran = NULL;
-  libio = NULL;
   eigen = NULL;
   cont = NULL;
   loca_in = NULL;
