@@ -23,15 +23,15 @@
 /* Communicator PETSc was initialized on when Goma initialized it */
 static MPI_Comm goma_petsc_comm = MPI_COMM_NULL;
 
-PetscErrorCode goma_petsc_initialize(PetscBool *initialized_by_run) {
+PetscErrorCode goma_petsc_initialize(MPI_Comm comm) {
   PetscErrorCode err;
   PetscBool initialized = PETSC_FALSE;
   err = PetscInitialized(&initialized);
   CHKERRQ(err);
-  *initialized_by_run = !initialized;
   if (!initialized) {
-    /* PETSc stays initialized after this run, so it gets its own communicator */
-    MPI_Comm_dup(goma_comm, &goma_petsc_comm);
+    /* PETSc outlives the runs, so it gets its own communicator, duplicated on all of comm's
+     * processes so that runs on any subset of them can use it */
+    MPI_Comm_dup(comm, &goma_petsc_comm);
     PETSC_COMM_WORLD = goma_petsc_comm;
     err = PetscInitializeNoArguments();
     CHKERRQ(err);
@@ -65,12 +65,8 @@ static char *copy_string(const char *s) {
   return copy;
 }
 
-/*
- * Record the current value of every option named in opts that is not
- * recorded yet.  inserted_already: the options were inserted by
- * PetscInitialize, so they were not set before the run.
- */
-static PetscErrorCode save_options(const char *opts, PetscBool inserted_already) {
+/* Record the current value of every option named in opts that is not recorded yet */
+static PetscErrorCode save_options(const char *opts) {
   PetscErrorCode err;
   char *copy = copy_string(opts);
   for (char *token = strtok(copy, " \t\r\n"); token != NULL; token = strtok(NULL, " \t\r\n")) {
@@ -89,10 +85,8 @@ static PetscErrorCode save_options(const char *opts, PetscBool inserted_already)
     }
     const char *value = NULL;
     PetscBool set = PETSC_FALSE;
-    if (!inserted_already) {
-      err = PetscOptionsFindPair(NULL, NULL, token, &value, &set);
-      CHKERRQ(err);
-    }
+    err = PetscOptionsFindPair(NULL, NULL, token, &value, &set);
+    CHKERRQ(err);
     saved_options = realloc(saved_options, (num_saved_options + 1) * sizeof(saved_option));
     saved_options[num_saved_options].name = copy_string(token);
     saved_options[num_saved_options].value = set ? copy_string(value) : NULL;
@@ -104,7 +98,7 @@ static PetscErrorCode save_options(const char *opts, PetscBool inserted_already)
 }
 
 /* Record and insert the options of a petscrc file in the current directory */
-static PetscErrorCode insert_options_file(const char *file, PetscBool inserted_already) {
+static PetscErrorCode insert_options_file(const char *file) {
   PetscErrorCode err;
   PetscOptions file_options;
   char *opts;
@@ -116,31 +110,29 @@ static PetscErrorCode insert_options_file(const char *file, PetscBool inserted_a
   CHKERRQ(err);
   err = PetscOptionsDestroy(&file_options);
   CHKERRQ(err);
-  err = save_options(opts, inserted_already);
+  err = save_options(opts);
   CHKERRQ(err);
   err = PetscFree(opts);
   CHKERRQ(err);
-  if (!inserted_already) {
-    err = PetscOptionsInsertFile(goma_comm, NULL, file, PETSC_FALSE);
-    CHKERRQ(err);
-  }
+  err = PetscOptionsInsertFile(goma_comm, NULL, file, PETSC_FALSE);
+  CHKERRQ(err);
   return 0;
 }
 
-PetscErrorCode goma_petsc_insert_run_options(PetscBool initialized_by_run) {
+PetscErrorCode goma_petsc_insert_run_options(void) {
   PetscErrorCode err;
   /* the files PetscInitialize reads from the current directory */
   PetscBool skip_petscrc = PETSC_FALSE;
   err = PetscOptionsGetBool(NULL, NULL, "-skip_petscrc", &skip_petscrc, NULL);
   CHKERRQ(err);
   if (!skip_petscrc) {
-    err = insert_options_file(".petscrc", initialized_by_run);
+    err = insert_options_file(".petscrc");
     CHKERRQ(err);
-    err = insert_options_file("petscrc", initialized_by_run);
+    err = insert_options_file("petscrc");
     CHKERRQ(err);
   }
   if (GomaPetscOptions != NULL) {
-    err = save_options(GomaPetscOptions, PETSC_FALSE);
+    err = save_options(GomaPetscOptions);
     CHKERRQ(err);
     err = PetscOptionsInsertString(NULL, GomaPetscOptions);
     CHKERRQ(err);

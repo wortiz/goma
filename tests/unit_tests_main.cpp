@@ -5,9 +5,15 @@
 #include <mpi.h>
 
 extern "C" {
+#ifdef GOMA_UNIT_TESTS_LINK_GOMA
+/* defined by libgoma */
+extern int ProcID;
+extern int Num_Proc;
+#else
 int ProcID = 0;
 int parallel_err = 0;
 int Num_Proc = 1;
+#endif
 }
 
 int main(int argc, char *argv[]) {

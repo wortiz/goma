@@ -988,16 +988,14 @@ static goma_error initialize_petsc_post_proc_matrix(Exo_DB *exo,
 
 goma_error goma_setup_petsc_post_proc_matrix(
     Exo_DB *exo, Dpi *dpi, dbl *x, dbl *x_old, dbl *xdot, dbl *xdot_old) {
-  PetscBool initialized_by_run = PETSC_FALSE;
-  PetscErrorCode err = goma_petsc_initialize(&initialized_by_run);
-  CHKERRQ(err);
+  PetscErrorCode err;
 
   PetscMatrixData *matrix_data = calloc(1, sizeof(struct PetscMatrixData));
 
   upd->petsc_post_proc_data = (void *)matrix_data;
 
   if (!GomaPetscOptionsInserted) {
-    err = goma_petsc_insert_run_options(initialized_by_run);
+    err = goma_petsc_insert_run_options();
     CHKERRQ(err);
     GomaPetscOptionsInserted = true;
   }
@@ -1272,16 +1270,14 @@ goma_error goma_setup_petsc_matrix(struct GomaLinearSolverData *ams,
                                    int boundary_dof,
                                    int external_dof,
                                    int imtrx) {
-  PetscBool initialized_by_run = PETSC_FALSE;
-  PetscErrorCode err = goma_petsc_initialize(&initialized_by_run);
-  CHKERRQ(err);
+  PetscErrorCode err;
 
   PetscMatrixData *matrix_data = calloc(1, sizeof(struct PetscMatrixData));
 
   ams->PetscMatrixData = (void *)matrix_data;
 
   if (!GomaPetscOptionsInserted) {
-    err = goma_petsc_insert_run_options(initialized_by_run);
+    err = goma_petsc_insert_run_options();
     CHKERRQ(err);
     GomaPetscOptionsInserted = true;
   }

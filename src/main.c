@@ -43,6 +43,8 @@ int main(int argc, char **argv) {
    * forcing a return to the higher level, shutdown now
    */
   if (error < 0) {
+    goma_destroy(&ctx);
+    goma_library_finalize();
 #ifdef PARALLEL
     MPI_Finalize();
 #endif

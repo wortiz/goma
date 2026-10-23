@@ -166,6 +166,13 @@ int goma_library_initialize(MPI_Comm comm) {
   if (goma_library_initialized) {
     return -1;
   }
+#ifdef GOMA_ENABLE_PETSC
+  /* collective over comm: initializing PETSc in the first run that uses it would leave out the
+   * processes of later runs */
+  if (goma_petsc_initialize(comm) != 0) {
+    return -1;
+  }
+#endif
 #ifdef GOMA_CHECK_GLOBAL_RESET
   goma_reset_check_snapshot();
 #endif
@@ -772,6 +779,15 @@ static void goma_solve_done(goma_context *ctx) {
   ctx->stage = GOMA_STAGE_SOLVED;
 }
 
+/* Load the imported external fields set since the last step, returns -1 if one has no values */
+static int goma_load_import_fields(const char *caller) {
+  if (load_import_fields(EXO_ptr, DPI_ptr, cx[0]) != 0) {
+    P0PRINTF("%s: imported external field %s has no values\n", caller, unset_import_field());
+    return -1;
+  }
+  return 0;
+}
+
 int goma_solve(goma_context *ctx) {
   int error = 0;
 
@@ -780,6 +796,9 @@ int goma_solve(goma_context *ctx) {
   }
   if (ctx->stage == GOMA_STAGE_ADVANCING) {
     if (!ctx->finished) {
+      if (goma_load_import_fields("goma_solve") != 0) {
+        return -1;
+      }
       goma_advance_stage(ctx, 0, NULL);
     }
     return goma_finish(ctx);
@@ -877,6 +896,7 @@ static int goma_advance(goma_context *ctx, int num_steps, const double *t_stop) 
   if (ctx == NULL) {
     return -1;
   }
+  bool started = ctx->stage == GOMA_STAGE_ADVANCING;
   if (ctx->stage == GOMA_STAGE_SETUP) {
     const char *unset = unset_import_field();
     if (unset != NULL) {
@@ -911,8 +931,10 @@ static int goma_advance(goma_context *ctx, int num_steps, const double *t_stop) 
   }
 
   if (!ctx->finished) {
-    /* values set since the last call */
-    load_import_fields(EXO_ptr, DPI_ptr, cx[0]);
+    /* values set since the last call, the first call loaded them in init_vec() */
+    if (started && goma_load_import_fields("goma_advance") != 0) {
+      return -1;
+    }
     goma_advance_stage(ctx, num_steps, t_stop);
   }
   return ctx->finished ? 1 : 0;

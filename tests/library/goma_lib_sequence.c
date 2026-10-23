@@ -17,7 +17,8 @@
  *
  * usage: goma_lib_sequence [--ranks=<n>] <dir> [--stop-after=create|setup]
  *                          [--advance-steps=<n> | --advance-to=<dt>]
- *                          [--log=<file>] <goma args> [-- <dir> ...] ...
+ *                          [--run-ranks=<first>:<n>] [--log=<file>] <goma args>
+ *                          [-- <dir> ...] ...
  *
  * Each run changes to <dir> and runs Goma with the given arguments, for
  * example:
@@ -52,6 +53,10 @@
  * --ranks runs Goma on a communicator split from MPI_COMM_WORLD that holds
  * only its first <n> ranks, the other ranks wait, to check that Goma does not
  * communicate outside the communicator it is given.
+ *
+ * --run-ranks runs one problem on ranks <first> .. <first>+<n>-1 of the
+ * library's communicator (all of it by default), the other ranks skip it, so
+ * that runs in one process can use different sets of ranks.
  */
 
 #ifndef _GNU_SOURCE
@@ -414,6 +419,8 @@ int main(int argc, char **argv) {
     int num_imports = 0;
     const char *declares[MAX_IMPORTS];
     int num_declares = 0;
+    int run_first = 0;
+    int run_size = 0; /* 0: all of comm */
     while (first + 1 < last && strncmp(argv[first + 1], "--", 2) == 0) {
       const char *opt = argv[first + 1];
       if (strncmp(opt, "--stop-after=", 13) == 0) {
@@ -438,6 +445,11 @@ int main(int argc, char **argv) {
         mode.feedback = opt + 11;
       } else if (strncmp(opt, "--check-fields=", 15) == 0) {
         mode.check_fields = opt + 15;
+      } else if (strncmp(opt, "--run-ranks=", 12) == 0) {
+        if (sscanf(opt + 12, "%d:%d", &run_first, &run_size) != 2) {
+          fprintf(stderr, "bad option %s\n", opt);
+          MPI_Abort(MPI_COMM_WORLD, 1);
+        }
       } else if (strncmp(opt, "--log=", 6) == 0) {
         log = opt + 6;
       } else {
@@ -458,8 +470,22 @@ int main(int argc, char **argv) {
     }
     run_argv[last - first] = NULL;
 
+    MPI_Comm run_comm = comm;
+    if (run_size > 0) {
+      int in_run = rank >= run_first && rank < run_first + run_size;
+      MPI_Comm_split(comm, in_run ? 0 : MPI_UNDEFINED, rank, &run_comm);
+      if (run_comm == MPI_COMM_NULL) {
+        fprintf(stderr, "goma_lib_sequence: run %d in %s skipped by this rank\n", run, dir);
+        run++;
+        first = last + 1;
+        continue;
+      }
+    }
+    int run_rank;
+    MPI_Comm_rank(run_comm, &run_rank);
+
     int saved_stdout = -1;
-    if (log != NULL && rank == 0) {
+    if (log != NULL && run_rank == 0) {
       int fd = open(log, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd < 0) {
         fprintf(stderr, "could not open %s\n", log);
@@ -484,7 +510,7 @@ int main(int argc, char **argv) {
     int trace = leaktrace_enable != NULL && trace_run != NULL && atoi(trace_run) == run;
     if (trace)
       leaktrace_enable(1);
-    int error = run_goma(comm, last - first, run_argv, stop, mode);
+    int error = run_goma(run_comm, last - first, run_argv, stop, mode);
     if (trace)
       leaktrace_enable(0);
     if (saved_stdout >= 0) {
@@ -503,6 +529,9 @@ int main(int argc, char **argv) {
     }
     if (chdir(start_dir) != 0) {
       MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+    if (run_comm != comm) {
+      MPI_Comm_free(&run_comm);
     }
     run++;
     first = last + 1;

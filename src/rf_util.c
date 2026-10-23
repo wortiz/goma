@@ -3668,10 +3668,64 @@ const char *unset_import_field(void) {
 }
 
 /*
+ * Size of element el for averaging element values to the nodes: the product
+ * of its widths along the local coordinate directions, measured between face
+ * centroids of the undeformed mesh as h_elem_siz() does
+ */
+double import_elem_size(const Exo_DB *exo, int el) {
+  const double *coord[DIM] = {exo->x_coord, exo->y_coord, exo->z_coord};
+  const int *nodes = exo->elem_node_list + exo->elem_node_pntr[el];
+  int dim = exo->num_dim;
+  int shape = type2shape(Elem_Type(exo, el));
+  double x[DIM][8] = {{0.0}};
+  int n = MIN(exo->elem_node_pntr[el + 1] - exo->elem_node_pntr[el], 8);
+  for (int p = 0; p < dim; p++) {
+    for (int i = 0; i < n; i++) {
+      x[p][i] = coord[p][nodes[i]];
+    }
+  }
+
+  double hsquared[DIM] = {0.0, 0.0, 0.0};
+  int num_h = dim;
+  if (shape == TRIANGLE || shape == TRISHELL || shape == TETRAHEDRON) {
+    /* h_elem_siz() uses the length of the edge between local nodes 0 and 1 */
+    for (int p = 0; p < dim; p++) {
+      hsquared[0] += (x[p][0] - x[p][1]) * (x[p][0] - x[p][1]);
+    }
+    hsquared[1] = hsquared[2] = hsquared[0];
+  } else if (dim == 2 || shape == SHELL) {
+    for (int p = 0; p < dim; p++) {
+      double h0 = 0.5 * (x[p][1] + x[p][2]) - 0.5 * (x[p][0] + x[p][3]);
+      double h1 = 0.5 * (x[p][0] + x[p][1]) - 0.5 * (x[p][2] + x[p][3]);
+      hsquared[0] += h0 * h0;
+      hsquared[1] += h1 * h1;
+    }
+    num_h = 2;
+  } else {
+    for (int p = 0; p < dim; p++) {
+      double h0 = 0.25 * (x[p][1] + x[p][2] + x[p][5] + x[p][6]) -
+                  0.25 * (x[p][0] + x[p][3] + x[p][4] + x[p][7]);
+      double h1 = 0.25 * (x[p][2] + x[p][3] + x[p][6] + x[p][7]) -
+                  0.25 * (x[p][0] + x[p][1] + x[p][4] + x[p][5]);
+      double h2 = 0.25 * (x[p][0] + x[p][1] + x[p][2] + x[p][3]) -
+                  0.25 * (x[p][4] + x[p][5] + x[p][6] + x[p][7]);
+      hsquared[0] += h0 * h0;
+      hsquared[1] += h1 * h1;
+      hsquared[2] += h2 * h2;
+    }
+  }
+  double size = 1.0;
+  for (int p = 0; p < num_h; p++) {
+    size *= hsquared[p];
+  }
+  return sqrt(size);
+}
+
+/*
  * Load imported external field w into efv->ext_fld_ndl_val[w]: the values of
- * the owned nodes, or of each node the average of the elements around it,
- * then the ghost nodes from their owners. Returns -1 if the field has no
- * values.
+ * the owned nodes, or of each node the average of the elements around it
+ * weighted by their size (see import_elem_size()), then the ghost nodes from
+ * their owners. Returns -1 if the field has no values.
  */
 int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
   if (!is_import_field(w) || import_values[w] == NULL) {
@@ -3689,10 +3743,14 @@ int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
       int first = exo->node_elem_pntr[i];
       int last = exo->node_elem_pntr[i + 1];
       double sum = 0.0;
+      double size_sum = 0.0;
       for (int j = first; j < last; j++) {
-        sum += import_values[w][exo->node_elem_list[j]];
+        int el = exo->node_elem_list[j];
+        double size = import_elem_size(exo, el);
+        sum += import_values[w][el] * size;
+        size_sum += size;
       }
-      nodal[i] = last > first ? sum / (last - first) : 0.0;
+      nodal[i] = size_sum > 0.0 ? sum / size_sum : 0.0;
     }
   }
   exchange_node(cx, dpi, nodal);

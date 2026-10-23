@@ -47,10 +47,13 @@ extern "C" {
 
 typedef struct goma_context goma_context;
 
-/* Call once per process after MPI_Init, before any other goma_* function */
+/* Call once per process after MPI_Init, before any other goma_* function,
+ * collective over comm, which holds every process that may run a problem.
+ * Initializes PETSc on a duplicate of comm unless the host initialized it. */
 int goma_library_initialize(MPI_Comm comm);
 
-/* Finalizes third-party libraries initialized by Goma (never MPI) */
+/* Finalizes third-party libraries initialized by Goma (never MPI),
+ * collective over the communicator of goma_library_initialize */
 int goma_library_finalize(void);
 
 /* Parse the command line (argv[0] is the program name) and input deck,
@@ -131,7 +134,8 @@ int goma_get_post_field(goma_context *ctx, const char *name, double *values);
  *
  * values[num_nodes] or values[num_elems] of goma_mesh_get_info.  Only the
  * owned nodes' values are used, Goma copies them to the ghost nodes.  Element
- * values (owned and ghost elements) are averaged to the nodes.  Call after
+ * values (owned and ghost elements) are averaged to the nodes, weighted by
+ * element size.  Call after
  * goma_setup and before goma_solve or each goma_advance_*; Goma uses the
  * values from then on.  goma_solve and goma_advance_* return an error while
  * an imported field has no values.

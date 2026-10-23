@@ -35,7 +35,10 @@ run with the first run of its job exactly, to check the loop is repeatable.
 
 --extra-ranks starts that many more MPI ranks than a problem needs, Goma runs
 on a communicator of the first ranks only, to check that it does not
-communicate outside the communicator it is given.
+communicate outside the communicator it is given.  With --shift-ranks, Goma
+is initialized on all the ranks instead and run i of a job uses the ranks
+starting at i modulo (extra ranks + 1), so later runs use ranks that earlier
+runs did not, while sharing some with them.
 
 If goma was built with -DGOMA_CHECK_GLOBAL_RESET=ON, global variables that
 were not restored by goma_destroy are reported for each run.
@@ -88,6 +91,11 @@ def parse_args():
     )
     parser.add_argument(
         "--extra-ranks", type=int, default=0, help="idle MPI ranks outside Goma's communicator"
+    )
+    parser.add_argument(
+        "--shift-ranks",
+        action="store_true",
+        help="with --extra-ranks, shift each run's ranks by one within all the ranks",
     )
     advance = parser.add_mutually_exclusive_group()
     advance.add_argument(
@@ -143,6 +151,8 @@ def parse_args():
     args = parser.parse_args()
     if args.check_fields and not (args.advance_steps or args.advance_to):
         parser.error("--check-fields needs --advance-steps or --advance-to")
+    if args.shift_ranks and args.extra_ranks < 1:
+        parser.error("--shift-ranks needs --extra-ranks")
     if args.declare_fields and not args.import_fields:
         parser.error("--declare-fields needs --import-fields")
     return args
@@ -236,6 +246,8 @@ def run_job(args, guts_cfg, name, runs):
             driver_args.append("--advance-steps=%d" % args.advance_steps)
         elif args.advance_to:
             driver_args.append("--advance-to=%.17g" % args.advance_to)
+        if args.shift_ranks:
+            driver_args.append("--run-ranks=%d:%d" % (i % (args.extra_ranks + 1), np))
         if stop == "solve" and args.feedback:
             driver_args.append("--feedback=" + args.feedback)
         if args.import_fields:
@@ -256,7 +268,7 @@ def run_job(args, guts_cfg, name, runs):
     driver_args.pop()
 
     cmd = [str(Path(args.driver).resolve())] + driver_args
-    if args.extra_ranks > 0:
+    if args.extra_ranks > 0 and not args.shift_ranks:
         cmd = [cmd[0], "--ranks=%d" % np] + cmd[1:]
     if np > 1 or args.extra_ranks > 0:
         cmd = [guts_cfg.mpirun, "-np", str(np + args.extra_ranks), "--bind-to", "none"] + cmd

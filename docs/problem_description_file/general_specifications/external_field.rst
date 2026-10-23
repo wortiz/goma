@@ -41,7 +41,8 @@ with the following input parameters:
     *Goma* runs inside a host program through the library interface (see
     :doc:`/library_interface`) and the host sets the field with
     ``goma_set_external_field``, this entry is IMPORT (nodal values) or
-    IMPORT_EV (element values, averaged to the nodes) instead of a file
+    IMPORT_EV (element values, averaged to the nodes weighted by element
+    size) instead of a file
     name. The host can also declare such a field with
     ``goma_declare_external_field`` instead of this card.
 

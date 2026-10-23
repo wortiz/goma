@@ -36,7 +36,8 @@ Lifecycle
 
 ``goma_library_initialize``
    Call once per process, after ``MPI_Init`` and before any other ``goma_``
-   function.
+   function. It is collective over ``comm``, which must hold every process
+   that will run a problem (see `MPI and PETSc`_).
 
 ``goma_create``
    Parses a *Goma* command line and reads the input deck. ``argv[0]`` is the
@@ -60,8 +61,9 @@ Lifecycle
    returned an error.
 
 ``goma_library_finalize``
-   Finalizes third-party libraries that *Goma* initialized. Call it once,
-   after the last ``goma_destroy`` and before ``MPI_Finalize``.
+   Finalizes third-party libraries that *Goma* initialized. Call it once on
+   every process of the ``goma_library_initialize`` communicator, after the
+   last ``goma_destroy`` and before ``MPI_Finalize``.
 
 All functions return 0 on success and a negative value on failure.
 
@@ -186,7 +188,8 @@ with ``IMPORT`` or ``IMPORT_EV`` in place of a file name (see
 ``GOMA_NODAL`` values are given at every local node, but only the owned
 nodes' values are used; *Goma* copies them to the ghost nodes. ``GOMA_ELEMENT``
 values are given at every local element (owned and ghost) and averaged to the
-nodes. Call it after ``goma_setup`` and again whenever the values change;
+nodes, each element weighted by its size (the product of its widths between
+face centroids). Call it after ``goma_setup`` and again whenever the values change;
 *Goma* uses them from the next ``goma_advance_*`` call on. ``goma_solve`` and
 ``goma_advance_*`` return an error while an imported field has no values.
 
@@ -243,22 +246,22 @@ made with ``MPI_Comm_split``. The other processes are free to do other work,
 including running their own *Goma* problem on another communicator. File names
 of a parallel run are numbered by rank in that communicator.
 
-If PETSc is already initialized when a problem first uses it, the host owns
-it and *Goma* leaves it initialized; *Goma*'s PETSc objects then live on the
-run's communicator, which must contain only processes of ``PETSC_COMM_WORLD``.
-Otherwise *Goma* initializes PETSc with ``PETSC_COMM_WORLD`` set to a duplicate
-of the communicator of that run, and ``goma_library_finalize`` calls
-``PetscFinalize``. Later runs that use PETSc must then use the same processes
-or a subset of them.
+If PETSc is already initialized when ``goma_library_initialize`` is called,
+the host owns it and *Goma* leaves it initialized; *Goma*'s PETSc objects then
+live on the run's communicator, which must contain only processes of
+``PETSC_COMM_WORLD``. Otherwise ``goma_library_initialize`` initializes PETSc
+with ``PETSC_COMM_WORLD`` set to a duplicate of its communicator, so runs on
+any subset of those processes can use it, and ``goma_library_finalize`` calls
+``PetscFinalize``. A host that uses PETSc itself must initialize it before
+``goma_library_initialize``. PETSc reads ``PETSC_OPTIONS``, ``~/.petscrc`` and
+the ``.petscrc`` and ``petscrc`` files of the current directory when it is
+initialized, as ``PetscInitialize`` always does.
 
 Each run reads the ``.petscrc`` and ``petscrc`` files in its directory and the
-``-petsc`` command-line option, as a standalone ``goma`` run does, even when
-PETSc was initialized by an earlier run or by the host. ``goma_destroy``
-restores the options that the run set to their previous values, so options of
-one problem do not carry over to the next, and options set by the host,
-``PETSC_OPTIONS`` or ``~/.petscrc`` are kept. One exception: in the run that
-initializes PETSc, an option in the problem's ``petscrc`` that also appears in
-``PETSC_OPTIONS`` or ``~/.petscrc`` is removed when the run ends.
+``-petsc`` command-line option, as a standalone ``goma`` run does.
+``goma_destroy`` restores the options that the run set to their previous
+values, so options of one problem do not carry over to the next, and options
+set by the host or read when PETSc was initialized are kept.
 
 Errors
 ######

@@ -229,6 +229,7 @@ extern int is_import_field(int w);
 extern int import_field_index(const char *name, int *element);
 extern void set_import_field(int w, const double *values, int n);
 extern const char *unset_import_field(void);
+extern double import_elem_size(const Exo_DB *exo, int el);
 extern int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx);
 extern int load_import_fields(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx);
 extern int declare_import_field(const char *name, const char *interpolation, int element);
