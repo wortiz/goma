@@ -190,6 +190,23 @@ nodes. Call it after ``goma_setup`` and again whenever the values change;
 *Goma* uses them from the next ``goma_advance_*`` call on. ``goma_solve`` and
 ``goma_advance_*`` return an error while an imported field has no values.
 
+A host can also declare an imported field itself, so the deck needs no card
+for it. ``goma_declare_external_field`` is called before ``goma_create``, with
+the same arguments on every process::
+
+   goma_declare_external_field("SOURCE", "Q1", GOMA_NODAL);
+   goma_create(&ctx, comm, argc, argv);
+
+This is the same as adding the card ``External Field = SOURCE Q1 IMPORT``
+(``IMPORT_EV`` for ``GOMA_ELEMENT``) after the deck's ``External Field``
+cards. The field exists while the deck is read, so material property cards can
+use it, for example ``Conductivity = EXTERNAL_FIELD SOURCE 1.0``. A declaration
+applies to the next problem only: ``goma_destroy`` forgets it. It returns an
+error for a name longer than 20 characters or declared twice, an unknown
+interpolation (``TABLE`` and ``N1`` are not allowed) or too many external
+fields. A field that the deck also declares is a fatal error when the deck is
+read.
+
 A coupling loop that sends *Goma*'s temperature to another code and gets a
 source term back every 0.1 time units:
 
@@ -331,7 +348,9 @@ falls on a time step.
 nodal variable of the output file when its last step is the current time.
 ``--import-fields`` replaces the file of every ``External Field`` card that
 reads a fixed field from a mesh file with ``IMPORT``; the host reads the field
-from the file and sets it with ``goma_set_external_field`` instead. With
+from the file and sets it with ``goma_set_external_field`` instead; with
+``--declare-fields`` it also removes the card and declares the field with
+``goma_declare_external_field``. With
 ``--feedback NAME:FIELD:SCALE`` the host adds ``SCALE`` times *Goma*'s
 ``FIELD`` to the imported field ``NAME`` before every advance, a coupling loop
 whose results differ from the blessed ones; ``--compare-runs`` then checks that

@@ -2505,6 +2505,7 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
                                          x_older[pg->imtrx], x_oldest[pg->imtrx], xdot[pg->imtrx],
                                          xdot_old[pg->imtrx], xdot_older[pg->imtrx]);
             }
+            pg->imtrx = Fill_Matrix;
             last_renorm_nt = nt;
             if (delta_t_new > fabs(delta_t0))
               delta_t_new *= tran->time_step_decelerator;
@@ -2661,6 +2662,7 @@ void solve_problem_segregated_finish(Exo_DB *exo, /* ptr to the finite element m
     free(xdot_old[pg->imtrx]);
     free(xdot_older[pg->imtrx]);
     free(x_pred[pg->imtrx]);
+    free(x_prev[pg->imtrx]);
     free(delta_x[pg->imtrx]);
     free(x_previous[pg->imtrx]);
     free(x_update[pg->imtrx]);
@@ -2674,6 +2676,7 @@ void solve_problem_segregated_finish(Exo_DB *exo, /* ptr to the finite element m
   free(xdot_old);
   free(xdot_older);
   free(x_pred);
+  free(x_prev);
   free(delta_x);
   free(x_previous);
   free(x_update);
@@ -2719,6 +2722,28 @@ void solve_problem_segregated_finish(Exo_DB *exo, /* ptr to the finite element m
   free(gvec);
 
   free(numProcUnknowns);
+
+  /* the linear systems, freed as at the end of solve_problem() */
+  amesos_free_solvers();
+  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+    if (strcmp(Matrix_Format, "msr") == 0 &&
+        num_universe_dofs[pg->imtrx] !=
+            (num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx])) {
+      safer_free((void **)&ija_attic[pg->imtrx]);
+    }
+    GomaSparseMatrix goma_matrix = ams[pg->imtrx]->GomaMatrixData;
+    GomaSparseMatrix_Destroy(&goma_matrix);
+#ifdef GOMA_ENABLE_PETSC
+    if (strcmp(Matrix_Format, "petsc") == 0) {
+      goma_error err = goma_petsc_free_matrix(ams[pg->imtrx]);
+      GOMA_EH(err, "free petsc matrix");
+    }
+#endif
+    free_ams(ams[pg->imtrx]);
+    safer_free((void **)&ams[pg->imtrx]);
+  }
+  safer_free((void **)&ams);
+  pg->imtrx = 0;
 
   free(ija);
   free(ija_attic);
@@ -2846,8 +2871,7 @@ void predict_solution_u_star(int N,
 /*
  * Reset this file's globals to their load time values, see goma_reset.h
  *
- * The solution vectors and ams are freed at the end of
- * solve_problem_segregated().
+ * The solution vectors and ams are freed by solve_problem_segregated_finish().
  */
 void rf_solve_segregated_free_globals(void) {
   x = NULL;

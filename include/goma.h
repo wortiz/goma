@@ -57,6 +57,26 @@ int goma_library_finalize(void);
  * collective over comm */
 int goma_create(goma_context **ctx, MPI_Comm comm, int argc, char **argv);
 
+/*
+ * Declare an imported external field (see goma_set_external_field) without
+ * an External Field card in the deck.  Call before goma_create, with the same
+ * arguments on all ranks; the declaration applies to the next problem only
+ * and is the same as adding the card
+ *
+ *   External Field = name interpolation IMPORT      (GOMA_NODAL)
+ *   External Field = name interpolation IMPORT_EV   (GOMA_ELEMENT)
+ *
+ * after the deck's External Field cards, so material property cards can
+ * use the field.  interpolation is that of the card, Q1 or Q2 for example.
+ * Returns an error for a name longer than 20 characters or declared twice,
+ * an unknown interpolation, or too many external fields; declaring a field
+ * that the deck also declares is a fatal error when the deck is read.
+ */
+typedef enum { GOMA_NODAL, GOMA_ELEMENT } goma_field_location;
+int goma_declare_external_field(const char *name,
+                                const char *interpolation,
+                                goma_field_location location);
+
 /* Read the mesh and set up the problem */
 int goma_setup(goma_context *ctx);
 
@@ -103,9 +123,9 @@ int goma_get_field(goma_context *ctx, const char *name, int component, double *v
 int goma_get_post_field(goma_context *ctx, const char *name, double *values);
 
 /*
- * Values of an external field declared in the deck with IMPORT (nodal values,
- * GOMA_NODAL) or IMPORT_EV (element values, GOMA_ELEMENT) in place of a file
- * name, for example
+ * Values of an external field declared with goma_declare_external_field or
+ * in the deck with IMPORT (nodal values, GOMA_NODAL) or IMPORT_EV (element
+ * values, GOMA_ELEMENT) in place of a file name, for example
  *
  *   External Field = SOURCE Q1 IMPORT
  *
@@ -116,7 +136,6 @@ int goma_get_post_field(goma_context *ctx, const char *name, double *values);
  * values from then on.  goma_solve and goma_advance_* return an error while
  * an imported field has no values.
  */
-typedef enum { GOMA_NODAL, GOMA_ELEMENT } goma_field_location;
 int goma_set_external_field(goma_context *ctx,
                             const char *name,
                             goma_field_location location,

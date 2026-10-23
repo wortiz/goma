@@ -231,6 +231,9 @@ extern void set_import_field(int w, const double *values, int n);
 extern const char *unset_import_field(void);
 extern int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx);
 extern int load_import_fields(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx);
+extern int declare_import_field(const char *name, const char *interpolation, int element);
+extern int num_declared_import_fields(void);
+extern const char *declared_import_field(int k, const char **interpolation, int *element);
 
 extern int init_pmv_hyst(const Exo_DB * /* exo - ptr to finite element mesh database */
 );

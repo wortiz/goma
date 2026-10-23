@@ -124,6 +124,8 @@ extern void rd_file_specs /* mm_input.c                                */
     (FILE *,              /* ifp                                       */
      char *);             /* input                                     */
 
+extern int external_field_interpolation(const char *name); /* mm_input.c */
+
 extern void rd_genl_specs /* mm_input.c                                */
     (FILE *,              /* ifp                                       */
      char *);             /* input                                     */

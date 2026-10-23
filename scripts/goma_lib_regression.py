@@ -25,7 +25,8 @@ goma_get_post_field() after each step must equal the output file's.
 --import-fields replaces the file of each External Field card that reads a
 fixed field from a mesh file with IMPORT; the driver reads the field from the
 file and sets it with goma_set_external_field() instead, so the output must
-still match the blessed results.
+still match the blessed results.  With --declare-fields, it removes the card
+and declares the field with goma_declare_external_field() instead.
 
 --feedback NAME:FIELD:SCALE (with --import-fields and --advance-*) adds SCALE
 times Goma's FIELD to the imported field NAME before each call, a coupling loop
@@ -106,6 +107,12 @@ def parse_args():
         help="set external fields read from files with goma_set_external_field instead",
     )
     parser.add_argument(
+        "--declare-fields",
+        action="store_true",
+        help="with --import-fields, remove the External Field cards and declare the fields "
+        "with goma_declare_external_field instead",
+    )
+    parser.add_argument(
         "--feedback",
         metavar="NAME:FIELD:SCALE",
         help="with --import-fields and --advance-*, add SCALE times Goma's FIELD to imported "
@@ -136,6 +143,8 @@ def parse_args():
     args = parser.parse_args()
     if args.check_fields and not (args.advance_steps or args.advance_to):
         parser.error("--check-fields needs --advance-steps or --advance-to")
+    if args.declare_fields and not args.import_fields:
+        parser.error("--declare-fields needs --import-fields")
     return args
 
 
@@ -230,8 +239,12 @@ def run_job(args, guts_cfg, name, runs):
         if stop == "solve" and args.feedback:
             driver_args.append("--feedback=" + args.feedback)
         if args.import_fields:
-            for field, mesh_file in import_external_fields(d / p.run.goma_input):
+            for field, interpolation, mesh_file in import_external_fields(
+                d / p.run.goma_input, args.declare_fields
+            ):
                 driver_args.append("--import=%s:%s" % (field, mesh_file))
+                if args.declare_fields:
+                    driver_args.append("--declare=%s:%s" % (field, interpolation))
         if stop == "solve" and args.check_fields and p.blessed.exo_output:
             driver_args.append("--check-fields=" + p.blessed.exo_output[0])
         driver_args.append("--log=" + str(d / "stdout.txt"))
@@ -290,20 +303,21 @@ def run_job(args, guts_cfg, name, runs):
     return {"job": name, "exit": exit_code, "runs": results}
 
 
-EXTERNAL_FIELD = re.compile(r"^(\s*External Field\s*=\s*(\S+)\s+\S+\s+)(\S+)\s*$")
+EXTERNAL_FIELD = re.compile(r"^(\s*External Field\s*=\s*(\S+)\s+(\S+)\s+)(\S+)\s*$")
 
 
-def import_external_fields(deck):
-    """Replace the mesh file of fixed External Field cards in deck with IMPORT.
+def import_external_fields(deck, remove=False):
+    """Replace the mesh file of fixed External Field cards in deck with IMPORT, or remove
+    the cards.
 
-    Returns [(field name, mesh file)]."""
+    Returns [(field name, interpolation, mesh file)]."""
     lines = deck.read_text().splitlines(keepends=True)
     imports = []
     for i, line in enumerate(lines):
         m = EXTERNAL_FIELD.match(line)
-        if m and m.group(3) not in ("IMPORT", "IMPORT_EV") and m.group(3).endswith(".exoII"):
-            imports.append((m.group(2), m.group(3)))
-            lines[i] = m.group(1) + "IMPORT\n"
+        if m and m.group(4) not in ("IMPORT", "IMPORT_EV") and m.group(4).endswith(".exoII"):
+            imports.append((m.group(2), m.group(3), m.group(4)))
+            lines[i] = "" if remove else m.group(1) + "IMPORT\n"
     deck.write_text("".join(lines))
     return imports
 
