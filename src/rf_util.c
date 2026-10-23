@@ -3676,6 +3676,11 @@ int load_import_fields(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
 void rf_util_free_globals(void) {
   for (int w = 0; w < MAX_EXTERNAL_FIELD; w++) {
     safer_free((void **)&import_values[w]);
+    /* the external field values, read from files or imported (efv is freed later, by
+     * as_free_globals) */
+    if (efv != NULL) {
+      safer_free((void **)&efv->ext_fld_ndl_val[w]);
+    }
   }
 }
 

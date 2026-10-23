@@ -248,6 +248,7 @@ int assemble_potential(double time, /* present time value */
   memset(dhdT, 0, sizeof(double) * MDE);
   memset(dhdV, 0, sizeof(double) * MDE);
   memset(dhdX, 0, sizeof(double) * DIM * MDE);
+  memset(dhdv, 0, sizeof(double) * DIM * MDE);
   memset(dhdC, 0, sizeof(double) * MAX_CONC * MDE);
   if (mp->CurrentSourceModel == USER) {
     (void)usr_current_source(mp->u_current_source);
