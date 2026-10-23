@@ -65,6 +65,7 @@ extern void handle_ieee(void);
 #include "brkfix/fix.h"
 #include "mm_as.h"
 #include "mm_as_alloc.h"
+#include "mm_as_const.h"
 #include "mm_as_structs.h"
 #include "mm_eh.h"
 #include "mm_elem_block_structs.h"
@@ -936,6 +937,20 @@ int goma_get_time(goma_context *ctx, double *time, double *delta_t) {
     solve_problem_get_time(time, delta_t);
   }
   return 0;
+}
+
+int goma_declare_external_field(const char *name,
+                                const char *interpolation,
+                                goma_field_location location) {
+  if (!goma_library_initialized || goma_context_active || name == NULL || name[0] == '\0' ||
+      strlen(name) > 20 || strchr(name, ' ') != NULL || interpolation == NULL) {
+    return -1;
+  }
+  int i = external_field_interpolation(interpolation);
+  if (i < 0 || i == I_TABLE || i == I_N1) {
+    return -1;
+  }
+  return declare_import_field(name, interpolation, location == GOMA_ELEMENT);
 }
 
 int goma_set_external_field(goma_context *ctx,

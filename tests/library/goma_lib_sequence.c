@@ -41,6 +41,9 @@
  * matched to Goma's nodes by global node id.  With --advance-*, it is set again
  * before each call; --feedback=<name>:<field>:<scale> then adds <scale> times
  * Goma's current <field> (goma_get_field), like a coupled code would.
+ * --declare=<name>:<interpolation> (repeatable) declares the imported nodal
+ * field <name> with goma_declare_external_field before goma_create, in place
+ * of an External Field card.
  *
  * --log writes
  * the standard output of rank 0 during the run to <file> (relative to the
@@ -78,6 +81,8 @@ struct solve_mode {
   int num_imports;          /* --import=<name>:<file> options */
   const char **imports;
   const char *feedback; /* --feedback=<name>:<field>:<scale> */
+  int num_declares;     /* --declare=<name>:<interpolation> options */
+  const char **declares;
 };
 
 #define MAX_IMPORTS 8
@@ -330,7 +335,19 @@ static int advance_goma(goma_context *ctx, MPI_Comm comm, struct solve_mode mode
 static int
 run_goma(MPI_Comm comm, int argc, char **argv, enum stop_after stop, struct solve_mode mode) {
   goma_context *ctx = NULL;
-  int error = goma_create(&ctx, comm, argc, argv);
+  int error = 0;
+  for (int i = 0; i < mode.num_declares && error == 0; i++) {
+    char name[64];
+    const char *colon = strchr(mode.declares[i], ':');
+    if (colon == NULL || colon - mode.declares[i] >= (long)sizeof(name)) {
+      return -1;
+    }
+    snprintf(name, colon - mode.declares[i] + 1, "%s", mode.declares[i]);
+    error = goma_declare_external_field(name, colon + 1, GOMA_NODAL);
+  }
+  if (error == 0) {
+    error = goma_create(&ctx, comm, argc, argv);
+  }
   if (error == 0 && stop >= STOP_AFTER_SETUP) {
     error = goma_setup(ctx);
   }
@@ -392,9 +409,11 @@ int main(int argc, char **argv) {
     const char *dir = argv[first];
     enum stop_after stop = STOP_AFTER_SOLVE;
     const char *log = NULL;
-    struct solve_mode mode = {0, 0.0, NULL, 0, NULL, NULL};
+    struct solve_mode mode = {0, 0.0, NULL, 0, NULL, NULL, 0, NULL};
     const char *imports[MAX_IMPORTS];
     int num_imports = 0;
+    const char *declares[MAX_IMPORTS];
+    int num_declares = 0;
     while (first + 1 < last && strncmp(argv[first + 1], "--", 2) == 0) {
       const char *opt = argv[first + 1];
       if (strncmp(opt, "--stop-after=", 13) == 0) {
@@ -413,6 +432,8 @@ int main(int argc, char **argv) {
         mode.advance_to = atof(opt + 13);
       } else if (strncmp(opt, "--import=", 9) == 0 && num_imports < MAX_IMPORTS) {
         imports[num_imports++] = opt + 9;
+      } else if (strncmp(opt, "--declare=", 10) == 0 && num_declares < MAX_IMPORTS) {
+        declares[num_declares++] = opt + 10;
       } else if (strncmp(opt, "--feedback=", 11) == 0) {
         mode.feedback = opt + 11;
       } else if (strncmp(opt, "--check-fields=", 15) == 0) {
@@ -427,6 +448,8 @@ int main(int argc, char **argv) {
     }
     mode.num_imports = num_imports;
     mode.imports = imports;
+    mode.num_declares = num_declares;
+    mode.declares = declares;
     /* goma expects argv[0] to be the program name */
     char *run_argv[last - first + 1];
     run_argv[0] = argv[0];

@@ -42,7 +42,8 @@ with the following input parameters:
     :doc:`/library_interface`) and the host sets the field with
     ``goma_set_external_field``, this entry is IMPORT (nodal values) or
     IMPORT_EV (element values, averaged to the nodes) instead of a file
-    name.
+    name. The host can also declare such a field with
+    ``goma_declare_external_field`` instead of this card.
 
 [char_string3]       
     Optional character string. Only optional available is **“timedependent”**

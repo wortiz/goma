@@ -56,6 +56,7 @@
 #include "rf_solve.h"
 #include "rf_solver.h"
 #include "rf_solver_const.h"
+#include "rf_util.h"
 #include "sl_util.h"
 #include "std.h"
 #include "util/aprepro_helper.h"
@@ -850,6 +851,28 @@ void rd_file_specs(FILE *ifp, char *input) {
     }
   }
 }
+
+/*
+ * Interpolation of an external field from its name on the External Field
+ * card (Q1, Q2, ...), -1 if it is not recognized
+ */
+int external_field_interpolation(const char *name) {
+  static const struct {
+    const char *name;
+    int interpolation;
+  } interpolations[] = {{"Q1", I_Q1},     {"Q2", I_Q2},     {"Q2_LSA", I_Q2_LSA},
+                        {"Q1_D", I_Q1_D}, {"Q2_D", I_Q2_D}, {"Q2_D_LSA", I_Q2_D_LSA},
+                        {"PQ1", I_PQ1},   {"PQ2", I_PQ2},   {"P0", I_P0},
+                        {"P1", I_P1},     {"SP", I_SP},     {"TABLE", I_TABLE},
+                        {"N1", I_N1}};
+  for (size_t k = 0; k < sizeof(interpolations) / sizeof(interpolations[0]); k++) {
+    if (strcmp(name, interpolations[k].name) == 0) {
+      return interpolations[k].interpolation;
+    }
+  }
+  return -1;
+}
+
 /* rd_file_spec -- read problem specification section of input file */
 
 /*
@@ -1136,37 +1159,13 @@ void rd_genl_specs(FILE *ifp, char *input) {
      * is reasonable.
      */
 
-    if (!strcmp(input, "Q1")) {
-      efv->i[Num_Var_External] = I_Q1;
-    } else if (!strcmp(input, "Q2")) {
-      efv->i[Num_Var_External] = I_Q2;
-    } else if (!strcmp(input, "Q2_LSA")) {
-      efv->i[Num_Var_External] = I_Q2_LSA;
-    } else if (!strcmp(input, "Q1_D")) {
-      efv->i[Num_Var_External] = I_Q1_D;
-    } else if (!strcmp(input, "Q2_D")) {
-      efv->i[Num_Var_External] = I_Q2_D;
-    } else if (!strcmp(input, "Q2_D_LSA")) {
-      efv->i[Num_Var_External] = I_Q2_D_LSA;
-    } else if (!strcmp(input, "PQ1")) {
-      efv->i[Num_Var_External] = I_PQ1;
-    } else if (!strcmp(input, "PQ2")) {
-      efv->i[Num_Var_External] = I_PQ2;
-    } else if (!strcmp(input, "P0")) {
-      efv->i[Num_Var_External] = I_P0;
-    } else if (!strcmp(input, "P1")) {
-      efv->i[Num_Var_External] = I_P1;
-    } else if (!strcmp(input, "SP")) {
-      efv->i[Num_Var_External] = I_SP;
-    } else if (!strcmp(input, "TABLE")) {
-      efv->i[Num_Var_External] = I_TABLE;
-      num_ext_Tables++;
-    } else if (!strcmp(input, "N1")) {
-      efv->i[Num_Var_External] = I_N1;
-      num_ext_Tables++;
-    } else {
+    efv->i[Num_Var_External] = external_field_interpolation(input);
+    if (efv->i[Num_Var_External] < 0) {
       sprintf(err_msg, "??? interpolation \"%s\" for external field var", input);
       GOMA_EH(GOMA_ERROR, err_msg);
+    }
+    if (efv->i[Num_Var_External] == I_TABLE || efv->i[Num_Var_External] == I_N1) {
+      num_ext_Tables++;
     }
 
     strcat(echo_string, input);
@@ -1256,6 +1255,39 @@ void rd_genl_specs(FILE *ifp, char *input) {
     Num_Var_External++;
 
     ECHO(echo_string, echo_file);
+  }
+
+  /* Imported external fields declared by the host program, see goma_declare_external_field() */
+  for (int k = 0; k < num_declared_import_fields(); k++) {
+    const char *interpolation;
+    int element;
+    const char *name = declared_import_field(k, &interpolation, &element);
+    for (int w = 0; w < Num_Var_External; w++) {
+      if (strcmp(efv->name[w], name) == 0) {
+        GOMA_EH(GOMA_ERROR,
+                "External field %s is declared in the input deck and by the host program", name);
+      }
+    }
+    if (Num_Var_External + 1 > MAX_EXTERNAL_FIELD) {
+      GOMA_EH(GOMA_ERROR,
+              ">%d external field vars. Fix MAX_EXTERNAL_FIELD (rf_fem_const.h), recompile.",
+              MAX_EXTERNAL_FIELD);
+    }
+    efv->ev = T_SOMETHING;
+    strcpy(efv->name[Num_Var_External], name);
+    efv->i[Num_Var_External] = external_field_interpolation(interpolation);
+    strcpy(efv->file_nm[Num_Var_External], element ? "IMPORT_EV" : "IMPORT");
+    strcpy(efv->field_type[Num_Var_External], "steady");
+    if (element) {
+      Num_Import_EV++;
+    } else {
+      Num_Import_NV++;
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT,
+             "External Field = %s %s %s steady (declared by the host program)", name, interpolation,
+             efv->file_nm[Num_Var_External]);
+    ECHO(echo_string, echo_file);
+    Num_Var_External++;
   }
 
   efv->Num_external_field = Num_Var_External;

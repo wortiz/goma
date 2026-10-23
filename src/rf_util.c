@@ -3602,6 +3602,43 @@ int is_import_field(int w) {
   return strcmp(efv->file_nm[w], "IMPORT") == 0 || strcmp(efv->file_nm[w], "IMPORT_EV") == 0;
 }
 
+/*
+ * Imported external fields declared by the host program with
+ * goma_declare_external_field() before the deck is read, added to the deck's
+ * External Field cards by rd_genl_specs()
+ */
+static char declared_import_name[MAX_EXTERNAL_FIELD][32];
+static char declared_import_interpolation[MAX_EXTERNAL_FIELD][16];
+static int declared_import_element[MAX_EXTERNAL_FIELD];
+static int num_declared_imports = 0;
+
+/* Declare an imported external field, returns -1 if there are too many or
+ * the name is declared already */
+int declare_import_field(const char *name, const char *interpolation, int element) {
+  if (num_declared_imports >= MAX_EXTERNAL_FIELD) {
+    return -1;
+  }
+  for (int k = 0; k < num_declared_imports; k++) {
+    if (strcmp(declared_import_name[k], name) == 0) {
+      return -1;
+    }
+  }
+  strcpy(declared_import_name[num_declared_imports], name);
+  strcpy(declared_import_interpolation[num_declared_imports], interpolation);
+  declared_import_element[num_declared_imports] = element;
+  num_declared_imports++;
+  return 0;
+}
+
+int num_declared_import_fields(void) { return num_declared_imports; }
+
+/* Name, interpolation and location of declared imported field k */
+const char *declared_import_field(int k, const char **interpolation, int *element) {
+  *interpolation = declared_import_interpolation[k];
+  *element = declared_import_element[k];
+  return declared_import_name[k];
+}
+
 /* Index of the imported external field name, -1 if there is none. *element
  * is TRUE for an IMPORT_EV field */
 int import_field_index(const char *name, int *element) {
@@ -3674,6 +3711,10 @@ int load_import_fields(Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
 
 /* Reset this file's globals to their load time values, see goma_reset.h */
 void rf_util_free_globals(void) {
+  memset(declared_import_name, 0, sizeof(declared_import_name));
+  memset(declared_import_interpolation, 0, sizeof(declared_import_interpolation));
+  memset(declared_import_element, 0, sizeof(declared_import_element));
+  num_declared_imports = 0;
   for (int w = 0; w < MAX_EXTERNAL_FIELD; w++) {
     safer_free((void **)&import_values[w]);
     /* the external field values, read from files or imported (efv is freed later, by

@@ -117,6 +117,8 @@ static struct LS_Surf_List *create_surfs_from_iso(int, double, double *, Exo_DB 
 
 static void initialize_sign(int, double *, Exo_DB *);
 
+static void free_surf(struct LS_Surf *);
+
 static double initial_level_set(double, double, double);
 
 static double gradient_norm_err(dbl *, dbl *, Exo_DB *, Dpi *, dbl);
@@ -1589,7 +1591,7 @@ create_surfs_from_arc(double c[DIM], double r, double n[DIM], double d) {
       if (unique_surf(list, surf)) {
         append_surf(list, surf);
       } else {
-        safe_free(surf);
+        free_surf(surf);
       }
     }
     theta += del_theta;
@@ -3199,7 +3201,7 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
           if (unique_surf(list, surf)) {
             append_surf(list, surf);
           } else {
-            safe_free(surf);
+            free_surf(surf);
           }
         }
       }
@@ -3232,9 +3234,7 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
           if (unique_surf(list, surf)) {
             append_surf(list, surf);
           } else {
-            free(surf->data);
-            free(surf->closest_point);
-            free(surf);
+            free_surf(surf);
           }
         }
       }
@@ -3278,7 +3278,7 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
           if (unique_surf(list, surf)) {
             append_surf(list, surf);
           } else {
-            safe_free(surf);
+            free_surf(surf);
           }
         }
       }
@@ -3322,7 +3322,7 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
           if (unique_surf(list, surf)) {
             append_surf(list, surf);
           } else {
-            safe_free(surf);
+            free_surf(surf);
           }
         }
       }
@@ -3364,7 +3364,7 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
           if (unique_surf(list, surf)) {
             append_surf(list, surf);
           } else {
-            safe_free(surf);
+            free_surf(surf);
           }
         }
       }
@@ -3406,7 +3406,7 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
           if (unique_surf(list, surf)) {
             append_surf(list, surf);
           } else {
-            safe_free(surf);
+            free_surf(surf);
           }
         }
       }
@@ -3435,7 +3435,7 @@ static void find_intersections(struct LS_Surf_List *list, int isovar, double iso
           if (unique_surf(list, surf)) {
             append_surf(list, surf);
           } else {
-            safe_free(surf);
+            free_surf(surf);
           }
         }
       }
@@ -3811,6 +3811,13 @@ static void compute_link_level_set(double *xi,
       }
     }
   }
+}
+
+/* free a surface that is not in a list (one without subsurfaces) */
+static void free_surf(struct LS_Surf *surf) {
+  safer_free((void **)&surf->data);
+  safer_free((void **)&surf->closest_point);
+  safer_free((void **)&surf);
 }
 
 struct LS_Surf *create_surf(int type)
@@ -6947,7 +6954,7 @@ void find_grid_intersections(SGRID *grid, struct LS_Surf_List *list) {
           if (unique_surf(list, surf)) {
             append_surf(list, surf);
           } else {
-            safe_free(surf);
+            free_surf(surf);
           }
         }
       }

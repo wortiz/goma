@@ -63,6 +63,10 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   add_test(NAME goma_lib_import
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_import --runs 1 --import-fields
                    --advance-steps 1 -p lub_film -p lub_CYmold)
+  # the same with the field declared by goma_declare_external_field instead of a card
+  add_test(NAME goma_lib_declare
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_declare --runs 2 --import-fields
+                   --declare-fields --advance-steps 1 -p lub_film)
   # a coupling loop: before each time step the host sets the imported field from Goma's
   # solution, two runs in one process must give the same results
   add_test(NAME goma_lib_coupling
@@ -70,14 +74,15 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
                    --advance-steps 1 --feedback THETA:SH_FH:1000 --compare-runs -p lub_film)
   set_tests_properties(goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm
                        goma_lib_advance goma_lib_advance_segregated goma_lib_import
-                       goma_lib_coupling PROPERTIES SKIP_RETURN_CODE 77 LABELS library)
+                       goma_lib_declare goma_lib_coupling
+                       PROPERTIES SKIP_RETURN_CODE 77 LABELS library)
   set_tests_properties(goma_lib_import PROPERTIES PROCESSORS 2)
   set_tests_properties(goma_lib_mpi goma_lib_petsc PROPERTIES PROCESSORS 2)
   set_tests_properties(goma_lib_subcomm PROPERTIES PROCESSORS 3)
   if(CMAKE_BUILD_TYPE STREQUAL "Asan")
     set_tests_properties(
       goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm goma_lib_advance
-      goma_lib_advance_segregated goma_lib_import goma_lib_coupling
+      goma_lib_advance_segregated goma_lib_import goma_lib_declare goma_lib_coupling
       PROPERTIES
         ENVIRONMENT
         "ASAN_OPTIONS=fast_unwind_on_malloc=0;LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/library/lsan.supp"
