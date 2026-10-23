@@ -110,10 +110,12 @@ problem is solved by the first call. The time step size carries over from one
 call to the next, and ``goma_solve`` called after them solves the rest of the
 problem.
 
-Only problems that *Goma* solves with its fully coupled solver can be advanced
-in steps: steady or transient problems with a single matrix and no
-continuation, hunting or LOCA. For other problems the first call returns an
-error and the problem can still be solved with ``goma_solve``.
+Steady or transient problems with a single matrix and no continuation,
+hunting or LOCA, and problems solved by the segregated solver (several
+matrices), can be advanced in steps. For other problems the first call returns
+an error and the problem can still be solved with ``goma_solve``. A steady
+segregated problem is solved by the first call, like a steady fully coupled
+one.
 
 A host loop that advances a transient problem every 0.1 time units:
 

@@ -43,6 +43,17 @@ EXTERN void solve_problem_segregated(Exo_DB *, /* exo - ptr to finite element me
                                      Dpi *,    /* dpi - ptr to distributed processing info */
                                      dbl *);
 
+/* solve_problem_segregated() in stages, see goma_advance_steps() */
+EXTERN void solve_problem_segregated_init(Exo_DB *, Dpi *);
+EXTERN int solve_problem_segregated_advance(Exo_DB *,
+                                            Dpi *,
+                                            int,             /* num_steps, <= 0 for all */
+                                            const double *); /* t_stop, NULL for none */
+EXTERN void solve_problem_segregated_finish(Exo_DB *, Dpi *);
+EXTERN void solve_problem_segregated_get_time(double *, double *);
+EXTERN int solve_problem_segregated_get_field(const char *, int, double *);
+EXTERN int solve_problem_segregated_get_post_field(const char *, double *);
+
 EXTERN void predict_solution_u_star(int N,
                                     dbl delta_t,
                                     dbl delta_t_old,

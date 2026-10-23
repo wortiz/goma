@@ -2607,13 +2607,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 } /* END of routine solve_problem()  */
 
 /*
- * Values of a nodal solution variable at this rank's nodes, as they are
- * written to the output file, after solve_problem_advance(). name is a
- * variable name (VELOCITY1 or VX) with the species number in kind for
- * MASS_FRACTION, or a nodal variable name of the output file (kind 0).
- * Returns -1 if the problem has no such variable.
+ * Index in rd of a nodal solution variable written to the output file, -1 if
+ * there is none. name is a variable name (VELOCITY1 or VX) with the species
+ * number in kind for MASS_FRACTION, or a nodal variable name of the output
+ * file (kind 0).
  */
-int solve_problem_get_field(const char *name, int kind, double *values) {
+int find_nodal_output_var(const struct Results_Description *rd, const char *name, int kind) {
   for (int i = 0; i < rd->TotalNVSolnOutput; i++) {
     int type = rd->nvtype[i];
     int match = (strcmp(name, rd->nvname[i]) == 0 && kind == 0);
@@ -2623,12 +2622,37 @@ int solve_problem_get_field(const char *name, int kind, double *values) {
               strcasecmp(name, Var_Name[type].name2) == 0;
     }
     if (match) {
-      extract_nodal_vec(x, rd->nvtype[i], rd->nvkind[i], rd->nvmatID[i], values, EXO_ptr, FALSE,
-                        time);
-      return 0;
+      return i;
     }
   }
   return -1;
+}
+
+/*
+ * Index in rd of a nodal post processing variable named as in the output
+ * file (0 .. rd->TotalNVPostOutput-1), -1 if there is none
+ */
+int find_nodal_output_post_var(const struct Results_Description *rd, const char *name) {
+  for (int i = 0; i < rd->TotalNVPostOutput; i++) {
+    if (strcmp(name, rd->nvname[rd->TotalNVSolnOutput + i]) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/*
+ * Values of a nodal solution variable at this rank's nodes, as they are
+ * written to the output file, after solve_problem_advance(), see
+ * find_nodal_output_var(). Returns -1 if the problem has no such variable.
+ */
+int solve_problem_get_field(const char *name, int kind, double *values) {
+  int i = find_nodal_output_var(rd, name, kind);
+  if (i < 0) {
+    return -1;
+  }
+  extract_nodal_vec(x, rd->nvtype[i], rd->nvkind[i], rd->nvmatID[i], values, EXO_ptr, FALSE, time);
+  return 0;
 }
 
 /*
@@ -2638,21 +2662,20 @@ int solve_problem_get_field(const char *name, int kind, double *values) {
  * variable.
  */
 int solve_problem_get_post_field(const char *name, double *values) {
-  for (int i = 0; i < rd->TotalNVPostOutput; i++) {
-    if (strcmp(name, rd->nvname[rd->TotalNVSolnOutput + i]) == 0) {
-      if (is_steady_state) {
-        post_process_nodal_var(x, x_sens_p, x_old, xdot, xdot_old, resid_vector, time, delta_t,
-                               theta, EXO_ptr, DPI_ptr, rd, i, values);
-      } else {
-        /* after a time step the history has moved back by one step, pass what the
-         * output of the step saw */
-        post_process_nodal_var(x, x_sens_p, x_older, xdot, xdot_older, resid_vector, time,
-                               delta_t_old, theta, EXO_ptr, DPI_ptr, rd, i, values);
-      }
-      return 0;
-    }
+  int i = find_nodal_output_post_var(rd, name);
+  if (i < 0) {
+    return -1;
   }
-  return -1;
+  if (is_steady_state) {
+    post_process_nodal_var(x, x_sens_p, x_old, xdot, xdot_old, resid_vector, time, delta_t, theta,
+                           EXO_ptr, DPI_ptr, rd, i, values);
+  } else {
+    /* after a time step the history has moved back by one step, pass what the
+     * output of the step saw */
+    post_process_nodal_var(x, x_sens_p, x_older, xdot, xdot_older, resid_vector, time, delta_t_old,
+                           theta, EXO_ptr, DPI_ptr, rd, i, values);
+  }
+  return 0;
 }
 
 /*

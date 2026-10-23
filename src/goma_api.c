@@ -154,7 +154,8 @@ struct goma_context {
   fenv_t host_fenv; /* floating point environment to restore for the host */
   MPI_Comm comm;    /* duplicate of the host's communicator, goma_comm during the run */
   enum goma_stage stage;
-  bool finished; /* GOMA_STAGE_ADVANCING: the problem reached its end */
+  bool finished;   /* GOMA_STAGE_ADVANCING: the problem reached its end */
+  bool segregated; /* GOMA_STAGE_ADVANCING: solved by solve_problem_segregated() */
 };
 
 static bool goma_library_initialized = false;
@@ -742,6 +743,15 @@ int goma_setup(goma_context *ctx) {
   return 0;
 }
 
+/* Advance the problem started by goma_advance() */
+static void goma_advance_stage(goma_context *ctx, int num_steps, const double *t_stop) {
+  if (ctx->segregated) {
+    ctx->finished = solve_problem_segregated_advance(EXO_ptr, DPI_ptr, num_steps, t_stop);
+  } else {
+    ctx->finished = solve_problem_advance(EXO_ptr, DPI_ptr, num_steps, t_stop);
+  }
+}
+
 /* Final output after the problem is solved */
 static void goma_solve_done(goma_context *ctx) {
 #ifdef PARALLEL
@@ -769,7 +779,7 @@ int goma_solve(goma_context *ctx) {
   }
   if (ctx->stage == GOMA_STAGE_ADVANCING) {
     if (!ctx->finished) {
-      solve_problem_advance(EXO_ptr, DPI_ptr, 0, NULL);
+      goma_advance_stage(ctx, 0, NULL);
     }
     return goma_finish(ctx);
   }
@@ -858,8 +868,9 @@ int goma_solve(goma_context *ctx) {
 }
 
 /*
- * Start solve_problem() on the first call, then advance it. Only problems
- * that goma_solve() hands to solve_problem() can be advanced in steps.
+ * Start solve_problem() or solve_problem_segregated() on the first call,
+ * then advance it. Only problems that goma_solve() hands to one of them can be
+ * advanced in steps.
  */
 static int goma_advance(goma_context *ctx, int num_steps, const double *t_stop) {
   if (ctx == NULL) {
@@ -871,19 +882,27 @@ static int goma_advance(goma_context *ctx, int num_steps, const double *t_stop) 
       P0PRINTF("goma_advance: imported external field %s has no values\n", unset);
       return -1;
     }
-    if (upd->Total_Num_Matrices != 1 || loca_in->Cont_Alg == LOCA_LSA_ONLY ||
-        (TimeIntegration != TRANSIENT && Continuation != ALC_NONE)) {
-      P0PRINTF("goma_advance: only problems solved by solve_problem() can be advanced, not "
-               "segregated, continuation, hunting or LOCA problems\n");
+    /* goma_solve() solves several matrices with solve_problem_segregated() whatever the
+     * continuation settings */
+    ctx->segregated = upd->Total_Num_Matrices > 1;
+    if (!ctx->segregated && (loca_in->Cont_Alg == LOCA_LSA_ONLY ||
+                             (TimeIntegration != TRANSIENT && Continuation != ALC_NONE))) {
+      P0PRINTF("goma_advance: only problems solved by solve_problem() or "
+               "solve_problem_segregated() can be advanced, not continuation, hunting or LOCA "
+               "problems\n");
       return -1;
-    }
-    pg->imtrx = 0;
-    if (TimeIntegration == TRANSIENT) {
-      Continuation = ALC_NONE;
     }
     char *yo = ctx->yo;
     log_msg("Solving problem in steps");
-    solve_problem_init(EXO_ptr, DPI_ptr);
+    if (ctx->segregated) {
+      solve_problem_segregated_init(EXO_ptr, DPI_ptr);
+    } else {
+      pg->imtrx = 0;
+      if (TimeIntegration == TRANSIENT) {
+        Continuation = ALC_NONE;
+      }
+      solve_problem_init(EXO_ptr, DPI_ptr);
+    }
     ctx->stage = GOMA_STAGE_ADVANCING;
     ctx->finished = false;
   } else if (ctx->stage != GOMA_STAGE_ADVANCING) {
@@ -893,7 +912,7 @@ static int goma_advance(goma_context *ctx, int num_steps, const double *t_stop) 
   if (!ctx->finished) {
     /* values set since the last call */
     load_import_fields(EXO_ptr, DPI_ptr, cx[0]);
-    ctx->finished = solve_problem_advance(EXO_ptr, DPI_ptr, num_steps, t_stop);
+    goma_advance_stage(ctx, num_steps, t_stop);
   }
   return ctx->finished ? 1 : 0;
 }
@@ -911,7 +930,11 @@ int goma_get_time(goma_context *ctx, double *time, double *delta_t) {
   if (ctx == NULL || ctx->stage != GOMA_STAGE_ADVANCING || time == NULL || delta_t == NULL) {
     return -1;
   }
-  solve_problem_get_time(time, delta_t);
+  if (ctx->segregated) {
+    solve_problem_segregated_get_time(time, delta_t);
+  } else {
+    solve_problem_get_time(time, delta_t);
+  }
   return 0;
 }
 
@@ -936,12 +959,18 @@ int goma_get_field(goma_context *ctx, const char *name, int component, double *v
   if (ctx == NULL || ctx->stage != GOMA_STAGE_ADVANCING || name == NULL || values == NULL) {
     return -1;
   }
+  if (ctx->segregated) {
+    return solve_problem_segregated_get_field(name, component, values);
+  }
   return solve_problem_get_field(name, component, values);
 }
 
 int goma_get_post_field(goma_context *ctx, const char *name, double *values) {
   if (ctx == NULL || ctx->stage != GOMA_STAGE_ADVANCING || name == NULL || values == NULL) {
     return -1;
+  }
+  if (ctx->segregated) {
+    return solve_problem_segregated_get_post_field(name, values);
   }
   return solve_problem_get_post_field(name, values);
 }
@@ -956,7 +985,11 @@ int goma_finish(goma_context *ctx) {
   if (ctx->stage != GOMA_STAGE_ADVANCING) {
     return -1;
   }
-  solve_problem_finish(EXO_ptr, DPI_ptr);
+  if (ctx->segregated) {
+    solve_problem_segregated_finish(EXO_ptr, DPI_ptr);
+  } else {
+    solve_problem_finish(EXO_ptr, DPI_ptr);
+  }
   goma_solve_done(ctx);
   return 0;
 }
