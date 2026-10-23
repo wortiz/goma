@@ -38,10 +38,11 @@ with the following input parameters:
 
 <file_name>          
     Name of the EXODUS II file from which the nodal field is to be read. When
-    Goma is compiled with LIBRARY_MODE defined (see Appendix 2) and the
-    external field will be passed into Goma from a driver code, this entry will
-    be either IMPORT (for nodal variables) or IMPORT_EV (for element
-    variables), instead of a file name.
+    *Goma* runs inside a host program through the library interface (see
+    :doc:`/library_interface`) and the host sets the field with
+    ``goma_set_external_field``, this entry is IMPORT (nodal values) or
+    IMPORT_EV (element values, averaged to the nodes) instead of a file
+    name.
 
 [char_string3]       
     Optional character string. Only optional available is **“timedependent”**
@@ -132,13 +133,15 @@ Should that occur, a new version of *Goma* must be compiled with an increased va
 MAX_EXTERNAL_FIELD. The user should consult notes on building *Goma* if (s)he
 has questions regarding how to do this.
 
-The third example assumes that *Goma* has been compiled with LIBRARY_MODE and
-is linked in to an external driver code along with another program which will compute
-some variables and pass their values into *Goma*; here the imported fields are the X and
-Y components of mesh displacement (nodal variables) and porosity (an element
-variable). There is a naive first order interpolation function in *Goma* to obtain nodal
-values of fields which are imported as element variables. Although *Goma* does not
-solve for these variables, their values are included in the output Exodus file.
+The third example assumes that *Goma* runs inside a host program through the
+library interface (see :doc:`/library_interface`), which computes some variables
+with another code and passes their values to *Goma* with
+``goma_set_external_field``; here the imported fields are the X and Y components
+of mesh displacement (nodal variables) and porosity (an element variable).
+Element values are averaged to the nodes. Although *Goma* does not solve for
+these variables, their values are included in the output Exodus file. The
+porosity update of the former ``LIBRARY_MODE`` coupling, which advanced an
+imported porosity with the porous liquid pressure, has been removed.
 
 In the fourth example a field JE_N_1, the x-directed current density field, timedependent,
 is brought in from emfields.exoII. Typically, depending on the

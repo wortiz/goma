@@ -5273,14 +5273,6 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->initial_porosity = mat_ptr->u_porous_compressibility[1];
       mat_ptr->len_u_porous_compressibility = num_const;
       SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_porous_compressibility);
-    } else {
-#ifdef LIBRARY_MODE
-      if (efv->ev_porous_decouple) {
-        sprintf(err_msg, "Material %s - unrecognized model for %s \"%s\" ???\n",
-                pd_glob[mn]->MaterialName, "Porous Compressibility", model_name);
-        GOMA_EH(model_read, err_msg);
-      }
-#endif
     }
 
     ECHO(es, echo_file);

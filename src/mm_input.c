@@ -1306,10 +1306,8 @@ void rd_genl_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Export Field", ex_id);
     ECHO(echo_string, echo_file);
   }
-#ifndef LIBRARY_MODE
   if (Num_Export_XS > 0)
-    GOMA_WH(-1, "Export Field only valid in LIBRARY_MODE!");
-#endif
+    GOMA_WH(-1, "Export Field is ignored, a host program reads fields with goma_get_field()");
 
   /* XFEM turned off by default */
   upd->XFEM = FALSE;

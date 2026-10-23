@@ -53,8 +53,6 @@ EXTERN int elc_rs_alloc(void);
 
 EXTERN int tran_alloc(void);
 
-EXTERN int libio_alloc(void);
-
 EXTERN int eigen_alloc(void);
 
 EXTERN int cont_alloc(void);

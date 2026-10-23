@@ -15,6 +15,23 @@ Modes:
 --partial adds two runs before the full runs of each problem that stop after
 goma_create and after goma_setup, to test teardown of a partly set up problem.
 
+--advance-steps solves with goma_advance_steps() and --advance-to with
+goma_advance_to() at the given simulation time interval instead of
+goma_solve(), the output must still match the blessed results.  Problems that
+cannot be advanced in steps are solved with goma_solve() and reported as
+unsupported.  With --check-fields, the fields returned by goma_get_field() and
+goma_get_post_field() after each step must equal the output file's.
+
+--import-fields replaces the file of each External Field card that reads a
+fixed field from a mesh file with IMPORT; the driver reads the field from the
+file and sets it with goma_set_external_field() instead, so the output must
+still match the blessed results.
+
+--feedback NAME:FIELD:SCALE (with --import-fields and --advance-*) adds SCALE
+times Goma's FIELD to the imported field NAME before each call, a coupling loop
+whose results differ from the blessed ones; --compare-runs then compares each
+run with the first run of its job exactly, to check the loop is repeatable.
+
 --extra-ranks starts that many more MPI ranks than a problem needs, Goma runs
 on a communicator of the first ranks only, to check that it does not
 communicate outside the communicator it is given.
@@ -39,6 +56,7 @@ import concurrent.futures
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -70,8 +88,41 @@ def parse_args():
     parser.add_argument(
         "--extra-ranks", type=int, default=0, help="idle MPI ranks outside Goma's communicator"
     )
+    advance = parser.add_mutually_exclusive_group()
+    advance.add_argument(
+        "--advance-steps", type=int, help="solve with goma_advance_steps(N) instead of goma_solve"
+    )
+    advance.add_argument(
+        "--advance-to", type=float, help="solve with goma_advance_to() every DT of simulation time"
+    )
+    parser.add_argument(
+        "--check-fields",
+        action="store_true",
+        help="with --advance-*, compare goma_get_field with the output after each call",
+    )
+    parser.add_argument(
+        "--import-fields",
+        action="store_true",
+        help="set external fields read from files with goma_set_external_field instead",
+    )
+    parser.add_argument(
+        "--feedback",
+        metavar="NAME:FIELD:SCALE",
+        help="with --import-fields and --advance-*, add SCALE times Goma's FIELD to imported "
+        "field NAME before each call",
+    )
+    parser.add_argument(
+        "--compare-runs",
+        action="store_true",
+        help="compare each run's output with the first run's exactly instead of the blessed one",
+    )
     parser.add_argument("--chain-length", type=int, default=8, help="problems per chain")
     parser.add_argument("--seed", type=int, default=0, help="shuffle seed (chain mode)")
+    parser.add_argument(
+        "--no-shuffle",
+        action="store_true",
+        help="chain the problems in the order given with -p (chain mode)",
+    )
     parser.add_argument("-p", "--problem", action="append", default=[], help="problem name")
     parser.add_argument("-f", "--feature", action="append", default=[], help="GUTS feature")
     parser.add_argument("-t", "--max-time", type=int, help="skip problems estimated over N minutes")
@@ -82,7 +133,10 @@ def parse_args():
         "--timeout", type=int, default=3600, help="seconds per run, a job gets this times its runs"
     )
     parser.add_argument("--json", help="write results to this file")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.check_fields and not (args.advance_steps or args.advance_to):
+        parser.error("--check-fields needs --advance-steps or --advance-to")
+    return args
 
 
 def select_problems(args, guts_cfg):
@@ -128,7 +182,10 @@ def make_jobs(args, problems):
     for p in problems:
         by_np.setdefault(nprocs(p), []).append(p)
     for np, group in sorted(by_np.items()):
-        rng.shuffle(group)
+        if args.no_shuffle:
+            group.sort(key=lambda p: args.problem.index(p.name) if p.name in args.problem else 0)
+        else:
+            rng.shuffle(group)
         for i in range(0, len(group), args.chain_length):
             chain = group[i : i + args.chain_length]
             runs = [(p, s) for p in chain[:1] for s in partial] + [(p, "solve") for p in chain]
@@ -166,6 +223,17 @@ def run_job(args, guts_cfg, name, runs):
         driver_args.append(str(d))
         if stop != "solve":
             driver_args.append("--stop-after=" + stop)
+        elif args.advance_steps:
+            driver_args.append("--advance-steps=%d" % args.advance_steps)
+        elif args.advance_to:
+            driver_args.append("--advance-to=%.17g" % args.advance_to)
+        if stop == "solve" and args.feedback:
+            driver_args.append("--feedback=" + args.feedback)
+        if args.import_fields:
+            for field, mesh_file in import_external_fields(d / p.run.goma_input):
+                driver_args.append("--import=%s:%s" % (field, mesh_file))
+        if stop == "solve" and args.check_fields and p.blessed.exo_output:
+            driver_args.append("--check-fields=" + p.blessed.exo_output[0])
         driver_args.append("--log=" + str(d / "stdout.txt"))
         driver_args += ["-i", p.run.goma_input] + p.run.goma_opts.split()
         if p.run.use_aprepro:
@@ -203,18 +271,75 @@ def run_job(args, guts_cfg, name, runs):
             run_tool(
                 [guts_cfg.epu, "-auto", "%s.exoII.%d.0" % (p.run.fix_exo_basename, np)], d, env
             )
-        code, log = check_exodiff(p, d, guts_cfg)
-        (d / "exoComparison.txt").write_text(log)
+        if args.compare_runs:
+            exodiff = compare_with_first_run(guts_cfg, p, d, run_dirs[0], env)
+        else:
+            code, log = check_exodiff(p, d, guts_cfg)
+            (d / "exoComparison.txt").write_text(log)
+            exodiff = code.value
         results.append(
             {
                 "problem": p.name,
                 "dir": str(d),
-                "exodiff": code.value,
+                "exodiff": exodiff,
                 "petsc_options": check_petsc_options(p, d),
                 "symbols": reset_check_symbols(args.driver, d),
+                "advance": advance_status(args, d),
             }
         )
     return {"job": name, "exit": exit_code, "runs": results}
+
+
+EXTERNAL_FIELD = re.compile(r"^(\s*External Field\s*=\s*(\S+)\s+\S+\s+)(\S+)\s*$")
+
+
+def import_external_fields(deck):
+    """Replace the mesh file of fixed External Field cards in deck with IMPORT.
+
+    Returns [(field name, mesh file)]."""
+    lines = deck.read_text().splitlines(keepends=True)
+    imports = []
+    for i, line in enumerate(lines):
+        m = EXTERNAL_FIELD.match(line)
+        if m and m.group(3) not in ("IMPORT", "IMPORT_EV") and m.group(3).endswith(".exoII"):
+            imports.append((m.group(2), m.group(3)))
+            lines[i] = m.group(1) + "IMPORT\n"
+    deck.write_text("".join(lines))
+    return imports
+
+
+def compare_with_first_run(guts_cfg, problem, run_dir, first_dir, env):
+    """Compare the output files of a run with the first run's exactly: OK, FAILED or n/a."""
+    if run_dir == first_dir:
+        return "n/a"
+    for name in problem.blessed.exo_output:
+        cmd = [
+            guts_cfg.exodiff,
+            "-absolute",
+            "-tolerance",
+            "0",
+            "-coordinate_tolerance",
+            "0",
+            "-Floor",
+            "0",
+            str(first_dir / name),
+            str(run_dir / name),
+        ]
+        with open(run_dir / "exoComparison.txt", "a") as log:
+            if subprocess.run(cmd, env=env, stdout=log, stderr=subprocess.STDOUT).returncode != 0:
+                return "FAILED"
+    return "OK"
+
+
+def advance_status(args, run_dir):
+    """Whether a run was solved in steps: OK, unsupported (solved by goma_solve) or n/a."""
+    if not (args.advance_steps or args.advance_to):
+        return "n/a"
+    try:
+        stdout = (run_dir / "stdout.txt").read_text(errors="replace")
+    except OSError:
+        return "n/a"
+    return "unsupported" if "can be advanced" in stdout else "OK"
 
 
 def petsc_options(stdout_file):
@@ -321,6 +446,16 @@ def main():
         with open(args.json, "w") as f:
             json.dump({"results": results, "skipped": skipped}, f, indent=2)
     print("%d of %d jobs passed" % (len(results) - len(failed), len(results)))
+    unsupported = sorted(
+        {
+            Path(r["dir"]).name
+            for j in results
+            for r in j["runs"]
+            if r.get("advance") == "unsupported"
+        }
+    )
+    if unsupported:
+        print("solved with goma_solve, cannot be advanced: %s" % " ".join(unsupported))
     if failed:
         print("failed: %s" % " ".join(failed))
     return 1 if failed else 0

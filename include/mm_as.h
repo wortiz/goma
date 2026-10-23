@@ -62,7 +62,6 @@ extern PMV_ML_STRUCT *pmv_ml;
 extern struct Constitutive_Relations **cr_glob, *cr;
 extern struct Local_Element_Contributions *lec;
 extern struct Transient_Information *tran;
-extern struct Library_IO *libio;
 extern struct Eigensolver_Info *eigen;
 extern struct Continuation_Information *cont;
 extern struct Loca_Input *loca_in;

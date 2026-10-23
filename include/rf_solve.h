@@ -58,6 +58,28 @@ EXTERN void solve_problem(Exo_DB *, /* exo - ptr to finite element mesh database
                           Dpi *,    /* dpi - ptr to distributed processing info */
                           dbl *);   /* te_out - return actual end time */
 
+/* solve_problem() in stages, see goma_advance_steps() */
+EXTERN void solve_problem_init(Exo_DB *, /* exo - ptr to finite element mesh database */
+                               Dpi *);   /* dpi - ptr to distributed processing info */
+
+EXTERN int solve_problem_advance(Exo_DB *, /* exo - ptr to finite element mesh database */
+                                 Dpi *,    /* dpi - ptr to distributed processing info */
+                                 int,      /* num_steps - successful time steps, <= 0 for all */
+                                 const double *); /* t_stop - time to stop at, NULL for none */
+
+EXTERN void solve_problem_finish(Exo_DB *, /* exo - ptr to finite element mesh database */
+                                 Dpi *);   /* dpi - ptr to distributed processing info */
+
+EXTERN int solve_problem_get_field(const char *, /* name - variable name */
+                                   int,          /* kind - species number */
+                                   double *);    /* values[num_nodes] */
+
+EXTERN int solve_problem_get_post_field(const char *, /* name - post processing variable */
+                                        double *);    /* values[num_nodes] */
+
+EXTERN void solve_problem_get_time(double *,  /* t - time of the last converged step */
+                                   double *); /* dt - size of the next time step */
+
 EXTERN int anneal_mesh             /* rf_solve.c */
     (double[],                     /* x - solution vector */
      int,                          /* tev - number elem results */
@@ -70,13 +92,6 @@ EXTERN int anneal_mesh             /* rf_solve.c */
 
 EXTERN int anneal_mesh_with_external_field /* rf_solve.c */
     (const Exo_DB *);                      /* *exo  */
-
-#ifdef LIBRARY_MODE
-EXTERN int load_export_vars /* rf_solve.c */
-    (const int,             /* num_nodes */
-     dbl[],                 /* x - solution vector */
-     dbl *);                /* x_pp - post processing varibale vector */
-#endif
 
 EXTERN int variable_stats /* rf_solve.c */
     (dbl[],               /* x - solution vector */

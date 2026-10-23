@@ -31,6 +31,7 @@ extern "C" {
 #endif
 
 void globals_free_globals(void);             /* globals.c */
+void rf_util_free_globals(void);             /* rf_util.c */
 void rd_mesh_free_globals(void);             /* rd_mesh.c */
 void unknown_map_free_globals(void);         /* mm_unknown_map.c */
 void bc_conflict_free_globals(void);         /* mm_bc_conflict.c */
