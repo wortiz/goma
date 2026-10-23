@@ -70,6 +70,13 @@ EXTERN int solve_problem_advance(Exo_DB *, /* exo - ptr to finite element mesh d
 EXTERN void solve_problem_finish(Exo_DB *, /* exo - ptr to finite element mesh database */
                                  Dpi *);   /* dpi - ptr to distributed processing info */
 
+EXTERN int find_nodal_output_var(const struct Results_Description *, /* rd */
+                                 const char *,                       /* name */
+                                 int);                               /* kind */
+
+EXTERN int find_nodal_output_post_var(const struct Results_Description *, /* rd */
+                                      const char *);                      /* name */
+
 EXTERN int solve_problem_get_field(const char *, /* name - variable name */
                                    int,          /* kind - species number */
                                    double *);    /* values[num_nodes] */

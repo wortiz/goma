@@ -66,9 +66,10 @@ int goma_solve(goma_context *ctx);
 
 /*
  * Advance the problem in steps instead of goma_solve, for coupling with
- * another code.  Only problems that goma_solve hands to solve_problem
- * (steady or transient, a single matrix, no continuation, hunting or LOCA)
- * can be advanced; the first call returns an error for others.
+ * another code.  Problems with a single matrix (steady or transient, no
+ * continuation, hunting or LOCA) and problems solved by the segregated solver
+ * (several matrices) can be advanced; the first call returns an error for
+ * others.
  *
  * goma_advance_steps takes num_steps (>= 1) successful time steps.
  * goma_advance_to steps until the simulation time reaches time, shortening
