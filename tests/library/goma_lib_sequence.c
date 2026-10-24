@@ -712,8 +712,15 @@ int main(int argc, char **argv) {
     }
 #ifdef __GLIBC__
     /* heap still in use after goma_destroy, growth between runs is leaked memory */
+#if __GLIBC_PREREQ(2, 33)
     struct mallinfo2 mi = mallinfo2();
-    fprintf(stderr, "goma_lib_sequence: run %d heap in use %zu bytes\n", run, mi.uordblks);
+    size_t heap_in_use = mi.uordblks;
+#else
+    /* mallinfo2 needs glibc 2.33, mallinfo fields are int and wrap past 2 GiB */
+    struct mallinfo mi = mallinfo();
+    size_t heap_in_use = (size_t)(unsigned int)mi.uordblks;
+#endif
+    fprintf(stderr, "goma_lib_sequence: run %d heap in use %zu bytes\n", run, heap_in_use);
 #endif
     if (error != 0) {
       status = 1;
