@@ -866,7 +866,7 @@ set(GOMA_SOURCES
 
 if(ENABLE_KOKKOS_ASSEMBLY)
   list(APPEND GOMA_SOURCES src/mm_kokkos_assembly.cpp)
-  list(APPEND GOMA_INCLUDES include/mm_kokkos_assembly.h)
+  list(APPEND GOMA_INCLUDES include/mm_kokkos_assembly.h include/mm_kokkos_flow.hpp)
   set_source_files_properties(src/mm_kokkos_assembly.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 

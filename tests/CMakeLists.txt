@@ -43,6 +43,12 @@ foreach(backend_mode legacy kokkos)
 endforeach()
 
 if(ENABLE_KOKKOS_ASSEMBLY)
+  add_executable(goma_kokkos_flow_tests assembly/kokkos_flow.cpp)
+  target_include_directories(goma_kokkos_flow_tests PRIVATE ${PROJECT_SOURCE_DIR}/include)
+  target_link_libraries(goma_kokkos_flow_tests PRIVATE Catch2::Catch2 Kokkos::kokkos)
+  add_test(NAME goma_kokkos_flow COMMAND goma_kokkos_flow_tests)
+  set_tests_properties(goma_kokkos_flow PROPERTIES LABELS "assembly;kokkos")
+
   add_executable(goma_kokkos_runtime_tests assembly/kokkos_runtime.cpp
                  ${PROJECT_SOURCE_DIR}/src/mm_kokkos_assembly.cpp)
   target_include_directories(goma_kokkos_runtime_tests PRIVATE ${PROJECT_SOURCE_DIR}/include)
