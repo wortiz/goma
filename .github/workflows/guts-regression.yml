@@ -46,3 +46,38 @@ jobs:
       if: always()
       run: |
         python3 guts/scripts/check_summary.py guts/results.json
+
+  library:
+    name: library mode tests with reset checker
+    runs-on: ubuntu-latest
+    container: westonortiz/goma-libs:netlib-latest
+    env:
+      PYTHONUNBUFFERED: "1"
+
+    defaults:
+      run:
+        shell: bash -l -e {0}
+
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: true
+
+    - name: CMake Configure Goma
+      run: |
+        . /etc/profile.d/goma-libs.sh
+        cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=ON -DGOMA_CHECK_GLOBAL_RESET=ON -Bbuild .
+
+    - name: Build Goma
+      run: |
+        . /etc/profile.d/goma-libs.sh
+        cd build
+        make -j 2
+
+    # goma_lib_regression.py fails a run that leaves global variables changed by the reset
+    # checker
+    - name: Library Mode Tests
+      run: |
+        . /etc/profile.d/goma-libs.sh
+        export OMPI_MCA_btl_base_warn_component_unused='0'
+        ctest --test-dir build -L library --output-on-failure -j 2

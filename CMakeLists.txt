@@ -1185,10 +1185,9 @@ endif()
 
 # The library interface (goma.h) for host programs, Goma::goma when installed
 add_library(goma_library INTERFACE)
-target_link_libraries(goma_library INTERFACE goma goma_user goma_util ${MPI_C_LIBRARIES})
+target_link_libraries(goma_library INTERFACE goma goma_user goma_util MPI::MPI_C)
 target_include_directories(goma_library INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-                                                  $<INSTALL_INTERFACE:include/goma>
-                                                  ${MPI_C_INCLUDE_PATH})
+                                                  $<INSTALL_INTERFACE:include/goma>)
 set_target_properties(goma_library PROPERTIES EXPORT_NAME goma)
 set_target_properties(goma PROPERTIES EXPORT_NAME goma_solver)
 

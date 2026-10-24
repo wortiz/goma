@@ -28,7 +28,10 @@ program built with CMake can use an installed *Goma*:
 with the install prefix in ``CMAKE_PREFIX_PATH``. ``Goma::goma`` brings in
 *Goma*'s libraries, the third party libraries it was configured with (the
 package finds Trilinos, SEACAS, Omega_h and PETSc where *Goma*'s build found
-them) and MPI. Inside *Goma*'s own build, link the ``goma_library`` target, as
+them) and MPI. The other libraries *Goma* links (ARPACK, METIS, MUMPS,
+UMFPACK, ...) are recorded in the package by their absolute paths, so the
+install is not relocatable: build the host on the machine *Goma* was built on,
+with those libraries still where *Goma*'s build found them. Inside *Goma*'s own build, link the ``goma_library`` target, as
 ``tests/library/goma_lib_sequence.c`` does in ``tests/CMakeLists.txt``.
 
 Lifecycle
@@ -383,10 +386,16 @@ communicate outside the communicator it is given. With ``--shift-ranks`` the
 library is initialized on all the processes instead and each run moves one
 process further, so later runs use processes that earlier ones did not.
 
-``--declare-value NAME:VALUE`` declares an imported nodal field and sets it to
-``VALUE`` once; with ``--advance-steps`` it must still be ``VALUE`` after
-every call, also after mesh adaptation. The output then has the extra field,
-so it is not compared.
+``--declare-value NAME:VALUE[:INTERP]`` declares an imported nodal field
+(interpolation ``INTERP``, ``Q1`` by default) and sets it to ``VALUE`` once;
+with ``--advance-steps`` it must still be ``VALUE`` after every call, also
+after mesh adaptation. The output then has the extra field, so it is not
+compared. ``--import-value-step STEP`` instead sets the field again before
+every call, to ``VALUE + k * STEP`` before call ``k``, sized for the mesh as
+earlier calls adapted it, and checks those values after the call;
+``--check-imports`` checks the field at the last step of the output file
+against the values set last. ``--solve-after N`` finishes each problem with
+``goma_solve`` after ``N`` advance calls, setting the imported fields first.
 
 ``--set-card "NAME=VALUE"`` sets a card of every problem's input deck, and
 ``--expect-failure`` then requires the solve to return an error instead of
@@ -394,7 +403,9 @@ comparing the output, for cards that make the solver give up, for example
 ``--set-card "Minimum time step=1.0e6"``.
 
 With ``-DENABLE_TESTING=ON`` and the ``guts`` submodule checked out, ctest runs
-a few of these problems (label ``library``)::
+a few of these problems (label ``library``), and ``goma_lib_install`` installs
+*Goma* and builds and runs ``tests/library/install``, a host program using
+``find_package(Goma)``::
 
    ctest --test-dir build -L library
 

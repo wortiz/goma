@@ -3759,6 +3759,14 @@ int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
     efv->ext_fld_ndl_val[w] = alloc_dbl_1(exo->num_nodes, 0.0);
   }
   double *nodal = efv->ext_fld_ndl_val[w];
+  /* each element's size once, not once for each of its nodes */
+  double *elem_size = NULL;
+  if (element) {
+    elem_size = alloc_dbl_1(exo->num_elems, 0.0);
+    for (int el = 0; el < exo->num_elems; el++) {
+      elem_size[el] = import_elem_size(exo, el);
+    }
+  }
   for (int i = 0; i < exo->num_nodes; i++) {
     if (!element) {
       nodal[i] = import_values[w][i];
@@ -3769,13 +3777,13 @@ int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
       double size_sum = 0.0;
       for (int j = first; j < last; j++) {
         int el = exo->node_elem_list[j];
-        double size = import_elem_size(exo, el);
-        sum += import_values[w][el] * size;
-        size_sum += size;
+        sum += import_values[w][el] * elem_size[el];
+        size_sum += elem_size[el];
       }
       nodal[i] = size_sum > 0.0 ? sum / size_sum : 0.0;
     }
   }
+  safer_free((void **)&elem_size);
   exchange_node(cx, dpi, nodal);
   return 0;
 }

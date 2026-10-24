@@ -40,10 +40,19 @@ is initialized on all the ranks instead and run i of a job uses the ranks
 starting at i modulo (extra ranks + 1), so later runs use ranks that earlier
 runs did not, while sharing some with them.
 
---declare-value NAME:VALUE (repeatable) declares an imported nodal field NAME
-with goma_declare_external_field() and sets it to VALUE once before the solve;
+--declare-value NAME:VALUE[:INTERP] (repeatable) declares an imported nodal
+field NAME with goma_declare_external_field() (interpolation INTERP, Q1 by
+default) and sets it to VALUE once before the solve;
 with --advance-*, it must still be VALUE after each call, on adapted meshes
 too.  The output then has the field and is not compared.
+--import-value-step STEP (with --advance-*) sets the declared fields again
+before each later call, to VALUE + k * STEP before call k, sized for the mesh
+as adapted by earlier calls, and they must have those values after the call.
+--check-imports checks the declared fields at the last time step of the
+output against the values last set.
+
+--solve-after N (with --advance-*) finishes the problem with goma_solve()
+after N calls, setting the imported fields first as before a call.
 
 --set-card "NAME=VALUE" (repeatable) sets the value of card NAME in each
 problem's input deck.  With --expect-failure, the solve must return an error,
@@ -105,8 +114,26 @@ def parse_args():
         "--declare-value",
         action="append",
         default=[],
-        metavar="NAME:VALUE",
+        metavar="NAME:VALUE[:INTERP]",
         help="declare an imported nodal field set to VALUE once",
+    )
+    parser.add_argument(
+        "--import-value-step",
+        type=float,
+        default=0.0,
+        metavar="STEP",
+        help="with --advance-*, add STEP to the --declare-value fields before each call",
+    )
+    parser.add_argument(
+        "--check-imports",
+        action="store_true",
+        help="check the --declare-value fields in the output against the values last set",
+    )
+    parser.add_argument(
+        "--solve-after",
+        type=int,
+        metavar="N",
+        help="with --advance-*, finish with goma_solve after N calls",
     )
     parser.add_argument(
         "--set-card",
@@ -184,6 +211,10 @@ def parse_args():
             parser.error("--set-card needs NAME=VALUE, got %s" % card)
     if args.shift_ranks and args.extra_ranks < 1:
         parser.error("--shift-ranks needs --extra-ranks")
+    if (args.import_value_step or args.solve_after) and not (args.advance_steps or args.advance_to):
+        parser.error("--import-value-step and --solve-after need --advance-steps or --advance-to")
+    if (args.import_value_step or args.check_imports) and not args.declare_value:
+        parser.error("--import-value-step and --check-imports need --declare-value")
     if args.declare_fields and not args.import_fields:
         parser.error("--declare-fields needs --import-fields")
     return args
@@ -280,8 +311,15 @@ def run_job(args, guts_cfg, name, runs):
         if args.set_card:
             set_cards(d / p.run.goma_input, args.set_card)
         for declared in args.declare_value:
-            driver_args.append("--declare=%s:Q1" % declared.split(":")[0])
-            driver_args.append("--import-value=" + declared)
+            field, value, interpolation = (declared.split(":") + ["Q1"])[:3]
+            driver_args.append("--declare=%s:%s" % (field, interpolation))
+            driver_args.append("--import-value=%s:%s" % (field, value))
+        if stop == "solve" and args.import_value_step:
+            driver_args.append("--import-value-step=%.17g" % args.import_value_step)
+        if stop == "solve" and args.solve_after:
+            driver_args.append("--solve-after=%d" % args.solve_after)
+        if stop == "solve" and args.check_imports and p.blessed.exo_output:
+            driver_args.append("--check-imports=" + p.blessed.exo_output[0])
         if stop == "solve" and args.expect_failure:
             driver_args.append("--expect-error")
         if args.shift_ranks:

@@ -82,6 +82,22 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   add_test(NAME goma_lib_advance
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_advance --mode chain --advance-steps 2
                    --check-fields -p tbc -p current -p 2_phase_diff -p heat_box_fcont)
+  # solved by goma_advance_to every 1.0 of simulation time (two of poise_drop's fixed time
+  # steps), the output must match goma_solve's
+  add_test(NAME goma_lib_advance_to
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_advance_to --runs 1 --advance-to 1.0
+                   -p poise_drop)
+  # targets between time steps (every 0.75, steps of 0.5): steps are cut to land on each
+  # target, two runs in one process must give the same results
+  add_test(NAME goma_lib_advance_to_cut
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_advance_to_cut --runs 2
+                   --advance-to 0.75 --compare-runs -p poise_drop)
+  # advanced, then new values for an imported field and goma_solve for the rest: the output
+  # must have the new values
+  add_test(NAME goma_lib_solve_after
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_solve_after --runs 2
+                   --advance-steps 2 --solve-after 2 --declare-value SOURCE:2.5:Q2 --import-value-step 1
+                   --check-imports -p tbc)
   # the segregated solver in steps, twice in one process
   add_test(NAME goma_lib_advance_segregated
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_advance_segregated --runs 2
@@ -98,24 +114,43 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   add_test(NAME goma_lib_adapt_import
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_adapt_import --runs 2
                    --advance-steps 3 --declare-value SOURCE:2.5 -p poise_drop)
+  # new values for an imported field before each call, after adaptation sized for the
+  # adapted mesh
+  add_test(NAME goma_lib_adapt_import_reset
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_adapt_import_reset --runs 1
+                   --advance-steps 3 --declare-value SOURCE:2.5 --import-value-step 1 -p poise_drop)
   # a coupling loop: before each time step the host sets the imported field from Goma's
   # solution, two runs in one process must give the same results
   add_test(NAME goma_lib_coupling
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_coupling --runs 2 --import-fields
                    --advance-steps 1 --feedback THETA:SH_FH:1000 --compare-runs -p lub_film)
+  # a host program outside Goma's tree, built against Goma installed with cmake --install
+  add_test(NAME goma_lib_install
+           COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${PROJECT_BINARY_DIR}
+                   -DSOURCE_DIR=${PROJECT_SOURCE_DIR}
+                   -DPROBLEM_DIR=${GOMA_GUTS_DIR}/problems/2_phase_diff
+                   "-DGOMA_ARGS=-i simple_diff.gap -a" "-DGENERATOR=${CMAKE_GENERATOR}"
+                   -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/goma_lib_install
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/library/install_check.cmake)
+  set_tests_properties(goma_lib_install PROPERTIES LABELS library)
   set_tests_properties(goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm
                        goma_lib_shift_ranks goma_lib_failure goma_lib_failure_advance
-                       goma_lib_advance goma_lib_advance_segregated goma_lib_import
-                       goma_lib_declare goma_lib_adapt_import goma_lib_coupling
+                       goma_lib_advance goma_lib_advance_to goma_lib_advance_to_cut
+                       goma_lib_solve_after goma_lib_advance_segregated goma_lib_import
+                       goma_lib_declare goma_lib_adapt_import goma_lib_adapt_import_reset
+                       goma_lib_coupling
                        PROPERTIES SKIP_RETURN_CODE 77 LABELS library)
   set_tests_properties(goma_lib_import PROPERTIES PROCESSORS 2)
   set_tests_properties(goma_lib_mpi goma_lib_petsc PROPERTIES PROCESSORS 2)
   set_tests_properties(goma_lib_subcomm goma_lib_shift_ranks PROPERTIES PROCESSORS 3)
   if(CMAKE_BUILD_TYPE STREQUAL "Asan")
+    # the host program would need the sanitizer flags of Goma's libraries
+    set_tests_properties(goma_lib_install PROPERTIES DISABLED TRUE)
     set_tests_properties(
       goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm goma_lib_shift_ranks
-      goma_lib_failure goma_lib_failure_advance goma_lib_advance goma_lib_advance_segregated
-      goma_lib_import goma_lib_declare goma_lib_adapt_import goma_lib_coupling
+      goma_lib_failure goma_lib_failure_advance goma_lib_advance goma_lib_advance_to
+      goma_lib_advance_to_cut goma_lib_solve_after goma_lib_advance_segregated goma_lib_import
+      goma_lib_declare goma_lib_adapt_import goma_lib_adapt_import_reset goma_lib_coupling
       PROPERTIES
         ENVIRONMENT
         "ASAN_OPTIONS=fast_unwind_on_malloc=0;LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/library/lsan.supp"

@@ -17,6 +17,8 @@
  *
  * usage: goma_lib_sequence [--ranks=<n>] <dir> [--stop-after=create|setup]
  *                          [--advance-steps=<n> | --advance-to=<dt>]
+ *                          [--solve-after=<n>] [--import-value-step=<step>]
+ *                          [--check-imports=<file>]
  *                          [--run-ranks=<first>:<n>] [--expect-error]
  *                          [--log=<file>] <goma args>
  *                          [-- <dir> ...] ...
@@ -48,6 +50,15 @@
  * that it keeps those values (as transferred by any mesh adaptation) from then
  * on; with --advance-*, goma_get_post_field must return <value> at every owned
  * node after each call.
+ * --import-value-step=<step> (with --advance-*) sets the --import-value fields
+ * again before each call after the first, to <value> + <k> * <step> before
+ * call <k>, sized for the mesh as it is then (adapted by earlier calls or
+ * not), and they must have these values after the call.
+ * --solve-after=<n> (with --advance-*) finishes with goma_solve after <n>
+ * calls, setting the imported fields first as before a call.
+ * --check-imports=<file> checks that the --import-value fields at the last
+ * time step of output file <file> (with .<np>.<rank> added in parallel) have
+ * the values last set.
  * --declare=<name>:<interpolation> (repeatable) declares the imported nodal
  * field <name> with goma_declare_external_field before goma_create, in place
  * of an External Field card.
@@ -99,6 +110,9 @@ struct solve_mode {
   const char **declares;
   int num_import_values; /* --import-value=<name>:<value> options */
   const char **import_values;
+  double import_value_step;  /* --import-value-step=<step> */
+  int solve_after;           /* > 0: goma_solve after this many calls */
+  const char *check_imports; /* output file to check the --import-value fields in */
 };
 
 #define MAX_IMPORTS 8
@@ -272,15 +286,26 @@ static int check_fields(goma_context *ctx, MPI_Comm comm, const char *file, int 
   return exoid < 0 ? -1 : bad;
 }
 
-/* Set the imported external fields, see import_field() */
-static int set_imports(goma_context *ctx, struct solve_mode mode, int started) {
+/* Name and value before call k of --import-value field i, returns -1 if it is malformed */
+static int import_value(struct solve_mode mode, int i, int k, char name[256], double *value) {
+  if (sscanf(mode.import_values[i], "%255[^:]:%lf", name, value) != 2) {
+    return -1;
+  }
+  *value += k * mode.import_value_step;
+  return 0;
+}
+
+/* Set the imported external fields before call k (0: before the problem starts), see
+ * import_field() */
+static int set_imports(goma_context *ctx, struct solve_mode mode, int k) {
   int error = 0;
-  for (int i = 0; i < mode.num_import_values && !started && error == 0; i++) {
+  int started = k > 0;
+  int set_values = !started || mode.import_value_step != 0.0;
+  for (int i = 0; i < mode.num_import_values && set_values && error == 0; i++) {
     char name[256];
     double value;
     goma_mesh_info info;
-    if (sscanf(mode.import_values[i], "%255[^:]:%lf", name, &value) != 2 ||
-        goma_mesh_get_info(ctx, &info) != 0) {
+    if (import_value(mode, i, k, name, &value) != 0 || goma_mesh_get_info(ctx, &info) != 0) {
       return -1;
     }
     double *values = malloc(sizeof(double) * (info.num_nodes > 0 ? info.num_nodes : 1));
@@ -310,15 +335,15 @@ static int set_imports(goma_context *ctx, struct solve_mode mode, int started) {
   return error;
 }
 
-/* Number of owned nodes where the --import-value fields differ from their values */
-static int check_import_values(goma_context *ctx, MPI_Comm comm, struct solve_mode mode) {
+/* Number of owned nodes where the --import-value fields differ from their values
+ * before call k */
+static int check_import_values(goma_context *ctx, MPI_Comm comm, struct solve_mode mode, int k) {
   int bad = 0;
   for (int i = 0; i < mode.num_import_values; i++) {
     char name[256];
     double value;
     goma_mesh_info info;
-    if (sscanf(mode.import_values[i], "%255[^:]:%lf", name, &value) != 2 ||
-        goma_mesh_get_info(ctx, &info) != 0) {
+    if (import_value(mode, i, k, name, &value) != 0 || goma_mesh_get_info(ctx, &info) != 0) {
       return 1;
     }
     double *values = malloc(sizeof(double) * (info.num_nodes > 0 ? info.num_nodes : 1));
@@ -336,6 +361,69 @@ static int check_import_values(goma_context *ctx, MPI_Comm comm, struct solve_mo
     }
   }
   /* every rank must stop if one does */
+  int all = 0;
+  MPI_Allreduce(&bad, &all, 1, MPI_INT, MPI_SUM, comm);
+  return all;
+}
+
+/* Number of nodes where the --import-value fields at the last time step of the output
+ * file differ from their values before call k, after the problem is solved */
+static int check_import_output(MPI_Comm comm, struct solve_mode mode, int k) {
+  int rank, np;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &np);
+  char path[4096];
+  if (np > 1) {
+    snprintf(path, sizeof(path), "%s.%d.%d", mode.check_imports, np, rank);
+  } else {
+    snprintf(path, sizeof(path), "%s", mode.check_imports);
+  }
+  int bad = 0;
+  int cpu_ws = 8, io_ws = 0;
+  float version;
+  int exoid = ex_open(path, EX_READ, &cpu_ws, &io_ws, &version);
+  int num_steps = exoid < 0 ? 0 : ex_inquire_int(exoid, EX_INQ_TIME);
+  int num_nodes = exoid < 0 ? 0 : ex_inquire_int(exoid, EX_INQ_NODES);
+  int num_vars = 0;
+  if (num_steps > 0) {
+    ex_get_variable_param(exoid, EX_NODAL, &num_vars);
+  }
+  double *values = malloc(sizeof(double) * (num_nodes + 1));
+  for (int i = 0; i < mode.num_import_values; i++) {
+    char name[256];
+    double value;
+    int var = 0;
+    if (import_value(mode, i, k, name, &value) != 0) {
+      bad++;
+      continue;
+    }
+    for (int v = 1; v <= num_vars; v++) {
+      char var_name[MAX_STR_LENGTH + 1];
+      ex_get_variable_name(exoid, EX_NODAL, v, var_name);
+      if (strcmp(var_name, name) == 0) {
+        var = v;
+      }
+    }
+    if (var == 0) {
+      fprintf(stderr, "goma_lib_sequence: rank %d no variable %s in %s\n", rank, name, path);
+      bad++;
+      continue;
+    }
+    ex_get_var(exoid, num_steps, EX_NODAL, var, 1, num_nodes, values);
+    int differ = 0;
+    for (int n = 0; n < num_nodes; n++) {
+      differ += values[n] != value;
+    }
+    if (differ > 0) {
+      fprintf(stderr, "goma_lib_sequence: rank %d %s in %s is not %g at %d of %d nodes\n", rank,
+              name, path, value, differ, num_nodes);
+    }
+    bad += differ;
+  }
+  free(values);
+  if (exoid >= 0) {
+    ex_close(exoid);
+  }
   int all = 0;
   MPI_Allreduce(&bad, &all, 1, MPI_INT, MPI_SUM, comm);
   return all;
@@ -362,20 +450,33 @@ static int advance_goma(goma_context *ctx, MPI_Comm comm, struct solve_mode mode
 
   int calls = 1;
   int checked = 0, bad = 0;
+  int solved = 0;
+  int last = 0; /* the imported values are those set before call last */
   goma_get_time(ctx, &t0, &dt);
   for (int k = 1; result >= 0; k++, calls++) {
+    last = k - 1;
     if (mode.check_fields != NULL) {
       int differ = check_fields(ctx, comm, mode.check_fields, &checked);
       bad += differ < 0 ? 1 : differ;
     }
-    if (check_import_values(ctx, comm, mode) != 0) {
+    if (check_import_values(ctx, comm, mode, k - 1) != 0) {
       return -1;
     }
     if (result == 1) {
       break;
     }
-    if (set_imports(ctx, mode, 1) != 0) {
+    if (set_imports(ctx, mode, k) != 0) {
       return -1;
+    }
+    if (k == mode.solve_after) {
+      /* the values just set must be used for the rest of the problem */
+      fprintf(stderr, "goma_lib_sequence: goma_solve after %d calls\n", calls);
+      result = goma_solve(ctx);
+      solved = 1;
+      if (result == 0 && mode.check_imports != NULL && check_import_output(comm, mode, k) != 0) {
+        return -1;
+      }
+      break;
     }
     if (mode.advance_steps > 0) {
       result = goma_advance_steps(ctx, mode.advance_steps);
@@ -395,10 +496,14 @@ static int advance_goma(goma_context *ctx, MPI_Comm comm, struct solve_mode mode
       return -1;
     }
   }
-  if (result < 0) {
+  if (result < 0 || solved) {
     return result;
   }
-  return goma_finish(ctx);
+  int error = goma_finish(ctx);
+  if (error == 0 && mode.check_imports != NULL && check_import_output(comm, mode, last) != 0) {
+    return -1;
+  }
+  return error;
 }
 
 static int
@@ -444,7 +549,8 @@ int main(int argc, char **argv) {
   if (getcwd(start_dir, sizeof(start_dir)) == NULL || argc < 2) {
     fprintf(stderr,
             "usage: %s [--ranks=<n>] <dir> [--stop-after=create|setup] "
-            "[--advance-steps=<n> | --advance-to=<dt>] [--log=<file>] <goma args> "
+            "[--advance-steps=<n> | --advance-to=<dt>] [--solve-after=<n>] [--log=<file>] "
+            "<goma args> "
             "[-- <dir> ...] ...\n",
             argv[0]);
     MPI_Abort(MPI_COMM_WORLD, 1);
@@ -478,7 +584,7 @@ int main(int argc, char **argv) {
     const char *dir = argv[first];
     enum stop_after stop = STOP_AFTER_SOLVE;
     const char *log = NULL;
-    struct solve_mode mode = {0, 0.0, NULL, 0, NULL, NULL, 0, NULL, 0, NULL};
+    struct solve_mode mode = {0, 0.0, NULL, 0, NULL, NULL, 0, NULL, 0, NULL, 0.0, 0, NULL};
     const char *imports[MAX_IMPORTS];
     int num_imports = 0;
     const char *declares[MAX_IMPORTS];
@@ -506,6 +612,12 @@ int main(int argc, char **argv) {
         mode.advance_to = atof(opt + 13);
       } else if (strncmp(opt, "--import-value=", 15) == 0 && num_import_values < MAX_IMPORTS) {
         import_values[num_import_values++] = opt + 15;
+      } else if (strncmp(opt, "--import-value-step=", 20) == 0) {
+        mode.import_value_step = atof(opt + 20);
+      } else if (strncmp(opt, "--solve-after=", 14) == 0) {
+        mode.solve_after = atoi(opt + 14);
+      } else if (strncmp(opt, "--check-imports=", 16) == 0) {
+        mode.check_imports = opt + 16;
       } else if (strncmp(opt, "--import=", 9) == 0 && num_imports < MAX_IMPORTS) {
         imports[num_imports++] = opt + 9;
       } else if (strncmp(opt, "--declare=", 10) == 0 && num_declares < MAX_IMPORTS) {
