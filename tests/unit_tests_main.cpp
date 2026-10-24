@@ -47,6 +47,7 @@ int main(int argc, char *argv[]) {
     return error;
   }
 
+#ifndef GOMA_MPI_UNIT_TESTS
   if (Num_Proc > 1) {
     if (ProcID == 0) {
       std::cerr << "Unit tests are currently expected to be run serially, found " << Num_Proc
@@ -54,6 +55,7 @@ int main(int argc, char *argv[]) {
     }
     return -1;
   }
+#endif
 
 #ifdef GOMA_KOKKOS_UNIT_TESTS
   if (goma_kokkos_runtime_initialize() != GOMA_KOKKOS_SUCCESS) {

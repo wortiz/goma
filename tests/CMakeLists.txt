@@ -43,7 +43,23 @@ foreach(backend_mode legacy kokkos)
 endforeach()
 
 if(ENABLE_KOKKOS_ASSEMBLY)
-  add_executable(goma_kokkos_element_tests unit_tests_main.cpp assembly/kokkos_element.cpp)
+  add_executable(goma_kokkos_scatter_tests unit_tests_main.cpp assembly/kokkos_scatter.cpp)
+  target_compile_definitions(goma_kokkos_scatter_tests PRIVATE GOMA_UNIT_TESTS_LINK_GOMA
+                                                             GOMA_KOKKOS_UNIT_TESTS
+                                                             GOMA_MPI_UNIT_TESTS)
+  target_include_directories(goma_kokkos_scatter_tests SYSTEM PRIVATE ${GOMA_TPL_INCLUDES})
+  target_link_libraries(goma_kokkos_scatter_tests PRIVATE Catch2::Catch2 goma goma_user goma_util
+                                                        Kokkos::kokkos ${MPI_C_LIBRARIES})
+  add_test(NAME goma_kokkos_scatter COMMAND goma_kokkos_scatter_tests)
+  add_test(NAME goma_kokkos_scatter_mpi
+           COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+                   $<TARGET_FILE:goma_kokkos_scatter_tests> ${MPIEXEC_POSTFLAGS})
+  set_tests_properties(goma_kokkos_scatter goma_kokkos_scatter_mpi
+                       PROPERTIES LABELS "assembly;kokkos" TIMEOUT 120)
+  set_tests_properties(goma_kokkos_scatter_mpi PROPERTIES PROCESSORS 2)
+
+  add_executable(goma_kokkos_element_tests unit_tests_main.cpp assembly/kokkos_element.cpp
+                                          assembly/kokkos_constraints.cpp)
   target_compile_definitions(goma_kokkos_element_tests PRIVATE GOMA_UNIT_TESTS_LINK_GOMA
                                                              GOMA_KOKKOS_UNIT_TESTS)
   target_link_libraries(goma_kokkos_element_tests PRIVATE Catch2::Catch2 goma goma_user goma_util

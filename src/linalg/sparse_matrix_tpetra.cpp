@@ -77,9 +77,8 @@ extern "C" goma_error g_tpetra_create_graph(GomaSparseMatrix matrix,
   tmp->crs_graph =
       Teuchos::rcp(new Tpetra::FECrsGraph<LO, GO>(tmp->row_map, tmp->col_map, max_per_row));
 
-  GomaGlobalOrdinal current_row = row_list[0];
+  GomaGlobalOrdinal current_row = local_nnz > 0 ? coo_rows[0] : 0;
   std::vector<GomaGlobalOrdinal> indices(max_per_row);
-  std::vector<double> values(max_per_row);
   GomaGlobalOrdinal row_count = 0;
   for (GomaGlobalOrdinal i = 0; i < local_nnz; i++) {
     if (coo_rows[i] != current_row) {
@@ -89,11 +88,12 @@ extern "C" goma_error g_tpetra_create_graph(GomaSparseMatrix matrix,
       row_count = 0;
     }
     indices[row_count] = coo_cols[i];
-    values[row_count] = coo_cols[i];
     row_count++;
   }
-  tmp->crs_graph->insertGlobalIndices(
-      current_row, Teuchos::ArrayView<GomaGlobalOrdinal>(indices.data(), row_count));
+  if (row_count > 0) {
+    tmp->crs_graph->insertGlobalIndices(
+        current_row, Teuchos::ArrayView<GomaGlobalOrdinal>(indices.data(), row_count));
+  }
 
   if (Debug_Flag > 2) {
     RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));

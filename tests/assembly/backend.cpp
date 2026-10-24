@@ -23,7 +23,7 @@ TEST_CASE("Unavailable assembly never falls back to legacy", "[assembly]") {
   const std::string error = goma_assembly_backend_check(GOMA_ASSEMBLY_KOKKOS, 0);
   const std::string ad_error = goma_assembly_backend_check(GOMA_ASSEMBLY_KOKKOS, 1);
 #ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
-  REQUIRE(error.find("global assembly") != std::string::npos);
+  REQUIRE(error.find("solver integration") != std::string::npos);
   REQUIRE(ad_error.find("AutoDiff") != std::string::npos);
 #else
   REQUIRE(error.find("ENABLE_KOKKOS_ASSEMBLY=ON") != std::string::npos);

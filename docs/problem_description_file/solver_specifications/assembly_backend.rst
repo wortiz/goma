@@ -88,7 +88,41 @@ Regular and distorted element Jacobians are checked against centered finite
 differences, perturbing time derivatives consistently. These checks do not yet
 establish parity with the full legacy assembly implementation.
 
-The evaluator currently produces unconstrained local element contributions.
-Constraints, global matrix scatter, complete-system capability checks, and
-end-to-end flow qualification remain to be implemented. The input option stays
-unavailable until those integration checks pass.
+Element constraints and global scatter
+--------------------------------------
+
+The internal Dirichlet kernel supports constant velocity and pressure data.
+It replaces constrained element rows, preserves constrained columns, and adds
+the full ``DIRICHLET_PENALTY`` for every incident element, as the legacy
+implementation does. Hard-set conditions produce zero residual; residual-mode
+conditions produce the penalty times the current value minus the prescribed
+value. The host must impose hard-set values and zero their time derivatives
+before gathering fields. The row-replacement kernel does not update the
+solution or its time derivative.
+
+A Tpetra scatter plan caches each element's owned row indices and local graph
+entry offsets. Device kernels atomically add residual and Jacobian entries,
+including columns for ghost DOFs. Only owned rows are assembled, so the caller
+must provide every element incident on an owned row exactly once, including
+ghost elements. The plan requires an owned-only active row map and a fixed,
+complete graph containing all element couplings. Rebuild it after changing
+the matrix, graph, or maps.
+
+Plan setup and scatter are collective on the matrix communicator. Extent,
+cache, phase, and element-status errors are rejected on all ranks before any
+global writes. Scatter acquires writable Tpetra device values only for
+Jacobian requests and fences before returning. It adds to existing values;
+zeroing, scaling, and FE assembly phase transitions remain the caller's
+responsibility. Jacobian requests require an open assembly or modification
+phase. Residual-only requests leave matrix values untouched and may use a
+closed matrix.
+
+Tests cover constrained rows, shared nodes, ghost columns, repeated assembly,
+empty ranks, and collective rejection of failed elements on one and two MPI
+ranks with the Serial execution space. These checks do not yet qualify other
+Kokkos execution spaces or establish end-to-end solver parity.
+
+The input option remains unavailable. Complete-system capability checks,
+legacy field/DOF/constraint adaptation, nonlinear-solver routing, and complete
+legacy assembly comparisons must be implemented before enabling Kokkos flow
+solves.

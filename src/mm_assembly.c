@@ -31,7 +31,8 @@ const char *goma_assembly_backend_check(goma_assembly_backend backend, int autod
   if (autodiff) {
     return "Assembly Backend = kokkos does not yet support Use AutoDiff Assembly = yes";
   }
-  return "Assembly Backend = kokkos is not yet available: constraints and global assembly are not "
+  return "Assembly Backend = kokkos is not yet available: solver integration and capability checks "
+         "are not "
          "implemented";
 #endif
 }
