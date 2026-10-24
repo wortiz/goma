@@ -54,14 +54,27 @@ EXTERN void slow_square_dgemm /* Matrix multiplication C = A X B */
 EXTERN void initial_guess_stress_to_log_conf(double *, /* x array (solutions from initial guess) */
                                              int);     /* num_total_nodes */
 
-EXTERN void solve_problem(Exo_DB *, /* exo - ptr to finite element mesh database */
-                          Dpi *,    /* dpi - ptr to distributed processing info */
-                          dbl *);   /* te_out - return actual end time */
+/*
+ * Results of solve_problem*() and solve_problem*_advance():
+ *   SOLVE_ADVANCED  stopped after num_steps or at t_stop, can be advanced further
+ *   SOLVE_FINISHED  reached its end: maximum time or steps, steady state
+ *   SOLVE_FAILED    gave up: no converged steady solution, the time step fell
+ *                   below its minimum or the element quality check failed
+ */
+#define SOLVE_ADVANCED 0
+#define SOLVE_FINISHED 1
+#define SOLVE_FAILED   -1
+
+/* Returns SOLVE_FINISHED or SOLVE_FAILED */
+EXTERN int solve_problem(Exo_DB *, /* exo - ptr to finite element mesh database */
+                         Dpi *,    /* dpi - ptr to distributed processing info */
+                         dbl *);   /* te_out - return actual end time */
 
 /* solve_problem() in stages, see goma_advance_steps() */
 EXTERN void solve_problem_init(Exo_DB *, /* exo - ptr to finite element mesh database */
                                Dpi *);   /* dpi - ptr to distributed processing info */
 
+/* Returns SOLVE_ADVANCED, SOLVE_FINISHED or SOLVE_FAILED */
 EXTERN int solve_problem_advance(Exo_DB *, /* exo - ptr to finite element mesh database */
                                  Dpi *,    /* dpi - ptr to distributed processing info */
                                  int,      /* num_steps - successful time steps, <= 0 for all */

@@ -16,11 +16,20 @@ steps`_ and `Mesh and fields`_).
 Building
 ########
 
-The interface is part of the ``goma`` library built with *Goma*. Link the host
-program against ``goma``, ``goma_user`` and ``goma_util`` and the third party
-libraries *Goma* was configured with, as ``tests/library/goma_lib_sequence.c``
-does in ``tests/CMakeLists.txt``. ``goma.h`` is installed with the other
-headers.
+The interface is part of the libraries built with *Goma*. ``cmake --install``
+installs them, ``goma.h`` (in ``include/goma``) and a CMake package, so a host
+program built with CMake can use an installed *Goma*:
+
+.. code-block:: cmake
+
+   find_package(Goma REQUIRED)
+   target_link_libraries(host PRIVATE Goma::goma)
+
+with the install prefix in ``CMAKE_PREFIX_PATH``. ``Goma::goma`` brings in
+*Goma*'s libraries, the third party libraries it was configured with (the
+package finds Trilinos, SEACAS, Omega_h and PETSc where *Goma*'s build found
+them) and MPI. Inside *Goma*'s own build, link the ``goma_library`` target, as
+``tests/library/goma_lib_sequence.c`` does in ``tests/CMakeLists.txt``.
 
 Lifecycle
 #########
@@ -50,7 +59,10 @@ Lifecycle
    problem.
 
 ``goma_solve``
-   Solves the problem and writes the output files.
+   Solves the problem and writes the output files. It returns an error when
+   the solver gives up: a steady solve that does not converge, a time step
+   that falls below the deck's ``Minimum time step`` or a failed element
+   quality check. The output written until then is kept.
 
 ``goma_destroy``
    Frees the context and the memory allocated for the problem, and restores
@@ -107,7 +119,9 @@ the deck's print frequency as usual. A problem advanced with
 
 Both advance functions return 0 when the problem can be advanced further and
 1 when it has reached its end (the maximum time or number of time steps, or a
-steady state); further calls then return 1 without doing anything. A steady
+steady state); further calls then return 1 without doing anything. They
+return an error when the solver gives up, as ``goma_solve`` does, and so do
+further calls; ``goma_finish`` still finishes the output files. A steady
 problem is solved by the first call. The time step size carries over from one
 call to the next, and ``goma_solve`` called after them solves the rest of the
 problem.
@@ -192,6 +206,10 @@ nodes, each element weighted by its size (the product of its widths between
 face centroids). Call it after ``goma_setup`` and again whenever the values change;
 *Goma* uses them from the next ``goma_advance_*`` call on. ``goma_solve`` and
 ``goma_advance_*`` return an error while an imported field has no values.
+When mesh adaptation changes the mesh during a ``goma_advance_*`` call, the
+values set before it were for the old mesh: the field keeps its values as
+adaptation transferred them to the new mesh until the host sets it again, with
+values for the new mesh (see ``goma_mesh_get_info``).
 
 A host can also declare an imported field itself, so the deck needs no card
 for it. ``goma_declare_external_field`` is called before ``goma_create``, with
@@ -361,7 +379,19 @@ the runs of a problem give exactly the same results instead.
 
 ``--extra-ranks 1`` starts one more MPI process than each problem needs and
 runs *Goma* on a communicator without it, to check that *Goma* does not
-communicate outside the communicator it is given.
+communicate outside the communicator it is given. With ``--shift-ranks`` the
+library is initialized on all the processes instead and each run moves one
+process further, so later runs use processes that earlier ones did not.
+
+``--declare-value NAME:VALUE`` declares an imported nodal field and sets it to
+``VALUE`` once; with ``--advance-steps`` it must still be ``VALUE`` after
+every call, also after mesh adaptation. The output then has the extra field,
+so it is not compared.
+
+``--set-card "NAME=VALUE"`` sets a card of every problem's input deck, and
+``--expect-failure`` then requires the solve to return an error instead of
+comparing the output, for cards that make the solver give up, for example
+``--set-card "Minimum time step=1.0e6"``.
 
 With ``-DENABLE_TESTING=ON`` and the ``guts`` submodule checked out, ctest runs
 a few of these problems (label ``library``)::

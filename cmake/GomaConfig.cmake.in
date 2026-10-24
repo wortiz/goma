@@ -1,0 +1,32 @@
+# Goma library for host programs, see docs/library_interface.rst:
+#
+#   find_package(Goma REQUIRED)
+#   target_link_libraries(host PRIVATE Goma::goma)
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# the third-party libraries Goma was built with
+find_dependency(MPI COMPONENTS C)
+find_dependency(Trilinos HINTS "@Trilinos_DIR@")
+find_dependency(SEACASExodus HINTS "@SEACASExodus_DIR@")
+if("@SEACASAprepro_lib_FOUND@")
+  find_dependency(SEACASAprepro_lib HINTS "@SEACASAprepro_lib_DIR@")
+endif()
+if("@Omega_h_FOUND@")
+  find_dependency(Omega_h HINTS "@Omega_h_DIR@")
+  # as Goma's build does
+  set_target_properties(Omega_h::omega_h PROPERTIES INTERFACE_COMPILE_OPTIONS "")
+endif()
+if(NOT "@GOMA_PETSC_PKG_CONFIG_PATH@" STREQUAL "")
+  find_dependency(PkgConfig)
+  set(_goma_pkg_config_path "$ENV{PKG_CONFIG_PATH}")
+  set(ENV{PKG_CONFIG_PATH} "@GOMA_PETSC_PKG_CONFIG_PATH@")
+  pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
+  set(ENV{PKG_CONFIG_PATH} "${_goma_pkg_config_path}")
+  unset(_goma_pkg_config_path)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/GomaTargets.cmake")
+check_required_components(Goma)

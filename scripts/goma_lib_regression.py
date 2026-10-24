@@ -40,6 +40,15 @@ is initialized on all the ranks instead and run i of a job uses the ranks
 starting at i modulo (extra ranks + 1), so later runs use ranks that earlier
 runs did not, while sharing some with them.
 
+--declare-value NAME:VALUE (repeatable) declares an imported nodal field NAME
+with goma_declare_external_field() and sets it to VALUE once before the solve;
+with --advance-*, it must still be VALUE after each call, on adapted meshes
+too.  The output then has the field and is not compared.
+
+--set-card "NAME=VALUE" (repeatable) sets the value of card NAME in each
+problem's input deck.  With --expect-failure, the solve must return an error,
+for cards that make the solver give up, and the output is not compared.
+
 If goma was built with -DGOMA_CHECK_GLOBAL_RESET=ON, global variables that
 were not restored by goma_destroy are reported for each run.
 
@@ -91,6 +100,25 @@ def parse_args():
     )
     parser.add_argument(
         "--extra-ranks", type=int, default=0, help="idle MPI ranks outside Goma's communicator"
+    )
+    parser.add_argument(
+        "--declare-value",
+        action="append",
+        default=[],
+        metavar="NAME:VALUE",
+        help="declare an imported nodal field set to VALUE once",
+    )
+    parser.add_argument(
+        "--set-card",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        help="set the value of a card in each input deck",
+    )
+    parser.add_argument(
+        "--expect-failure",
+        action="store_true",
+        help="the solve must return an error, the output is not compared",
     )
     parser.add_argument(
         "--shift-ranks",
@@ -151,6 +179,9 @@ def parse_args():
     args = parser.parse_args()
     if args.check_fields and not (args.advance_steps or args.advance_to):
         parser.error("--check-fields needs --advance-steps or --advance-to")
+    for card in args.set_card:
+        if "=" not in card:
+            parser.error("--set-card needs NAME=VALUE, got %s" % card)
     if args.shift_ranks and args.extra_ranks < 1:
         parser.error("--shift-ranks needs --extra-ranks")
     if args.declare_fields and not args.import_fields:
@@ -246,6 +277,13 @@ def run_job(args, guts_cfg, name, runs):
             driver_args.append("--advance-steps=%d" % args.advance_steps)
         elif args.advance_to:
             driver_args.append("--advance-to=%.17g" % args.advance_to)
+        if args.set_card:
+            set_cards(d / p.run.goma_input, args.set_card)
+        for declared in args.declare_value:
+            driver_args.append("--declare=%s:Q1" % declared.split(":")[0])
+            driver_args.append("--import-value=" + declared)
+        if stop == "solve" and args.expect_failure:
+            driver_args.append("--expect-error")
         if args.shift_ranks:
             driver_args.append("--run-ranks=%d:%d" % (i % (args.extra_ranks + 1), np))
         if stop == "solve" and args.feedback:
@@ -296,7 +334,10 @@ def run_job(args, guts_cfg, name, runs):
             run_tool(
                 [guts_cfg.epu, "-auto", "%s.exoII.%d.0" % (p.run.fix_exo_basename, np)], d, env
             )
-        if args.compare_runs:
+        if args.expect_failure or args.declare_value:
+            # the solver gave up or the output has the declared fields, it is not the blessed one
+            exodiff = "n/a"
+        elif args.compare_runs:
             exodiff = compare_with_first_run(guts_cfg, p, d, run_dirs[0], env)
         else:
             code, log = check_exodiff(p, d, guts_cfg)
@@ -307,7 +348,7 @@ def run_job(args, guts_cfg, name, runs):
                 "problem": p.name,
                 "dir": str(d),
                 "exodiff": exodiff,
-                "petsc_options": check_petsc_options(p, d),
+                "petsc_options": "n/a" if args.expect_failure else check_petsc_options(p, d),
                 "symbols": reset_check_symbols(args.driver, d),
                 "advance": advance_status(args, d),
             }
@@ -332,6 +373,18 @@ def import_external_fields(deck, remove=False):
             lines[i] = "" if remove else m.group(1) + "IMPORT\n"
     deck.write_text("".join(lines))
     return imports
+
+
+def set_cards(deck, cards):
+    """Set the value of each NAME=VALUE card in deck where the deck has the card."""
+    lines = deck.read_text().splitlines(keepends=True)
+    for card in cards:
+        name, value = (part.strip() for part in card.split("=", 1))
+        pattern = re.compile(r"^\s*%s\s*=" % r"\s+".join(map(re.escape, name.split())), re.I)
+        for i, line in enumerate(lines):
+            if pattern.match(line):
+                lines[i] = "%s = %s\n" % (name, value)
+    deck.write_text("".join(lines))
 
 
 def compare_with_first_run(guts_cfg, problem, run_dir, first_dir, env):

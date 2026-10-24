@@ -84,7 +84,9 @@ int goma_declare_external_field(const char *name,
 int goma_setup(goma_context *ctx);
 
 /* Solve the problem, writing results to the output files.  After
- * goma_advance_*, solves the rest of the problem. */
+ * goma_advance_*, solves the rest of the problem.  Returns an error when the
+ * solver gives up (a steady solve that does not converge, a time step below
+ * the minimum, a failed element quality check). */
 int goma_solve(goma_context *ctx);
 
 /*
@@ -102,7 +104,8 @@ int goma_solve(goma_context *ctx);
  *
  * Returns 0 when the problem can be advanced further, 1 when it has reached
  * its end (maximum time or steps, steady state) and a negative value on
- * failure.
+ * failure, including the solver giving up as for goma_solve; later calls
+ * then fail too.
  */
 int goma_advance_steps(goma_context *ctx, int num_steps);
 int goma_advance_to(goma_context *ctx, double time);
@@ -137,7 +140,9 @@ int goma_get_post_field(goma_context *ctx, const char *name, double *values);
  * values (owned and ghost elements) are averaged to the nodes, weighted by
  * element size.  Call after
  * goma_setup and before goma_solve or each goma_advance_*; Goma uses the
- * values from then on.  goma_solve and goma_advance_* return an error while
+ * values from then on.  When mesh adaptation changes the mesh, the field
+ * keeps its values transferred to the new mesh until it is set again, for
+ * the new mesh.  goma_solve and goma_advance_* return an error while
  * an imported field has no values.
  */
 int goma_set_external_field(goma_context *ctx,

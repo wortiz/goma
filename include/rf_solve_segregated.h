@@ -39,12 +39,14 @@ EXTERN double
 vector_distance_squared(int size, double *vec1, double *vec2, int ignore_pressure, int imtrx);
 EXTERN double vector_distance(int size, double *vec1, double *vec2);
 
-EXTERN void solve_problem_segregated(Exo_DB *, /* exo - ptr to finite element mesh database */
-                                     Dpi *,    /* dpi - ptr to distributed processing info */
-                                     dbl *);
+/* Returns SOLVE_FINISHED or SOLVE_FAILED, see rf_solve.h */
+EXTERN int solve_problem_segregated(Exo_DB *, /* exo - ptr to finite element mesh database */
+                                    Dpi *,    /* dpi - ptr to distributed processing info */
+                                    dbl *);
 
 /* solve_problem_segregated() in stages, see goma_advance_steps() */
 EXTERN void solve_problem_segregated_init(Exo_DB *, Dpi *);
+/* Returns SOLVE_ADVANCED, SOLVE_FINISHED or SOLVE_FAILED, see rf_solve.h */
 EXTERN int solve_problem_segregated_advance(Exo_DB *,
                                             Dpi *,
                                             int,             /* num_steps, <= 0 for all */

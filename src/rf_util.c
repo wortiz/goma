@@ -3597,6 +3597,10 @@ int find_first_elem_with_var(Exo_DB *e, int var) {
  */
 static double *import_values[MAX_EXTERNAL_FIELD];
 
+/* TRUE for an imported field whose values were for a mesh that has since been adapted:
+ * efv->ext_fld_ndl_val holds them transferred to the new mesh, until new values are set */
+static int import_adapted[MAX_EXTERNAL_FIELD];
+
 /* TRUE if external field w is set by the host program, not read from a file */
 int is_import_field(int w) {
   return strcmp(efv->file_nm[w], "IMPORT") == 0 || strcmp(efv->file_nm[w], "IMPORT_EV") == 0;
@@ -3655,12 +3659,27 @@ int import_field_index(const char *name, int *element) {
 void set_import_field(int w, const double *values, int n) {
   import_values[w] = realloc(import_values[w], sizeof(double) * n);
   memcpy(import_values[w], values, sizeof(double) * n);
+  import_adapted[w] = FALSE;
+}
+
+/*
+ * The mesh was adapted and efv->ext_fld_ndl_val transferred to the new mesh:
+ * drop the imported values, they are for the old mesh's nodes or elements.
+ * The fields keep their transferred values until new values are set.
+ */
+void import_fields_mesh_adapted(void) {
+  for (int w = 0; w < efv->Num_external_field; w++) {
+    if (is_import_field(w) && (import_values[w] != NULL || import_adapted[w])) {
+      safer_free((void **)&import_values[w]);
+      import_adapted[w] = TRUE;
+    }
+  }
 }
 
 /* Name of an imported external field that has no values yet, NULL if all have */
 const char *unset_import_field(void) {
   for (int w = 0; w < efv->Num_external_field; w++) {
-    if (is_import_field(w) && import_values[w] == NULL) {
+    if (is_import_field(w) && import_values[w] == NULL && !import_adapted[w]) {
       return efv->name[w];
     }
   }
@@ -3725,11 +3744,15 @@ double import_elem_size(const Exo_DB *exo, int el) {
  * Load imported external field w into efv->ext_fld_ndl_val[w]: the values of
  * the owned nodes, or of each node the average of the elements around it
  * weighted by their size (see import_elem_size()), then the ghost nodes from
- * their owners. Returns -1 if the field has no values.
+ * their owners. Returns -1 if the field has no values. A field whose values
+ * were for a mesh that has since been adapted keeps its transferred values.
  */
 int load_import_field(int w, Exo_DB *exo, Dpi *dpi, Comm_Ex *cx) {
-  if (!is_import_field(w) || import_values[w] == NULL) {
+  if (!is_import_field(w)) {
     return -1;
+  }
+  if (import_values[w] == NULL) {
+    return import_adapted[w] ? 0 : -1;
   }
   int element = strcmp(efv->file_nm[w], "IMPORT_EV") == 0;
   if (efv->ext_fld_ndl_val[w] == NULL) {
@@ -3773,6 +3796,7 @@ void rf_util_free_globals(void) {
   memset(declared_import_interpolation, 0, sizeof(declared_import_interpolation));
   memset(declared_import_element, 0, sizeof(declared_import_element));
   num_declared_imports = 0;
+  memset(import_adapted, 0, sizeof(import_adapted));
   for (int w = 0; w < MAX_EXTERNAL_FIELD; w++) {
     safer_free((void **)&import_values[w]);
     /* the external field values, read from files or imported (efv is freed later, by

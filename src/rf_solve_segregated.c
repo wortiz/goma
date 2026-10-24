@@ -1150,8 +1150,8 @@ void solve_problem_segregated_init(Exo_DB *exo, /* ptr to the finite element mes
  * Advance the problem set up by solve_problem_segregated_init(). A steady
  * problem is solved completely. A transient problem stops after num_steps
  * successful time steps (num_steps <= 0: no limit), at time *t_stop (the last
- * step is shortened to land on it) or when it is finished. Returns TRUE when
- * the problem is finished.
+ * step is shortened to land on it) or when it is finished. Returns
+ * SOLVE_ADVANCED, SOLVE_FINISHED or SOLVE_FAILED.
  */
 int solve_problem_segregated_advance(
     Exo_DB *exo,          /* ptr to the finite element mesh database  */
@@ -1392,7 +1392,7 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
           if (ProcID == 0) {
             printf("\n Steady state reached \n");
           }
-          return TRUE;
+          return SOLVE_FINISHED;
         }
       } else {
         break;
@@ -1401,7 +1401,7 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
     if (ProcID == 0) {
       printf("Failed to solve steady state.");
     }
-    return TRUE;
+    return SOLVE_FAILED;
   } /* if(steady) */
 
   /********************************************************************************
@@ -1412,10 +1412,10 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
    ********************************************************************************/
   for (; n_try < MaxTimeSteps; n_try++) {
     if (num_steps > 0 && nt - nt_start >= num_steps) {
-      return FALSE;
+      return SOLVE_ADVANCED;
     }
     if (t_stop != NULL && time >= *t_stop) {
-      return FALSE;
+      return SOLVE_ADVANCED;
     }
     delta_t_unstopped = 0.0;
 
@@ -2403,7 +2403,7 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
           if (ProcID == 0) {
             printf("\n Steady state reached \n");
           }
-          return TRUE;
+          return SOLVE_FINISHED;
         }
       }
 
@@ -2432,10 +2432,10 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
             GOMA_EH(err, "anneal_mesh() bad return.");
           }
         }
-        return TRUE;
+        return SOLVE_FINISHED;
       }
       if (!good_mesh)
-        return TRUE;
+        return SOLVE_FAILED;
 
       if (converged && ls != NULL) {
         pg->imtrx = Fill_Matrix;
@@ -2621,11 +2621,12 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
       DPRINTF(stdout, "\n\tdelta_t = %e < %e\n\n", delta_t, delta_t_min);
 
       DPRINTF(stdout, "time step too small, I'm giving up!\n");
-      return TRUE;
+      return SOLVE_FAILED;
     }
   } /* end of time step loop */
 
-  return TRUE;
+  /* Maximum number of time steps */
+  return SOLVE_FINISHED;
 } /* END of routine solve_problem_segregated_advance_steps()  */
 
 /*
@@ -2775,16 +2776,17 @@ void solve_problem_segregated_finish(Exo_DB *exo, /* ptr to the finite element m
 
 } /* END of routine solve_problem_segregated_finish()  */
 
-void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh database  */
-                              Dpi *dpi,    /* distributed processing information       */
-                              dbl *te_out) /* te_out - return actual end time */
+int solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh database  */
+                             Dpi *dpi,    /* distributed processing information       */
+                             dbl *te_out) /* te_out - return actual end time */
 {
   solve_problem_segregated_init(exo, dpi);
-  solve_problem_segregated_advance(exo, dpi, 0, NULL);
+  int result = solve_problem_segregated_advance(exo, dpi, 0, NULL);
   solve_problem_segregated_finish(exo, dpi);
   if (te_out != NULL) {
     *te_out = time;
   }
+  return result;
 }
 
 /*

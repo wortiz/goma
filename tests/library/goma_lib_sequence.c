@@ -17,7 +17,8 @@
  *
  * usage: goma_lib_sequence [--ranks=<n>] <dir> [--stop-after=create|setup]
  *                          [--advance-steps=<n> | --advance-to=<dt>]
- *                          [--run-ranks=<first>:<n>] [--log=<file>] <goma args>
+ *                          [--run-ranks=<first>:<n>] [--expect-error]
+ *                          [--log=<file>] <goma args>
  *                          [-- <dir> ...] ...
  *
  * Each run changes to <dir> and runs Goma with the given arguments, for
@@ -42,6 +43,11 @@
  * matched to Goma's nodes by global node id.  With --advance-*, it is set again
  * before each call; --feedback=<name>:<field>:<scale> then adds <scale> times
  * Goma's current <field> (goma_get_field), like a coupled code would.
+ * --import-value=<name>:<value> (repeatable) sets imported nodal field <name>
+ * to <value> at every node once, before the problem is solved or advanced, so
+ * that it keeps those values (as transferred by any mesh adaptation) from then
+ * on; with --advance-*, goma_get_post_field must return <value> at every owned
+ * node after each call.
  * --declare=<name>:<interpolation> (repeatable) declares the imported nodal
  * field <name> with goma_declare_external_field before goma_create, in place
  * of an External Field card.
@@ -53,6 +59,9 @@
  * --ranks runs Goma on a communicator split from MPI_COMM_WORLD that holds
  * only its first <n> ranks, the other ranks wait, to check that Goma does not
  * communicate outside the communicator it is given.
+ *
+ * --expect-error expects goma_solve or goma_advance_* to return an error, for
+ * a problem whose solver gives up; the run fails if they do not.
  *
  * --run-ranks runs one problem on ranks <first> .. <first>+<n>-1 of the
  * library's communicator (all of it by default), the other ranks skip it, so
@@ -88,6 +97,8 @@ struct solve_mode {
   const char *feedback; /* --feedback=<name>:<field>:<scale> */
   int num_declares;     /* --declare=<name>:<interpolation> options */
   const char **declares;
+  int num_import_values; /* --import-value=<name>:<value> options */
+  const char **import_values;
 };
 
 #define MAX_IMPORTS 8
@@ -264,6 +275,21 @@ static int check_fields(goma_context *ctx, MPI_Comm comm, const char *file, int 
 /* Set the imported external fields, see import_field() */
 static int set_imports(goma_context *ctx, struct solve_mode mode, int started) {
   int error = 0;
+  for (int i = 0; i < mode.num_import_values && !started && error == 0; i++) {
+    char name[256];
+    double value;
+    goma_mesh_info info;
+    if (sscanf(mode.import_values[i], "%255[^:]:%lf", name, &value) != 2 ||
+        goma_mesh_get_info(ctx, &info) != 0) {
+      return -1;
+    }
+    double *values = malloc(sizeof(double) * (info.num_nodes > 0 ? info.num_nodes : 1));
+    for (int n = 0; n < info.num_nodes; n++) {
+      values[n] = value;
+    }
+    error = goma_set_external_field(ctx, name, GOMA_NODAL, values);
+    free(values);
+  }
   for (int i = 0; i < mode.num_imports && error == 0; i++) {
     char name[256];
     const char *colon = strchr(mode.imports[i], ':');
@@ -284,6 +310,37 @@ static int set_imports(goma_context *ctx, struct solve_mode mode, int started) {
   return error;
 }
 
+/* Number of owned nodes where the --import-value fields differ from their values */
+static int check_import_values(goma_context *ctx, MPI_Comm comm, struct solve_mode mode) {
+  int bad = 0;
+  for (int i = 0; i < mode.num_import_values; i++) {
+    char name[256];
+    double value;
+    goma_mesh_info info;
+    if (sscanf(mode.import_values[i], "%255[^:]:%lf", name, &value) != 2 ||
+        goma_mesh_get_info(ctx, &info) != 0) {
+      return 1;
+    }
+    double *values = malloc(sizeof(double) * (info.num_nodes > 0 ? info.num_nodes : 1));
+    if (goma_get_post_field(ctx, name, values) != 0) {
+      bad++;
+    } else {
+      for (int n = 0; n < info.num_owned_nodes; n++) {
+        bad += values[n] != value;
+      }
+    }
+    free(values);
+    if (bad > 0) {
+      fprintf(stderr, "goma_lib_sequence: imported field %s is not %g at %d of %d nodes\n", name,
+              value, bad, info.num_owned_nodes);
+    }
+  }
+  /* every rank must stop if one does */
+  int all = 0;
+  MPI_Allreduce(&bad, &all, 1, MPI_INT, MPI_SUM, comm);
+  return all;
+}
+
 /* Solve in steps, setting the imported fields again before each call as a coupled
  * code would, returns 0 on success */
 static int advance_goma(goma_context *ctx, MPI_Comm comm, struct solve_mode mode) {
@@ -292,20 +349,27 @@ static int advance_goma(goma_context *ctx, MPI_Comm comm, struct solve_mode mode
   int result = mode.advance_steps > 0 && mode.feedback == NULL
                    ? goma_advance_steps(ctx, mode.advance_steps)
                    : goma_advance_to(ctx, -HUGE_VAL);
+  double t0, t, dt;
+  if (result < 0 && goma_get_time(ctx, &t0, &dt) == 0) {
+    fprintf(stderr, "goma_lib_sequence: advance failed\n");
+    return result;
+  }
   if (result < 0) {
-    /* the first call fails for problems that cannot be advanced in steps */
+    /* the first call fails without starting for problems that cannot be advanced in steps */
     fprintf(stderr, "goma_lib_sequence: cannot advance, using goma_solve\n");
     return goma_solve(ctx);
   }
 
   int calls = 1;
   int checked = 0, bad = 0;
-  double t0, t, dt;
   goma_get_time(ctx, &t0, &dt);
   for (int k = 1; result >= 0; k++, calls++) {
     if (mode.check_fields != NULL) {
       int differ = check_fields(ctx, comm, mode.check_fields, &checked);
       bad += differ < 0 ? 1 : differ;
+    }
+    if (check_import_values(ctx, comm, mode) != 0) {
+      return -1;
     }
     if (result == 1) {
       break;
@@ -414,11 +478,14 @@ int main(int argc, char **argv) {
     const char *dir = argv[first];
     enum stop_after stop = STOP_AFTER_SOLVE;
     const char *log = NULL;
-    struct solve_mode mode = {0, 0.0, NULL, 0, NULL, NULL, 0, NULL};
+    struct solve_mode mode = {0, 0.0, NULL, 0, NULL, NULL, 0, NULL, 0, NULL};
     const char *imports[MAX_IMPORTS];
     int num_imports = 0;
     const char *declares[MAX_IMPORTS];
     int num_declares = 0;
+    const char *import_values[MAX_IMPORTS];
+    int num_import_values = 0;
+    int expect_error = 0;
     int run_first = 0;
     int run_size = 0; /* 0: all of comm */
     while (first + 1 < last && strncmp(argv[first + 1], "--", 2) == 0) {
@@ -437,6 +504,8 @@ int main(int argc, char **argv) {
         mode.advance_steps = atoi(opt + 16);
       } else if (strncmp(opt, "--advance-to=", 13) == 0) {
         mode.advance_to = atof(opt + 13);
+      } else if (strncmp(opt, "--import-value=", 15) == 0 && num_import_values < MAX_IMPORTS) {
+        import_values[num_import_values++] = opt + 15;
       } else if (strncmp(opt, "--import=", 9) == 0 && num_imports < MAX_IMPORTS) {
         imports[num_imports++] = opt + 9;
       } else if (strncmp(opt, "--declare=", 10) == 0 && num_declares < MAX_IMPORTS) {
@@ -445,6 +514,8 @@ int main(int argc, char **argv) {
         mode.feedback = opt + 11;
       } else if (strncmp(opt, "--check-fields=", 15) == 0) {
         mode.check_fields = opt + 15;
+      } else if (strcmp(opt, "--expect-error") == 0) {
+        expect_error = 1;
       } else if (strncmp(opt, "--run-ranks=", 12) == 0) {
         if (sscanf(opt + 12, "%d:%d", &run_first, &run_size) != 2) {
           fprintf(stderr, "bad option %s\n", opt);
@@ -460,6 +531,8 @@ int main(int argc, char **argv) {
     }
     mode.num_imports = num_imports;
     mode.imports = imports;
+    mode.num_import_values = num_import_values;
+    mode.import_values = import_values;
     mode.num_declares = num_declares;
     mode.declares = declares;
     /* goma expects argv[0] to be the program name */
@@ -519,6 +592,12 @@ int main(int argc, char **argv) {
       close(saved_stdout);
     }
     fprintf(stderr, "goma_lib_sequence: run %d in %s returned %d\n", run, dir, error);
+    if (expect_error) {
+      if (error >= 0) {
+        fprintf(stderr, "goma_lib_sequence: run %d in %s did not return an error\n", run, dir);
+      }
+      error = error < 0 ? 0 : 1;
+    }
 #ifdef __GLIBC__
     /* heap still in use after goma_destroy, growth between runs is leaked memory */
     struct mallinfo2 mi = mallinfo2();

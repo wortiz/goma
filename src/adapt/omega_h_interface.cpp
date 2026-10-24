@@ -79,6 +79,7 @@ extern "C" {
 #include "rf_io.h"
 #include "rf_io_const.h"
 #include "rf_mp.h"
+#include "rf_util.h"
 #include "std.h"
 #include <exodusII.h>
 #define IGNORE_CPP_DEFINE
@@ -1407,6 +1408,8 @@ void adapt_mesh_omega_h(struct GomaLinearSolverData **ams,
   }
   resetup_matrix(ams, exo, dpi);
   copy_solution(exo, dpi, x, mesh);
+  /* imported values set by the host are for the old mesh */
+  import_fields_mesh_adapted();
   step++;
 }
 

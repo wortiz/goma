@@ -30,8 +30,7 @@ catch_discover_tests(goma_solver_unit_tests)
 
 # Runs goma several times in one process through goma.h
 add_executable(goma_lib_sequence library/goma_lib_sequence.c)
-target_link_libraries(goma_lib_sequence goma goma_user goma_util ${MPI_C_LIBRARIES})
-target_include_directories(goma_lib_sequence PRIVATE ${MPI_C_INCLUDE_PATH})
+target_link_libraries(goma_lib_sequence goma_library)
 
 # Library mode regression tests: GUTS problems run several times in one process
 # by goma_lib_sequence and compared with their blessed results
@@ -66,6 +65,17 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   add_test(NAME goma_lib_shift_ranks
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_shift_ranks --mode chain --no-shuffle
                    --extra-ranks 1 --shift-ranks -p p_C_T_U_petsc -p p_C_T_U_petsc_gamg)
+  # solvers that give up, steady (ldc: one Newton iteration), transient (tbc) and segregated
+  # (poise_drop_seg: time step below its minimum): goma_solve and goma_advance_steps must
+  # return an error
+  set(GOMA_LIB_FAILURE_ARGS --mode chain --no-shuffle --expect-failure
+                            --set-card "Number of Newton Iterations=1"
+                            --set-card "Minimum time step=1.0e6" -p ldc -p tbc -p poise_drop_seg)
+  add_test(NAME goma_lib_failure COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_failure
+                                         ${GOMA_LIB_FAILURE_ARGS})
+  add_test(NAME goma_lib_failure_advance
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_failure_advance --advance-steps 1
+                   ${GOMA_LIB_FAILURE_ARGS})
   # solved in steps by goma_advance_steps, the output must match goma_solve's and the
   # fields Goma returns the output's; steady (2_phase_diff) and transient problems, and a
   # continuation problem that cannot be advanced
@@ -84,14 +94,19 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   add_test(NAME goma_lib_declare
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_declare --runs 2 --import-fields
                    --declare-fields --advance-steps 1 -p lub_film)
+  # an imported field set once keeps its values through mesh adaptation (poise_drop adapts)
+  add_test(NAME goma_lib_adapt_import
+           COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_adapt_import --runs 2
+                   --advance-steps 3 --declare-value SOURCE:2.5 -p poise_drop)
   # a coupling loop: before each time step the host sets the imported field from Goma's
   # solution, two runs in one process must give the same results
   add_test(NAME goma_lib_coupling
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_coupling --runs 2 --import-fields
                    --advance-steps 1 --feedback THETA:SH_FH:1000 --compare-runs -p lub_film)
   set_tests_properties(goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm
-                       goma_lib_shift_ranks goma_lib_advance goma_lib_advance_segregated goma_lib_import
-                       goma_lib_declare goma_lib_coupling
+                       goma_lib_shift_ranks goma_lib_failure goma_lib_failure_advance
+                       goma_lib_advance goma_lib_advance_segregated goma_lib_import
+                       goma_lib_declare goma_lib_adapt_import goma_lib_coupling
                        PROPERTIES SKIP_RETURN_CODE 77 LABELS library)
   set_tests_properties(goma_lib_import PROPERTIES PROCESSORS 2)
   set_tests_properties(goma_lib_mpi goma_lib_petsc PROPERTIES PROCESSORS 2)
@@ -99,7 +114,8 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   if(CMAKE_BUILD_TYPE STREQUAL "Asan")
     set_tests_properties(
       goma_lib_repeat goma_lib_chain goma_lib_mpi goma_lib_petsc goma_lib_subcomm goma_lib_shift_ranks
-      goma_lib_advance goma_lib_advance_segregated goma_lib_import goma_lib_declare goma_lib_coupling
+      goma_lib_failure goma_lib_failure_advance goma_lib_advance goma_lib_advance_segregated
+      goma_lib_import goma_lib_declare goma_lib_adapt_import goma_lib_coupling
       PROPERTIES
         ENVIRONMENT
         "ASAN_OPTIONS=fast_unwind_on_malloc=0;LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/library/lsan.supp"

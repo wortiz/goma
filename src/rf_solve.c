@@ -956,8 +956,8 @@ void solve_problem_init(Exo_DB *exo, /* ptr to the finite element mesh database 
  * Advance the problem set up by solve_problem_init(). A steady problem is
  * solved completely. A transient problem stops after num_steps successful
  * time steps (num_steps <= 0: no limit), at time *t_stop (the last step is
- * shortened to land on it) or when it is finished. Returns TRUE when the
- * problem is finished.
+ * shortened to land on it) or when it is finished. Returns SOLVE_ADVANCED,
+ * SOLVE_FINISHED or SOLVE_FAILED.
  */
 int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mesh database  */
                           Dpi *dpi,             /* distributed processing information       */
@@ -1035,6 +1035,7 @@ int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mes
                                   0, &time_step_reform, is_steady_state, x_AC, x_AC_dot, time1,
                                   resid_vector_sens, x_sens, x_sens_p, NULL);
 
+    int steady_converged = converged; /* solve_stability_problem() sets converged */
     if (!converged) {
       DPRINTF(stderr, "\n\tFailure: could not converge on the steady state solution.\n");
       DPRINTF(stderr, "\tSorry, I really tried...\n");
@@ -1190,7 +1191,7 @@ int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mes
         GOMA_EH(err, "Error performing particle calculations.");
       }
     }
-    return TRUE;
+    return steady_converged ? SOLVE_FINISHED : SOLVE_FAILED;
   } /* if(steady) */
 
   /********************************************************************************
@@ -1201,10 +1202,10 @@ int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mes
    ********************************************************************************/
   for (; n_try < max_time_steps; n_try++) {
     if (num_steps > 0 && nt - nt_start >= num_steps) {
-      return FALSE;
+      return SOLVE_ADVANCED;
     }
     if (t_stop != NULL && time >= *t_stop) {
-      return FALSE;
+      return SOLVE_ADVANCED;
     }
     /*
      * Calculate the absolute time for the current step, time1
@@ -1989,7 +1990,7 @@ int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mes
           if (ProcID == 0) {
             printf("\n Steady state reached \n");
           }
-          return TRUE;
+          return SOLVE_FINISHED;
         }
       }
 
@@ -2335,10 +2336,10 @@ int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mes
           err = anneal_mesh(x, tev, tev_post, gv, rd, time1, exo, dpi);
           GOMA_EH(err, "anneal_mesh() bad return.");
         }
-        return TRUE;
+        return SOLVE_FINISHED;
       }
       if (!good_mesh)
-        return TRUE;
+        return SOLVE_FAILED;
 
     } /*  if(converged && success_dt) */
 
@@ -2455,12 +2456,13 @@ int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mes
       DPRINTF(stderr, "\n\tdelta_t = %e < %e\n\n", delta_t, delta_t_min);
 
       DPRINTF(stdout, "time step too small, I'm giving up!\n");
-      return TRUE;
+      return SOLVE_FAILED;
     }
 
   } /* end of time step loop */
 
-  return TRUE;
+  /* Maximum number of time steps */
+  return SOLVE_FINISHED;
 } /* END of routine solve_problem_advance()  */
 
 /*
@@ -2587,9 +2589,9 @@ void solve_problem_finish(Exo_DB *exo, /* ptr to the finite element mesh databas
   soln_file = NULL;
 } /* END of routine solve_problem_finish()  */
 
-void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
-                   Dpi *dpi,    /* distributed processing information       */
-                   dbl *te_out) /* te_out - return actual end time */
+int solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
+                  Dpi *dpi,    /* distributed processing information       */
+                  dbl *te_out) /* te_out - return actual end time */
 
 /*
     Routine that controls solution of overall FEM reacting
@@ -2599,11 +2601,12 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
 {
   solve_problem_init(exo, dpi);
-  solve_problem_advance(exo, dpi, 0, NULL);
+  int result = solve_problem_advance(exo, dpi, 0, NULL);
   solve_problem_finish(exo, dpi);
   if (te_out != NULL) {
     *te_out = time;
   }
+  return result;
 } /* END of routine solve_problem()  */
 
 /*

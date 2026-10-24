@@ -1106,9 +1106,10 @@ set_source_files_properties(
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 add_library(goma_user ${GOMA_USER_SOURCES} ${GOMA_USER_INCLUDES})
-target_include_directories(goma_user PUBLIC include)
+target_include_directories(goma_user PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
 target_include_directories(goma_user SYSTEM PRIVATE ${GOMA_TPL_INCLUDES})
-target_compile_definitions(goma_user PUBLIC ${GOMA_COMPILE_DEFINITIONS})
+# Goma's own definitions, not for programs using the installed library
+target_compile_definitions(goma_user PUBLIC "$<BUILD_INTERFACE:${GOMA_COMPILE_DEFINITIONS}>")
 target_link_libraries(goma_user PUBLIC ${GOMA_TPL_LIBRARIES})
 if(ENABLE_WARNINGS)
   target_compile_options(
@@ -1124,11 +1125,12 @@ endif()
 
 add_library(goma ${GOMA_SOURCES} ${GOMA_INCLUDES})
 target_include_directories(
-  goma PUBLIC include ${PROJECT_SOURCE_DIR}/tpls/nanoflann/include)
+  goma PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+              $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tpls/nanoflann/include>)
 target_include_directories(goma SYSTEM PRIVATE ${GOMA_TPL_INCLUDES})
 target_link_directories(goma PUBLIC ${GOMA_TPL_LIBRARY_DIRS})
 target_link_libraries(goma PUBLIC ${GOMA_TPL_LIBRARIES} gds)
-target_compile_definitions(goma PUBLIC ${GOMA_COMPILE_DEFINITIONS})
+target_compile_definitions(goma PUBLIC "$<BUILD_INTERFACE:${GOMA_COMPILE_DEFINITIONS}>")
 if(ENABLE_WARNINGS)
   target_compile_options(
     goma
@@ -1144,7 +1146,7 @@ if(ENABLE_WARNINGS)
 endif()
 
 add_library(gds ${GDS_SOURCES} ${GDS_INCLUDES})
-target_include_directories(gds PUBLIC include)
+target_include_directories(gds PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
 if(ENABLE_WARNINGS)
   target_compile_options(
     gds
@@ -1161,11 +1163,12 @@ endif()
 
 add_library(goma_util ${GOMA_UTIL_SOURCES} ${GOMA_UTIL_INCLUDES})
 target_include_directories(
-  goma_util PUBLIC include ${PROJECT_SOURCE_DIR}/tpls/nanoflann/include)
+  goma_util PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tpls/nanoflann/include>)
 target_include_directories(goma_util SYSTEM PRIVATE ${GOMA_TPL_INCLUDES})
 target_link_libraries(goma_util PUBLIC ${GOMA_TPL_LIBRARIES} gds)
 target_link_directories(goma_util PUBLIC ${GOMA_TPL_LIBRARY_DIRS})
-target_compile_definitions(goma_util PUBLIC ${GOMA_COMPILE_DEFINITIONS})
+target_compile_definitions(goma_util PUBLIC "$<BUILD_INTERFACE:${GOMA_COMPILE_DEFINITIONS}>")
 if(ENABLE_WARNINGS)
   target_compile_options(
     goma_util
@@ -1179,6 +1182,15 @@ if(ENABLE_WARNINGS)
       -Wno-unused-parameter
       -Wimplicit-fallthrough>)
 endif()
+
+# The library interface (goma.h) for host programs, Goma::goma when installed
+add_library(goma_library INTERFACE)
+target_link_libraries(goma_library INTERFACE goma goma_user goma_util ${MPI_C_LIBRARIES})
+target_include_directories(goma_library INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                                                  $<INSTALL_INTERFACE:include/goma>
+                                                  ${MPI_C_INCLUDE_PATH})
+set_target_properties(goma_library PROPERTIES EXPORT_NAME goma)
+set_target_properties(goma PROPERTIES EXPORT_NAME goma_solver)
 
 add_executable(goma_exe src/main.c)
 set_target_properties(goma_exe PROPERTIES OUTPUT_NAME "goma")
@@ -1223,16 +1235,33 @@ if(ENABLE_WARNINGS)
 endif()
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 install(FILES include/goma.h DESTINATION include/goma)
 
+install(TARGETS goma_exe fix_exe RUNTIME DESTINATION bin)
+
+# Libraries for host programs: find_package(Goma) and link Goma::goma
 install(
-  TARGETS goma_exe fix_exe
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
-  RUNTIME DESTINATION bin
-  INCLUDES
-  DESTINATION include/goma)
+  TARGETS goma_library goma goma_user goma_util gds
+  EXPORT GomaTargets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION bin)
+install(
+  EXPORT GomaTargets
+  NAMESPACE Goma::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Goma)
+# where the third-party libraries were found, for GomaConfig.cmake to find them again
+set(GOMA_PETSC_PKG_CONFIG_PATH "")
+if(ENABLE_PETSC AND PETSC_FOUND)
+  set(GOMA_PETSC_PKG_CONFIG_PATH ${PETSC_PATH}/lib/pkgconfig)
+endif()
+configure_package_config_file(
+  cmake/GomaConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/GomaConfig.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Goma)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/GomaConfig.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Goma)
 
 option(ENABLE_TESTING "ENABLE_TESTING" OFF)
 if(ENABLE_TESTING)
