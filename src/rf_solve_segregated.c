@@ -283,9 +283,6 @@ static int last_adapt_nt = 0;
  * the step to land on the stop time */
 #define STOP_TIME_TOLERANCE 1.0e-6
 
-static int
-solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, const double *t_stop);
-
 /*
  * Set up solve_problem_segregated(): allocate the solution vectors and the
  * matrices, set the initial guess and, for a transient problem, the time
@@ -1147,28 +1144,244 @@ void solve_problem_segregated_init(Exo_DB *exo, /* ptr to the finite element mes
 } /* END of routine solve_problem_segregated_init()  */
 
 /*
- * Advance the problem set up by solve_problem_segregated_init(). A steady
- * problem is solved completely. A transient problem stops after num_steps
- * successful time steps (num_steps <= 0: no limit), at time *t_stop (the last
- * step is shortened to land on it) or when it is finished. Returns
- * SOLVE_ADVANCED, SOLVE_FINISHED or SOLVE_FAILED.
+ * Solve the steady problem set up by solve_problem_segregated_init(), sweeping
+ * over the matrices until they are all converged. Returns SOLVE_FINISHED or
+ * SOLVE_FAILED.
  */
-int solve_problem_segregated_advance(
-    Exo_DB *exo,          /* ptr to the finite element mesh database  */
-    Dpi *dpi,             /* distributed processing information       */
-    int num_steps,        /* successful time steps to take, <= 0 for all */
-    const double *t_stop) /* time to stop at, NULL for none */
-{
-  int finished = solve_problem_segregated_advance_steps(exo, dpi, num_steps, t_stop);
-  /* augc and nAC point at the per matrix copies while solving */
-  augc = total_augc;
-  nAC = totalnAC;
-  return finished;
-}
-
-static int
-solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, const double *t_stop) {
+static int solve_problem_segregated_steady(Exo_DB *exo, Dpi *dpi) {
   int n; /* steady state sweep counter */
+  int i;
+  int err = 0;
+  int iAC; /* Counter                                  */
+
+  /***************************************************************************
+   *            STEADY STATE SOLUTION PROCEDURE
+   ***************************************************************************/
+
+  theta = 0.0; /* for steady problems. theta def in rf_fem.h */
+  delta_t = 0.0;
+
+  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+
+    /*
+     * set boundary conditions on the initial conditions to the
+     * transient calculation.
+     *  NOTE -> At this point, xdot[] is set to zero. Therefore,
+     *          there may be serious errors in the specification
+     *          of the boundary condition at this point. Some
+     *          ODE solvers actually solve an initial problem for
+     *          the evaluation of xdot[] at t = 0+. This algorithm
+     *          perhaps could be introduced here.
+     */
+    nullify_dirichlet_bcs();
+    find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
+
+    /*
+     * Before propagating x_n back into the historical records in
+     * x_n-1, x_n-2 and x_n-3, make sure external dofs are the best
+     * they can be. That is, ask the processors that are supposed to
+     * know...
+     */
+    exchange_dof(cx[pg->imtrx], dpi, x[pg->imtrx], pg->imtrx);
+
+    /*
+     * Now copy the initial solution, x[], into the history solutions
+     * x_old[], etc. Note, xdot[] = xdot_old[] = 0 at this point,
+     * which is in agreement with the specification of the history
+     * solutions.
+     */
+    dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+    dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx]);
+    dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx], x_oldest[pg->imtrx]);
+  }
+  /* Outer loop for number of steady state steps */
+  matrix_systems_mask = 1;
+  for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+    sl_init(matrix_systems_mask, ams, exo, dpi, cx[pg->imtrx]);
+  }
+
+  /*
+   * make sure the Aztec was properly initialized
+   */
+  check_parallel_error("Solver initialization problems");
+
+  for (n = 0; n < tran->MaxSteadyStateSteps; n++) {
+
+    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+      dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx], x_oldest[pg->imtrx]);
+      dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx]);
+      dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+    }
+
+    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+
+      nullify_dirichlet_bcs();
+
+      find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
+
+      if (ProcID == 0) {
+        printf("\n===================== SOLVING MATRIX %d Step %d "
+               "===========================\n\n",
+               pg->imtrx, n);
+      }
+
+      nAC = matrix_nAC[pg->imtrx];
+      augc = matrix_augc[pg->imtrx];
+
+      err = solve_nonlinear_problem(
+          ams[pg->imtrx], x[pg->imtrx], delta_t, theta, x_old[pg->imtrx], x_older[pg->imtrx],
+          xdot[pg->imtrx], xdot_old[pg->imtrx], resid_vector[pg->imtrx], x_update[pg->imtrx],
+          scale[pg->imtrx], &converged, &nprint, tev[pg->imtrx], tev_post[pg->imtrx], gv,
+          rd[pg->imtrx], NULL, NULL, gvec[pg->imtrx], gvec_elem[pg->imtrx], time1, exo, dpi,
+          cx[pg->imtrx], 0, &time_step_reform, is_steady_state, x_AC[pg->imtrx],
+          x_AC_dot[pg->imtrx], time1, NULL, NULL, NULL, NULL);
+
+      if (err == -1)
+        converged = FALSE;
+
+      if (!converged)
+        break;
+
+      if (nAC > 0) {
+        DPRINTF(stdout, "\n------------------------------\n");
+        DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
+        DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
+
+        for (iAC = 0; iAC < nAC; iAC++) {
+          if (augc[iAC].Type == AC_USERBC) {
+            DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
+                    x_AC[pg->imtrx][iAC]);
+          }
+          /*		  else if(augc[iAC].Type == AC_USERMAT ||
+                            augc[iAC].Type == AC_FLUX_MAT )
+                            {
+                            DPRINTF(stderr, "\tMT[%4d] MP[%4d]=% 10.6e\n",
+                            augc[iAC].MTID, augc[iAC].MPID, x_AC[iAC]);
+                            }
+                            else if(augc[iAC].Type == AC_VOLUME)
+                            {
+                            evol_local = augc[iAC].evol;
+                            #ifdef PARALLEL
+                            if( Num_Proc > 1 ) {
+                            MPI_Allreduce( &evol_local, &evol_global, 1,
+                            MPI_DOUBLE, MPI_SUM, goma_comm);
+
+                            evol_local = evol_global;
+                            }
+                            #endif
+                            DPRINTF(stderr, "\tMT[%4d] VC[%4d]=%10.6e
+             Param=%10.6e\n", augc[iAC].MTID, augc[iAC].VOLID, evol_local,
+                            x_AC[iAC]);
+                            }
+                            else if(augc[iAC].Type == AC_LS_VEL)
+                            {
+                            evol_local = augc[iAC].lsvol;
+                            lsvel_local = augc[iAC].lsvel;
+
+
+                            #ifdef PARALLEL
+                            if( Num_Proc > 1 ) {
+                            MPI_Allreduce( &evol_local, &evol_global, 1,
+                            MPI_DOUBLE, MPI_SUM, goma_comm);
+                            MPI_Allreduce( &lsvel_local, &lsvel_global, 1,
+                            MPI_DOUBLE, MPI_SUM, goma_comm);
+                            evol_local = evol_global;
+                            lsvel_local = lsvel_global;
+                            }
+                            #endif
+
+                            lsvel_local = lsvel_local / evol_local;
+
+                            DPRINTF(stderr, "\tMT[%4d] LSVEL
+             phase[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
+             augc[iAC].LSPHASE, lsvel_local, x_AC[iAC]);
+                            }
+                            else if(augc[iAC].Type == AC_FLUX)
+                            {p
+                            DPRINTF(stderr, "\tBC[%4d] DF[%4d]=%10.6e\n",
+                            augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC]);
+                            } */
+        }
+      }
+    }
+
+    if (converged) {
+
+      for (i = 0; matrix_nAC[pg->imtrx] > 0 && i < matrix_nAC[pg->imtrx]; i++) {
+        gv[5 + invACidx[pg->imtrx][i]] = x_AC[pg->imtrx][i];
+      }
+
+      double distance = 0;
+
+      for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
+        find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
+        double d1 = vector_distance(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+        if (pg->imtrx == 0) {
+          double vel = vector_distance_vel(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+          double pres =
+              vector_distance_pres(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
+          if (ProcID == 0) {
+            printf("M%d distance = %g, %g, %g\n", i, d1, vel, pres);
+          }
+        } else {
+          if (ProcID == 0) {
+            printf("M%d distance = %g \n", i, d1);
+          }
+        }
+        distance += vector_distance_squared(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx],
+                                            FALSE, pg->imtrx);
+      }
+
+      distance = sqrt(distance);
+
+      if (ProcID == 0) {
+        printf("\nL_2 x changes %g\n", distance);
+      }
+
+      //	write_solution_segregated(ExoFileOut, resid_vector, x, x_old,
+      // xdot, 				  xdot_old, tev, tev_post, gv,
+      // rd, gvec, gvec_elem, &nprint, delta_t,
+      // theta, (double) nprint, NULL, exo, dpi); 	nprint++;
+
+      if (distance < tran->steady_state_tolerance) {
+
+        pg->imtrx = 0;
+        for (i = 0; i < nn_post_fluxes; i++) {
+          (void)evaluate_flux(exo, dpi, pp_fluxes[i]->ss_id, pp_fluxes[i]->flux_type,
+                              pp_fluxes[i]->flux_type_name, pp_fluxes[i]->blk_id,
+                              pp_fluxes[i]->species_number, pp_fluxes[i]->flux_filenm,
+                              pp_fluxes[i]->profile_flag, x[pg->imtrx], xdot[pg->imtrx], NULL,
+                              delta_t_old, time, 1);
+        }
+
+        write_solution_segregated(ExoFileOut, resid_vector, x, x_old, xdot, xdot_old, tev_post, gv,
+                                  rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, NULL, exo,
+                                  dpi);
+
+        if (ProcID == 0) {
+          printf("\n Steady state reached \n");
+        }
+        return SOLVE_FINISHED;
+      }
+    } else {
+      break;
+    }
+  }
+  if (ProcID == 0) {
+    printf("Failed to solve steady state.");
+  }
+  return SOLVE_FAILED;
+} /* END of routine solve_problem_segregated_steady()  */
+
+/*
+ * Take time steps of the transient problem set up by
+ * solve_problem_segregated_init(). Stops after num_steps successful time steps
+ * (num_steps <= 0: no limit), at time *t_stop (the last step is shortened to
+ * land on it) or when the problem is finished. Returns SOLVE_ADVANCED,
+ * SOLVE_FINISHED or SOLVE_FAILED.
+ */
+static int
+solve_problem_segregated_transient(Exo_DB *exo, Dpi *dpi, int num_steps, const double *t_stop) {
   int i;
   int err = 0;
   int inewton = 0;
@@ -1181,228 +1394,7 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
   char tspstring[MAX_FNL];
   int nt_start = nt;
   double delta_t_unstopped = 0.0; /* step size before it was shortened to land on *t_stop */
-  static const char yo[] = "solve_problem_segregated_advance";
-
-  /***************************************************************************
-   *            STEADY STATE SOLUTION PROCEDURE
-   ***************************************************************************/
-  if (TimeIntegration == STEADY) {
-
-    theta = 0.0; /* for steady problems. theta def in rf_fem.h */
-    delta_t = 0.0;
-
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-
-      /*
-       * set boundary conditions on the initial conditions to the
-       * transient calculation.
-       *  NOTE -> At this point, xdot[] is set to zero. Therefore,
-       *          there may be serious errors in the specification
-       *          of the boundary condition at this point. Some
-       *          ODE solvers actually solve an initial problem for
-       *          the evaluation of xdot[] at t = 0+. This algorithm
-       *          perhaps could be introduced here.
-       */
-      nullify_dirichlet_bcs();
-      find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
-
-      /*
-       * Before propagating x_n back into the historical records in
-       * x_n-1, x_n-2 and x_n-3, make sure external dofs are the best
-       * they can be. That is, ask the processors that are supposed to
-       * know...
-       */
-      exchange_dof(cx[pg->imtrx], dpi, x[pg->imtrx], pg->imtrx);
-
-      /*
-       * Now copy the initial solution, x[], into the history solutions
-       * x_old[], etc. Note, xdot[] = xdot_old[] = 0 at this point,
-       * which is in agreement with the specification of the history
-       * solutions.
-       */
-      dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-      dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx]);
-      dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx], x_oldest[pg->imtrx]);
-    }
-    /* Outer loop for number of steady state steps */
-    matrix_systems_mask = 1;
-    for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-      sl_init(matrix_systems_mask, ams, exo, dpi, cx[pg->imtrx]);
-    }
-
-    /*
-     * make sure the Aztec was properly initialized
-     */
-    check_parallel_error("Solver initialization problems");
-
-    for (n = 0; n < tran->MaxSteadyStateSteps; n++) {
-
-      for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-        dcopy1(numProcUnknowns[pg->imtrx], x_older[pg->imtrx], x_oldest[pg->imtrx]);
-        dcopy1(numProcUnknowns[pg->imtrx], x_old[pg->imtrx], x_older[pg->imtrx]);
-        dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-      }
-
-      for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-
-        nullify_dirichlet_bcs();
-
-        find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
-
-        if (ProcID == 0) {
-          printf("\n===================== SOLVING MATRIX %d Step %d "
-                 "===========================\n\n",
-                 pg->imtrx, n);
-        }
-
-        nAC = matrix_nAC[pg->imtrx];
-        augc = matrix_augc[pg->imtrx];
-
-        err = solve_nonlinear_problem(
-            ams[pg->imtrx], x[pg->imtrx], delta_t, theta, x_old[pg->imtrx], x_older[pg->imtrx],
-            xdot[pg->imtrx], xdot_old[pg->imtrx], resid_vector[pg->imtrx], x_update[pg->imtrx],
-            scale[pg->imtrx], &converged, &nprint, tev[pg->imtrx], tev_post[pg->imtrx], gv,
-            rd[pg->imtrx], NULL, NULL, gvec[pg->imtrx], gvec_elem[pg->imtrx], time1, exo, dpi,
-            cx[pg->imtrx], 0, &time_step_reform, is_steady_state, x_AC[pg->imtrx],
-            x_AC_dot[pg->imtrx], time1, NULL, NULL, NULL, NULL);
-
-        if (err == -1)
-          converged = FALSE;
-
-        if (!converged)
-          break;
-
-        if (nAC > 0) {
-          DPRINTF(stdout, "\n------------------------------\n");
-          DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
-          DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
-
-          for (iAC = 0; iAC < nAC; iAC++) {
-            if (augc[iAC].Type == AC_USERBC) {
-              DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e\n", augc[iAC].BCID, augc[iAC].DFID,
-                      x_AC[pg->imtrx][iAC]);
-            }
-            /*		  else if(augc[iAC].Type == AC_USERMAT ||
-                              augc[iAC].Type == AC_FLUX_MAT )
-                              {
-                              DPRINTF(stderr, "\tMT[%4d] MP[%4d]=% 10.6e\n",
-                              augc[iAC].MTID, augc[iAC].MPID, x_AC[iAC]);
-                              }
-                              else if(augc[iAC].Type == AC_VOLUME)
-                              {
-                              evol_local = augc[iAC].evol;
-                              #ifdef PARALLEL
-                              if( Num_Proc > 1 ) {
-                              MPI_Allreduce( &evol_local, &evol_global, 1,
-                              MPI_DOUBLE, MPI_SUM, goma_comm);
-
-                              evol_local = evol_global;
-                              }
-                              #endif
-                              DPRINTF(stderr, "\tMT[%4d] VC[%4d]=%10.6e
-               Param=%10.6e\n", augc[iAC].MTID, augc[iAC].VOLID, evol_local,
-                              x_AC[iAC]);
-                              }
-                              else if(augc[iAC].Type == AC_LS_VEL)
-                              {
-                              evol_local = augc[iAC].lsvol;
-                              lsvel_local = augc[iAC].lsvel;
-
-
-                              #ifdef PARALLEL
-                              if( Num_Proc > 1 ) {
-                              MPI_Allreduce( &evol_local, &evol_global, 1,
-                              MPI_DOUBLE, MPI_SUM, goma_comm);
-                              MPI_Allreduce( &lsvel_local, &lsvel_global, 1,
-                              MPI_DOUBLE, MPI_SUM, goma_comm);
-                              evol_local = evol_global;
-                              lsvel_local = lsvel_global;
-                              }
-                              #endif
-
-                              lsvel_local = lsvel_local / evol_local;
-
-                              DPRINTF(stderr, "\tMT[%4d] LSVEL
-               phase[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-               augc[iAC].LSPHASE, lsvel_local, x_AC[iAC]);
-                              }
-                              else if(augc[iAC].Type == AC_FLUX)
-                              {p
-                              DPRINTF(stderr, "\tBC[%4d] DF[%4d]=%10.6e\n",
-                              augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC]);
-                              } */
-          }
-        }
-      }
-
-      if (converged) {
-
-        for (i = 0; matrix_nAC[pg->imtrx] > 0 && i < matrix_nAC[pg->imtrx]; i++) {
-          gv[5 + invACidx[pg->imtrx][i]] = x_AC[pg->imtrx][i];
-        }
-
-        double distance = 0;
-
-        for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
-          find_and_set_Dirichlet(x[pg->imtrx], xdot[pg->imtrx], exo, dpi);
-          double d1 = vector_distance(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-          if (pg->imtrx == 0) {
-            double vel =
-                vector_distance_vel(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-            double pres =
-                vector_distance_pres(NumUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
-            if (ProcID == 0) {
-              printf("M%d distance = %g, %g, %g\n", i, d1, vel, pres);
-            }
-          } else {
-            if (ProcID == 0) {
-              printf("M%d distance = %g \n", i, d1);
-            }
-          }
-          distance += vector_distance_squared(NumUnknowns[pg->imtrx], x[pg->imtrx],
-                                              x_old[pg->imtrx], FALSE, pg->imtrx);
-        }
-
-        distance = sqrt(distance);
-
-        if (ProcID == 0) {
-          printf("\nL_2 x changes %g\n", distance);
-        }
-
-        //	write_solution_segregated(ExoFileOut, resid_vector, x, x_old,
-        // xdot, 				  xdot_old, tev, tev_post, gv,
-        // rd, gvec, gvec_elem, &nprint, delta_t,
-        // theta, (double) nprint, NULL, exo, dpi); 	nprint++;
-
-        if (distance < tran->steady_state_tolerance) {
-
-          pg->imtrx = 0;
-          for (i = 0; i < nn_post_fluxes; i++) {
-            (void)evaluate_flux(exo, dpi, pp_fluxes[i]->ss_id, pp_fluxes[i]->flux_type,
-                                pp_fluxes[i]->flux_type_name, pp_fluxes[i]->blk_id,
-                                pp_fluxes[i]->species_number, pp_fluxes[i]->flux_filenm,
-                                pp_fluxes[i]->profile_flag, x[pg->imtrx], xdot[pg->imtrx], NULL,
-                                delta_t_old, time, 1);
-          }
-
-          write_solution_segregated(ExoFileOut, resid_vector, x, x_old, xdot, xdot_old, tev_post,
-                                    gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, NULL,
-                                    exo, dpi);
-
-          if (ProcID == 0) {
-            printf("\n Steady state reached \n");
-          }
-          return SOLVE_FINISHED;
-        }
-      } else {
-        break;
-      }
-    }
-    if (ProcID == 0) {
-      printf("Failed to solve steady state.");
-    }
-    return SOLVE_FAILED;
-  } /* if(steady) */
+  static const char yo[] = "solve_problem_segregated_transient";
 
   /********************************************************************************
    *                            Transient solution process
@@ -2627,7 +2619,29 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
 
   /* Maximum number of time steps */
   return SOLVE_FINISHED;
-} /* END of routine solve_problem_segregated_advance_steps()  */
+} /* END of routine solve_problem_segregated_transient()  */
+
+/*
+ * Advance the problem set up by solve_problem_segregated_init(). A steady
+ * problem is solved completely. A transient problem stops after num_steps
+ * successful time steps (num_steps <= 0: no limit), at time *t_stop (the last
+ * step is shortened to land on it) or when it is finished. Returns
+ * SOLVE_ADVANCED, SOLVE_FINISHED or SOLVE_FAILED.
+ */
+int solve_problem_segregated_advance(
+    Exo_DB *exo,          /* ptr to the finite element mesh database  */
+    Dpi *dpi,             /* distributed processing information       */
+    int num_steps,        /* successful time steps to take, <= 0 for all */
+    const double *t_stop) /* time to stop at, NULL for none */
+{
+  int finished = (TimeIntegration == STEADY)
+                     ? solve_problem_segregated_steady(exo, dpi)
+                     : solve_problem_segregated_transient(exo, dpi, num_steps, t_stop);
+  /* augc and nAC point at the per matrix copies while solving */
+  augc = total_augc;
+  nAC = totalnAC;
+  return finished;
+}
 
 /*
  * Free what solve_problem_segregated_init() allocated.

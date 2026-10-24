@@ -953,16 +953,237 @@ void solve_problem_init(Exo_DB *exo, /* ptr to the finite element mesh database 
 } /* END of routine solve_problem_init()  */
 
 /*
- * Advance the problem set up by solve_problem_init(). A steady problem is
- * solved completely. A transient problem stops after num_steps successful
- * time steps (num_steps <= 0: no limit), at time *t_stop (the last step is
- * shortened to land on it) or when it is finished. Returns SOLVE_ADVANCED,
+ * Solve the steady problem set up by solve_problem_init(). Returns
  * SOLVE_FINISHED or SOLVE_FAILED.
  */
-int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mesh database  */
-                          Dpi *dpi,             /* distributed processing information       */
-                          int num_steps,        /* successful time steps to take, <= 0 for all */
-                          const double *t_stop) /* time to stop at, NULL for none */
+static int solve_problem_steady(Exo_DB *exo, /* ptr to the finite element mesh database  */
+                                Dpi *dpi)    /* distributed processing information       */
+{
+  int iAC; /* Counter                                  */
+  int i;
+  int error = 0, err;
+  int *gindex = NULL, gsize;
+  int *p_gsize = &gsize;
+  double evol_local = 0.0;
+  double lsvel_local = 0.0;
+#ifdef PARALLEL
+  double evol_global = 0.0;
+  double lsvel_global = 0.0;
+#endif   /* PARALLEL */
+  int n; /* particle time step counter */
+  static const char yo[] = "solve_problem_steady";
+
+  /***************************************************************************
+   *            STEADY STATE SOLUTION PROCEDURE
+   ***************************************************************************/
+
+  theta = 0.0; /* for steady problems. theta def in rf_fem.h */
+  delta_t = 0.0;
+
+  find_and_set_Dirichlet(x, xdot, exo, dpi);
+
+  matrix_systems_mask = 1;
+
+  log_msg("sl_init()...");
+  sl_init(matrix_systems_mask, ams, exo, dpi, cx[0]);
+#ifdef GOMA_ENABLE_AZTEC
+  if (nAC > 0 || nn_post_fluxes_sens > 0 || nn_post_data_sens > 0)
+    ams[JAC]->options[AZ_keep_info] = 1;
+#endif
+
+  /*
+   * Now, just pass pointer to ams structure with all Aztec stuff
+   * bundled inside. At the other end, extract "ija" and "a" as
+   * appropriate, but the other items are there now, too.
+   */
+
+#ifdef PARALLEL
+
+  /*
+   * Make sure the solver was properly initialized on all processors.
+   */
+  check_parallel_error("Solver initialization problems");
+#endif /* PARALLEL */
+
+  if (nEQM > 0) {
+    DPRINTF(stdout, "\nINITIAL ELEMENT QUALITY CHECK---\n");
+    good_mesh = element_quality(exo, x, ams[0]->proc_config);
+  }
+
+  err = solve_nonlinear_problem(ams[JAC], x, delta_t, theta, x_old, x_older, xdot, xdot_old,
+                                resid_vector, x_update, scale, &converged, &nprint, tev, tev_post,
+                                gv, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo, dpi, cx[0], 0,
+                                &time_step_reform, is_steady_state, x_AC, x_AC_dot, time1,
+                                resid_vector_sens, x_sens, x_sens_p, NULL);
+
+  int steady_converged = converged; /* solve_stability_problem() sets converged */
+  if (!converged) {
+    DPRINTF(stderr, "\n\tFailure: could not converge on the steady state solution.\n");
+    DPRINTF(stderr, "\tSorry, I really tried...\n");
+    if (Linear_Stability) {
+      DPRINTF(stderr, "\tThere's no point in solving the eigensystem (but I'll do it anyway).\n");
+    }
+  }
+
+  log_msg("Returning from solve_nonlinear_problem with %d", err);
+  GOMA_EH(err, "Problem from solve_nonlinear_problem.");
+
+  /* Check element quality */
+  good_mesh = element_quality(exo, x, ams[0]->proc_config);
+
+  if (soln_file != NULL) {
+    error = write_ascii_soln(x, resid_vector, numProcUnknowns, x_AC, nAC, 0.0, soln_file);
+  }
+
+  GOMA_EH(error, "Error writing ASCII soln file.");
+
+  if (Write_Intermediate_Solutions == 0) {
+    nprint = 0;
+
+    write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev, tev_post, gv,
+                   rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, x_pp, exo, dpi);
+  } /* end of if Write Intermediate Solutions */
+
+  /* Print out values of extra unknowns from augmenting conditions */
+  if (nAC > 0) {
+    DPRINTF(stdout, "\n------------------------------\n");
+    DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
+    DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
+
+    for (iAC = 0; iAC < nAC; iAC++) {
+      evol_local = augc[iAC].evol;
+#ifdef PARALLEL
+      if (Num_Proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
+                           augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
+        MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
+        evol_local = evol_global;
+      }
+#endif
+      if (augc[iAC].Type == AC_USERBC) {
+        DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e\n", augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC]);
+      } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
+        DPRINTF(stdout, "\tMT[%4d] MP[%4d]=% 10.6e\n", augc[iAC].MTID, augc[iAC].MPID, x_AC[iAC]);
+      } else if (augc[iAC].Type == AC_VOLUME) {
+        DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID, augc[iAC].VOLID,
+                evol_local, x_AC[iAC]);
+      } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
+        DPRINTF(stdout, "\tNodeSet[%4d]_Pos = %10.6e F_bal = %10.6e MT[%4d] Param=%10.6e\n",
+                augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
+      } else if (augc[iAC].Type == AC_ANGLE) {
+        evol_local = augc[iAC].lm_resid + augc[iAC].CONSTV;
+        DPRINTF(stdout, "\tNodeSet[%4d]_Ang = %g F_bal = %6.3e MT[%4d] Param=%6.3e\n",
+                augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
+      } else if (augc[iAC].Type == AC_LS_VEL) {
+        evol_local = augc[iAC].lsvol;
+        lsvel_local = augc[iAC].lsvel;
+
+#ifdef PARALLEL
+        if (Num_Proc > 1) {
+          MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
+          MPI_Allreduce(&lsvel_local, &lsvel_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
+          evol_local = evol_global;
+          lsvel_local = lsvel_global;
+        }
+#endif /* PARALLEL */
+
+        lsvel_local = lsvel_local / evol_local;
+
+        DPRINTF(stdout, "\tMT[%4d] LSVEL phase[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
+                augc[iAC].LSPHASE, lsvel_local, x_AC[iAC]);
+      } else if (augc[iAC].Type == AC_FLUX) {
+        DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC]);
+      }
+    }
+  }
+
+  /* Integrate fluxes, forces  (only if converged)
+   */
+  if (converged) {
+    for (i = 0; i < nn_post_fluxes; i++) {
+      (void)evaluate_flux(exo, dpi, pp_fluxes[i]->ss_id, pp_fluxes[i]->flux_type,
+                          pp_fluxes[i]->flux_type_name, pp_fluxes[i]->blk_id,
+                          pp_fluxes[i]->species_number, pp_fluxes[i]->flux_filenm,
+                          pp_fluxes[i]->profile_flag, x, xdot, NULL, delta_t, time1, 1);
+    }
+
+    /* Compute flux, force sensitivities
+     */
+    for (i = 0; i < nn_post_fluxes_sens; i++) {
+      (void)evaluate_flux_sens(exo, dpi, pp_fluxes_sens[i]->ss_id, pp_fluxes_sens[i]->flux_type,
+                               pp_fluxes_sens[i]->flux_type_name, pp_fluxes_sens[i]->blk_id,
+                               pp_fluxes_sens[i]->species_number, pp_fluxes_sens[i]->sens_type,
+                               pp_fluxes_sens[i]->sens_id, pp_fluxes_sens[i]->sens_flt,
+                               pp_fluxes_sens[i]->sens_flt2, pp_fluxes_sens[i]->vector_id,
+                               pp_fluxes_sens[i]->flux_filenm, pp_fluxes_sens[i]->profile_flag, x,
+                               xdot, x_sens_p, delta_t, time1, 1);
+    }
+
+    /*
+     * Compute global volumetric quantities
+     */
+    for (i = 0; i < nn_volume; i++) {
+      evaluate_volume_integral(exo, dpi, pp_volume[i]->volume_type, pp_volume[i]->volume_name,
+                               pp_volume[i]->blk_id, pp_volume[i]->species_no,
+                               pp_volume[i]->volume_fname, pp_volume[i]->params,
+                               pp_volume[i]->num_params, NULL, x, xdot, delta_t, time1, 1);
+    }
+    if (Output_Variable_Stats) {
+      err = variable_stats(x, time1, Output_Variable_Regression);
+      GOMA_EH(err, "Problem with variable_stats!");
+      if (ProcID == 0)
+        fflush(stdout);
+    }
+
+    DPRINTF(stderr, "\t\tconverged SS!\n");
+  } /* if converged */
+
+  if (Anneal_Mesh) {
+    /*
+     * Transform the node point coordinates according to the
+     * displacements and write out all the results using the
+     * displaced coordinates. Set the displacement field to
+     * zero, too.
+     */
+
+    err = anneal_mesh(x, tev, tev_post, gv, rd, time1, exo, dpi);
+    GOMA_EH(err, "anneal_mesh() bad return.");
+  }
+
+  if (Linear_Stability) {
+    err = solve_stability_problem(ams[JAC], x, delta_t, theta, resid_vector, x_old, x_older, xdot,
+                                  xdot_old, x_update, &converged, &nprint, tnv, tnv_post, tev,
+                                  tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo, dpi);
+    GOMA_EH(err, "Problem from solve_stability_problem.");
+    DPRINTF(stderr, "\t\tcompleted LSA!\n");
+  }
+
+  if (Particle_Dynamics) {
+    /* If this was steady-state we need to ensure the fv_old* values are the same as fv. */
+    dcopy1(NumUnknowns[pg->imtrx], x, x_old);
+    dcopy1(NumUnknowns[pg->imtrx], x, x_older);
+    initialize_particles(exo, x, x_old, xdot, xdot_old, resid_vector);
+    for (n = 0; n < Particle_Max_Time_Steps; n++) {
+      time = (n + 1) * Particle_Output_Time_Step;
+      DPRINTF(stdout, "\nComputing particles for time %g (%2.0f%% done)\n", time,
+              (dbl)n / (dbl)Particle_Max_Time_Steps * 100.0);
+      err = compute_particles(exo, x, x_old, xdot, xdot_old, resid_vector, time,
+                              Particle_Output_Time_Step, n);
+      GOMA_EH(err, "Error performing particle calculations.");
+    }
+  }
+  return steady_converged ? SOLVE_FINISHED : SOLVE_FAILED;
+} /* END of routine solve_problem_steady()  */
+
+/*
+ * Take time steps of the transient problem set up by solve_problem_init().
+ * Stops after num_steps successful time steps (num_steps <= 0: no limit), at
+ * time *t_stop (the last step is shortened to land on it) or when the problem
+ * is finished. Returns SOLVE_ADVANCED, SOLVE_FINISHED or SOLVE_FAILED.
+ */
+static int solve_problem_transient(Exo_DB *exo,   /* ptr to the finite element mesh database  */
+                                   Dpi *dpi,      /* distributed processing information       */
+                                   int num_steps, /* successful time steps to take, <= 0 for all */
+                                   const double *t_stop) /* time to stop at, NULL for none */
 {
   int iAC; /* Counter                                  */
   int i;
@@ -981,218 +1202,12 @@ int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mes
   int did_renorm;         /* Flag indicating if we renormalized.       */
   int Renorm_Now = FALSE; /* Flag forcing renormalization regardless of gradient */
   double evol_local = 0.0;
-  double lsvel_local = 0.0;
 #ifdef PARALLEL
   double evol_global = 0.0;
-  double lsvel_global = 0.0;
-#endif   /* PARALLEL */
-  int n; /* particle time step counter of a steady problem */
+#endif /* PARALLEL */
   int nt_start = nt;
   double delta_t_unstopped = 0.0; /* step size before it was shortened to land on *t_stop */
-  static const char yo[] = "solve_problem_advance";
-
-  /***************************************************************************
-   *            STEADY STATE SOLUTION PROCEDURE
-   ***************************************************************************/
-  if (TimeIntegration == STEADY) {
-
-    theta = 0.0; /* for steady problems. theta def in rf_fem.h */
-    delta_t = 0.0;
-
-    find_and_set_Dirichlet(x, xdot, exo, dpi);
-
-    matrix_systems_mask = 1;
-
-    log_msg("sl_init()...");
-    sl_init(matrix_systems_mask, ams, exo, dpi, cx[0]);
-#ifdef GOMA_ENABLE_AZTEC
-    if (nAC > 0 || nn_post_fluxes_sens > 0 || nn_post_data_sens > 0)
-      ams[JAC]->options[AZ_keep_info] = 1;
-#endif
-
-    /*
-     * Now, just pass pointer to ams structure with all Aztec stuff
-     * bundled inside. At the other end, extract "ija" and "a" as
-     * appropriate, but the other items are there now, too.
-     */
-
-#ifdef PARALLEL
-
-    /*
-     * Make sure the solver was properly initialized on all processors.
-     */
-    check_parallel_error("Solver initialization problems");
-#endif /* PARALLEL */
-
-    if (nEQM > 0) {
-      DPRINTF(stdout, "\nINITIAL ELEMENT QUALITY CHECK---\n");
-      good_mesh = element_quality(exo, x, ams[0]->proc_config);
-    }
-
-    err = solve_nonlinear_problem(ams[JAC], x, delta_t, theta, x_old, x_older, xdot, xdot_old,
-                                  resid_vector, x_update, scale, &converged, &nprint, tev, tev_post,
-                                  gv, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo, dpi, cx[0],
-                                  0, &time_step_reform, is_steady_state, x_AC, x_AC_dot, time1,
-                                  resid_vector_sens, x_sens, x_sens_p, NULL);
-
-    int steady_converged = converged; /* solve_stability_problem() sets converged */
-    if (!converged) {
-      DPRINTF(stderr, "\n\tFailure: could not converge on the steady state solution.\n");
-      DPRINTF(stderr, "\tSorry, I really tried...\n");
-      if (Linear_Stability) {
-        DPRINTF(stderr, "\tThere's no point in solving the eigensystem (but I'll do it anyway).\n");
-      }
-    }
-
-    log_msg("Returning from solve_nonlinear_problem with %d", err);
-    GOMA_EH(err, "Problem from solve_nonlinear_problem.");
-
-    /* Check element quality */
-    good_mesh = element_quality(exo, x, ams[0]->proc_config);
-
-    if (soln_file != NULL) {
-      error = write_ascii_soln(x, resid_vector, numProcUnknowns, x_AC, nAC, 0.0, soln_file);
-    }
-
-    GOMA_EH(error, "Error writing ASCII soln file.");
-
-    if (Write_Intermediate_Solutions == 0) {
-      nprint = 0;
-
-      write_solution(ExoFileOut, resid_vector, x, x_sens_p, x_old, xdot, xdot_old, tev, tev_post,
-                     gv, rd, gvec, gvec_elem, &nprint, delta_t, theta, time1, x_pp, exo, dpi);
-    } /* end of if Write Intermediate Solutions */
-
-    /* Print out values of extra unknowns from augmenting conditions */
-    if (nAC > 0) {
-      DPRINTF(stdout, "\n------------------------------\n");
-      DPRINTF(stdout, "Augmenting Conditions:    %4d\n", nAC);
-      DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
-
-      for (iAC = 0; iAC < nAC; iAC++) {
-        evol_local = augc[iAC].evol;
-#ifdef PARALLEL
-        if (Num_Proc > 1 && (augc[iAC].Type == AC_VOLUME || augc[iAC].Type == AC_POSITION ||
-                             augc[iAC].Type == AC_ANGLE || augc[iAC].Type == AC_POSITION_MT)) {
-          MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
-          evol_local = evol_global;
-        }
-#endif
-        if (augc[iAC].Type == AC_USERBC) {
-          DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e\n", augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
-          DPRINTF(stdout, "\tMT[%4d] MP[%4d]=% 10.6e\n", augc[iAC].MTID, augc[iAC].MPID, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_VOLUME) {
-          DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                  augc[iAC].VOLID, evol_local, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_POSITION || augc[iAC].Type == AC_POSITION_MT) {
-          DPRINTF(stdout, "\tNodeSet[%4d]_Pos = %10.6e F_bal = %10.6e MT[%4d] Param=%10.6e\n",
-                  augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_ANGLE) {
-          evol_local = augc[iAC].lm_resid + augc[iAC].CONSTV;
-          DPRINTF(stdout, "\tNodeSet[%4d]_Ang = %g F_bal = %6.3e MT[%4d] Param=%6.3e\n",
-                  augc[iAC].MTID, evol_local, augc[iAC].lm_resid, augc[iAC].VOLID, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_LS_VEL) {
-          evol_local = augc[iAC].lsvol;
-          lsvel_local = augc[iAC].lsvel;
-
-#ifdef PARALLEL
-          if (Num_Proc > 1) {
-            MPI_Allreduce(&evol_local, &evol_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
-            MPI_Allreduce(&lsvel_local, &lsvel_global, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
-            evol_local = evol_global;
-            lsvel_local = lsvel_global;
-          }
-#endif /* PARALLEL */
-
-          lsvel_local = lsvel_local / evol_local;
-
-          DPRINTF(stdout, "\tMT[%4d] LSVEL phase[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
-                  augc[iAC].LSPHASE, lsvel_local, x_AC[iAC]);
-        } else if (augc[iAC].Type == AC_FLUX) {
-          DPRINTF(stdout, "\tBC[%4d] DF[%4d]=%10.6e\n", augc[iAC].BCID, augc[iAC].DFID, x_AC[iAC]);
-        }
-      }
-    }
-
-    /* Integrate fluxes, forces  (only if converged)
-     */
-    if (converged) {
-      for (i = 0; i < nn_post_fluxes; i++) {
-        (void)evaluate_flux(exo, dpi, pp_fluxes[i]->ss_id, pp_fluxes[i]->flux_type,
-                            pp_fluxes[i]->flux_type_name, pp_fluxes[i]->blk_id,
-                            pp_fluxes[i]->species_number, pp_fluxes[i]->flux_filenm,
-                            pp_fluxes[i]->profile_flag, x, xdot, NULL, delta_t, time1, 1);
-      }
-
-      /* Compute flux, force sensitivities
-       */
-      for (i = 0; i < nn_post_fluxes_sens; i++) {
-        (void)evaluate_flux_sens(exo, dpi, pp_fluxes_sens[i]->ss_id, pp_fluxes_sens[i]->flux_type,
-                                 pp_fluxes_sens[i]->flux_type_name, pp_fluxes_sens[i]->blk_id,
-                                 pp_fluxes_sens[i]->species_number, pp_fluxes_sens[i]->sens_type,
-                                 pp_fluxes_sens[i]->sens_id, pp_fluxes_sens[i]->sens_flt,
-                                 pp_fluxes_sens[i]->sens_flt2, pp_fluxes_sens[i]->vector_id,
-                                 pp_fluxes_sens[i]->flux_filenm, pp_fluxes_sens[i]->profile_flag, x,
-                                 xdot, x_sens_p, delta_t, time1, 1);
-      }
-
-      /*
-       * Compute global volumetric quantities
-       */
-      for (i = 0; i < nn_volume; i++) {
-        evaluate_volume_integral(exo, dpi, pp_volume[i]->volume_type, pp_volume[i]->volume_name,
-                                 pp_volume[i]->blk_id, pp_volume[i]->species_no,
-                                 pp_volume[i]->volume_fname, pp_volume[i]->params,
-                                 pp_volume[i]->num_params, NULL, x, xdot, delta_t, time1, 1);
-      }
-      if (Output_Variable_Stats) {
-        err = variable_stats(x, time1, Output_Variable_Regression);
-        GOMA_EH(err, "Problem with variable_stats!");
-        if (ProcID == 0)
-          fflush(stdout);
-      }
-
-      DPRINTF(stderr, "\t\tconverged SS!\n");
-    } /* if converged */
-
-    if (Anneal_Mesh) {
-      /*
-       * Transform the node point coordinates according to the
-       * displacements and write out all the results using the
-       * displaced coordinates. Set the displacement field to
-       * zero, too.
-       */
-
-      err = anneal_mesh(x, tev, tev_post, gv, rd, time1, exo, dpi);
-      GOMA_EH(err, "anneal_mesh() bad return.");
-    }
-
-    if (Linear_Stability) {
-      err =
-          solve_stability_problem(ams[JAC], x, delta_t, theta, resid_vector, x_old, x_older, xdot,
-                                  xdot_old, x_update, &converged, &nprint, tnv, tnv_post, tev,
-                                  tev_post, rd, gindex, p_gsize, gvec, gvec_elem, time1, exo, dpi);
-      GOMA_EH(err, "Problem from solve_stability_problem.");
-      DPRINTF(stderr, "\t\tcompleted LSA!\n");
-    }
-
-    if (Particle_Dynamics) {
-      /* If this was steady-state we need to ensure the fv_old* values are the same as fv. */
-      dcopy1(NumUnknowns[pg->imtrx], x, x_old);
-      dcopy1(NumUnknowns[pg->imtrx], x, x_older);
-      initialize_particles(exo, x, x_old, xdot, xdot_old, resid_vector);
-      for (n = 0; n < Particle_Max_Time_Steps; n++) {
-        time = (n + 1) * Particle_Output_Time_Step;
-        DPRINTF(stdout, "\nComputing particles for time %g (%2.0f%% done)\n", time,
-                (dbl)n / (dbl)Particle_Max_Time_Steps * 100.0);
-        err = compute_particles(exo, x, x_old, xdot, xdot_old, resid_vector, time,
-                                Particle_Output_Time_Step, n);
-        GOMA_EH(err, "Error performing particle calculations.");
-      }
-    }
-    return steady_converged ? SOLVE_FINISHED : SOLVE_FAILED;
-  } /* if(steady) */
+  static const char yo[] = "solve_problem_transient";
 
   /********************************************************************************
    *                            Transient solution process
@@ -2463,6 +2478,24 @@ int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mes
 
   /* Maximum number of time steps */
   return SOLVE_FINISHED;
+} /* END of routine solve_problem_transient()  */
+
+/*
+ * Advance the problem set up by solve_problem_init(). A steady problem is
+ * solved completely. A transient problem stops after num_steps successful
+ * time steps (num_steps <= 0: no limit), at time *t_stop (the last step is
+ * shortened to land on it) or when it is finished. Returns SOLVE_ADVANCED,
+ * SOLVE_FINISHED or SOLVE_FAILED.
+ */
+int solve_problem_advance(Exo_DB *exo,          /* ptr to the finite element mesh database  */
+                          Dpi *dpi,             /* distributed processing information       */
+                          int num_steps,        /* successful time steps to take, <= 0 for all */
+                          const double *t_stop) /* time to stop at, NULL for none */
+{
+  if (TimeIntegration == STEADY) {
+    return solve_problem_steady(exo, dpi);
+  }
+  return solve_problem_transient(exo, dpi, num_steps, t_stop);
 } /* END of routine solve_problem_advance()  */
 
 /*
