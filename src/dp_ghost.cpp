@@ -2,7 +2,7 @@
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
 *                                                                         *
-* Copyright (c) 2022 Goma Developers, National Technology & Engineering   *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
 *               Solutions of Sandia, LLC (NTESS)                          *
 *                                                                         *
 * Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
@@ -196,8 +196,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
       send_sizes[i][j] = sizes[j];
     }
 
-    MPI_Irecv(recv_sizes[i].data(), 3, MPI_INT, dpi->neighbor[i], 2500, goma_comm,
-              &requests[i]);
+    MPI_Irecv(recv_sizes[i].data(), 3, MPI_INT, dpi->neighbor[i], 2500, goma_comm, &requests[i]);
     MPI_Isend(send_sizes[i].data(), 3, MPI_INT, dpi->neighbor[i], 2500, goma_comm,
               &requests[dpi->num_neighbors + i]);
   }
@@ -775,8 +774,8 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
               goma_comm, &ss_requests[req_offset++]);
   }
   for (int i = 0; i < dpi->num_neighbors; i++) {
-    MPI_Isend(&num_send_sides[0], exo->num_side_sets, MPI_INT, dpi->neighbor[i], 210,
-              goma_comm, &ss_requests[req_offset++]);
+    MPI_Isend(&num_send_sides[0], exo->num_side_sets, MPI_INT, dpi->neighbor[i], 210, goma_comm,
+              &ss_requests[req_offset++]);
   }
   MPI_Waitall(req_offset, ss_requests.data(), MPI_STATUSES_IGNORE);
 
@@ -789,8 +788,8 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
       ss_neighbor_sides[i][ss].resize(num_recv_sides[i][ss]);
       MPI_Irecv(ss_neighbor_sides[i][ss].data(), num_recv_sides[i][ss], MPI_INT, dpi->neighbor[i],
                 211, goma_comm, &ss_requests[req_offset++]);
-      MPI_Isend(ss_sides[ss].data(), num_send_sides[ss], MPI_INT, dpi->neighbor[i], 211,
-                goma_comm, &ss_requests[req_offset++]);
+      MPI_Isend(ss_sides[ss].data(), num_send_sides[ss], MPI_INT, dpi->neighbor[i], 211, goma_comm,
+                &ss_requests[req_offset++]);
     }
   }
   MPI_Waitall(req_offset, ss_requests.data(), MPI_STATUSES_IGNORE);
@@ -802,8 +801,8 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
       ss_neighbor_elem[i][ss].resize(num_recv_sides[i][ss]);
       MPI_Irecv(ss_neighbor_elem[i][ss].data(), num_recv_sides[i][ss], MPI_INT, dpi->neighbor[i],
                 211, goma_comm, &ss_requests[req_offset++]);
-      MPI_Isend(ss_elems[ss].data(), num_send_sides[ss], MPI_INT, dpi->neighbor[i], 211,
-                goma_comm, &ss_requests[req_offset++]);
+      MPI_Isend(ss_elems[ss].data(), num_send_sides[ss], MPI_INT, dpi->neighbor[i], 211, goma_comm,
+                &ss_requests[req_offset++]);
     }
   }
   MPI_Waitall(req_offset, ss_requests.data(), MPI_STATUSES_IGNORE);

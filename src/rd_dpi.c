@@ -2,7 +2,7 @@
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
 *                                                                         *
-* Copyright (c) 2022 Goma Developers, National Technology & Engineering   *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
 *               Solutions of Sandia, LLC (NTESS)                          *
 *                                                                         *
 * Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
@@ -365,8 +365,8 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
 
     for (int i = 0; i < d->num_neighbors; i++) {
       global_send_nodes[i] = malloc(sizeof(int) * num_send_nodes[i]);
-      MPI_Irecv(global_send_nodes[i], num_send_nodes[i], MPI_INT, d->neighbor[i], 207,
-                goma_comm, &requests[d->num_neighbors + i]);
+      MPI_Irecv(global_send_nodes[i], num_send_nodes[i], MPI_INT, d->neighbor[i], 207, goma_comm,
+                &requests[d->num_neighbors + i]);
       // printf("Proc %d recv from Proc %d tag %d", d->neighbor[i], ProcID, 207);
     }
 
@@ -379,8 +379,8 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
           global_recv_nodes[i][recv_index++] = d->node_index_global[local_node];
         }
       }
-      MPI_Isend(global_recv_nodes[i], num_recv_nodes[i], MPI_INT, d->neighbor[i], 207,
-                goma_comm, &requests[i]);
+      MPI_Isend(global_recv_nodes[i], num_recv_nodes[i], MPI_INT, d->neighbor[i], 207, goma_comm,
+                &requests[i]);
       // printf("Proc %d sending to Proc %d tag %d", ProcID, d->neighbor[i], 207);
     }
 

@@ -1,3 +1,17 @@
+/************************************************************************ *
+* Goma - Multiphysics finite element software                             *
+* Sandia National Laboratories                                            *
+*                                                                         *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
+*               Solutions of Sandia, LLC (NTESS)                          *
+*                                                                         *
+* Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
+* certain rights in this software.                                        *
+*                                                                         *
+* This software is distributed under the GNU General Public License.      *
+* See LICENSE file.                                                       *
+\************************************************************************/
+
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -220,8 +234,7 @@ extern "C" goma_error find_current_distances(Exo_DB *exo,
     size_t max_count = 0;
     std::vector<size_t> global_counts(dpi->num_proc);
     MPI_Allreduce(&my_count, &max_count, 1, MPI_UINT64_T, MPI_MAX, goma_comm);
-    MPI_Allgather(&my_count, 1, MPI_UINT64_T, &proc_node_counts[0], 1, MPI_UINT64_T,
-                  goma_comm);
+    MPI_Allgather(&my_count, 1, MPI_UINT64_T, &proc_node_counts[0], 1, MPI_UINT64_T, goma_comm);
     size_t total_count = 0;
     for (size_t i = 0; i < proc_node_counts.size(); i++) {
       total_count += proc_node_counts[i];

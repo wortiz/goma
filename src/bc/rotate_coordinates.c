@@ -1,3 +1,17 @@
+/************************************************************************ *
+* Goma - Multiphysics finite element software                             *
+* Sandia National Laboratories                                            *
+*                                                                         *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
+*               Solutions of Sandia, LLC (NTESS)                          *
+*                                                                         *
+* Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
+* certain rights in this software.                                        *
+*                                                                         *
+* This software is distributed under the GNU General Public License.      *
+* See LICENSE file.                                                       *
+\************************************************************************/
+
 #include "bc/rotate_coordinates.h"
 
 #include <assert.h>
@@ -329,10 +343,9 @@ goma_error exchange_neighbor_ss_edges(Exo_DB *exo, Dpi *dpi) {
     for (int j = 0; j < dpi->num_side_sets_global; j++) {
       int n_sides = recv_sides[i * dpi->num_side_sets_global + j];
       if (n_sides > 0) {
-        GOMA_CHECK_MPI_ERROR(MPI_Irecv(recv_nodes_per_side[i * dpi->num_side_sets_global + j],
-                                       n_sides, MPI_INT, dpi->neighbor[i],
-                                       104 + j + dpi->neighbor[i], goma_comm,
-                                       &(requests[req_count++])));
+        GOMA_CHECK_MPI_ERROR(MPI_Irecv(
+            recv_nodes_per_side[i * dpi->num_side_sets_global + j], n_sides, MPI_INT,
+            dpi->neighbor[i], 104 + j + dpi->neighbor[i], goma_comm, &(requests[req_count++])));
         // printf("-2 Proc %d IRECV %d fr %d size %d\n", ProcID, 204 + j + dpi->neighbor[i],
         // dpi->neighbor[i], dpi->num_side_sets_global);
       }

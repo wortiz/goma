@@ -2,7 +2,7 @@
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
 *                                                                         *
-* Copyright (c) 2022 Goma Developers, National Technology & Engineering   *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
 *               Solutions of Sandia, LLC (NTESS)                          *
 *                                                                         *
 * Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
@@ -41,7 +41,7 @@ static char *cvs_solnonlin_id =
 #include <mpi.h>
 #else
 #if !defined(MPI) && !defined(DLB)
-#define MPI_Comm       int
+#define MPI_Comm  int
 #define goma_comm 0
 #else
 #include <mpi.h>

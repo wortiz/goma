@@ -2,7 +2,7 @@
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
 *                                                                         *
-* Copyright (c) 2022 Goma Developers, National Technology & Engineering   *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
 *               Solutions of Sandia, LLC (NTESS)                          *
 *                                                                         *
 * Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
@@ -490,8 +490,7 @@ void initialize_particles(const Exo_DB *exo,
         memset(local_number_created, 0, Num_Proc * sizeof(int));
         local_number_created[0] = number_to_create[0] - rejection;
         MPI_Barrier(goma_comm);
-        MPI_Reduce(local_number_created, number_created, Num_Proc, MPI_INT, MPI_SUM, 0,
-                   goma_comm);
+        MPI_Reduce(local_number_created, number_created, Num_Proc, MPI_INT, MPI_SUM, 0, goma_comm);
 
         for (i = 0; i < Num_Proc; i++) {
           creation_count += number_created[i];
@@ -519,8 +518,7 @@ void initialize_particles(const Exo_DB *exo,
         memset(local_number_created, 0, Num_Proc * sizeof(int));
         local_number_created[ProcID] = number_to_create[ProcID] - rejection;
         MPI_Barrier(goma_comm);
-        MPI_Reduce(local_number_created, number_created, Num_Proc, MPI_INT, MPI_SUM, 0,
-                   goma_comm);
+        MPI_Reduce(local_number_created, number_created, Num_Proc, MPI_INT, MPI_SUM, 0, goma_comm);
       }
     }
     DPRINTF(stdout, "    total R = %d, ", rejection_count);
@@ -1456,8 +1454,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
               fflush(stderr);
             */
             memcpy(&send_p, p, sizeof(particle_t));
-            mpi_retval = MPI_Send(&send_p, sizeof(particle_t), MPI_BYTE, p->owning_proc_id, 0,
-                                  goma_comm);
+            mpi_retval =
+                MPI_Send(&send_p, sizeof(particle_t), MPI_BYTE, p->owning_proc_id, 0, goma_comm);
             if (mpi_retval != MPI_SUCCESS) {
               fprintf(stderr, "Proc %d failed on particle send (%d).\n", ProcID, mpi_retval);
               exit(-1);
@@ -1473,8 +1471,7 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
                 fprintf(stderr, "Proc %d is sending the TERMINATION_MARKER to proc %d\n", i, j);
                 fflush(stderr);
               */
-              mpi_retval =
-                  MPI_Send(&termination_p, sizeof(particle_t), MPI_BYTE, j, 0, goma_comm);
+              mpi_retval = MPI_Send(&termination_p, sizeof(particle_t), MPI_BYTE, j, 0, goma_comm);
               if (mpi_retval != MPI_SUCCESS) {
                 fprintf(stderr, "Proc %d failed on TERMINATION_MARKER send (%d).\n", ProcID,
                         mpi_retval);
@@ -1630,10 +1627,8 @@ int compute_particles(const Exo_DB *exo,         /* mesh */
              goma_comm);
   MPI_Reduce(&local_max_newton_iterations, &max_newton_iterations, 1, MPI_INT, MPI_MAX, 0,
              goma_comm);
-  MPI_Reduce(&local_particle_transfers, &particle_transfers, 1, MPI_INT, MPI_SUM, 0,
-             goma_comm);
-  MPI_Reduce(&local_particle_accum_ust, &particle_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0,
-             goma_comm);
+  MPI_Reduce(&local_particle_transfers, &particle_transfers, 1, MPI_INT, MPI_SUM, 0, goma_comm);
+  MPI_Reduce(&local_particle_accum_ust, &particle_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0, goma_comm);
   MPI_Reduce(&local_output_accum_ust, &output_accum_ust, 1, MPI_DOUBLE, MPI_MAX, 0, goma_comm);
   communication_accum_ust += MAX((dbl)ust() - (dbl)temp_ust, 0.0);
   local_communication_accum_ust = communication_accum_ust;

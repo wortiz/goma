@@ -2,7 +2,7 @@
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
 *                                                                         *
-* Copyright (c) 2022 Goma Developers, National Technology & Engineering   *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
 *               Solutions of Sandia, LLC (NTESS)                          *
 *                                                                         *
 * Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
@@ -274,9 +274,8 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
    * Post receives for all messages
    */
   for (p = 0; p < num_neighbors; p++) {
-    retn =
-        MPI_Irecv((np_ptr->recv_message_buf), np_ptr->recv_message_length, MPI_BYTE,
-                  np_ptr->neighbor_ProcID, exchange_mtype, goma_comm, &(np_ptr->recv_request));
+    retn = MPI_Irecv((np_ptr->recv_message_buf), np_ptr->recv_message_length, MPI_BYTE,
+                     np_ptr->neighbor_ProcID, exchange_mtype, goma_comm, &(np_ptr->recv_request));
     if (retn != MPI_SUCCESS) {
       fprintf(stderr, "%s Proc %d: Irecv to %d failed post: %d\n", yo, ProcID,
               np_ptr->neighbor_ProcID, retn);
@@ -290,9 +289,8 @@ void exchange_neighbor_proc_info(int num_neighbors, COMM_NP_STRUCT *np_ptr)
    */
   np_ptr = np_base;
   for (p = 0; p < num_neighbors; p++) {
-    retn =
-        MPI_Isend(np_ptr->send_message_buf, np_ptr->send_message_length, MPI_BYTE,
-                  np_ptr->neighbor_ProcID, exchange_mtype, goma_comm, &(np_ptr->send_request));
+    retn = MPI_Isend(np_ptr->send_message_buf, np_ptr->send_message_length, MPI_BYTE,
+                     np_ptr->neighbor_ProcID, exchange_mtype, goma_comm, &(np_ptr->send_request));
     if (retn != MPI_SUCCESS) {
       fprintf(stderr, "%s Proc %d: Isend to %d failed post: %d\n", yo, ProcID,
               np_ptr->neighbor_ProcID, retn);

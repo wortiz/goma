@@ -2,7 +2,7 @@
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
 *                                                                         *
-* Copyright (c) 2022 Goma Developers, National Technology & Engineering   *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
 *               Solutions of Sandia, LLC (NTESS)                          *
 *                                                                         *
 * Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
@@ -1957,8 +1957,7 @@ int std_aug_cond(int iAC,
 #ifdef PARALLEL
     if (Num_Proc > 1) {
       MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
-      MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
-                    goma_comm);
+      MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
       inventory = global_inventory;
       LSvel_inventory = global_LSvel_inventory;
     }
@@ -2567,8 +2566,7 @@ static int estimate_dAC_ALC(
 #ifdef PARALLEL
       if (Num_Proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
-        MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
-                      goma_comm);
+        MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
         LSvel_inventory = global_LSvel_inventory;
       }
@@ -2675,8 +2673,7 @@ static int estimate_dAC_ALC(
 #ifdef PARALLEL
       if (Num_Proc > 1) {
         MPI_Allreduce(&inventory, &global_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
-        MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM,
-                      goma_comm);
+        MPI_Allreduce(&LSvel_inventory, &global_LSvel_inventory, 1, MPI_DOUBLE, MPI_SUM, goma_comm);
         inventory = global_inventory;
         LSvel_inventory = global_LSvel_inventory;
       }

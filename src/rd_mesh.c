@@ -1,9 +1,8 @@
-
 /************************************************************************ *
 * Goma - Multiphysics finite element software                             *
 * Sandia National Laboratories                                            *
 *                                                                         *
-* Copyright (c) 2022 Goma Developers, National Technology & Engineering   *
+* Copyright (c) Goma Developers, National Technology & Engineering        *
 *               Solutions of Sandia, LLC (NTESS)                          *
 *                                                                         *
 * Under the terms of Contract DE-NA0003525, the U.S. Government retains   *
@@ -700,10 +699,8 @@ void setup_old_exo(Exo_DB *e, Dpi *dpi, int num_proc) {
   unsigned long long num_local_elem = Num_Elem;
 
   if (num_proc > 1) {
-    MPI_Allreduce(&num_local_node, &num_global_node, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
-                  goma_comm);
-    MPI_Allreduce(&num_local_elem, &num_global_elem, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
-                  goma_comm);
+    MPI_Allreduce(&num_local_node, &num_global_node, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, goma_comm);
+    MPI_Allreduce(&num_local_elem, &num_global_elem, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, goma_comm);
   } else {
     num_global_elem = Num_Elem;
     num_global_node = Num_Node;
