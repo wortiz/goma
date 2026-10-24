@@ -34,6 +34,7 @@
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
+#include "mm_assembly.h"
 #include "mm_augc_util.h"
 #include "mm_eh.h"
 #include "mm_fill_ls.h"
@@ -7201,6 +7202,19 @@ void rd_solver_specs(FILE *ifp, char *input) {
     upd->SegregatedSubcycles = 1;
     ECHO("(Number of Segregated Subcycles = 1) (default)", echo_file);
   }
+  goma_assembly_backend assembly_backend = GOMA_ASSEMBLY_LEGACY;
+  iread = look_for_optional(ifp, "Assembly Backend", input, '=');
+  if (iread == 1) {
+    if (goma_assembly_backend_parse(input, &assembly_backend) != 0) {
+      GOMA_EH(GOMA_ERROR, "Assembly Backend should equal legacy or kokkos, instead found %s",
+              input);
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Assembly Backend = %s", input);
+    ECHO(echo_string, echo_file);
+  } else {
+    ECHO("(Assembly Backend = legacy) (default)", echo_file);
+  }
+  upd->AssemblyBackend = assembly_backend;
   upd->AutoDiff = 0;
   iread = look_for_optional(ifp, "Use AutoDiff Assembly", input, '=');
   if (iread == 1) {
@@ -7218,6 +7232,11 @@ void rd_solver_specs(FILE *ifp, char *input) {
   } else {
     upd->AutoDiff = 0;
     ECHO("(Use AutoDiff Assembly = no) (default)", echo_file);
+  }
+
+  const char *assembly_error = goma_assembly_backend_check(assembly_backend, upd->AutoDiff);
+  if (assembly_error != NULL) {
+    GOMA_EH(GOMA_ERROR, "%s", assembly_error);
   }
 
   /*IGBRK*/
@@ -14276,6 +14295,12 @@ void echo_compiler_settings(void) {
   fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_APREPRO_LIB", "yes");
 #else
   fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_APREPRO_LIB", "no");
+#endif
+
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_KOKKOS_ASSEMBLY", "yes");
+#else
+  fprintf(echo_file, "%-30s= %s\n", "GOMA_ENABLE_KOKKOS_ASSEMBLY", "no");
 #endif
 
 #ifdef GOMA_ENABLE_SACADO

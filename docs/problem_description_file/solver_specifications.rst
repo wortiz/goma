@@ -64,6 +64,7 @@ report by Schunk, et al. (2002) for an overview and further usage tips.
    solver_specifications/pressure_stabilization_lagged_tau
    solver_specifications/supg_disable_tau_sens
    solver_specifications/supg_lagged_tau
+   solver_specifications/assembly_backend
    solver_specifications/use_autodiff_assembly
    solver_specifications/linear_stability
    solver_specifications/filter_concentration

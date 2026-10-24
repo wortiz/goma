@@ -922,6 +922,7 @@ struct Uniform_Problem_Description {
   turbulent_information *turbulent_info;
   int strong_bc_replace;
   dbl strong_penalty;
+  int AssemblyBackend; /* goma_assembly_backend; zero selects legacy assembly */
   int AutoDiff;
   int disable_pspg_tau_sensitivities;
   int pspg_lagged_tau;

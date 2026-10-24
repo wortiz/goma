@@ -7,7 +7,13 @@ enable_language(CXX)
 enable_language(Fortran)
 
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+option(ENABLE_KOKKOS_ASSEMBLY "Enable experimental Kokkos assembly infrastructure" OFF)
+if(ENABLE_KOKKOS_ASSEMBLY)
+  set(CMAKE_CXX_STANDARD 20)
+else()
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${goma_SOURCE_DIR}/cmake")
@@ -184,6 +190,18 @@ if(${epetra_package_index} GREATER_EQUAL 0)
     message(STATUS "TRILINOS: Epetra found, enabling in Goma")
     list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_EPETRA)
   endif()
+endif()
+
+if(ENABLE_KOKKOS_ASSEMBLY)
+  foreach(required_package Kokkos Tpetra Stratimikos)
+    if(NOT required_package IN_LIST Trilinos_PACKAGE_LIST)
+      message(FATAL_ERROR "Kokkos assembly requires Trilinos with ${required_package}")
+    endif()
+  endforeach()
+  if(NOT ENABLE_TPETRA OR NOT ENABLE_STRATIMIKOS)
+    message(FATAL_ERROR "Kokkos assembly requires ENABLE_TPETRA and ENABLE_STRATIMIKOS")
+  endif()
+  list(APPEND GOMA_COMPILE_DEFINITIONS GOMA_ENABLE_KOKKOS_ASSEMBLY)
 endif()
 
 # Exodus
@@ -556,6 +574,7 @@ set(GOMA_INCLUDES
     include/mm_as_const.h
     include/mm_as.h
     include/mm_as_structs.h
+    include/mm_assembly.h
     include/mm_augc_util.h
     include/mm_bc.h
     include/mm_chemkin.h
@@ -725,6 +744,7 @@ set(GOMA_SOURCES
     src/md_ieee.c
     src/md_timer.c
     src/metis_decomp.c
+    src/mm_assembly.c
     src/mm_as_alloc.c
     src/mm_augc_util.c
     src/mm_bc.c

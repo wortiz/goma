@@ -28,6 +28,21 @@ include(Catch)
 catch_discover_tests(goma_unit_tests)
 catch_discover_tests(goma_solver_unit_tests)
 
+# Exercise both build-time diagnostic paths without linking the solver.
+foreach(backend_mode legacy kokkos)
+  add_executable(goma_assembly_${backend_mode}_tests assembly/backend.cpp
+                 ${PROJECT_SOURCE_DIR}/src/mm_assembly.c)
+  target_include_directories(goma_assembly_${backend_mode}_tests PRIVATE
+                             ${PROJECT_SOURCE_DIR}/include)
+  target_link_libraries(goma_assembly_${backend_mode}_tests PRIVATE Catch2::Catch2WithMain)
+  if(backend_mode STREQUAL "kokkos")
+    target_compile_definitions(goma_assembly_${backend_mode}_tests PRIVATE
+                               GOMA_ENABLE_KOKKOS_ASSEMBLY)
+  endif()
+  catch_discover_tests(goma_assembly_${backend_mode}_tests TEST_PREFIX "${backend_mode}:")
+endforeach()
+
+
 # Runs goma several times in one process through goma.h
 add_executable(goma_lib_sequence library/goma_lib_sequence.c)
 target_link_libraries(goma_lib_sequence goma_library)
