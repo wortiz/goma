@@ -18,6 +18,10 @@
 #include <iostream>
 #include <mpi.h>
 
+#ifdef GOMA_KOKKOS_UNIT_TESTS
+#include "mm_kokkos_assembly.h"
+#endif
+
 extern "C" {
 #ifdef GOMA_UNIT_TESTS_LINK_GOMA
 /* defined by libgoma */
@@ -51,7 +55,20 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+#ifdef GOMA_KOKKOS_UNIT_TESTS
+  if (goma_kokkos_runtime_initialize() != GOMA_KOKKOS_SUCCESS) {
+    MPI_Finalize();
+    return -1;
+  }
+#endif
+
   int result = Catch::Session().run(argc, argv);
+
+#ifdef GOMA_KOKKOS_UNIT_TESTS
+  if (goma_kokkos_runtime_finalize() != GOMA_KOKKOS_SUCCESS) {
+    result = -1;
+  }
+#endif
 
   // global clean-up...
   MPI_Finalize();

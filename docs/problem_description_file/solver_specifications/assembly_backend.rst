@@ -56,6 +56,39 @@ uses the full symmetric gradient; dilational-viscosity corrections are outside
 this initial subset.
 
 These expressions are tested independently, including through Kokkos launches.
-Element geometry, Q2/Q1 interpolation, constraints, global matrix scatter,
-complete-system capability checks, and end-to-end flow qualification remain
-to be implemented. Expression availability does not enable the input option.
+
+Q2/Q1 element evaluation
+------------------------
+
+The internal element evaluator supports 9-node quadrilaterals and 27-node
+hexahedra with Q2 velocity, Q1 pressure on the corner nodes, and isoparametric
+Q2 geometry. It preserves Goma's node ordering and uses the same 3-point
+Gauss rule in each reference direction. Fixed geometry setup precomputes
+physical basis gradients, quadrature positions, and weighted determinants.
+Nonfinite geometry and nonpositive determinants at quadrature points invalidate
+the element.
+
+Each element is evaluated by one Kokkos team. Quadrature states are interpolated
+into shared team storage before parallel evaluation of the local rows. Residual
+requests allocate no local matrix; Jacobian requests omit residual storage;
+combined requests reuse interpolation and quadrature data. Explicit
+linearization uses the supplied time-derivative coefficient. The local ordering
+is component-major velocity DOFs followed by the corner pressure DOFs; a future
+host adapter must map this ordering to the existing solver DOFs.
+
+Results contain one status per element. Invalid material data, nonfinite
+solution fields, and nonfinite contributions are reported through that status.
+An element with nonzero status must be discarded in its entirety, including
+any partial values. Launches are asynchronous: callers must retain input and
+output Views and keep the runtime alive until completion. Results can be
+inspected after a fence or a host mirror copy.
+
+Basis and quadrature values are compared with the production legacy routines.
+Regular and distorted element Jacobians are checked against centered finite
+differences, perturbing time derivatives consistently. These checks do not yet
+establish parity with the full legacy assembly implementation.
+
+The evaluator currently produces unconstrained local element contributions.
+Constraints, global matrix scatter, complete-system capability checks, and
+end-to-end flow qualification remain to be implemented. The input option stays
+unavailable until those integration checks pass.
