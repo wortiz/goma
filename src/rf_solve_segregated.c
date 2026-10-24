@@ -1402,8 +1402,6 @@ solve_problem_segregated_advance_steps(Exo_DB *exo, Dpi *dpi, int num_steps, con
       printf("Failed to solve steady state.");
     }
     return TRUE;
-
-    return TRUE;
   } /* if(steady) */
 
   /********************************************************************************

@@ -417,6 +417,9 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
   noahs_raven();
 
   MPI_Bcast(MPI_BOTTOM, 1, Noahs_Raven->new_type, 0, goma_comm);
+  /* MPI_Type_commit() allocated the type, free it now that it has been sent so a run that
+   * stops early does not leak it */
+  MPI_Type_free(&(Noahs_Raven->new_type));
 
 #endif
 
@@ -443,6 +446,7 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
 
   noahs_ark();
   MPI_Bcast(MPI_BOTTOM, 1, Noahs_Ark->new_type, 0, goma_comm);
+  MPI_Type_free(&(Noahs_Ark->new_type));
 
   /*
    * Chemkin was initialized on processor zero during the input file
@@ -464,6 +468,7 @@ int goma_create(goma_context **ctx_out, MPI_Comm comm, int argc, char **argv) {
 
   noahs_dove();
   MPI_Bcast(MPI_BOTTOM, 1, Noahs_Dove->new_type, 0, goma_comm);
+  MPI_Type_free(&(Noahs_Dove->new_type));
 
 #endif /* End of ifdef PARALLEL */
 
@@ -560,18 +565,6 @@ int goma_setup(goma_context *ctx) {
   if (error < 0) {
     return (-1);
   }
-
-  /*
-   * All of the MPI_Type_commit() calls called behind the scenes that build
-   * the dove, ark and raven really allocated memory. Let's free it up now that
-   * the initial information has been communicated.
-   */
-
-#ifdef PARALLEL
-  MPI_Type_free(&(Noahs_Raven->new_type));
-  MPI_Type_free(&(Noahs_Ark->new_type));
-  MPI_Type_free(&(Noahs_Dove->new_type));
-#endif
 
   /*
    * Setup the rest of the Problem Description structure that depends on
@@ -688,9 +681,10 @@ int goma_setup(goma_context *ctx) {
     int imtrx;
     for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
       cx[imtrx] = alloc_struct_1(Comm_Ex, DPI_ptr->num_neighbors);
-      Request = alloc_struct_1(MPI_Request, Num_Requests * DPI_ptr->num_neighbors);
-      Status = alloc_struct_1(MPI_Status, Num_Requests * DPI_ptr->num_neighbors);
     }
+    /* shared by the exchanges of all matrices */
+    Request = alloc_struct_1(MPI_Request, Num_Requests * DPI_ptr->num_neighbors);
+    Status = alloc_struct_1(MPI_Status, Num_Requests * DPI_ptr->num_neighbors);
   }
 #endif
 

@@ -545,7 +545,7 @@ void globals_free_globals(void) {
   }
   free(cx);
   free(GomaPetscOptions);
-  /* the MPI types were already freed after the broadcast in goma_setup */
+  /* the MPI types were already freed after their broadcasts in goma_create */
   free_ddd_members(Noahs_Raven);
   free_ddd_members(Noahs_Ark);
   free_ddd_members(Noahs_Dove);
