@@ -278,6 +278,19 @@ any subset of those processes can use it, and ``goma_library_finalize`` calls
 the ``.petscrc`` and ``petscrc`` files of the current directory when it is
 initialized, as ``PetscInitialize`` always does.
 
+With ``ENABLE_KOKKOS_ASSEMBLY=ON``, ``goma_library_initialize`` also starts a
+Kokkos runtime session. If the host already initialized Kokkos, *Goma* borrows
+it and leaves it initialized at ``goma_library_finalize``. Otherwise *Goma*
+initializes Kokkos and finalizes it after its last context has been destroyed.
+Sequential Goma contexts share this runtime; destroying one context does not
+finalize it. The host must keep a borrowed runtime alive until after all Goma
+contexts are destroyed and ``goma_library_finalize`` has returned.
+
+Kokkos cannot be initialized again after finalization. A second Goma library
+session therefore requires a host-owned runtime that is kept initialized
+across both sessions. Initialization fails if Kokkos has already been finalized.
+This runtime support does not yet enable Kokkos flow assembly.
+
 Each run reads the ``.petscrc`` and ``petscrc`` files in its directory and the
 ``-petsc`` command-line option, as a standalone ``goma`` run does.
 ``goma_destroy`` restores the options that the run set to their previous

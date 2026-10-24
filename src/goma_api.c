@@ -70,6 +70,9 @@ extern void handle_ieee(void);
 #include "mm_eh.h"
 #include "mm_elem_block_structs.h"
 #include "mm_input.h"
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+#include "mm_kokkos_assembly.h"
+#endif
 #include "mm_prob_def.h"
 #include "rd_dpi.h"
 #include "rd_exo.h"
@@ -173,6 +176,14 @@ int goma_library_initialize(MPI_Comm comm) {
     return -1;
   }
 #endif
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  if (goma_kokkos_runtime_initialize() != GOMA_KOKKOS_SUCCESS) {
+#ifdef GOMA_ENABLE_PETSC
+    goma_petsc_finalize();
+#endif
+    return -1;
+  }
+#endif
 #ifdef GOMA_CHECK_GLOBAL_RESET
   goma_reset_check_snapshot();
 #endif
@@ -186,8 +197,19 @@ int goma_library_finalize(void) {
   if (!goma_library_initialized || goma_context_active) {
     return -1;
   }
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  /* Leave dependent libraries usable if assembly contexts still own Views. */
+  if (goma_kokkos_runtime_check_finalize() != GOMA_KOKKOS_SUCCESS) {
+    return -1;
+  }
+#endif
 #ifdef GOMA_ENABLE_PETSC
   goma_petsc_finalize();
+#endif
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  if (goma_kokkos_runtime_finalize() != GOMA_KOKKOS_SUCCESS) {
+    return -1;
+  }
 #endif
   goma_library_initialized = false;
   return 0;

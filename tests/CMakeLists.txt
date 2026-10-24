@@ -42,6 +42,18 @@ foreach(backend_mode legacy kokkos)
   catch_discover_tests(goma_assembly_${backend_mode}_tests TEST_PREFIX "${backend_mode}:")
 endforeach()
 
+if(ENABLE_KOKKOS_ASSEMBLY)
+  add_executable(goma_kokkos_runtime_tests assembly/kokkos_runtime.cpp
+                 ${PROJECT_SOURCE_DIR}/src/mm_kokkos_assembly.cpp)
+  target_include_directories(goma_kokkos_runtime_tests PRIVATE ${PROJECT_SOURCE_DIR}/include)
+  target_link_libraries(goma_kokkos_runtime_tests PRIVATE Catch2::Catch2 Kokkos::kokkos)
+  # A process may initialize Kokkos only once; exercise ownership modes separately.
+  add_test(NAME goma_kokkos_runtime_owned COMMAND goma_kokkos_runtime_tests)
+  add_test(NAME goma_kokkos_runtime_borrowed COMMAND goma_kokkos_runtime_tests --borrow-runtime)
+  add_test(NAME goma_kokkos_runtime_finalized COMMAND goma_kokkos_runtime_tests --finalized-runtime)
+  set_tests_properties(goma_kokkos_runtime_owned goma_kokkos_runtime_borrowed
+                       goma_kokkos_runtime_finalized PROPERTIES LABELS "assembly;kokkos")
+endif()
 
 # Runs goma several times in one process through goma.h
 add_executable(goma_lib_sequence library/goma_lib_sequence.c)

@@ -29,7 +29,13 @@ int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
 #endif
 
-  goma_library_initialize(MPI_COMM_WORLD);
+  error = goma_library_initialize(MPI_COMM_WORLD);
+  if (error != 0) {
+#ifdef PARALLEL
+    MPI_Finalize();
+#endif
+    return error;
+  }
   /* the executable owns MPI, so fatal errors may finalize it */
   Goma_Owns_MPI = TRUE;
 

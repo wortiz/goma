@@ -17,6 +17,8 @@ two enabled in Goma. Legacy-only builds continue to use C++17 and C11.
 The initial infrastructure does not yet implement flow assembly kernels.
 Selecting ``kokkos`` therefore reports an error before assembly, including in
 an enabled build. It never falls back to legacy assembly. Kokkos with
-``Use AutoDiff Assembly = yes`` is also unavailable. Runtime ownership,
-capability checks for individual physics, and numerical qualification will be
-added with the assembly implementation.
+``Use AutoDiff Assembly = yes`` is also unavailable. Enabled builds initialize Kokkos for the Goma library lifetime, borrowing an
+already initialized host runtime when present. Assembly contexts own device
+error storage and must be destroyed before finalization. Flow kernels,
+capability checks for individual physics, and numerical qualification remain
+unavailable.

@@ -864,6 +864,12 @@ set(GOMA_SOURCES
     src/brkfix/setup_fix_data.cpp
     src/brkfix/fix_exo_file.c)
 
+if(ENABLE_KOKKOS_ASSEMBLY)
+  list(APPEND GOMA_SOURCES src/mm_kokkos_assembly.cpp)
+  list(APPEND GOMA_INCLUDES include/mm_kokkos_assembly.h)
+  set_source_files_properties(src/mm_kokkos_assembly.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+endif()
+
 set(GOMA_USER_INCLUDES
     include/user_bc.h
     include/user_continuation.h

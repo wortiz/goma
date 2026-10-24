@@ -49,7 +49,9 @@ typedef struct goma_context goma_context;
 
 /* Call once per process after MPI_Init, before any other goma_* function,
  * collective over comm, which holds every process that may run a problem.
- * Initializes PETSc on a duplicate of comm unless the host initialized it. */
+ * Initializes PETSc on a duplicate of comm unless the host initialized it.
+ * ENABLE_KOKKOS_ASSEMBLY builds also initialize Kokkos unless already initialized;
+ * the runtime spans all Goma contexts until goma_library_finalize. */
 int goma_library_initialize(MPI_Comm comm);
 
 /* Finalizes third-party libraries initialized by Goma (never MPI),
