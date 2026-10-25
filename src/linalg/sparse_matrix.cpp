@@ -21,9 +21,9 @@
 #endif
 #ifdef GOMA_ENABLE_EPETRA
 #include "linalg/sparse_matrix_epetra.h"
+#endif
 #ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
 #include "mm_kokkos_legacy.h"
-#endif
 #endif
 
 extern "C" {

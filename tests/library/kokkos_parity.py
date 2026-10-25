@@ -69,6 +69,40 @@ STRATIMIKOS = """<ParameterList>
 </ParameterList>
 """
 
+# Iterative solves stop well below the parity tolerance so Newton histories still match.
+STRATIMIKOS_GMRES_ILUT = """<ParameterList>
+  <Parameter name="Linear Solver Type" type="string" value="Belos"/>
+  <ParameterList name="Linear Solver Types">
+    <ParameterList name="Belos">
+      <Parameter name="Solver Type" type="string" value="Pseudo Block GMRES"/>
+      <ParameterList name="Solver Types">
+        <ParameterList name="Pseudo Block GMRES">
+          <Parameter name="Num Blocks" type="int" value="200"/>
+          <Parameter name="Maximum Iterations" type="int" value="1000"/>
+          <Parameter name="Maximum Restarts" type="int" value="10"/>
+          <Parameter name="Convergence Tolerance" type="double" value="1e-13"/>
+        </ParameterList>
+      </ParameterList>
+      <ParameterList name="VerboseObject">
+        <Parameter name="Verbosity Level" type="string" value="none"/>
+      </ParameterList>
+    </ParameterList>
+  </ParameterList>
+  <Parameter name="Preconditioner Type" type="string" value="Ifpack2"/>
+  <ParameterList name="Preconditioner Types">
+    <ParameterList name="Ifpack2">
+      <Parameter name="Prec Type" type="string" value="ILUT"/>
+      <ParameterList name="Ifpack2 Settings">
+        <Parameter name="fact: ilut level-of-fill" type="double" value="2"/>
+        <Parameter name="fact: drop tolerance" type="double" value="0"/>
+        <!-- Zero continuity diagonals: perturb pivots instead of producing NaN. -->
+        <Parameter name="fact: absolute threshold" type="double" value="1e-4"/>
+      </ParameterList>
+    </ParameterList>
+  </ParameterList>
+</ParameterList>
+"""
+
 
 def walls(dim, sets, components=None):
     names = ["U", "V", "W"][:dim]
@@ -77,7 +111,8 @@ def walls(dim, sets, components=None):
 
 CASES = [
     {
-        # Re = 100 lid, residual-mode lid condition, backtracking line search.
+        # Re = 100 lid, residual-mode lid condition, backtracking line search with
+        # Belos GMRES and Ifpack2 ILUT(2) through Stratimikos.
         "name": "cavity2d_distorted",
         "mesh": "cavity2d_distorted.exoII",
         "dim": 2,
@@ -85,6 +120,7 @@ CASES = [
         "viscosity": 0.01,
         "bcs": walls(2, [1, 2, 4]) + ["BC = U NS 3 1. 1.", "BC = V NS 3 0."],
         "solver": ["Newton line search type          = BACKTRACK"],
+        "stratimikos": STRATIMIKOS_GMRES_ILUT,
     },
     {
         # Plane Poiseuille flow driven by a body force; V = 0 on the ends removes
@@ -284,7 +320,9 @@ def main():
                     source=case.get("source", "0. 0. 0."),
                 )
             )
-            (directory / "stratimikos.xml").write_text(STRATIMIKOS)
+            (directory / "stratimikos.xml").write_text(
+                case.get("stratimikos", STRATIMIKOS)
+            )
             if runs:
                 command.append("--")
             command += [

@@ -183,9 +183,10 @@ extern "C" goma_error g_tpetra_row_sum_scaling(GomaSparseMatrix matrix, double *
   auto n_rows = tmp->matrix->getLocalNumRows();
 
   using crs_t = Tpetra::CrsMatrix<double, LO, GO>;
-  typename crs_t::local_inds_host_view_type indices;
-  typename crs_t::values_host_view_type values;
   for (size_t i = 0; i < n_rows; i++) {
+    // Host row views must not outlive the loop; leftScale needs device access on GPU builds.
+    typename crs_t::local_inds_host_view_type indices;
+    typename crs_t::values_host_view_type values;
     tmp->matrix->getLocalRowView(i, indices, values);
     double row_sum = 0;
     for (size_t j = 0; j < values.size(); j++) {

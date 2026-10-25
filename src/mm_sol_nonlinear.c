@@ -269,7 +269,6 @@ assemble_prefill(struct GomaLinearSolverData *ams, double x[], Exo_DB *exo, Dpi 
 
 */
 
-#ifdef GOMA_ENABLE_AZTEC
 static void update_problem_unknowns(int line_search_type,
                                     Dpi *dpi,
                                     Comm_Ex *cx,
@@ -333,7 +332,6 @@ static void update_problem_unknowns_dot(int line_search_type,
   }
   exchange_dof(cx, dpi, xdot, pg->imtrx);
 }
-#endif
 
 /*
  * Perform backtracking line search algorithm.
@@ -366,11 +364,6 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
                                          int line_search_type,
                                          dbl *damp_factor,
                                          dbl *damp_factor_mesh) {
-#ifndef GOMA_ENABLE_AZTEC
-  GOMA_EH(GOMA_ERROR, "Newton Line Search with Backtracking requires Aztec");
-  return -1;
-#else
-
   int *variable_types = NULL;
 
   if (line_search_type == NLS_BACKTRACK_MESH) {
@@ -441,16 +434,19 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
   dbl best_norm = g_check;
   r_check = 0.5 * (r_check * r_check);
   dbl slope = 0;
-  if (strcmp(Matrix_Format, "msr") == 0) {
+  if (strcmp(Matrix_Format, "tpetra") == 0) {
+    GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
+    matrix->matrix_vector_mult(matrix, delta_x, w);
+#ifdef GOMA_ENABLE_AZTEC
+  } else if (strcmp(Matrix_Format, "msr") == 0) {
     AZ_MATRIX *Amat = AZ_matrix_create(ams->data_org[AZ_N_internal] + ams->data_org[AZ_N_border]);
     AZ_set_MSR(Amat, ams->bindx, ams->val, ams->data_org, 0, NULL, AZ_LOCAL);
     AZ_MSR_matvec_mult(delta_x, w, Amat, ams->proc_config);
     AZ_matrix_destroy(&Amat);
-  } else if (strcmp(Matrix_Format, "tpetra") == 0) {
-    GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
-    matrix->matrix_vector_mult(matrix, delta_x, w);
+#endif
   } else {
-    GOMA_EH(GOMA_ERROR, "Newton Line Search with Backtracking requires MSR matrix format");
+    GOMA_EH(GOMA_ERROR,
+            "Newton Line Search with Backtracking requires MSR or Tpetra matrix format");
   }
   for (int j = 0; j < numProcUnknowns; j++) {
     slope += w[j] * R[j];
@@ -593,7 +589,6 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
 
   return err;
 
-#endif
 }
 
 /* solve_nonlinear_problem() state kept between calls */

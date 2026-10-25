@@ -533,7 +533,8 @@ TEST_CASE("Legacy context setup rejects one-rank failures collectively and is re
   LegacyContextFixture<2> fixture(true);
   ContextHandle context;
   auto rejected = [&](const std::string &text) {
-    INFO("expected error containing: " << text);
+    // INFO inside this lambda hangs nvcc 13.0 (cudafe++); CAPTURE reports the same text.
+    CAPTURE(text);
     REQUIRE_THROWS_AS(setup_legacy_context(context.value, fixture.legacy.input(), fixture.wrapper),
                       std::invalid_argument);
     const std::string error = goma_kokkos_context_last_error(context.value);

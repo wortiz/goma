@@ -211,6 +211,8 @@ void launch_elements(const ElementGeometry<Dim> &geometry,
         const int element = team.league_rank();
         const auto fluid = materials(element);
         const auto flow = expressions(element);
+        // nvcc rejects extended lambdas whose first capture is inside if constexpr.
+        const double coefficient = time_coefficient;
         Kokkos::single(Kokkos::PerTeam(team), [&]() {
           int status = geometry.status(element);
           if (status == 0) {
@@ -255,7 +257,7 @@ void launch_elements(const ElementGeometry<Dim> &geometry,
                 const auto increment =
                     column < Topology::velocity_dofs
                         ? velocity_increment(point.velocity[column % Topology::velocity_nodes],
-                                             column / Topology::velocity_nodes, time_coefficient)
+                                             column / Topology::velocity_nodes, coefficient)
                         : pressure_increment(point.pressure[column - Topology::velocity_dofs]);
                 const auto tangent = fluid.linearize(state, increment);
                 entries[column] +=

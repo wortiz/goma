@@ -245,6 +245,23 @@ Complete the remaining integration in this order:
    OpenMP, and CUDA configurations, measure assembly/transfers/solve separately,
    then add bounded-storage Sacado Jacobians using the existing residuals.
 
+   **CUDA (in progress, 2026-10-25).** Built against Trilinos 17.2.1 (Kokkos
+   Serial/OpenMP/CUDA, `BLACKWELL120`, CUDA 13.0, no Epetra/Aztec) on an RTX 5070,
+   with `nvcc_wrapper` as the C++ compiler and explicit `MPI_<lang>_COMPILER`
+   wrappers. A Kokkos Tools kernel logger confirmed that geometry, element,
+   Dirichlet, gather, and Tpetra scatter kernels run on `Cuda` on one and two
+   ranks. Fixes needed: Epetra-independent include of `mm_kokkos_legacy.h`; no
+   first capture inside `if constexpr` in extended lambdas; linking cuSOLVER and
+   cuSPARSE for Tacho; releasing host row views before `leftScale` in
+   `g_tpetra_row_sum_scaling` (affected legacy assembly on GPU Tpetra as well);
+   and avoiding a Catch2 `INFO` in a lambda that hangs `cudafe++`. Backtracking
+   line search no longer requires Aztec for Tpetra matrices; only its MSR
+   matrix-vector product does. The line-search parity case now solves with Belos
+   GMRES and Ifpack2 ILUT (level-of-fill 2, absolute threshold 1e-4 for the zero
+   continuity diagonals) through Stratimikos. All nine Kokkos tests pass on CUDA,
+   including `goma_kokkos_parity` with 63 fill and 6 solution comparisons and
+   matching Newton histories. Timings and OpenMP/Threads remain unqualified.
+
 Existing checks cover Serial expression/element execution, one/two-rank scatter,
 legacy-metadata context setup and evaluation, ungated 2D cavity solves matching
 legacy on two ranks, fill-by-fill and solution parity with legacy on distorted

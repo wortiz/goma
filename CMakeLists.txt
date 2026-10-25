@@ -25,9 +25,12 @@ message(STATUS "Trilinos_DIR = ${Trilinos_DIR}")
 find_package(Trilinos REQUIRED)
 # message(STATUS "Trilinos LD Flags = ${Trilinos_EXTRA_LD_FLAGS}")
 
-set(MPI_C_COMPILER ${Trilinos_C_COMPILER})
-set(MPI_CXX_COMPILER ${Trilinos_CXX_COMPILER})
-set(MPI_Fortran_COMPILER ${Trilinos_Fortran_COMPILER})
+# CUDA Trilinos builds report nvcc_wrapper as their C++ compiler, so allow explicit MPI wrappers
+foreach(lang C CXX Fortran)
+  if(NOT MPI_${lang}_COMPILER)
+    set(MPI_${lang}_COMPILER ${Trilinos_${lang}_COMPILER})
+  endif()
+endforeach()
 message(STATUS "MPI_C_COMPILER: ${MPI_C_COMPILER}")
 message(STATUS "MPI_CXX_COMPILER: ${MPI_CXX_COMPILER}")
 message(STATUS "MPI_Fortran_COMPILER: ${MPI_Fortran_COMPILER}")
@@ -1117,6 +1120,12 @@ endif()
 set(GOMA_TRILINOS_LIBRARIES ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES}
                             ${Trilinos_EXTRA_LD_FLAGS})
 # else() set(GOMA_TRILINOS_LIBRARIES Trilinos::all_libs) endif()
+# CUDA builds of Tacho reference cuSOLVER/cuSPARSE without recording them as dependencies, so
+# keep them even when the linker defaults to --as-needed. nvcc_wrapper moves linker options ahead
+# of all libraries, so the option cannot be scoped to these libraries.
+if(Kokkos_ENABLE_CUDA AND TARGET CUDA::cusolver)
+  list(APPEND GOMA_TRILINOS_LIBRARIES "-Wl,--no-as-needed" CUDA::cusolver CUDA::cusparse)
+endif()
 
 set(GOMA_TPL_LIBRARIES
     ${SEACASExodus_LIBRARIES}
