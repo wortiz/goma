@@ -260,7 +260,20 @@ Complete the remaining integration in this order:
    GMRES and Ifpack2 ILUT (level-of-fill 2, absolute threshold 1e-4 for the zero
    continuity diagonals) through Stratimikos. All nine Kokkos tests pass on CUDA,
    including `goma_kokkos_parity` with 63 fill and 6 solution comparisons and
-   matching Newton histories. Timings and OpenMP/Threads remain unqualified.
+   matching Newton histories.
+
+   **Kernel benchmark (2026-10-25).** Geometry, element, and Dirichlet kernels take
+   an optional `Device` template parameter (default unchanged), so
+   `goma_kokkos_benchmark` runs the same distorted transient mesh on
+   `Kokkos::Serial` and the default device in one binary. It reports geometry
+   setup, field upload, residual, Jacobian, combined evaluation, and result
+   download separately, and checks the device against Serial per element row
+   (CTest smoke runs: `goma_kokkos_benchmark_2d/3d`). On a Ryzen 7 9800X3D and RTX
+   5070, combined residual+Jacobian evaluation takes 1119 ms Serial vs 84 ms CUDA
+   (13x) for 65,536 2D elements and 14.2 s vs 220 ms (65x) for 4,096 3D elements.
+   Field upload costs 1.5 ms (2D) and 0.5 ms (3D) per evaluation. Result download
+   (about 50 ms) is not needed, since scatter stays on the device. Tpetra scatter,
+   end-to-end fills, solves, and OpenMP/Threads remain unmeasured.
 
 Existing checks cover Serial expression/element execution, one/two-rank scatter,
 legacy-metadata context setup and evaluation, ungated 2D cavity solves matching

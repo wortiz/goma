@@ -9,6 +9,7 @@
 #include <climits>
 #include <cmath>
 #include <stdexcept>
+#include <type_traits>
 
 namespace goma::assembly {
 
@@ -30,24 +31,33 @@ template <int Dim> struct QuadratureGeometry {
   double weight = 0.0; // Includes the geometry determinant.
 };
 
-template <int Dim> struct ElementGeometry {
-  Kokkos::View<QuadratureGeometry<Dim> **> points;
-  Kokkos::View<int *> status;
+// Kernels run on Device's execution space; the default keeps Goma's View types unchanged.
+using DefaultDevice = Kokkos::DefaultExecutionSpace::device_type;
+template <class T, class Device>
+using DeviceView = std::conditional_t<std::is_same_v<Device, DefaultDevice>,
+                                      Kokkos::View<T>,
+                                      Kokkos::View<T, Device>>;
+
+template <int Dim, class Device = DefaultDevice> struct ElementGeometry {
+  DeviceView<QuadratureGeometry<Dim> **, Device> points;
+  DeviceView<int *, Device> status;
 };
 
-using ElementCoordinates = Kokkos::View<double ***>;
-using ElementFields = Kokkos::View<double **>;
+template <class Device = DefaultDevice> using ElementCoordinatesOn = DeviceView<double ***, Device>;
+template <class Device = DefaultDevice> using ElementFieldsOn = DeviceView<double **, Device>;
+using ElementCoordinates = ElementCoordinatesOn<>;
+using ElementFields = ElementFieldsOn<>;
 
-template <int Dim> struct ElementResult {
-  Kokkos::View<double **> residual;
-  Kokkos::View<double ***> jacobian;
-  Kokkos::View<int *> status;
+template <int Dim, class Device = DefaultDevice> struct ElementResult {
+  DeviceView<double **, Device> residual;
+  DeviceView<double ***, Device> jacobian;
+  DeviceView<int *, Device> status;
 };
 
 namespace detail {
 
-template <int Dim>
-KOKKOS_INLINE_FUNCTION ElementStatus map_point(const ElementCoordinates &coordinates,
+template <int Dim, class Coordinates>
+KOKKOS_INLINE_FUNCTION ElementStatus map_point(const Coordinates &coordinates,
                                                int element,
                                                int point,
                                                QuadratureGeometry<Dim> &result) {
@@ -126,10 +136,10 @@ KOKKOS_INLINE_FUNCTION ElementStatus map_point(const ElementCoordinates &coordin
   return ElementStatus::success;
 }
 
-template <int Dim>
+template <int Dim, class Fields>
 KOKKOS_INLINE_FUNCTION FlowState<double, Dim> interpolate(const QuadratureGeometry<Dim> &point,
-                                                          const ElementFields &solution,
-                                                          const ElementFields &velocity_dot,
+                                                          const Fields &solution,
+                                                          const Fields &velocity_dot,
                                                           int element,
                                                           bool transient) {
   using Topology = Q2Q1<Dim>;
@@ -191,16 +201,16 @@ KOKKOS_INLINE_FUNCTION bool valid_configuration(const ConstantFluid<Dim> &fluid,
   return !flow.continuity.enabled || Kokkos::isfinite(flow.continuity.multiplier);
 }
 
-template <int Dim, bool Residual, bool Jacobian>
-void launch_elements(const ElementGeometry<Dim> &geometry,
-                     const ElementFields &solution,
-                     const ElementFields &velocity_dot,
-                     const Kokkos::View<ConstantFluid<Dim> *> &materials,
-                     const Kokkos::View<FlowExpressions<Dim> *> &expressions,
+template <int Dim, class Device, bool Residual, bool Jacobian>
+void launch_elements(const ElementGeometry<Dim, Device> &geometry,
+                     const ElementFieldsOn<Device> &solution,
+                     const ElementFieldsOn<Device> &velocity_dot,
+                     const DeviceView<ConstantFluid<Dim> *, Device> &materials,
+                     const DeviceView<FlowExpressions<Dim> *, Device> &expressions,
                      double time_coefficient,
-                     const ElementResult<Dim> &output) {
+                     const ElementResult<Dim, Device> &output) {
   using Topology = Q2Q1<Dim>;
-  using Policy = Kokkos::TeamPolicy<>;
+  using Policy = Kokkos::TeamPolicy<typename Device::execution_space>;
   using Team = typename Policy::member_type;
   using Scratch = Kokkos::View<FlowState<double, Dim> *, typename Team::scratch_memory_space,
                                Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
@@ -297,12 +307,13 @@ void launch_elements(const ElementGeometry<Dim> &geometry,
 }
 } // namespace detail
 
-// All launches use the default execution-space instance. These functions return
+// All launches use the default instance of Device's execution space. These functions return
 // asynchronously; inspect status after a fence or a host mirror copy. A nonzero
 // status invalidates the entire element's output, including any partial values.
 // Keep input/output Views and the runtime alive until the launches complete.
-template <int Dim>
-ElementGeometry<Dim> prepare_q2q1_geometry(const ElementCoordinates &coordinates) {
+template <int Dim, class Device = DefaultDevice>
+ElementGeometry<Dim, Device>
+prepare_q2q1_geometry(const ElementCoordinatesOn<Device> &coordinates) {
   using Topology = Q2Q1<Dim>;
   const auto elements = coordinates.extent(0);
   if (elements > INT_MAX || coordinates.extent(1) != Topology::velocity_nodes ||
@@ -310,11 +321,11 @@ ElementGeometry<Dim> prepare_q2q1_geometry(const ElementCoordinates &coordinates
     throw std::invalid_argument(
         "Q2/Q1 coordinates must have shape (elements, Q2 nodes, dimension)");
   }
-  ElementGeometry<Dim> geometry;
-  geometry.points = Kokkos::View<QuadratureGeometry<Dim> **>("goma_q2q1_geometry", elements,
-                                                             Topology::quadrature_points);
-  geometry.status = Kokkos::View<int *>("goma_q2q1_geometry_status", elements);
-  using Policy = Kokkos::TeamPolicy<>;
+  ElementGeometry<Dim, Device> geometry;
+  geometry.points = DeviceView<QuadratureGeometry<Dim> **, Device>(
+      "goma_q2q1_geometry", elements, Topology::quadrature_points);
+  geometry.status = DeviceView<int *, Device>("goma_q2q1_geometry_status", elements);
+  using Policy = Kokkos::TeamPolicy<typename Device::execution_space>;
   using Team = typename Policy::member_type;
   Kokkos::parallel_for(
       "goma_q2q1_geometry", Policy(static_cast<int>(elements), Kokkos::AUTO),
@@ -330,14 +341,15 @@ ElementGeometry<Dim> prepare_q2q1_geometry(const ElementCoordinates &coordinates
   return geometry;
 }
 
-template <int Dim>
-ElementResult<Dim> evaluate_q2q1_elements(const ElementGeometry<Dim> &geometry,
-                                          const ElementFields &solution,
-                                          const ElementFields &velocity_dot,
-                                          const Kokkos::View<ConstantFluid<Dim> *> &materials,
-                                          const Kokkos::View<FlowExpressions<Dim> *> &expressions,
-                                          double time_coefficient,
-                                          EvaluationRequest request) {
+template <int Dim, class Device>
+ElementResult<Dim, Device>
+evaluate_q2q1_elements(const ElementGeometry<Dim, Device> &geometry,
+                       const ElementFieldsOn<Device> &solution,
+                       const ElementFieldsOn<Device> &velocity_dot,
+                       const DeviceView<ConstantFluid<Dim> *, Device> &materials,
+                       const DeviceView<FlowExpressions<Dim> *, Device> &expressions,
+                       double time_coefficient,
+                       EvaluationRequest request) {
   using Topology = Q2Q1<Dim>;
   const auto elements = solution.extent(0);
   if (elements > INT_MAX || solution.extent(1) != Topology::dofs ||
@@ -352,24 +364,24 @@ ElementResult<Dim> evaluate_q2q1_elements(const ElementGeometry<Dim> &geometry,
       request != EvaluationRequest::both) {
     throw std::invalid_argument("Invalid element evaluation request");
   }
-  ElementResult<Dim> result;
-  result.status = Kokkos::View<int *>("goma_q2q1_element_status", elements);
+  ElementResult<Dim, Device> result;
+  result.status = DeviceView<int *, Device>("goma_q2q1_element_status", elements);
   if (request != EvaluationRequest::jacobian) {
     result.residual =
-        Kokkos::View<double **>("goma_q2q1_element_residual", elements, Topology::dofs);
+        DeviceView<double **, Device>("goma_q2q1_element_residual", elements, Topology::dofs);
   }
   if (request != EvaluationRequest::residual) {
-    result.jacobian = Kokkos::View<double ***>("goma_q2q1_element_jacobian", elements,
-                                               Topology::dofs, Topology::dofs);
+    result.jacobian = DeviceView<double ***, Device>("goma_q2q1_element_jacobian", elements,
+                                                     Topology::dofs, Topology::dofs);
   }
   if (request == EvaluationRequest::both) {
-    detail::launch_elements<Dim, true, true>(geometry, solution, velocity_dot, materials,
+    detail::launch_elements<Dim, Device, true, true>(geometry, solution, velocity_dot, materials,
                                              expressions, time_coefficient, result);
   } else if (request == EvaluationRequest::residual) {
-    detail::launch_elements<Dim, true, false>(geometry, solution, velocity_dot, materials,
+    detail::launch_elements<Dim, Device, true, false>(geometry, solution, velocity_dot, materials,
                                               expressions, time_coefficient, result);
   } else {
-    detail::launch_elements<Dim, false, true>(geometry, solution, velocity_dot, materials,
+    detail::launch_elements<Dim, Device, false, true>(geometry, solution, velocity_dot, materials,
                                               expressions, time_coefficient, result);
   }
   return result;

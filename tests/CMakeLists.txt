@@ -74,6 +74,17 @@ if(ENABLE_KOKKOS_ASSEMBLY)
   add_test(NAME goma_kokkos_flow COMMAND goma_kokkos_flow_tests)
   set_tests_properties(goma_kokkos_flow PROPERTIES LABELS "assembly;kokkos")
 
+  # Serial vs default-device kernel benchmark; run directly with larger --cells for timings
+  add_executable(goma_kokkos_benchmark assembly/kokkos_benchmark.cpp)
+  target_include_directories(goma_kokkos_benchmark PRIVATE ${PROJECT_SOURCE_DIR}/include)
+  target_link_libraries(goma_kokkos_benchmark PRIVATE Kokkos::kokkos)
+  add_test(NAME goma_kokkos_benchmark_2d COMMAND goma_kokkos_benchmark --dim 2 --cells 8
+                                                 --repeats 1)
+  add_test(NAME goma_kokkos_benchmark_3d COMMAND goma_kokkos_benchmark --dim 3 --cells 3
+                                                 --repeats 1)
+  set_tests_properties(goma_kokkos_benchmark_2d goma_kokkos_benchmark_3d
+                       PROPERTIES LABELS "assembly;kokkos;benchmark")
+
   add_executable(goma_kokkos_runtime_tests assembly/kokkos_runtime.cpp
                  ${PROJECT_SOURCE_DIR}/src/mm_kokkos_assembly.cpp)
   target_include_directories(goma_kokkos_runtime_tests PRIVATE ${PROJECT_SOURCE_DIR}/include)

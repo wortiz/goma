@@ -11,16 +11,18 @@ struct DirichletConstraint {
   DirichletMode mode = DirichletMode::none;
   double value = 0.0;
 };
-using ElementConstraints = Kokkos::View<DirichletConstraint **>;
+template <class Device = DefaultDevice>
+using ElementConstraintsOn = DeviceView<DirichletConstraint **, Device>;
+using ElementConstraints = ElementConstraintsOn<>;
 
 // Supply DIRICHLET_PENALTY from the host adapter. Each incident element receives
 // the full penalty. Columns are retained, as in put_dirichlet_in_matrix(). The
 // host must impose hard-set solution values and zero their time derivatives
 // before gathering fields; row replacement itself never changes those fields.
-template <int Dim>
-void apply_q2q1_dirichlet(const ElementResult<Dim> &result,
-                          const ElementFields &solution,
-                          const ElementConstraints &constraints,
+template <int Dim, class Device>
+void apply_q2q1_dirichlet(const ElementResult<Dim, Device> &result,
+                          const ElementFieldsOn<Device> &solution,
+                          const ElementConstraintsOn<Device> &constraints,
                           EvaluationRequest request,
                           double penalty) {
   using Topology = Q2Q1<Dim>;
@@ -39,7 +41,7 @@ void apply_q2q1_dirichlet(const ElementResult<Dim> &result,
         result.jacobian.extent(2) != Topology::dofs))) {
     throw std::invalid_argument("Inconsistent Q2/Q1 Dirichlet inputs");
   }
-  using Policy = Kokkos::TeamPolicy<>;
+  using Policy = Kokkos::TeamPolicy<typename Device::execution_space>;
   using Team = typename Policy::member_type;
   Kokkos::parallel_for(
       "goma_q2q1_dirichlet", Policy(static_cast<int>(elements), Kokkos::AUTO),
