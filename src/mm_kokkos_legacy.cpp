@@ -1,5 +1,9 @@
 #include "mm_kokkos_legacy.hpp"
+#include "mm_kokkos_context.hpp"
+#include "mm_kokkos_context_internal.hpp"
 #include "mm_kokkos_legacy.h"
+
+#include "linalg/sparse_matrix_tpetra.h"
 
 extern "C" {
 #include "ac_particles.h"
@@ -7,7 +11,9 @@ extern "C" {
 #include "mm_as.h"
 #include "mm_as_const.h"
 #include "mm_mp.h"
+#include "mm_unknown_map.h"
 #include "rf_bc.h"
+#include "rf_bc_const.h"
 #include "rf_fem.h"
 #include "rf_io.h"
 #include "rf_solver.h"
@@ -15,6 +21,7 @@ extern "C" {
 }
 #include <algorithm>
 #include <cstdio>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -39,6 +46,39 @@ bool constant_boundary(const Boundary_Condition &bc, int dimension) {
          std::isfinite(bc.BC_Data_Float[0]) && std::isfinite(bc.BC_relax);
 }
 } // namespace
+
+LegacyFlowInput describe_legacy_flow(const Exo_DB &exo) {
+  if (upd == nullptr) {
+    throw std::invalid_argument("Missing initialized legacy update metadata");
+  }
+  LegacyFlowInput input{exo, *upd, {}, {}, {}, {}, {}, {}};
+  const auto materials = static_cast<std::size_t>(std::max(upd->Num_Mat, 0));
+  if (pd_glob != nullptr && mp_glob != nullptr && gn_glob != nullptr) {
+    input.problems = {pd_glob, materials};
+    input.materials = {mp_glob, materials};
+    input.constitutive = {gn_glob, materials};
+  }
+  if (BC_Types != nullptr && Num_BC > 0) {
+    input.boundaries = {BC_Types, static_cast<std::size_t>(Num_BC)};
+  }
+  if (Matilda != nullptr && exo.num_elem_blocks > 0) {
+    input.block_materials = {Matilda, static_cast<std::size_t>(exo.num_elem_blocks)};
+  }
+  auto &options = input.options;
+  options.matrix_format = Matrix_Format;
+  options.linear_solver = Linear_Solver;
+  options.pspg = PSPG != 0;
+  options.continuity_gls = Cont_GLS != 0;
+  options.level_set = Use_Level_Set != 0 || Use_Phase_Field != 0;
+  options.augmenting = nAC != 0;
+  options.continuation = Continuation != ALC_NONE;
+  options.linear_stability = Linear_Stability != LSA_NONE;
+  options.particles = Particle_Dynamics != 0;
+  options.rotations = Num_ROT != 0;
+  options.element_pressure_datum = PRESSURE_DATUM != 0;
+  options.numerical_jacobian = Debug_Flag < 0;
+  return input;
+}
 
 std::vector<std::string> check_legacy_flow(const LegacyFlowInput &input) {
   std::vector<std::string> issues;
@@ -309,6 +349,159 @@ HostFlowSnapshot<Dim> snapshot_legacy_flow(const LegacyFlowInput &input,
   return result;
 }
 
+template <int Dim>
+HostFlowSnapshot<Dim> snapshot_initialized_legacy_flow(const LegacyFlowInput &input,
+                                                       GomaSparseMatrix matrix) {
+  if (matrix == nullptr || matrix->n_cols < 0 || matrix->n_cols > INT_MAX || matrix->n_rows < 0 ||
+      matrix->n_rows > matrix->n_cols || (matrix->n_cols > 0 && matrix->global_ids == nullptr) ||
+      input.mesh.num_nodes < 0 || (input.mesh.num_nodes > 0 && Nodes == nullptr)) {
+    throw std::invalid_argument("Missing or invalid initialized legacy matrix/node map");
+  }
+  const auto unknowns = static_cast<std::size_t>(matrix->n_cols);
+  const auto constraints = legacy_flow_constraints(
+      {Nodes, static_cast<std::size_t>(input.mesh.num_nodes)}, input.boundaries, unknowns);
+  // Validate descriptor storage before Index_Solution dereferences it. This
+  // adapter accepts one scalar DOF per variable, with material-specific or shared IDs.
+  for (int n = 0; n < input.mesh.num_nodes; ++n) {
+    const auto &vars = *Nodes[n]->Nodal_Vars_Info[0];
+    if (vars.Num_Var_Desc < 0 || (vars.Num_Var_Desc > 0 && (vars.Var_Desc_List == nullptr ||
+                                                            vars.Nodal_Offset == nullptr))) {
+      throw std::invalid_argument("Missing legacy variable descriptors");
+    }
+    for (int v = 0; v < vars.Num_Var_Desc; ++v) {
+      const auto *description = vars.Var_Desc_List[v];
+      if (description == nullptr || description->Ndof != 1 || description->Variable_Type < 0 ||
+          description->Variable_Type >= V_LAST || vars.Nodal_Offset[v] < 0 ||
+          vars.Nodal_Offset[v] >= vars.Num_Unknowns) {
+        throw std::invalid_argument("Invalid or unsupported legacy scalar variable descriptor");
+      }
+    }
+  }
+  return snapshot_legacy_flow<Dim>(input, {matrix->global_ids, unknowns}, constraints,
+                                   [](int node, int variable, int material) {
+                                     return Index_Solution(node, variable, 0, 0, material, 0);
+                                   });
+}
+
+namespace {
+bool all_ranks(bool valid) {
+  int local = valid ? 1 : 0, global = 0;
+  MPI_Allreduce(&local, &global, 1, MPI_INT, MPI_MIN, goma_comm);
+  return global != 0;
+}
+
+// The Tpetra row map is built from the leading n_rows global IDs, so Goma's owned
+// residual prefix is already in row-map order. Verify that rather than reorder.
+void require_owned_row_map(GomaSparseMatrix matrix) {
+  if (matrix == nullptr || matrix->type != GOMA_SPARSE_MATRIX_TYPE_TPETRA ||
+      matrix->data == nullptr) {
+    throw std::invalid_argument("A configured Tpetra matrix is required");
+  }
+  const auto &adapter = *static_cast<const TpetraSparseMatrix *>(matrix->data);
+  if (adapter.row_map.is_null() || adapter.matrix.is_null() || matrix->n_rows < 0 ||
+      adapter.row_map->getLocalNumElements() != static_cast<std::size_t>(matrix->n_rows) ||
+      (matrix->n_rows > 0 && matrix->global_ids == nullptr)) {
+    throw std::invalid_argument("Tpetra owned rows do not match the legacy matrix extents");
+  }
+  for (GomaGlobalOrdinal row = 0; row < matrix->n_rows; ++row) {
+    if (adapter.row_map->getGlobalElement(static_cast<LO>(row)) != matrix->global_ids[row]) {
+      throw std::invalid_argument("Tpetra owned row map differs from the host vector map");
+    }
+  }
+}
+
+template <int Dim> void require_unique_elements(const HostFlowSnapshot<Dim> &snapshot) {
+  using Topology = Q2Q1<Dim>;
+  std::set<std::vector<int>> elements;
+  for (std::size_t e = 0; e < snapshot.elements; ++e) {
+    const auto first = snapshot.local_dofs.begin() + e * Topology::dofs;
+    std::vector<int> dofs(first, first + Topology::dofs);
+    std::sort(dofs.begin(), dofs.end());
+    if (!elements.insert(std::move(dofs)).second) {
+      throw std::invalid_argument("Legacy mesh includes an element more than once");
+    }
+  }
+}
+
+template <int Dim>
+bool owned_pressure_constraint(const HostFlowSnapshot<Dim> &snapshot, std::size_t owned_rows) {
+  using Topology = Q2Q1<Dim>;
+  for (std::size_t e = 0; e < snapshot.elements; ++e) {
+    for (int row = Topology::velocity_dofs; row < Topology::dofs; ++row) {
+      const auto offset = e * Topology::dofs + row;
+      if (snapshot.constraints[offset].mode != DirichletMode::none &&
+          static_cast<std::size_t>(snapshot.local_dofs[offset]) < owned_rows) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+template <int Dim>
+void setup_legacy_dimension(goma_kokkos_context *context,
+                            const LegacyFlowInput &input,
+                            GomaSparseMatrix matrix) {
+  std::string error;
+  HostFlowSnapshot<Dim> snapshot;
+  try {
+    if (context == nullptr) {
+      throw std::invalid_argument("Missing Kokkos assembly context");
+    }
+    const auto issues = check_legacy_flow(input);
+    if (!issues.empty()) {
+      throw std::invalid_argument("Unsupported Kokkos flow configuration: " + issues.front());
+    }
+    require_owned_row_map(matrix);
+    snapshot = snapshot_initialized_legacy_flow<Dim>(input, matrix);
+    require_unique_elements(snapshot);
+  } catch (const std::exception &failure) {
+    error = failure.what();
+  } catch (...) {
+    error = "Unknown legacy snapshot failure";
+  }
+  // Join local failures before any rank enters collective context setup.
+  if (!all_ranks(error.empty())) {
+    throw std::invalid_argument(error.empty() ? "Kokkos legacy setup failed on another rank"
+                                              : error);
+  }
+  int local = owned_pressure_constraint(snapshot, static_cast<std::size_t>(matrix->n_rows)) ? 1 : 0;
+  int pressure = 0;
+  MPI_Allreduce(&local, &pressure, 1, MPI_INT, MPI_MAX, goma_comm);
+  if (pressure == 0) {
+    throw std::invalid_argument("No rank owns a pressure DOF with a nodal P constraint");
+  }
+  setup_context<Dim>(context, snapshot, matrix, DIRICHLET_PENALTY);
+}
+} // namespace
+
+void setup_legacy_context(goma_kokkos_context *context,
+                          const LegacyFlowInput &input,
+                          GomaSparseMatrix matrix) {
+  try {
+    const int dimension = input.mesh.num_dim;
+    int minimum = 0, maximum = 0;
+    MPI_Allreduce(&dimension, &minimum, 1, MPI_INT, MPI_MIN, goma_comm);
+    MPI_Allreduce(&dimension, &maximum, 1, MPI_INT, MPI_MAX, goma_comm);
+    if (minimum != maximum || (minimum != 2 && minimum != 3)) {
+      throw std::invalid_argument("Kokkos legacy mesh dimensions are unsupported or differ");
+    }
+    if (dimension == 2) {
+      setup_legacy_dimension<2>(context, input, matrix);
+    } else {
+      setup_legacy_dimension<3>(context, input, matrix);
+    }
+  } catch (const std::exception &error) {
+    detail::context_error(context, error.what());
+    throw;
+  }
+}
+
+template HostFlowSnapshot<2> snapshot_initialized_legacy_flow<2>(const LegacyFlowInput &,
+                                                                 GomaSparseMatrix);
+template HostFlowSnapshot<3> snapshot_initialized_legacy_flow<3>(const LegacyFlowInput &,
+                                                                 GomaSparseMatrix);
+
 template HostFlowSnapshot<2> snapshot_legacy_flow<2>(const LegacyFlowInput &,
                                                      std::span<const GomaGlobalOrdinal>,
                                                      std::span<const DirichletConstraint>,
@@ -327,32 +520,7 @@ extern "C" goma_kokkos_status goma_kokkos_preflight_legacy(const Exo_DB *exo) {
     }
     std::vector<std::string> issues;
     try {
-      LegacyFlowInput input{*exo, *upd, {}, {}, {}, {}, {}, {}};
-      const auto materials = static_cast<std::size_t>(std::max(upd->Num_Mat, 0));
-      if (pd_glob != nullptr && mp_glob != nullptr && gn_glob != nullptr) {
-        input.problems = {pd_glob, materials};
-        input.materials = {mp_glob, materials};
-        input.constitutive = {gn_glob, materials};
-      }
-      if (BC_Types != nullptr && Num_BC > 0) {
-        input.boundaries = {BC_Types, static_cast<std::size_t>(Num_BC)};
-      }
-      if (Matilda != nullptr && exo->num_elem_blocks > 0) {
-        input.block_materials = {Matilda, static_cast<std::size_t>(exo->num_elem_blocks)};
-      }
-      auto &options = input.options;
-      options.matrix_format = Matrix_Format;
-      options.linear_solver = Linear_Solver;
-      options.pspg = PSPG != 0;
-      options.continuity_gls = Cont_GLS != 0;
-      options.level_set = Use_Level_Set != 0 || Use_Phase_Field != 0;
-      options.augmenting = nAC != 0;
-      options.continuation = Continuation != ALC_NONE;
-      options.linear_stability = Linear_Stability != LSA_NONE;
-      options.particles = Particle_Dynamics != 0;
-      options.rotations = Num_ROT != 0;
-      options.element_pressure_datum = PRESSURE_DATUM != 0;
-      options.numerical_jacobian = Debug_Flag < 0;
+      const auto input = describe_legacy_flow(*exo);
       issues = check_legacy_flow(input);
     } catch (const std::exception &error) {
       issues.push_back(std::string("adapter: preflight failed: ") + error.what());
@@ -412,6 +580,67 @@ extern "C" goma_kokkos_status goma_kokkos_preflight_legacy(const Exo_DB *exo) {
     }
     return GOMA_KOKKOS_UNSUPPORTED;
   } catch (...) {
+    return GOMA_KOKKOS_RUNTIME_ERROR;
+  }
+}
+
+extern "C" goma_kokkos_status goma_kokkos_context_setup_legacy(goma_kokkos_context *context,
+                                                               const Exo_DB *exo,
+                                                               struct g_GomaSparseMatrix *matrix) {
+  using namespace goma::assembly;
+  try {
+    std::optional<LegacyFlowInput> input;
+    std::string error;
+    try {
+      if (exo == nullptr) {
+        throw std::invalid_argument("Missing legacy mesh");
+      }
+      input.emplace(describe_legacy_flow(*exo));
+    } catch (const std::exception &failure) {
+      error = failure.what();
+    }
+    if (!all_ranks(error.empty())) {
+      detail::context_error(context, error.empty() ? "Kokkos legacy setup failed on another rank"
+                                                   : error.c_str());
+      return GOMA_KOKKOS_INVALID_ARGUMENT;
+    }
+    setup_legacy_context(context, *input, matrix);
+    return GOMA_KOKKOS_SUCCESS;
+  } catch (const std::invalid_argument &) {
+    return GOMA_KOKKOS_INVALID_ARGUMENT;
+  } catch (const std::exception &error) {
+    detail::context_error(context, error.what());
+    return GOMA_KOKKOS_RUNTIME_ERROR;
+  } catch (...) {
+    detail::context_error(context, "Unknown Kokkos legacy setup failure");
+    return GOMA_KOKKOS_RUNTIME_ERROR;
+  }
+}
+
+extern "C" goma_kokkos_status
+goma_kokkos_context_assemble_legacy(goma_kokkos_context *context,
+                                    struct g_GomaSparseMatrix *matrix,
+                                    const double *x,
+                                    const double *xdot,
+                                    double time_coefficient,
+                                    goma_kokkos_evaluation_request request,
+                                    double *resid_vector) {
+  using goma::assembly::all_ranks;
+  try {
+    // Reject a different matrix collectively; its extents would desynchronize ranks.
+    const bool valid = context != nullptr && matrix != nullptr && context->matrix == matrix &&
+                       matrix->n_rows >= 0 && matrix->n_cols >= matrix->n_rows;
+    if (!all_ranks(valid)) {
+      goma::assembly::detail::context_error(
+          context, "Kokkos legacy assembly requires the configured context and setup matrix");
+      return GOMA_KOKKOS_INVALID_ARGUMENT;
+    }
+    const auto unknowns = static_cast<size_t>(matrix->n_cols);
+    return goma_kokkos_context_assemble(context, x, unknowns, xdot, xdot == nullptr ? 0 : unknowns,
+                                        time_coefficient, request, resid_vector,
+                                        static_cast<size_t>(matrix->n_rows));
+  } catch (...) {
+    goma::assembly::detail::context_error(context, "Unknown Kokkos legacy assembly failure");
     return GOMA_KOKKOS_RUNTIME_ERROR;
   }
 }

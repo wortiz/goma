@@ -155,23 +155,26 @@ Complete the remaining integration in this order:
    evaluation, field/time-coefficient refresh, request modes, failed setup/input,
    teardown/recreation, and empty ranks. Actual legacy-data hookup and nonlinear
    solver routing remain the following steps.
-2. **Wire actual Goma data.** Call the snapshot builder with `Index_Solution`, the
-   existing global-ID map, and nodal DBC metadata. Gather exchanged solution and
-   time-derivative fields after hard-set conditions are imposed. Verify an active
-   pressure constraint and complete coverage of owned rows and ghost elements.
-   The immediate adapter tasks are:
-   - Share one description builder between preflight and runtime setup, reading
-     initialized Goma material/problem data without changing current globals.
-   - Add a collective legacy setup entry point using `Index_Solution`, the
-     matrix's complete owned/ghost global-ID array, and `Nodes` DBC offsets.
-   - Validate that a pressure constraint reaches an actual owned pressure DOF,
-     that the owned row map agrees with the host vector map, and that every local
-     mesh element is included exactly once (including ghost elements).
-   - Add an evaluation adapter that translates the owned residual ordering and
-     passes already exchanged/imposed `x` and `xdot` fields into the context.
-   - Test with real initialized Goma node/unknown metadata, repeated updates,
-     pressure and hard-set conditions, and one/two MPI ranks before routing the
-     nonlinear solver through the adapter.
+2. **Wire actual Goma data (implemented, 2026-10-25).** One description builder
+   (`describe_legacy_flow`) now serves both preflight and runtime setup, reading
+   initialized globals without changing them. `setup_legacy_context` and the C
+   entry point `goma_kokkos_context_setup_legacy` are collective on `goma_comm`:
+   they snapshot through `Index_Solution`, the matrix's owned/ghost global-ID
+   array, and `Nodes` DBC offsets, then require on every rank that the Tpetra
+   owned row map equals the leading `n_rows` global IDs, that each local element
+   (including ghost elements) appears exactly once, and that some rank owns a
+   constrained pressure DOF. Local failures are joined before collective context
+   setup, so a failure on one rank is reported on all and setup stays retryable.
+   `goma_kokkos_context_assemble_legacy` accepts Goma's local `x`/`xdot` (owned
+   plus external, already exchanged and hard-set) and adds requested contributions
+   to the owned prefix of `resid_vector`, rejecting any matrix other than the one
+   used at setup. Tests build Goma-layout node tables (owned nodes first,
+   owner-contiguous global IDs, ghost elements on non-owners) and compare
+   Index_Solution-backed assembly against an independent element reference on one,
+   two, and three ranks, steady and transient, quads and hexes, including repeated
+   updates, Jacobian-only and residual-only requests, residual and hard-set
+   constraints, and one-rank failures. The adapter has not yet been driven by a
+   real deck; that happens when step 3 routes `matrix_fill_full` through it.
 3. **Route nonlinear assembly.** Select the prepared Kokkos context above the
    legacy element loop in `matrix_fill_full`, preserving residual-only and
    Jacobian-only requests, transient coefficients, matrix zeroing, owned residual
@@ -190,8 +193,8 @@ Complete the remaining integration in this order:
    then add bounded-storage Sacado Jacobians using the existing residuals.
 
 Existing checks cover Serial expression/element execution, one/two-rank scatter,
-empty ranks, collective failure before global writes, and rejected-setup recovery
-followed by a legacy solve. They do not yet qualify full Kokkos flow solves,
+legacy-metadata context setup and evaluation, empty ranks, collective failure
+before global writes, and rejected-setup recovery followed by a legacy solve. They do not yet qualify full Kokkos flow solves,
 Threads/OpenMP/CUDA, or parity with the complete legacy assembly implementation.
 
 ## Validation and acceptance

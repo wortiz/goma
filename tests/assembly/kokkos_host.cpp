@@ -1,122 +1,10 @@
-#include <array>
 #include <catch2/catch_test_macros.hpp>
-#include <cstring>
-#include <memory>
 #include <numeric>
 
-#include "mm_kokkos_legacy.hpp"
-extern "C" {
-#include "mm_as_const.h"
-#include "rf_solver_const.h"
-}
+#include "kokkos_legacy_fixture.hpp"
 
 namespace {
 using namespace goma::assembly;
-
-template <int Dim> struct LegacyFixture {
-  using Topology = Q2Q1<Dim>;
-  std::unique_ptr<UPD_STRUCT> update = std::make_unique<UPD_STRUCT>();
-  std::unique_ptr<PROBLEM_DESCRIPTION_STRUCT> problem =
-      std::make_unique<PROBLEM_DESCRIPTION_STRUCT>();
-  std::unique_ptr<MATRL_PROP_STRUCT> material = std::make_unique<MATRL_PROP_STRUCT>();
-  std::unique_ptr<GEN_NEWT_STRUCT> constitutive = std::make_unique<GEN_NEWT_STRUCT>();
-  std::array<PROBLEM_DESCRIPTION_STRUCT *, 1> problems{problem.get()};
-  std::array<MATRL_PROP_STRUCT *, 1> materials{material.get()};
-  std::array<GEN_NEWT_STRUCT *, 1> models{constitutive.get()};
-  std::array<Boundary_Condition, 2> boundaries{};
-  std::array<int, 1> block_materials{0};
-  std::array<int, 1> ids{17}, types{Dim == 2 ? BIQUAD_QUAD : TRIQUAD_HEX};
-  std::array<int, 1> counts{1}, nodes_per_element{Topology::velocity_nodes};
-  std::array<int, Topology::velocity_nodes> connectivity{};
-  std::array<int *, 1> block_connectivity{connectivity.data()};
-  std::array<std::array<double, Topology::velocity_nodes>, Dim> coordinates{};
-  Exo_DB mesh{};
-  LegacyFlowOptions options;
-
-  LegacyFixture() {
-    update->Total_Num_Matrices = 1;
-    update->Num_Mat = 1;
-    problem->Num_Dim = Dim;
-    problem->CoordinateSystem = CARTESIAN;
-    problem->MeshMotion = ARBITRARY;
-    problem->TimeIntegration = TRANSIENT;
-    problem->IntegrationMap = I_Q2;
-    material->DensityModel = CONSTANT;
-    material->density = 1.7;
-    material->ViscosityModel = CONSTANT;
-    material->viscosity = 0.4;
-    material->DilationalViscosityModel = DILVISCM_KAPPAWIPESMU;
-    material->MomentumSourceModel = CONSTANT;
-    material->Mwt_funcModel = GALERKIN;
-    constitutive->ConstitutiveEquation = NEWTONIAN;
-    for (int a = 0; a < Dim; ++a) {
-      const int equation = R_MOMENTUM1 + a;
-      problem->v[0][equation] = V_SOLNVECTOR;
-      problem->e[0][equation] =
-          T_SOMETHING | T_MASS | T_ADVECTION | T_BOUNDARY | T_DIFFUSION | T_SOURCE;
-      problem->i[0][equation] = I_Q2;
-      problem->w[0][equation] = I_Q2;
-      for (int term = 0; term < MAX_TERM_TYPES; ++term) {
-        problem->etm[0][equation][term] = 0.7 + 0.03 * term + 0.1 * a;
-      }
-      material->momentum_source[a] = 0.2 - 0.1 * a;
-    }
-    problem->v[0][PRESSURE] = V_SOLNVECTOR;
-    problem->e[0][R_PRESSURE] = T_SOMETHING | T_ADVECTION;
-    problem->i[0][PRESSURE] = I_Q1;
-    problem->w[0][R_PRESSURE] = I_Q1;
-    problem->etm[0][R_PRESSURE][LOG2_ADVECTION] = 0.9;
-    boundaries[0].BC_Name = U_BC;
-    boundaries[1].BC_Name = P_BC;
-    for (auto &boundary : boundaries) {
-      std::strcpy(boundary.Set_Type, "NS");
-      boundary.BC_relax = -1.0;
-      boundary.BC_Data_Float[0] = 0.3;
-    }
-    options.matrix_format = "tpetra";
-    options.linear_solver = STRATIMIKOS;
-    mesh.num_dim = Dim;
-    mesh.num_elems = 1;
-    mesh.num_nodes = Topology::velocity_nodes;
-    mesh.num_elem_blocks = 1;
-    mesh.eb_id = ids.data();
-    mesh.eb_elem_itype = types.data();
-    mesh.eb_num_nodes_per_elem = nodes_per_element.data();
-    mesh.eb_num_elems = counts.data();
-    mesh.eb_conn = block_connectivity.data();
-    mesh.x_coord = coordinates[0].data();
-    mesh.y_coord = coordinates[1].data();
-    if constexpr (Dim == 3) {
-      mesh.z_coord = coordinates[2].data();
-    }
-    for (int node = 0; node < Topology::velocity_nodes; ++node) {
-      connectivity[node] = Topology::velocity_nodes - node - 1;
-      for (int d = 0; d < Dim; ++d) {
-        coordinates[d][connectivity[node]] = 0.3 + 0.5 * d + Topology::node_coordinate(node, d);
-      }
-    }
-  }
-
-  LegacyFlowInput input() const {
-    return {mesh, *update, problems, materials, models, boundaries, block_materials, options};
-  }
-
-  int index(int node, int variable) const {
-    int position = -1;
-    for (int i = 0; i < Topology::velocity_nodes; ++i) {
-      if (connectivity[i] == node) {
-        position = i;
-      }
-    }
-    if (position < 0 || (variable == PRESSURE && position >= Topology::pressure_nodes)) {
-      throw std::invalid_argument("Unexpected host node/variable lookup");
-    }
-    const int row = variable == PRESSURE
-                        ? Topology::velocity_dofs + position
-                        : (variable - VELOCITY1) * Topology::velocity_nodes + position;
-    return 2 * (Topology::dofs - 1 - row) + 1;
-  }
-};
 
 bool contains(const std::vector<std::string> &issues, const std::string &text) {
   for (const auto &issue : issues) {
@@ -294,5 +182,56 @@ TEST_CASE("Legacy host snapshots accept ranks with no nodes or elements",
   CHECK(snapshot.unknowns == 0);
   CHECK(snapshot.coordinates.empty());
   CHECK(snapshot.local_dofs.empty());
+}
+template <int Dim> void check_initialized_snapshot() {
+  LegacyFixture<Dim> fixture;
+  std::vector<int> order(Q2Q1<Dim>::velocity_nodes);
+  std::iota(order.begin(), order.end(), 0);
+  LegacyNodeTable<Dim> table(fixture, order);
+  for (int n = 0; n < table.count; ++n) {
+    for (int v = 0; v < table.variables[n].Num_Unknowns; ++v) {
+      table.dbc[n][v] = v == Dim ? 1 : (v == 0 ? 0 : -1);
+    }
+  }
+  const int unknowns = table.unknowns;
+  std::vector<GomaGlobalOrdinal> global(unknowns);
+  for (int i = 0; i < unknowns; ++i) {
+    global[i] = 2000 + 3 * (unknowns - i);
+  }
+  g_GomaSparseMatrix matrix{};
+  matrix.n_cols = unknowns;
+  matrix.n_rows = unknowns - 2; // Include ghost IDs in the copied map.
+  matrix.global_ids = global.data();
+  const auto snapshot = snapshot_initialized_legacy_flow<Dim>(fixture.input(), &matrix);
+  const auto constraints = legacy_flow_constraints(table.pointers, fixture.boundaries, unknowns);
+  const auto expected = snapshot_legacy_flow<Dim>(fixture.input(), global, constraints,
+                                                  [&](int node, int variable, int material) {
+                                                    CHECK(material == 0);
+                                                    return table.index(node, variable);
+                                                  });
+  CHECK(snapshot.local_dofs == expected.local_dofs);
+  CHECK(snapshot.global_dofs == expected.global_dofs);
+  REQUIRE(snapshot.constraints.size() == expected.constraints.size());
+  for (std::size_t i = 0; i < snapshot.constraints.size(); ++i) {
+    CHECK(snapshot.constraints[i].mode == expected.constraints[i].mode);
+    CHECK(snapshot.constraints[i].value == expected.constraints[i].value);
+  }
+  table.descriptors[0][0].Ndof = 2;
+  CHECK_THROWS_AS(snapshot_initialized_legacy_flow<Dim>(fixture.input(), &matrix),
+                  std::invalid_argument);
+  table.descriptors[0][0].Ndof = 1;
+  table.variables[0].Var_Desc_List = nullptr;
+  CHECK_THROWS_AS(snapshot_initialized_legacy_flow<Dim>(fixture.input(), &matrix),
+                  std::invalid_argument);
+  table.variables[0].Var_Desc_List = table.descriptor_pointers[0].data();
+  matrix.global_ids = nullptr;
+  CHECK_THROWS_AS(snapshot_initialized_legacy_flow<Dim>(fixture.input(), &matrix),
+                  std::invalid_argument);
+}
+
+TEST_CASE("Initialized legacy snapshots use Index_Solution and owned/ghost IDs",
+          "[assembly][kokkos][host]") {
+  check_initialized_snapshot<2>();
+  check_initialized_snapshot<3>();
 }
 } // namespace

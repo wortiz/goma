@@ -4,10 +4,17 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
+#include "kokkos_legacy_fixture.hpp"
 #include "linalg/sparse_matrix_tpetra.h"
 #include "mm_kokkos_context.hpp"
+#include "mm_kokkos_legacy.h"
+extern "C" {
+#include "rf_bc_const.h"
+}
 extern "C" {
 extern int ProcID;
 extern int Num_Proc;
@@ -343,5 +350,239 @@ TEST_CASE("Context errors are collective and leave global contributions unchange
   fixture.adapter().matrix->beginAssembly();
   CHECK(invoke(fixture.solution.size(), GOMA_KOKKOS_RESIDUAL_AND_JACOBIAN) == GOMA_KOKKOS_SUCCESS);
   CHECK(std::strlen(goma_kokkos_context_last_error(context.value)) == 0);
+}
+
+// One element held by every rank. Nodes are owned round-robin, owned nodes come
+// first in the local vector, and global IDs are contiguous by owner, as in
+// GomaSparseMatrix_SetProblemGraph. Non-owners hold the element as a ghost.
+template <int Dim> struct LegacyContextFixture {
+  using Topology = Q2Q1<Dim>;
+  LegacyFixture<Dim> legacy;
+  std::vector<int> order;
+  std::unique_ptr<LegacyNodeTable<Dim>> table;
+  std::vector<GO> global;
+  std::size_t owned_rows = 0;
+  g_GomaSparseMatrix storage{};
+  GomaSparseMatrix wrapper = &storage;
+  std::vector<double> x, xdot;
+  int hard_node = -1, pressure_node = -1;
+
+  static int owner(int node) { return node % Num_Proc; }
+
+  explicit LegacyContextFixture(bool transient) {
+    legacy.problem->TimeIntegration = transient ? TRANSIENT : STEADY;
+    legacy.boundaries[1].BC_relax = 0.5; // Residual-mode pressure datum.
+    legacy.boundaries[1].BC_Data_Float[0] = 2.1;
+    constexpr int count = Topology::velocity_nodes;
+    for (int pass = 0; pass < 2; ++pass) {
+      for (int n = 0; n < count; ++n) {
+        if ((owner(n) == ProcID) == (pass == 0)) {
+          order.push_back(n);
+        }
+      }
+    }
+    table = std::make_unique<LegacyNodeTable<Dim>>(legacy, order);
+    hard_node = legacy.connectivity[2];
+    pressure_node = legacy.connectivity[1];
+    table->dbc[hard_node][0] = 0;
+    table->dbc[pressure_node][Dim] = 1;
+    std::vector<GO> first(count);
+    GO next = 0;
+    for (int rank = 0; rank < Num_Proc; ++rank) {
+      for (int n = 0; n < count; ++n) {
+        if (owner(n) == rank) {
+          first[n] = next;
+          next += table->variables[n].Num_Unknowns;
+        }
+      }
+    }
+    global.resize(table->unknowns);
+    for (int n = 0; n < count; ++n) {
+      for (int v = 0; v < table->variables[n].Num_Unknowns; ++v) {
+        global[table->first[n] + v] = first[n] + v;
+      }
+      if (owner(n) == ProcID) {
+        owned_rows += table->variables[n].Num_Unknowns;
+      }
+    }
+    GomaSparseMatrix_Tpetra_Create(&wrapper);
+    std::vector<GO> rows, columns;
+    for (std::size_t row = 0; row < owned_rows; ++row) {
+      for (GO column : global) {
+        rows.push_back(global[row]);
+        columns.push_back(column);
+      }
+    }
+    g_tpetra_create_graph(wrapper, owned_rows, global.data(), global.size(), global.data(),
+                          rows.size(), global.size(), rows.data(), columns.data());
+    storage.global_ids = global.data();
+    storage.n_rows = owned_rows;
+    storage.n_cols = global.size();
+    // Ghost values equal the owner's values, as after exchange_dof.
+    x.resize(global.size());
+    xdot.resize(global.size());
+    for (std::size_t i = 0; i < global.size(); ++i) {
+      x[i] = 0.2 + 0.05 * global[i] + 0.002 * global[i] * global[i];
+      xdot[i] = 0.1 - 0.01 * global[i];
+    }
+    x[table->index(hard_node, VELOCITY1)] = legacy.boundaries[0].BC_Data_Float[0];
+    xdot[table->index(hard_node, VELOCITY1)] = 0.0;
+  }
+  ~LegacyContextFixture() {
+    Kokkos::fence();
+    g_tpetra_destroy(wrapper);
+  }
+  TpetraSparseMatrix &adapter() { return *static_cast<TpetraSparseMatrix *>(wrapper->data); }
+
+  // Independent mapping through the explicit resolver rather than Index_Solution.
+  HostFlowSnapshot<Dim> snapshot() const {
+    const auto constraints =
+        legacy_flow_constraints(table->pointers, legacy.boundaries, global.size());
+    return snapshot_legacy_flow<Dim>(
+        legacy.input(), global, constraints,
+        [&](int node, int variable, int) { return table->index(node, variable); });
+  }
+
+  void check(const std::vector<double> &residual,
+             const Reference<Dim> &expected,
+             double matrix_base,
+             double residual_base,
+             double external_residual) {
+    const auto element = snapshot();
+    std::unordered_map<GO, int> row_of;
+    for (int row = 0; row < Topology::dofs; ++row) {
+      row_of[element.global_dofs[row]] = row;
+    }
+    const auto &matrix = *adapter().matrix;
+    const auto graph = matrix.getCrsGraph()->getLocalGraphHost();
+    const auto values = matrix.getLocalValuesHost(Tpetra::Access::ReadOnly);
+    REQUIRE(matrix.getRowMap()->getLocalNumElements() == owned_rows);
+    for (std::size_t row = 0; row < owned_rows; ++row) {
+      REQUIRE(matrix.getRowMap()->getGlobalElement(row) == global[row]);
+      const int element_row = row_of.at(global[row]);
+      close(residual[row], residual_base + expected.residual[element_row]);
+      for (auto offset = graph.row_map(row); offset < graph.row_map(row + 1); ++offset) {
+        const auto column = matrix.getColMap()->getGlobalElement(graph.entries(offset));
+        close(values(offset),
+              matrix_base + expected.jacobian[element_row * Topology::dofs + row_of.at(column)]);
+      }
+    }
+    for (std::size_t row = owned_rows; row < residual.size(); ++row) {
+      CHECK(residual[row] == external_residual); // Ghost rows belong to their owners.
+    }
+  }
+};
+
+template <int Dim> void check_legacy_context(bool transient) {
+  using Topology = Q2Q1<Dim>;
+  LegacyContextFixture<Dim> fixture(transient);
+  ContextHandle context;
+  setup_legacy_context(context.value, fixture.legacy.input(), fixture.wrapper);
+  CHECK(std::strlen(goma_kokkos_context_last_error(context.value)) == 0);
+  const auto element = fixture.snapshot();
+  REQUIRE(element.constraints[Topology::velocity_dofs + 1].mode == DirichletMode::residual);
+  REQUIRE(element.constraints[2].mode == DirichletMode::hard_set);
+  const double *dot = transient ? fixture.xdot.data() : nullptr;
+  std::vector<double> residual(fixture.global.size(), 0.5);
+  auto assemble = [&](goma_kokkos_evaluation_request request, double coefficient, double *r) {
+    return goma_kokkos_context_assemble_legacy(context.value, fixture.wrapper, fixture.x.data(),
+                                               dot, coefficient, request, r);
+  };
+  auto expected = reference(element, fixture.x, fixture.xdot, 1.9, DIRICHLET_PENALTY);
+  g_tpetra_put_scalar(fixture.wrapper, 0.25);
+  CHECK(assemble(GOMA_KOKKOS_RESIDUAL_AND_JACOBIAN, 1.9, residual.data()) == GOMA_KOKKOS_SUCCESS);
+  fixture.check(residual, expected, 0.25, 0.5, 0.5);
+  // Repeated updates refresh exchanged fields; Jacobian-only requests leave the residual.
+  for (std::size_t i = 0; i < fixture.x.size(); ++i) {
+    if (i != static_cast<std::size_t>(fixture.table->index(fixture.hard_node, VELOCITY1))) {
+      fixture.x[i] -= 0.03 * fixture.global[i];
+      fixture.xdot[i] += 0.02;
+    }
+  }
+  expected = reference(element, fixture.x, fixture.xdot, 2.4, DIRICHLET_PENALTY);
+  std::vector<double> before = residual;
+  g_tpetra_put_scalar(fixture.wrapper, 0.0);
+  CHECK(assemble(GOMA_KOKKOS_JACOBIAN, 2.4, nullptr) == GOMA_KOKKOS_SUCCESS);
+  CHECK(residual == before);
+  std::fill(residual.begin(), residual.begin() + fixture.owned_rows, 0.0);
+  fixture.adapter().matrix->endAssembly();
+  CHECK(assemble(GOMA_KOKKOS_RESIDUAL, 2.4, residual.data()) == GOMA_KOKKOS_SUCCESS);
+  fixture.adapter().matrix->beginAssembly();
+  fixture.check(residual, expected, 0.0, 0.0, 0.5);
+  // Another wrapper is rejected on every rank before any contribution is added.
+  g_GomaSparseMatrix other = fixture.storage;
+  before = residual;
+  CHECK(goma_kokkos_context_assemble_legacy(context.value, &other, fixture.x.data(), dot, 2.4,
+                                            GOMA_KOKKOS_RESIDUAL,
+                                            residual.data()) == GOMA_KOKKOS_INVALID_ARGUMENT);
+  CHECK(residual == before);
+  CHECK(std::strlen(goma_kokkos_context_last_error(context.value)) > 0);
+}
+
+TEST_CASE("Legacy-backed quad contexts assemble owned rows from Index_Solution metadata",
+          "[assembly][kokkos][context][legacy][mpi]") {
+  check_legacy_context<2>(GENERATE(false, true));
+}
+TEST_CASE("Legacy-backed hex contexts assemble owned rows from Index_Solution metadata",
+          "[assembly][kokkos][context][legacy][mpi]") {
+  check_legacy_context<3>(GENERATE(false, true));
+}
+
+TEST_CASE("Legacy context setup rejects one-rank failures collectively and is retryable",
+          "[assembly][kokkos][context][legacy][mpi]") {
+  LegacyContextFixture<2> fixture(true);
+  ContextHandle context;
+  auto rejected = [&](const std::string &text) {
+    INFO("expected error containing: " << text);
+    REQUIRE_THROWS_AS(setup_legacy_context(context.value, fixture.legacy.input(), fixture.wrapper),
+                      std::invalid_argument);
+    const std::string error = goma_kokkos_context_last_error(context.value);
+    CHECK(
+        (error.find(text) != std::string::npos || error.find("another rank") != std::string::npos));
+    CHECK(goma_kokkos_context_assemble_legacy(context.value, fixture.wrapper, fixture.x.data(),
+                                              fixture.xdot.data(), 1.0, GOMA_KOKKOS_RESIDUAL,
+                                              nullptr) == GOMA_KOKKOS_INVALID_ARGUMENT);
+  };
+  // Pressure constraint absent from every owned DOF.
+  constexpr int pressure_offset = 2;
+  fixture.table->dbc[fixture.pressure_node][pressure_offset] = -1;
+  rejected("pressure");
+  fixture.table->dbc[fixture.pressure_node][pressure_offset] = 1;
+  // Unsupported configuration on rank zero only.
+  fixture.legacy.options.pspg = ProcID == 0;
+  rejected("PSPG");
+  fixture.legacy.options.pspg = false;
+  // Host vector map disagrees with the Tpetra owned row map on rank zero.
+  if (ProcID == 0 && fixture.owned_rows >= 2) {
+    std::swap(fixture.global[0], fixture.global[1]);
+  }
+  rejected("row map");
+  if (ProcID == 0 && fixture.owned_rows >= 2) {
+    std::swap(fixture.global[0], fixture.global[1]);
+  }
+  // A local element included twice on rank zero.
+  std::vector<int> repeated(fixture.legacy.connectivity.begin(), fixture.legacy.connectivity.end());
+  repeated.insert(repeated.end(), repeated.begin(), repeated.end());
+  if (ProcID == 0) {
+    fixture.legacy.block_connectivity[0] = repeated.data();
+    fixture.legacy.counts[0] = 2;
+    fixture.legacy.mesh.num_elems = 2;
+  }
+  rejected("more than once");
+  fixture.legacy.block_connectivity[0] = fixture.legacy.connectivity.data();
+  fixture.legacy.counts[0] = 1;
+  fixture.legacy.mesh.num_elems = 1;
+  // The C entry point joins missing-mesh failures before collective setup.
+  CHECK(goma_kokkos_context_setup_legacy(context.value, nullptr, fixture.wrapper) ==
+        GOMA_KOKKOS_INVALID_ARGUMENT);
+  CHECK(std::strlen(goma_kokkos_context_last_error(context.value)) > 0);
+  setup_legacy_context(context.value, fixture.legacy.input(), fixture.wrapper);
+  std::vector<double> residual(fixture.global.size(), 0.0);
+  CHECK(goma_kokkos_context_assemble_legacy(
+            context.value, fixture.wrapper, fixture.x.data(), fixture.xdot.data(), 1.0,
+            GOMA_KOKKOS_RESIDUAL_AND_JACOBIAN, residual.data()) == GOMA_KOKKOS_SUCCESS);
+  // Successful setup is immutable.
+  REQUIRE_THROWS_AS(setup_legacy_context(context.value, fixture.legacy.input(), fixture.wrapper),
+                    std::invalid_argument);
 }
 } // namespace

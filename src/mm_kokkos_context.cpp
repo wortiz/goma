@@ -256,6 +256,7 @@ void setup_context(goma_kokkos_context *context,
     auto prepared =
         std::make_unique<PreparedFlowState<Dim>>(snapshot, adapter, matrix, dirichlet_penalty);
     context->assembly = std::move(prepared);
+    context->matrix = matrix;
     context->last_error.clear();
   } catch (const std::exception &error) {
     detail::context_error(context, error.what());

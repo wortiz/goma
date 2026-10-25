@@ -26,6 +26,7 @@ public:
 struct goma_kokkos_context {
   Kokkos::View<int> device_status{"goma_assembly_device_status"};
   std::string last_error;
+  const void *matrix = nullptr; // Identity of the setup matrix wrapper; not dereferenced.
   std::unique_ptr<goma::assembly::detail::ContextAssemblyState> assembly;
 };
 

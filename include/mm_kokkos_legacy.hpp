@@ -2,6 +2,7 @@
 #ifndef GOMA_MM_KOKKOS_LEGACY_HPP
 #define GOMA_MM_KOKKOS_LEGACY_HPP
 
+#include "mm_kokkos_assembly.h"
 #include "mm_kokkos_host.hpp"
 extern "C" {
 #include "mm_as_structs.h"
@@ -38,6 +39,26 @@ struct LegacyFlowInput {
   std::span<const int> block_materials;
   LegacyFlowOptions options;
 };
+
+// Read initialized process-global metadata without changing it. Returned spans
+// borrow Goma storage; consume them before teardown or another problem setup.
+LegacyFlowInput describe_legacy_flow(const Exo_DB &mesh);
+
+// Copy actual owned/ghost global IDs and Nodes DBC metadata, resolving matrix-zero
+// unknowns with Index_Solution. Host-only: caller must coordinate failures across
+// ranks before entering collective context setup.
+template <int Dim>
+HostFlowSnapshot<Dim> snapshot_initialized_legacy_flow(const LegacyFlowInput &input,
+                                                       GomaSparseMatrix matrix);
+
+// Collective on goma_comm, which must match the matrix communicator. Snapshot the
+// initialized metadata, then require on every rank that the Tpetra owned row map
+// equals the leading matrix global IDs, that each local element (including ghost
+// elements) appears once, and that some rank owns a constrained pressure DOF.
+// Sets up the context with DIRICHLET_PENALTY. Throws on every rank if any rank fails.
+void setup_legacy_context(goma_kokkos_context *context,
+                          const LegacyFlowInput &input,
+                          GomaSparseMatrix matrix);
 
 // Collect every known incompatibility instead of stopping at the first one.
 // Call after setup_problem(), which resolves the integration-map interpolation.
