@@ -9,19 +9,45 @@ Select the assembly implementation for the complete coupled system. The default
 is ``legacy``, which preserves the existing assembly behavior and works with
 ``Use AutoDiff Assembly`` as before.
 
-``kokkos`` reserves the experimental device assembly path. Build its
-infrastructure with ``-DENABLE_KOKKOS_ASSEMBLY=ON``; this requires C++20 and a
+``kokkos`` selects the Kokkos assembly path for the supported subset described
+below. Build it with ``-DENABLE_KOKKOS_ASSEMBLY=ON``; this requires C++20 and a
 Trilinos installation containing Kokkos, Tpetra, and Stratimikos, with the latter
 two enabled in Goma. Legacy-only builds continue to use C++17 and C11.
 
-The Kokkos assembly path is still under development. A build without the
-feature rejects ``kokkos`` during input parsing. An enabled build accepts the
-selection and runs collective preflight after problem setup, then rejects
-execution before assembly until parity with legacy assembly is established
-(see `Solver routing and qualification`_). It never falls back to legacy
-assembly. Kokkos
-with ``Use AutoDiff Assembly = yes`` is also unavailable; that incompatibility
-is reported with the other preflight diagnostics.
+A build without the feature rejects ``kokkos`` during input parsing. An enabled
+build runs collective preflight after problem setup and rejects any
+configuration outside the supported subset before assembly, listing every
+incompatibility it finds (see `Host adaptation and preflight`_). Accepted
+configurations are announced on standard error. Kokkos never falls back to
+legacy assembly or combines legacy and Kokkos contributions. Kokkos with
+``Use AutoDiff Assembly = yes`` is not yet available; that incompatibility is
+reported with the other preflight diagnostics.
+
+Supported subset
+----------------
+
+The Kokkos path currently assembles fixed-mesh, Cartesian, incompressible
+Newtonian flow:
+
+* one fluid material, used by every element block, solved as a single coupled
+  matrix with ``Matrix storage format = tpetra`` and
+  ``Solution Algorithm = stratimikos``;
+* 9-node quadrilaterals in 2D or 27-node hexahedra in 3D, with isoparametric
+  geometry, Q2 velocity, and Q1 pressure;
+* steady or transient time integration, using the existing time-step parameter;
+* constant density and viscosity, ``Liquid Constitutive Equation = NEWTONIAN``,
+  Galerkin momentum weighting, and a constant ``Navier-Stokes Source``;
+* momentum mass, advection, diffusion, and source terms, and the continuity
+  advection term, each with its multiplier from the ``EQ`` card;
+* constant nodal ``U``, ``V``, ``W``, and ``P`` conditions on node sets, either
+  hard-set or residual-mode, with at least one ``P`` condition on a node that
+  has a pressure unknown.
+
+Stabilization, AutoDiff and numerical Jacobians, other equations and boundary
+conditions, mesh motion, level sets, augmenting conditions, continuation, and
+linear stability analysis remain on the legacy path. Only the Kokkos Serial
+execution space and direct Stratimikos solves (Amesos2) have been verified so
+far.
 
 Enabled builds initialize Kokkos for the Goma library lifetime, borrowing an
 already initialized host runtime when present. Assembly contexts own device
@@ -209,8 +235,8 @@ requested contributions to the owned entries of the residual vector. External
 residual entries are left unchanged. A matrix other than the one used at setup
 is rejected on every rank.
 
-Solver routing and qualification
---------------------------------
+Solver routing
+--------------
 
 When ``kokkos`` is selected, ``matrix_fill_full`` replaces its element loop with
 the Kokkos context for the current coupled matrix. The context is created and set
@@ -224,12 +250,7 @@ printed on each rank and returned as a failed fill. Goma treats a failed steady
 fill as fatal; transient solves reduce the time step as for other fill failures.
 Legacy contributions are never substituted.
 
-Execution remains gated by preflight until parity with legacy assembly is
-established. For parity and qualification runs only, set the environment
-variable ``GOMA_KOKKOS_QUALIFICATION=1``; rank zero's value applies to all ranks.
-Preflight then admits configurations with no other incompatibility and prints a
-notice that parity has not been established. Rank zero prints the execution
-space when each context is configured.
+Rank zero prints the execution space when each context is configured.
 
 Tests solve a lid-driven cavity of 9-node quadrilaterals in library mode on two
 MPI ranks, steady and transient (:math:`\theta = 0.5`). Solutions agree with
@@ -241,8 +262,8 @@ setup on every rank, without fallback.
 Legacy parity checks
 --------------------
 
-Setting ``GOMA_KOKKOS_PARITY=1`` as well (rank zero's value applies) turns every
-Kokkos fill into a comparison. The legacy element loop first assembles from the
+Setting the environment variable ``GOMA_KOKKOS_PARITY=1`` (rank zero's value
+applies to all ranks) turns every Kokkos fill into a comparison. The legacy element loop first assembles from the
 caller's matrix and residual state; that state is then restored and the Kokkos
 fill runs. Owned residual and matrix contributions are compared entry by entry
 before scaling, and the Kokkos values are kept for the solve. Entries agree when
@@ -257,15 +278,17 @@ fill for residual-only requests), and :math:`S` is the largest :math:`s` on any
 rank. Rank zero prints one summary per fill to standard error, with Dirichlet
 rows reported separately; ranks print their worst failing entries, and any
 failure fails the fill on every rank. Parity runs assemble twice and are meant
-only for qualification.
+for verification, not production.
 
 Tests compare every fill of Kokkos solves and then their solutions with legacy
 runs: a Re = 100 lid-driven cavity on distorted quadrilaterals with a
 residual-mode lid condition and backtracking line search (residual-only fills);
 body-force plane Poiseuille flow, which also reproduces the exact solution;
 decay of a uniform channel flow with backward Euler; a 3D lid-driven cavity on
-27-node hexahedra; and body-force duct spin-up with :math:`\theta = 0.5` on
-curved hexahedra. They run on one and two MPI ranks. Constrained rows agree
+27-node hexahedra; body-force duct spin-up with :math:`\theta = 0.5` on
+curved hexahedra; and a distorted cavity with non-unit density and non-unit,
+per-component term multipliers, including a disabled advection term and a
+negated continuity row. They run on one and two MPI ranks. Constrained rows agree
 exactly; other entries stay below 4% of tolerance, with the largest ratios in
 residual-only fills. Solutions, including
 velocity divergence, agree to a relative tolerance of :math:`10^{-8}`, with the

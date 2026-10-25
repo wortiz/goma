@@ -8,9 +8,8 @@ extern "C" {
 #endif
 
 /* Collective on goma_comm; reports all known incompatibilities on rank zero.
- * Execution remains gated until legacy parity is established, even when the
- * configuration passes the subset checks. Setting GOMA_KOKKOS_QUALIFICATION=1
- * on rank zero lifts only that gate, for parity and qualification runs. */
+ * Configurations outside the supported subset are rejected; accepted ones are
+ * reported once on rank zero. */
 goma_kokkos_status goma_kokkos_preflight_legacy(const Exo_DB *exo);
 
 struct g_GomaSparseMatrix;

@@ -139,8 +139,9 @@ The implementation through `33677081` includes backend selection and build check
 Kokkos runtime ownership, device-callable flow expressions and explicit Jacobians,
 Q2/Q1 geometry and element evaluation, Dirichlet row replacement, owned-row Tpetra
 scatter, and host snapshot/gather helpers. Collective preflight reports known
-incompatibilities after setup and rejects execution while solver routing and full
-legacy parity remain unfinished. Legacy assembly remains the default.
+incompatibilities after setup. Steps 1–5 below have since routed solver fills
+through Kokkos, established legacy parity, and enabled the supported subset.
+Legacy assembly remains the default.
 
 Complete the remaining integration in this order:
 
@@ -217,18 +218,39 @@ Complete the remaining integration in this order:
    perturbation is caught on the first fill. Unconstrained contributions are compared
    in every row without a Dirichlet condition; rows with one are compared after row
    replacement, which matches legacy exactly.
-5. **Enable the supported subset.** Remove the execution gate only after the
-   preceding integration and numerical checks pass; retain capability rejection
-   for every unsupported configuration and keep the default backend unchanged.
+5. **Enable the supported subset (implemented, 2026-10-25).** Preflight no
+   longer adds an execution issue, and `GOMA_KOKKOS_QUALIFICATION` is gone:
+   `Assembly Backend = kokkos` runs any configuration that passes the capability
+   checks, and rank zero reports the acceptance on standard error.
+   `GOMA_KOKKOS_PARITY=1` alone enables parity checks. Before removing the gate,
+   the checks were audited against the options read by the legacy fill, momentum,
+   and continuity assembly. Options not checked directly (strong side-set
+   replacement, subgrid integration, porous, FSI, and particle terms) are reachable
+   only through features preflight already rejects. Capability rejection is
+   unchanged and the default backend stays `legacy`. Tests:
+   - `goma_kokkos_cavity` runs Kokkos with no environment switches (parity
+     explicitly off) and checks that preflight accepts each Kokkos solve.
+   - `goma_kokkos_preflight` checks that rejections list only real
+     incompatibilities.
+   - `goma_kokkos_parity` adds a sixth case: a distorted cavity with density 1.5,
+     non-unit per-component momentum multipliers (y advection disabled), and a
+     negated continuity multiplier. All 63 fills pass, with a worst ratio of
+     3.5e-2 of tolerance. Swapping the mass and advection multipliers in the
+     adapter is caught on the first Jacobian fill.
+
+   Only Serial and direct Amesos2 solves are verified. Hard-set rows behave as in
+   legacy, because the matrices match, but iterative solves remain unqualified.
+   The user documentation now carries a supported-subset summary.
 6. **Qualify parallel execution and extend derivatives.** Run actual Threads,
    OpenMP, and CUDA configurations, measure assembly/transfers/solve separately,
    then add bounded-storage Sacado Jacobians using the existing residuals.
 
 Existing checks cover Serial expression/element execution, one/two-rank scatter,
-legacy-metadata context setup and evaluation, routed 2D cavity solves matching
+legacy-metadata context setup and evaluation, ungated 2D cavity solves matching
 legacy on two ranks, fill-by-fill and solution parity with legacy on distorted
-and 3D meshes, empty ranks, collective failure before global writes, and
-rejected-setup recovery followed by a legacy solve. They do not yet qualify
+and 3D meshes (including non-unit term multipliers), empty ranks, collective
+failure before global writes, and rejected-setup recovery followed by a legacy
+solve. They do not yet qualify
 Threads/OpenMP/CUDA.
 
 ## Validation and acceptance

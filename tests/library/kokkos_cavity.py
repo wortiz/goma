@@ -3,8 +3,9 @@
 One goma_lib_sequence process on two ranks runs, in order: a transient Kokkos
 solve whose context setup must fail on every rank (P on a node without a
 pressure DOF; steady fill errors are fatal in Goma), steady and transient
-Kokkos solves, then the same two legacy solves. Kokkos and legacy
-outputs must agree within the parity tolerance.
+Kokkos solves, then the same two legacy solves. Kokkos runs without any
+environment switch. Kokkos and legacy outputs must agree within the parity
+tolerance.
 """
 
 import argparse
@@ -78,7 +79,8 @@ def main():
         if index > 0:
             command.append("--")
         command += [str(output / name), *options, "-i", "input", "-a"]
-    environment = dict(os.environ, GOMA_KOKKOS_QUALIFICATION="1")
+    # Kokkos runs without any opt-in switch; keep parity checks off.
+    environment = {k: v for k, v in os.environ.items() if k != "GOMA_KOKKOS_PARITY"}
     result = subprocess.run(
         command,
         cwd=output,
@@ -98,12 +100,17 @@ def main():
     )
     if result.stderr.count(rejected) < 2:
         failures.append("setup failure was not reported on both ranks")
+    accepted = "Kokkos assembly preflight accepted this configuration"
+    if result.stderr.count(accepted) != 3:
+        failures.append("preflight did not accept each of the three Kokkos solves")
+    if "Kokkos parity" in result.stderr:
+        failures.append("parity checks ran without GOMA_KOKKOS_PARITY")
     if result.stderr.count("Kokkos assembly context configured for 2D Q2/Q1 flow") != 2:
         failures.append(
             "the steady and transient Kokkos solves did not each configure a context"
         )
     if result.stderr.count("Kokkos assembly failed") != result.stderr.count(rejected):
-        failures.append("a qualified Kokkos solve reported an assembly failure")
+        failures.append("a supported Kokkos solve reported an assembly failure")
     parity = output / "parity.exodiff"
     parity.write_text(PARITY)
     for kind in ("steady", "transient"):

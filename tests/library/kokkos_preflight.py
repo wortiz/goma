@@ -68,13 +68,22 @@ def main():
         "must be tpetra",
         "only one homogeneous fluid",
         "explicit nodal P",
-        "execution:",
     ]
     missing = [message for message in required if message not in result.stderr]
-    if result.returncode != 0 or missing or result.stderr.count(required[0]) != 1:
+    # Only real incompatibilities are reported; execution itself is no longer gated.
+    unexpected = (
+        "execution:" in result.stderr or "accepted this configuration" in result.stderr
+    )
+    if (
+        result.returncode != 0
+        or missing
+        or unexpected
+        or result.stderr.count(required[0]) != 1
+    ):
         print(result.stderr, file=sys.stderr)
         print(
-            f"exit={result.returncode}; missing diagnostics={missing}", file=sys.stderr
+            f"exit={result.returncode}; missing diagnostics={missing}; unexpected={unexpected}",
+            file=sys.stderr,
         )
         return 1
     print(

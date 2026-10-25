@@ -11,7 +11,8 @@ body-force channel must also reproduce its exact Poiseuille solution.
 Cases cover distorted 9-node quadrilaterals and regular and distorted 27-node
 hexahedra; lid-driven, body-force, and decaying flows; steady and transient
 (backward Euler and theta = 0.5) integration; hard-set and residual-mode
-velocity conditions; residual-only line-search fills; and one and two ranks.
+velocity conditions; residual-only line-search fills; non-unit, per-component
+equation term multipliers; and one and two ranks.
 Meshes come from kokkos_parity/make_meshes.py.
 """
 
@@ -127,15 +128,32 @@ CASES = [
         "bcs": walls(3, [5]),
         "transient": (0.5, 3),
     },
+    {
+        # Non-unit, per-component term multipliers, with y advection switched off,
+        # a negated continuity row, and non-unit density (backward Euler, lid and
+        # body force).
+        "name": "cavity2d_multipliers",
+        "mesh": "cavity2d_distorted.exoII",
+        "dim": 2,
+        "ranks": 2,
+        "density": 1.5,
+        "viscosity": 0.01,
+        "source": "0.3 -0.2 0.",
+        "bcs": walls(2, [1, 2, 4]) + ["BC = U NS 3 1.", "BC = V NS 3 0."],
+        "momentum": ["2. 0.5 1. 3. 0.25 0.", "0.5 0. 1. 0.75 4. 0."],
+        "continuity": "-2. 0.",
+        "transient": (0.0, 3),
+    },
 ]
 
 
 def deck(case, backend):
     dim = case["dim"]
+    momentum = case.get("momentum", ["1. 1. 1. 1. 1. 0."] * dim)
     equations = [
-        f"EQ = momentum{a + 1}  Q2 U{a + 1} Q2  1. 1. 1. 1. 1. 0." for a in range(dim)
+        f"EQ = momentum{a + 1}  Q2 U{a + 1} Q2  {momentum[a]}" for a in range(dim)
     ]
-    equations.append("EQ = continuity Q1 P  Q1  1.           0.")
+    equations.append(f"EQ = continuity Q1 P  Q1  {case.get('continuity', '1. 0.')}")
     if "transient" in case:
         theta, steps = case["transient"]
         time = [
@@ -278,9 +296,7 @@ def main():
                 "-a",
             ]
             runs.append(directory)
-    environment = dict(
-        os.environ, GOMA_KOKKOS_QUALIFICATION="1", GOMA_KOKKOS_PARITY="1"
-    )
+    environment = dict(os.environ, GOMA_KOKKOS_PARITY="1")
     result = subprocess.run(
         command,
         cwd=output,

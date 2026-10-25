@@ -22,7 +22,6 @@ extern "C" {
 }
 #include <algorithm>
 #include <cstdio>
-#include <cstdlib>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -529,14 +528,6 @@ extern "C" goma_kokkos_status goma_kokkos_preflight_legacy(const Exo_DB *exo) {
     } catch (...) {
       issues.push_back("adapter: preflight failed with an unknown exception");
     }
-    // Keep eligible configurations gated until legacy parity is established. Rank zero's
-    // environment decides, so launchers that do not forward it cannot split the ranks.
-    const char *qualification = std::getenv("GOMA_KOKKOS_QUALIFICATION");
-    int qualify = qualification != nullptr && std::string(qualification) == "1" ? 1 : 0;
-    MPI_Bcast(&qualify, 1, MPI_INT, 0, goma_comm);
-    if (!qualify) {
-      issues.push_back("execution: complete legacy assembly parity is not yet established");
-    }
     try {
       int rank = 0, processes = 1;
       MPI_Comm_rank(goma_comm, &rank);
@@ -546,9 +537,7 @@ extern "C" goma_kokkos_status goma_kokkos_preflight_legacy(const Exo_DB *exo) {
       MPI_Allreduce(&local_issues, &any_issues, 1, MPI_INT, MPI_MAX, goma_comm);
       if (any_issues == 0) {
         if (rank == 0) {
-          std::fprintf(stderr, "Kokkos assembly enabled for qualification "
-                               "(GOMA_KOKKOS_QUALIFICATION=1); legacy parity is not yet "
-                               "established\n");
+          std::fprintf(stderr, "Kokkos assembly preflight accepted this configuration\n");
           std::fflush(stderr);
         }
         return GOMA_KOKKOS_SUCCESS;

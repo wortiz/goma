@@ -1,4 +1,4 @@
-/* Opt-in comparison of legacy and Kokkos assembly for qualification runs. */
+/* Opt-in fill-by-fill comparison of legacy and Kokkos assembly. */
 #ifndef GOMA_MM_KOKKOS_PARITY_H
 #define GOMA_MM_KOKKOS_PARITY_H
 
