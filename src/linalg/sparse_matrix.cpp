@@ -21,6 +21,9 @@
 #endif
 #ifdef GOMA_ENABLE_EPETRA
 #include "linalg/sparse_matrix_epetra.h"
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+#include "mm_kokkos_legacy.h"
+#endif
 #endif
 
 extern "C" {
@@ -482,6 +485,10 @@ extern "C" goma_error GomaSparseMatrix_Destroy(GomaSparseMatrix *matrix) {
   if (*matrix == NULL) {
     return GOMA_SUCCESS;
   }
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  /* The fill context's scatter plan references this matrix's graph. */
+  goma_kokkos_release_matrix(*matrix);
+#endif
   if ((*matrix)->destroy != NULL) {
     (*matrix)->destroy(*matrix);
   }

@@ -93,6 +93,19 @@ target_link_libraries(goma_lib_sequence goma_library)
 # Library mode regression tests: GUTS problems run several times in one process
 # by goma_lib_sequence and compared with their blessed results
 find_package(Python3 COMPONENTS Interpreter)
+if(ENABLE_KOKKOS_ASSEMBLY AND Python3_FOUND)
+  find_program(GOMA_EXODIFF exodiff)
+  if(GOMA_EXODIFF)
+    # Kokkos-routed cavity solves agree with legacy assembly; setup failures do not fall back
+    add_test(NAME goma_kokkos_cavity
+             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/library/kokkos_cavity.py
+                     --driver $<TARGET_FILE:goma_lib_sequence> --exodiff ${GOMA_EXODIFF}
+                     --output-dir ${CMAKE_CURRENT_BINARY_DIR}/goma_kokkos_cavity
+                     --mpiexec ${MPIEXEC_EXECUTABLE})
+    set_tests_properties(goma_kokkos_cavity PROPERTIES PROCESSORS 2 TIMEOUT 300
+                                                     LABELS "library;assembly;kokkos")
+  endif()
+endif()
 set(GOMA_GUTS_DIR ${PROJECT_SOURCE_DIR}/guts)
 if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
   set(GOMA_LIB_REGRESSION

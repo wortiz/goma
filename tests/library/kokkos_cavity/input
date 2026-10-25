@@ -1,0 +1,61 @@
+---
+FEM File Specifications
+---
+FEM file                         = cavity.exoII
+Output EXODUS II file            = out.exoII
+GUESS file                       = contin.dat
+SOLN file                        = soln.dat
+Write intermediate results       = no
+---
+General Specifications
+---
+Number of processors             = 1
+Output Level                     = 0
+Debug                            = 0
+Initial Guess                    = zero
+---
+Time Integration Specifications
+---
+Time integration                 = steady
+---
+Solver Specifications
+---
+Solution Algorithm               = stratimikos
+Matrix storage format            = tpetra
+Number of Newton Iterations      = 10
+Newton correction factor         = 1
+Normalized Residual Tolerance    = 1e-11
+Residual Ratio Tolerance         = 1e-6
+Pressure Stabilization           = no
+Assembly Backend                 = kokkos
+---
+Boundary Condition Specifications
+---
+Number of BC = -1
+BC = U NS 1 0.
+BC = V NS 1 0.
+BC = U NS 2 0.
+BC = V NS 2 0.
+BC = U NS 4 0.
+BC = V NS 4 0.
+BC = U NS 3 1.
+BC = V NS 3 0.
+BC = P NS 100 0.
+END OF BC
+---
+Problem Description
+---
+Number of Materials = 1
+MAT = fluid 1
+  Coordinate System = CARTESIAN
+  Element Mapping   = isoparametric
+  Mesh Motion       = ARBITRARY
+  Number of bulk species = 0
+Number of EQ = 3
+EQ = momentum1  Q2 U1 Q2  1. 1. 1. 1. 1. 0.
+EQ = momentum2  Q2 U2 Q2  1. 1. 1. 1. 1. 0.
+EQ = continuity Q1 P  Q1  1.           0.
+---
+Post Processing Specifications
+---
+Stream Function = no

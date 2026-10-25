@@ -17,7 +17,9 @@ two enabled in Goma. Legacy-only builds continue to use C++17 and C11.
 The Kokkos assembly path is still under development. A build without the
 feature rejects ``kokkos`` during input parsing. An enabled build accepts the
 selection and runs collective preflight after problem setup, then rejects
-execution before assembly. It never falls back to legacy assembly. Kokkos
+execution before assembly until parity with legacy assembly is established
+(see `Solver routing and qualification`_). It never falls back to legacy
+assembly. Kokkos
 with ``Use AutoDiff Assembly = yes`` is also unavailable; that incompatibility
 is reported with the other preflight diagnostics.
 
@@ -189,8 +191,51 @@ metadata ownership, repeated requests, refreshed fields and transient
 coefficients, failed setup and evaluation, context recreation, and empty ranks
 in Serial and with two MPI ranks.
 
-Solver routing remains unavailable even when the subset checks pass. The
-prepared context is not yet attached to the Goma problem lifecycle or nonlinear
-assembly loop. Actual legacy unknown/constraint adaptation, complete legacy
-assembly comparisons, and end-to-end steady/transient flow qualification are
-still required before enabling Kokkos flow solves.
+Legacy data adaptation
+----------------------
+
+Context setup from an initialized Goma problem is collective on the problem
+communicator. It resolves element DOFs with the existing unknown map, copies the
+matrix's owned and ghost global IDs, and builds constraints from the nodal DBC
+offsets. Every rank must confirm that the Tpetra owned row map equals the leading
+owned global IDs of the host vector, that each local element, including ghost
+elements, appears exactly once, and that at least one rank owns a pressure DOF
+with a nodal ``P`` condition. A failure on any rank is reported on all ranks
+before any collective device setup, and setup may be retried.
+
+Evaluation takes Goma's local solution and time-derivative vectors (owned plus
+external entries, after ghost exchange and hard-set imposition) and adds the
+requested contributions to the owned entries of the residual vector. External
+residual entries are left unchanged. A matrix other than the one used at setup
+is rejected on every rank.
+
+Solver routing and qualification
+--------------------------------
+
+When ``kokkos`` is selected, ``matrix_fill_full`` replaces its element loop with
+the Kokkos context for the current coupled matrix. The context is created and set
+up on the first fill, reused for later Newton iterations and time steps, and
+destroyed with the matrix (or by ``goma_destroy``). Fills honor residual-only
+and Jacobian-only requests, including line-search residual evaluations, and pass
+the legacy transient coefficient :math:`(1 + 2\theta)/\Delta t`. The Newton
+loop's matrix and residual zeroing, ghost exchange, row-sum scaling, and
+Stratimikos assembly phases are unchanged. A setup or evaluation failure is
+printed on each rank and returned as a failed fill. Goma treats a failed steady
+fill as fatal; transient solves reduce the time step as for other fill failures.
+Legacy contributions are never substituted.
+
+Execution remains gated by preflight until parity with legacy assembly is
+established. For parity and qualification runs only, set the environment
+variable ``GOMA_KOKKOS_QUALIFICATION=1``; rank zero's value applies to all ranks.
+Preflight then admits configurations with no other incompatibility and prints a
+notice that parity has not been established. Rank zero prints the execution
+space when each context is configured.
+
+Tests solve a lid-driven cavity of 9-node quadrilaterals in library mode on two
+MPI ranks, steady and transient (:math:`\theta = 0.5`). Solutions agree with
+legacy assembly to a relative tolerance of :math:`10^{-8}`, with the same Newton
+convergence history up to round-off in the final residual. A configuration whose
+only pressure condition lies on a midside node passes preflight but fails context
+setup on every rank, without fallback. These checks do not yet cover
+element-level parity on distorted and 3D meshes, body-force cases, or execution
+spaces other than Serial.

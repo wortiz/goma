@@ -18,9 +18,11 @@ extern "C" {
 #include "rf_io.h"
 #include "rf_solver.h"
 #include "rf_solver_const.h"
+#include "sl_util_structs.h"
 }
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -527,13 +529,30 @@ extern "C" goma_kokkos_status goma_kokkos_preflight_legacy(const Exo_DB *exo) {
     } catch (...) {
       issues.push_back("adapter: preflight failed with an unknown exception");
     }
-    // Never let an eligible subset run through legacy assembly while routing is unfinished.
-    issues.push_back("execution: Kokkos solver routing and complete legacy assembly parity are not "
-                     "yet available");
+    // Keep eligible configurations gated until legacy parity is established. Rank zero's
+    // environment decides, so launchers that do not forward it cannot split the ranks.
+    const char *qualification = std::getenv("GOMA_KOKKOS_QUALIFICATION");
+    int qualify = qualification != nullptr && std::string(qualification) == "1" ? 1 : 0;
+    MPI_Bcast(&qualify, 1, MPI_INT, 0, goma_comm);
+    if (!qualify) {
+      issues.push_back("execution: complete legacy assembly parity is not yet established");
+    }
     try {
       int rank = 0, processes = 1;
       MPI_Comm_rank(goma_comm, &rank);
       MPI_Comm_size(goma_comm, &processes);
+      int local_issues = static_cast<int>(std::min<std::size_t>(issues.size(), INT_MAX));
+      int any_issues = 0;
+      MPI_Allreduce(&local_issues, &any_issues, 1, MPI_INT, MPI_MAX, goma_comm);
+      if (any_issues == 0) {
+        if (rank == 0) {
+          std::fprintf(stderr, "Kokkos assembly enabled for qualification "
+                               "(GOMA_KOKKOS_QUALIFICATION=1); legacy parity is not yet "
+                               "established\n");
+          std::fflush(stderr);
+        }
+        return GOMA_KOKKOS_SUCCESS;
+      }
       std::string local;
       for (const auto &issue : issues) {
         local += issue + '\n';
@@ -642,5 +661,94 @@ goma_kokkos_context_assemble_legacy(goma_kokkos_context *context,
   } catch (...) {
     goma::assembly::detail::context_error(context, "Unknown Kokkos legacy assembly failure");
     return GOMA_KOKKOS_RUNTIME_ERROR;
+  }
+}
+
+namespace {
+// The single fill context for the current coupled matrix. Null, or configured for
+// the matrix it records; a failed setup destroys it so the next fill retries.
+goma_kokkos_context *fill_context = nullptr;
+
+void report_fill_failure(const char *message) {
+  int rank = 0;
+  MPI_Comm_rank(goma_comm, &rank);
+  std::fprintf(stderr, "P_%d: Kokkos assembly failed: %s\n", rank,
+               message != nullptr && *message != '\0' ? message : "unknown error");
+  std::fflush(stderr);
+}
+
+void destroy_fill_context() {
+  if (fill_context != nullptr &&
+      goma_kokkos_context_destroy(&fill_context) != GOMA_KOKKOS_SUCCESS) {
+    report_fill_failure("could not destroy the assembly context");
+  }
+}
+} // namespace
+
+extern "C" int goma_kokkos_matrix_fill(struct GomaLinearSolverData *ams,
+                                       const Exo_DB *exo,
+                                       const double *x,
+                                       const double *xdot,
+                                       double delta_t,
+                                       double theta,
+                                       double *resid_vector) {
+  using goma::assembly::all_ranks;
+  try {
+    auto *matrix = ams != nullptr ? static_cast<GomaSparseMatrix>(ams->GomaMatrixData) : nullptr;
+    const bool valid = af != nullptr && exo != nullptr && matrix != nullptr && pd_glob != nullptr &&
+                       pd_glob[0] != nullptr &&
+                       (fill_context == nullptr || fill_context->matrix == matrix);
+    if (!all_ranks(valid)) {
+      report_fill_failure("Kokkos fill requires initialized problem data and the matrix bound "
+                          "to the existing context");
+      return -1;
+    }
+    const bool residual = af->Assemble_Residual != 0;
+    const bool jacobian = af->Assemble_Jacobian != 0;
+    if (!residual && !jacobian) {
+      return 0;
+    }
+    if (fill_context == nullptr) {
+      const auto created = goma_kokkos_context_create(&fill_context);
+      if (!all_ranks(created == GOMA_KOKKOS_SUCCESS)) {
+        report_fill_failure("could not create the assembly context");
+        destroy_fill_context();
+        return -1;
+      }
+      if (goma_kokkos_context_setup_legacy(fill_context, exo, matrix) != GOMA_KOKKOS_SUCCESS) {
+        report_fill_failure(goma_kokkos_context_last_error(fill_context));
+        destroy_fill_context();
+        return -1;
+      }
+      int rank = 0;
+      MPI_Comm_rank(goma_comm, &rank);
+      if (rank == 0) {
+        std::printf("Kokkos assembly context configured for %dD Q2/Q1 flow on %s\n", exo->num_dim,
+                    Kokkos::DefaultExecutionSpace::name());
+        std::fflush(stdout);
+      }
+    }
+    // Legacy momentum linearization uses d(xdot)/dx = (1 + 2 theta) / delta_t.
+    const bool transient = pd_glob[0]->TimeIntegration != STEADY;
+    const double coefficient = transient ? (1.0 + 2.0 * theta) / delta_t : 0.0;
+    const auto request = residual && jacobian ? GOMA_KOKKOS_RESIDUAL_AND_JACOBIAN
+                         : residual           ? GOMA_KOKKOS_RESIDUAL
+                                              : GOMA_KOKKOS_JACOBIAN;
+    if (goma_kokkos_context_assemble_legacy(
+            fill_context, matrix, x, transient ? xdot : nullptr, coefficient, request,
+            residual ? resid_vector : nullptr) != GOMA_KOKKOS_SUCCESS) {
+      report_fill_failure(goma_kokkos_context_last_error(fill_context));
+      return -1;
+    }
+    return 0;
+  } catch (...) {
+    report_fill_failure("unknown exception");
+    return -1;
+  }
+}
+
+extern "C" void goma_kokkos_release_matrix(const struct g_GomaSparseMatrix *matrix) {
+  if (fill_context != nullptr && (matrix == nullptr || fill_context->matrix == matrix)) {
+    destroy_fill_context();
   }
 }

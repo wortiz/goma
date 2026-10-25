@@ -1176,6 +1176,10 @@ int goma_destroy(goma_context **ctx_ptr) {
   if (ctx->stage == GOMA_STAGE_ADVANCING) {
     goma_finish(ctx);
   }
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  /* A failed solve may leave its matrix behind; release Views before library finalize. */
+  goma_kokkos_release_matrix(NULL);
+#endif
 #ifdef GOMA_CHECK_GLOBAL_RESET
   /* ProcID is reset below */
   int check_rank = ProcID;

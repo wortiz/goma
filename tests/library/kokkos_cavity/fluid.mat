@@ -1,0 +1,27 @@
+---Physical Properties
+Density                 = CONSTANT 1.
+---Mechanical Properties and Constitutive Equations
+Solid Constitutive Equation     = NONLINEAR
+Convective Lagrangian Velocity  = NONE
+Lame MU                         = CONSTANT 1.
+Lame LAMBDA                     = CONSTANT 1.
+Liquid Constitutive Equation    = NEWTONIAN
+Viscosity                       = CONSTANT 0.01
+Surface Tension                 = CONSTANT 0.
+---Thermal Properties
+Conductivity            = CONSTANT 1.
+Heat Capacity           = CONSTANT 1.
+Volume Expansion        = CONSTANT 0.
+Reference Temperature   = CONSTANT 0.
+Liquidus Temperature    = CONSTANT 1.
+Solidus Temperature     = CONSTANT 1.
+---Electrical Properties
+Electrical Conductivity = CONSTANT 1.
+---Microstructure Properties
+Media Type              = CONTINUOUS
+---Source Terms
+Navier-Stokes Source    = CONSTANT 0. 0. 0.
+Solid Body Source       = CONSTANT 0. 0. 0.
+Mass Source             = CONSTANT 0.
+Heat Source             = CONSTANT 0.
+Current Source           = CONSTANT 0.

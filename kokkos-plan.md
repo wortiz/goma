@@ -175,11 +175,26 @@ Complete the remaining integration in this order:
    updates, Jacobian-only and residual-only requests, residual and hard-set
    constraints, and one-rank failures. The adapter has not yet been driven by a
    real deck; that happens when step 3 routes `matrix_fill_full` through it.
-3. **Route nonlinear assembly.** Select the prepared Kokkos context above the
-   legacy element loop in `matrix_fill_full`, preserving residual-only and
-   Jacobian-only requests, transient coefficients, matrix zeroing, owned residual
-   ordering, scaling, and Stratimikos assembly phases. Attach context teardown to
-   the Goma library lifecycle. Never silently fall back to legacy contributions.
+3. **Route nonlinear assembly (implemented, 2026-10-25).** With `Assembly Backend =
+   kokkos`, `matrix_fill_full` returns through `goma_kokkos_matrix_fill` before the
+   legacy element loop. The fill context is created and set up on the first fill
+   for the current coupled matrix, reused across Newton iterations and time steps,
+   and destroyed in `GomaSparseMatrix_Destroy` (with a release in `goma_destroy`
+   for failed solves). Requests follow `af->Assemble_Residual/Jacobian`, so
+   line-search residual-only fills work; the transient coefficient is the legacy
+   `(1 + 2θ)/Δt`. The Newton loop's zeroing, exchange, owned residual ordering,
+   row-sum scaling, and Stratimikos assembly phases are unchanged. Failures are
+   printed on each rank and returned as failed fills, never replaced by legacy
+   contributions; Goma treats a failed steady fill as fatal. The preflight execution
+   gate stays in place; `GOMA_KOKKOS_QUALIFICATION=1` (rank zero's value) lifts only
+   that gate for parity and qualification runs. `goma_kokkos_cavity` solves a 2D
+   Q2/Q1 lid-driven cavity in library mode on two ranks, steady and transient
+   (θ = 0.5). Its solutions agree with legacy to 1e-8 relative, with matching
+   Newton histories. It also checks that a setup failure (a P condition only on a
+   midside node) is reported on both ranks without fallback. Manual runs also
+   matched legacy on one rank. Hard-set rows rely on exact zero Newton updates,
+   which direct solves give; iterative Stratimikos solves may need a tolerance
+   or re-imposition when qualified.
 4. **Establish legacy parity.** Compare constrained and unconstrained element and
    global contributions before scaling on regular/distorted quads and hexes, with
    shared nodes, ghost columns, and one/two MPI ranks. Run steady cavity,
@@ -193,9 +208,11 @@ Complete the remaining integration in this order:
    then add bounded-storage Sacado Jacobians using the existing residuals.
 
 Existing checks cover Serial expression/element execution, one/two-rank scatter,
-legacy-metadata context setup and evaluation, empty ranks, collective failure
-before global writes, and rejected-setup recovery followed by a legacy solve. They do not yet qualify full Kokkos flow solves,
-Threads/OpenMP/CUDA, or parity with the complete legacy assembly implementation.
+legacy-metadata context setup and evaluation, routed 2D cavity solves matching
+legacy on two ranks, empty ranks, collective failure before global writes, and
+rejected-setup recovery followed by a legacy solve. They do not yet qualify 3D,
+distorted, or body-force flow solves, Threads/OpenMP/CUDA, or parity with the
+complete legacy assembly implementation.
 
 ## Validation and acceptance
 

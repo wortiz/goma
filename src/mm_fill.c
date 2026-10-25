@@ -112,6 +112,10 @@
 #include "sl_petsc_complex.h"
 #include "stdbool.h"
 #include "wr_side_data.h"
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+#include "mm_assembly.h"
+#include "mm_kokkos_legacy.h"
+#endif
 
 #define GOMA_MM_FILL_C
 
@@ -219,6 +223,13 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
   neg_elem_volume = FALSE;
   neg_lub_height = FALSE;
   zero_detJ = FALSE;
+
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  /* Preflight admitted the whole coupled system; never mix in legacy contributions. */
+  if (upd->AssemblyBackend == GOMA_ASSEMBLY_KOKKOS) {
+    return goma_kokkos_matrix_fill(ams, exo, x, xdot, *ptr_delta_t, *ptr_theta, resid_vector);
+  }
+#endif
 
   e_start = exo->eb_ptr[0];
   e_end = exo->eb_ptr[exo->num_elem_blocks];
