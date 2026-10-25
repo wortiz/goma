@@ -98,7 +98,7 @@ def main():
     )
     if result.stderr.count(rejected) < 2:
         failures.append("setup failure was not reported on both ranks")
-    if result.stdout.count("Kokkos assembly context configured for 2D Q2/Q1 flow") != 2:
+    if result.stderr.count("Kokkos assembly context configured for 2D Q2/Q1 flow") != 2:
         failures.append(
             "the steady and transient Kokkos solves did not each configure a context"
         )

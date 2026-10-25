@@ -236,6 +236,38 @@ MPI ranks, steady and transient (:math:`\theta = 0.5`). Solutions agree with
 legacy assembly to a relative tolerance of :math:`10^{-8}`, with the same Newton
 convergence history up to round-off in the final residual. A configuration whose
 only pressure condition lies on a midside node passes preflight but fails context
-setup on every rank, without fallback. These checks do not yet cover
-element-level parity on distorted and 3D meshes, body-force cases, or execution
-spaces other than Serial.
+setup on every rank, without fallback.
+
+Legacy parity checks
+--------------------
+
+Setting ``GOMA_KOKKOS_PARITY=1`` as well (rank zero's value applies) turns every
+Kokkos fill into a comparison. The legacy element loop first assembles from the
+caller's matrix and residual state; that state is then restored and the Kokkos
+fill runs. Owned residual and matrix contributions are compared entry by entry
+before scaling, and the Kokkos values are kept for the solve. Entries agree when
+
+.. math::
+
+   |a_K - a_L| \le 10^{-9}\max(|a_K|, |a_L|) + 10^{-12}(s + 10^{-3} S),
+
+where :math:`s` is the row's largest legacy matrix entry or, for residuals, the
+row's sum of :math:`|J_{ij} x_j|` plus its contribution (from the last Jacobian
+fill for residual-only requests), and :math:`S` is the largest :math:`s` on any
+rank. Rank zero prints one summary per fill to standard error, with Dirichlet
+rows reported separately; ranks print their worst failing entries, and any
+failure fails the fill on every rank. Parity runs assemble twice and are meant
+only for qualification.
+
+Tests compare every fill of Kokkos solves and then their solutions with legacy
+runs: a Re = 100 lid-driven cavity on distorted quadrilaterals with a
+residual-mode lid condition and backtracking line search (residual-only fills);
+body-force plane Poiseuille flow, which also reproduces the exact solution;
+decay of a uniform channel flow with backward Euler; a 3D lid-driven cavity on
+27-node hexahedra; and body-force duct spin-up with :math:`\theta = 0.5` on
+curved hexahedra. They run on one and two MPI ranks. Constrained rows agree
+exactly; other entries stay below 4% of tolerance, with the largest ratios in
+residual-only fills. Solutions, including
+velocity divergence, agree to a relative tolerance of :math:`10^{-8}`, with the
+same Newton iteration counts, residual history, and printed solution norms.
+These checks do not yet cover execution spaces other than Serial.

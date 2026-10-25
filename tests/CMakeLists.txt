@@ -104,6 +104,14 @@ if(ENABLE_KOKKOS_ASSEMBLY AND Python3_FOUND)
                      --mpiexec ${MPIEXEC_EXECUTABLE})
     set_tests_properties(goma_kokkos_cavity PROPERTIES PROCESSORS 2 TIMEOUT 300
                                                      LABELS "library;assembly;kokkos")
+    # Fill-by-fill and solution parity with legacy assembly on Q2/Q1 quads and hexes
+    add_test(NAME goma_kokkos_parity
+             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/library/kokkos_parity.py
+                     --driver $<TARGET_FILE:goma_lib_sequence> --exodiff ${GOMA_EXODIFF}
+                     --output-dir ${CMAKE_CURRENT_BINARY_DIR}/goma_kokkos_parity
+                     --mpiexec ${MPIEXEC_EXECUTABLE})
+    set_tests_properties(goma_kokkos_parity PROPERTIES PROCESSORS 2 TIMEOUT 600
+                                                     LABELS "library;assembly;kokkos")
   endif()
 endif()
 set(GOMA_GUTS_DIR ${PROJECT_SOURCE_DIR}/guts)

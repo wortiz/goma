@@ -115,6 +115,7 @@
 #ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
 #include "mm_assembly.h"
 #include "mm_kokkos_legacy.h"
+#include "mm_kokkos_parity.h"
 #endif
 
 #define GOMA_MM_FILL_C
@@ -149,11 +150,12 @@ static void zero_lec(void);
 
 /*************************************************************************
  *
- * matrix_fill_full:
+ * matrix_fill_full / legacy_matrix_fill_full:
  *
  *
- *  Construct the Jacobian and Residual. This is a wrapper around the
- *  element level fill routine, matrix_fill().
+ *  Construct the Jacobian and Residual. legacy_matrix_fill_full is a
+ *  wrapper around the element level fill routine, matrix_fill();
+ *  matrix_fill_full selects it or the Kokkos assembly backend.
  *
  * Return:
  *  -1 : A negative element volume was encountered somewhere in the
@@ -161,24 +163,24 @@ static void zero_lec(void);
  *   0 : Successful completion.
  *************************************************************************/
 
-int matrix_fill_full(struct GomaLinearSolverData *ams,
-                     double x[],
-                     double resid_vector[],
-                     double x_old[],
-                     double x_older[],
-                     double xdot[],
-                     double xdot_old[],
-                     double x_update[],
-                     double *ptr_delta_t,
-                     double *ptr_theta,
-                     struct elem_side_bc_struct *first_elem_side_BC_array[],
-                     double *ptr_time_value,
-                     Exo_DB *exo,
-                     Dpi *dpi,
-                     int *ptr_num_total_nodes,
-                     dbl *ptr_h_elem_avg,
-                     dbl *ptr_U_norm,
-                     dbl *estifm) {
+static int legacy_matrix_fill_full(struct GomaLinearSolverData *ams,
+                                   double x[],
+                                   double resid_vector[],
+                                   double x_old[],
+                                   double x_older[],
+                                   double xdot[],
+                                   double xdot_old[],
+                                   double x_update[],
+                                   double *ptr_delta_t,
+                                   double *ptr_theta,
+                                   struct elem_side_bc_struct *first_elem_side_BC_array[],
+                                   double *ptr_time_value,
+                                   Exo_DB *exo,
+                                   Dpi *dpi,
+                                   int *ptr_num_total_nodes,
+                                   dbl *ptr_h_elem_avg,
+                                   dbl *ptr_U_norm,
+                                   dbl *estifm) {
   int ielem = 0, e_start = 0, e_end = 0, ebn = 0;
   char yo[] = "matrix_fill_full";
   int err, err_global;
@@ -223,13 +225,6 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
   neg_elem_volume = FALSE;
   neg_lub_height = FALSE;
   zero_detJ = FALSE;
-
-#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
-  /* Preflight admitted the whole coupled system; never mix in legacy contributions. */
-  if (upd->AssemblyBackend == GOMA_ASSEMBLY_KOKKOS) {
-    return goma_kokkos_matrix_fill(ams, exo, x, xdot, *ptr_delta_t, *ptr_theta, resid_vector);
-  }
-#endif
 
   e_start = exo->eb_ptr[0];
   e_end = exo->eb_ptr[exo->num_elem_blocks];
@@ -323,6 +318,85 @@ int matrix_fill_full(struct GomaLinearSolverData *ams,
 
   return 0;
 }
+/*****************************************************************************/
+
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+/* Arguments of one legacy fill, run as the reference of a Kokkos parity check. */
+struct legacy_fill_args {
+  struct GomaLinearSolverData *ams;
+  double *x, *resid_vector, *x_old, *x_older, *xdot, *xdot_old, *x_update;
+  double *ptr_delta_t, *ptr_theta;
+  struct elem_side_bc_struct **first_elem_side_BC_array;
+  double *ptr_time_value;
+  Exo_DB *exo;
+  Dpi *dpi;
+  int *ptr_num_total_nodes;
+  dbl *ptr_h_elem_avg, *ptr_U_norm, *estifm;
+};
+
+static int legacy_fill_reference(void *data) {
+  struct legacy_fill_args *a = data;
+  return legacy_matrix_fill_full(
+      a->ams, a->x, a->resid_vector, a->x_old, a->x_older, a->xdot, a->xdot_old, a->x_update,
+      a->ptr_delta_t, a->ptr_theta, a->first_elem_side_BC_array, a->ptr_time_value, a->exo, a->dpi,
+      a->ptr_num_total_nodes, a->ptr_h_elem_avg, a->ptr_U_norm, a->estifm);
+}
+#endif
+
+int matrix_fill_full(struct GomaLinearSolverData *ams,
+                     double x[],
+                     double resid_vector[],
+                     double x_old[],
+                     double x_older[],
+                     double xdot[],
+                     double xdot_old[],
+                     double x_update[],
+                     double *ptr_delta_t,
+                     double *ptr_theta,
+                     struct elem_side_bc_struct *first_elem_side_BC_array[],
+                     double *ptr_time_value,
+                     Exo_DB *exo,
+                     Dpi *dpi,
+                     int *ptr_num_total_nodes,
+                     dbl *ptr_h_elem_avg,
+                     dbl *ptr_U_norm,
+                     dbl *estifm) {
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  /* Preflight admitted the whole coupled system; never mix in legacy contributions. */
+  if (upd->AssemblyBackend == GOMA_ASSEMBLY_KOKKOS) {
+    neg_elem_volume = FALSE;
+    neg_lub_height = FALSE;
+    zero_detJ = FALSE;
+    if (goma_kokkos_parity_enabled()) {
+      struct legacy_fill_args args = {ams,
+                                      x,
+                                      resid_vector,
+                                      x_old,
+                                      x_older,
+                                      xdot,
+                                      xdot_old,
+                                      x_update,
+                                      ptr_delta_t,
+                                      ptr_theta,
+                                      first_elem_side_BC_array,
+                                      ptr_time_value,
+                                      exo,
+                                      dpi,
+                                      ptr_num_total_nodes,
+                                      ptr_h_elem_avg,
+                                      ptr_U_norm,
+                                      estifm};
+      return goma_kokkos_parity_fill(ams, exo, x, xdot, *ptr_delta_t, *ptr_theta, resid_vector,
+                                     legacy_fill_reference, &args);
+    }
+    return goma_kokkos_matrix_fill(ams, exo, x, xdot, *ptr_delta_t, *ptr_theta, resid_vector);
+  }
+#endif
+  return legacy_matrix_fill_full(ams, x, resid_vector, x_old, x_older, xdot, xdot_old, x_update,
+                                 ptr_delta_t, ptr_theta, first_elem_side_BC_array, ptr_time_value,
+                                 exo, dpi, ptr_num_total_nodes, ptr_h_elem_avg, ptr_U_norm, estifm);
+}
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/

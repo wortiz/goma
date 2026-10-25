@@ -195,11 +195,28 @@ Complete the remaining integration in this order:
    matched legacy on one rank. Hard-set rows rely on exact zero Newton updates,
    which direct solves give; iterative Stratimikos solves may need a tolerance
    or re-imposition when qualified.
-4. **Establish legacy parity.** Compare constrained and unconstrained element and
-   global contributions before scaling on regular/distorted quads and hexes, with
-   shared nodes, ghost columns, and one/two MPI ranks. Run steady cavity,
-   body-force, and transient-decay cases; compare norms, divergence, boundary
-   values, and nonlinear convergence against legacy.
+4. **Establish legacy parity (implemented, 2026-10-25).** `GOMA_KOKKOS_PARITY=1`
+   (with the qualification switch) makes every Kokkos fill run the legacy element
+   loop from the same matrix/residual state, restore that state, run the Kokkos
+   fill, and compare owned residual and matrix contributions before scaling
+   (`mm_kokkos_parity.cpp`). The tolerance is `1e-9 max(|a|) + 1e-12 (s + 1e-3 S)`,
+   with row scales from the largest legacy entry or `sum |J x|`; Dirichlet rows are
+   reported separately, and any failure fails the fill on all ranks.
+   `goma_kokkos_parity` runs five cases on one or two ranks, each with Kokkos (parity
+   on) and legacy in one process:
+   - a Re = 100 cavity on distorted quads with a residual-mode lid and backtracking
+     line search (residual-only fills);
+   - exact body-force Poiseuille flow;
+   - backward-Euler channel decay;
+   - a 3D hex cavity;
+   - θ = 0.5 body-force duct spin-up on curved hexes.
+
+   All 52 fills agree. Constrained rows are exact; other entries stay within 4% of
+   tolerance. Solutions, including divergence, agree to 1e-8 relative, with the same
+   Newton iteration counts, residual histories, and solution norms. A 1e-7 viscosity
+   perturbation is caught on the first fill. Unconstrained contributions are compared
+   in every row without a Dirichlet condition; rows with one are compared after row
+   replacement, which matches legacy exactly.
 5. **Enable the supported subset.** Remove the execution gate only after the
    preceding integration and numerical checks pass; retain capability rejection
    for every unsupported configuration and keep the default backend unchanged.
@@ -209,10 +226,10 @@ Complete the remaining integration in this order:
 
 Existing checks cover Serial expression/element execution, one/two-rank scatter,
 legacy-metadata context setup and evaluation, routed 2D cavity solves matching
-legacy on two ranks, empty ranks, collective failure before global writes, and
-rejected-setup recovery followed by a legacy solve. They do not yet qualify 3D,
-distorted, or body-force flow solves, Threads/OpenMP/CUDA, or parity with the
-complete legacy assembly implementation.
+legacy on two ranks, fill-by-fill and solution parity with legacy on distorted
+and 3D meshes, empty ranks, collective failure before global writes, and
+rejected-setup recovery followed by a legacy solve. They do not yet qualify
+Threads/OpenMP/CUDA.
 
 ## Validation and acceptance
 

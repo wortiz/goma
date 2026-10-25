@@ -723,9 +723,9 @@ extern "C" int goma_kokkos_matrix_fill(struct GomaLinearSolverData *ams,
       int rank = 0;
       MPI_Comm_rank(goma_comm, &rank);
       if (rank == 0) {
-        std::printf("Kokkos assembly context configured for %dD Q2/Q1 flow on %s\n", exo->num_dim,
-                    Kokkos::DefaultExecutionSpace::name());
-        std::fflush(stdout);
+        std::fprintf(stderr, "Kokkos assembly context configured for %dD Q2/Q1 flow on %s\n",
+                     exo->num_dim, Kokkos::DefaultExecutionSpace::name());
+        std::fflush(stderr);
       }
     }
     // Legacy momentum linearization uses d(xdot)/dx = (1 + 2 theta) / delta_t.
