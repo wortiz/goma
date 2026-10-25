@@ -43,7 +43,8 @@ foreach(backend_mode legacy kokkos)
 endforeach()
 
 if(ENABLE_KOKKOS_ASSEMBLY)
-  add_executable(goma_kokkos_scatter_tests unit_tests_main.cpp assembly/kokkos_scatter.cpp)
+  add_executable(goma_kokkos_scatter_tests unit_tests_main.cpp assembly/kokkos_scatter.cpp
+                                          assembly/kokkos_context.cpp)
   target_compile_definitions(goma_kokkos_scatter_tests PRIVATE GOMA_UNIT_TESTS_LINK_GOMA
                                                              GOMA_KOKKOS_UNIT_TESTS
                                                              GOMA_MPI_UNIT_TESTS)

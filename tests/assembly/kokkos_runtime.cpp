@@ -50,6 +50,11 @@ TEST_CASE("Kokkos assembly contexts respect runtime ownership", "[assembly][kokk
 
   REQUIRE(goma_kokkos_context_create(&first.value) == GOMA_KOKKOS_SUCCESS);
   REQUIRE(first.value != nullptr);
+  REQUIRE(goma_kokkos_context_assemble(first.value, nullptr, 0, nullptr, 0, 0.0,
+                                       GOMA_KOKKOS_RESIDUAL, nullptr, 0) == GOMA_KOKKOS_BAD_STATE);
+  REQUIRE(std::strlen(goma_kokkos_context_last_error(first.value)) > 0);
+  REQUIRE(goma_kokkos_context_assemble(nullptr, nullptr, 0, nullptr, 0, 0.0, GOMA_KOKKOS_RESIDUAL,
+                                       nullptr, 0) == GOMA_KOKKOS_INVALID_ARGUMENT);
   auto *original = first.value;
   REQUIRE(goma_kokkos_context_create(&first.value) == GOMA_KOKKOS_INVALID_ARGUMENT);
   REQUIRE(first.value == original);

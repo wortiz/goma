@@ -144,16 +144,34 @@ legacy parity remain unfinished. Legacy assembly remains the default.
 
 Complete the remaining integration in this order:
 
-1. **Connect the opaque assembly context.** Own prepared geometry, host/device DOF
-   maps, constraints, material/expression data, and the Tpetra scatter plan. Provide
-   setup and residual/Jacobian evaluation entry points, refresh solution fields on
-   each call, validate setup and evaluation collectively, and release all Views
-   before runtime finalization. Test repeated evaluations, failed setup, context
-   teardown/recreation, request modes, and empty MPI ranks.
+1. **Opaque assembly context (implemented, 2026-10-25).** The context now owns
+   copied host/device DOF maps, prepared geometry, constraints, material/expression
+   data, and its Tpetra scatter plan. Typed snapshot setup is collective and
+   validates metadata, geometry, owned-row coverage, and consistent setup options.
+   A C-compatible evaluation entry point refreshes fields and handles residual,
+   Jacobian, or combined requests without changing solver assembly phases. Failed
+   internal setup is retryable; successful setup is immutable. Runtime finalization
+   is blocked while contexts are alive. Serial and two-rank tests cover repeated
+   evaluation, field/time-coefficient refresh, request modes, failed setup/input,
+   teardown/recreation, and empty ranks. Actual legacy-data hookup and nonlinear
+   solver routing remain the following steps.
 2. **Wire actual Goma data.** Call the snapshot builder with `Index_Solution`, the
    existing global-ID map, and nodal DBC metadata. Gather exchanged solution and
    time-derivative fields after hard-set conditions are imposed. Verify an active
    pressure constraint and complete coverage of owned rows and ghost elements.
+   The immediate adapter tasks are:
+   - Share one description builder between preflight and runtime setup, reading
+     initialized Goma material/problem data without changing current globals.
+   - Add a collective legacy setup entry point using `Index_Solution`, the
+     matrix's complete owned/ghost global-ID array, and `Nodes` DBC offsets.
+   - Validate that a pressure constraint reaches an actual owned pressure DOF,
+     that the owned row map agrees with the host vector map, and that every local
+     mesh element is included exactly once (including ghost elements).
+   - Add an evaluation adapter that translates the owned residual ordering and
+     passes already exchanged/imposed `x` and `xdot` fields into the context.
+   - Test with real initialized Goma node/unknown metadata, repeated updates,
+     pressure and hard-set conditions, and one/two MPI ranks before routing the
+     nonlinear solver through the adapter.
 3. **Route nonlinear assembly.** Select the prepared Kokkos context above the
    legacy element loop in `matrix_fill_full`, preserving residual-only and
    Jacobian-only requests, transient coefficients, matrix zeroing, owned residual

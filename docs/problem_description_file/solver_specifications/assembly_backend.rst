@@ -153,8 +153,44 @@ pointers or invoking host callbacks in kernels. The caller must exchange
 ghost values and impose hard-set solution values and time derivatives first.
 Steady gathers do not need a time-derivative vector.
 
+Prepared assembly context
+-------------------------
+
+The internal opaque assembly context owns a copy of its host snapshot and the
+corresponding device DOF maps, prepared geometry, constraints, material and
+expression data, gathered fields, local results, and Tpetra scatter plan.
+Snapshot setup is collective. It checks array extents, finite geometry and
+configuration values, consistent local/global DOF mappings and constraints
+within each rank, coverage of owned rows, and agreement on dimension, transient mode, and penalty.
+Geometry is prepared once and reused across field updates.
+
+An internal C-compatible evaluation entry point supports residual-only,
+Jacobian-only, and combined requests. It copies and gathers current host fields
+on each call and uses the supplied transient linearization coefficient. Hard-set
+values must already match their prescribed values, with zero velocity time
+derivatives. Extent, request, and hard-set-field errors are rejected collectively;
+element-status errors block global scatter. Checked rejection paths leave the
+global matrix and host residual unchanged. Calls fence before returning, including
+checked evaluation failures, and expose error text owned by the context.
+
+Evaluation adds to existing matrix and residual entries. Zeroing, scaling,
+ghost exchange, hard-set updates, and Tpetra FE phase transitions remain the
+caller's responsibility. Residual buffers follow the owned row-map ordering.
+The Tpetra adapter and its static graph must remain alive and unchanged until
+context destruction. All context-owned Views are destroyed before runtime
+finalization. Failed internal context setup leaves it unconfigured and retryable;
+a successfully configured context must be recreated for a different mesh, map,
+material configuration, or graph. This internal setup API is separate from
+``goma_setup``, whose rejected problem contexts must be destroyed.
+
+Tests compare prepared-context evaluation with the independently exercised
+geometry/field/element/constraint/scatter primitives in 2D and 3D. They cover
+metadata ownership, repeated requests, refreshed fields and transient
+coefficients, failed setup and evaluation, context recreation, and empty ranks
+in Serial and with two MPI ranks.
+
 Solver routing remains unavailable even when the subset checks pass. The
-snapshot and gather infrastructure is not yet connected to the nonlinear
-assembly loop or the opaque context. Complete legacy assembly comparisons
-and end-to-end steady/transient flow qualification are still required before
-enabling Kokkos flow solves.
+prepared context is not yet attached to the Goma problem lifecycle or nonlinear
+assembly loop. Actual legacy unknown/constraint adaptation, complete legacy
+assembly comparisons, and end-to-end steady/transient flow qualification are
+still required before enabling Kokkos flow solves.
