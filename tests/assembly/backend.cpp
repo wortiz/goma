@@ -16,16 +16,17 @@ TEST_CASE("Assembly backend selection is explicit", "[assembly]") {
   REQUIRE(goma_assembly_backend_parse("legacy", nullptr) != 0);
 }
 
-TEST_CASE("Unavailable assembly never falls back to legacy", "[assembly]") {
+TEST_CASE("Assembly build availability is checked before complete-system preflight", "[assembly]") {
   REQUIRE(goma_assembly_backend_check(GOMA_ASSEMBLY_LEGACY, 0) == nullptr);
   REQUIRE(goma_assembly_backend_check(GOMA_ASSEMBLY_LEGACY, 1) == nullptr);
   REQUIRE(goma_assembly_backend_check(static_cast<goma_assembly_backend>(-1), 0) != nullptr);
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  // Build selection succeeds; setup must inspect the complete coupled problem.
+  REQUIRE(goma_assembly_backend_check(GOMA_ASSEMBLY_KOKKOS, 0) == nullptr);
+  REQUIRE(goma_assembly_backend_check(GOMA_ASSEMBLY_KOKKOS, 1) == nullptr);
+#else
   const std::string error = goma_assembly_backend_check(GOMA_ASSEMBLY_KOKKOS, 0);
   const std::string ad_error = goma_assembly_backend_check(GOMA_ASSEMBLY_KOKKOS, 1);
-#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
-  REQUIRE(error.find("solver integration") != std::string::npos);
-  REQUIRE(ad_error.find("AutoDiff") != std::string::npos);
-#else
   REQUIRE(error.find("ENABLE_KOKKOS_ASSEMBLY=ON") != std::string::npos);
   REQUIRE(ad_error == error);
 #endif

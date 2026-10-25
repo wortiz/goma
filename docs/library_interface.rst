@@ -73,7 +73,9 @@ Lifecycle
    ``goma_create`` starts from the same state as a new process. Sets
    ``*ctx`` to ``NULL``. It can be called after any stage, so a host can
    stop after ``goma_create`` or ``goma_setup``, or after one of them
-   returned an error.
+   returned an error. An experimental Kokkos backend rejected by setup preflight
+   must be destroyed before another context is created; solving, advancing, or
+   retrying that rejected context returns an error.
 
 ``goma_library_finalize``
    Finalizes third-party libraries that *Goma* initialized. Call it once on

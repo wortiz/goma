@@ -71,6 +71,9 @@
  * only its first <n> ranks, the other ranks wait, to check that Goma does not
  * communicate outside the communicator it is given.
  *
+ * --expect-setup-error checks a rejected setup, failed solve/advance/retry calls,
+ * and teardown, allowing the next run to verify recovery in the same process.
+ *
  * --expect-error expects goma_solve or goma_advance_* to return an error, for
  * a problem whose solver gives up; the run fails if they do not.
  *
@@ -113,6 +116,7 @@ struct solve_mode {
   double import_value_step;  /* --import-value-step=<step> */
   int solve_after;           /* > 0: goma_solve after this many calls */
   const char *check_imports; /* output file to check the --import-value fields in */
+  int expect_setup_error;    /* assert that a failed setup cannot be solved or retried */
 };
 
 #define MAX_IMPORTS 8
@@ -525,6 +529,14 @@ run_goma(MPI_Comm comm, int argc, char **argv, enum stop_after stop, struct solv
   if (error == 0 && stop >= STOP_AFTER_SETUP) {
     error = goma_setup(ctx);
   }
+  if (mode.expect_setup_error) {
+    int rejected = ctx != NULL && error < 0;
+    if (rejected) {
+      rejected = goma_solve(ctx) < 0 && goma_advance_steps(ctx, 1) < 0 && goma_setup(ctx) < 0;
+    }
+    int destroyed = ctx != NULL ? goma_destroy(&ctx) : -1;
+    return rejected && destroyed == 0 ? 0 : -1;
+  }
   if (error == 0 && stop >= STOP_AFTER_SETUP) {
     error = set_imports(ctx, mode, 0);
   }
@@ -584,7 +596,7 @@ int main(int argc, char **argv) {
     const char *dir = argv[first];
     enum stop_after stop = STOP_AFTER_SOLVE;
     const char *log = NULL;
-    struct solve_mode mode = {0, 0.0, NULL, 0, NULL, NULL, 0, NULL, 0, NULL, 0.0, 0, NULL};
+    struct solve_mode mode = {0};
     const char *imports[MAX_IMPORTS];
     int num_imports = 0;
     const char *declares[MAX_IMPORTS];
@@ -626,6 +638,8 @@ int main(int argc, char **argv) {
         mode.feedback = opt + 11;
       } else if (strncmp(opt, "--check-fields=", 15) == 0) {
         mode.check_fields = opt + 15;
+      } else if (strcmp(opt, "--expect-setup-error") == 0) {
+        mode.expect_setup_error = 1;
       } else if (strcmp(opt, "--expect-error") == 0) {
         expect_error = 1;
       } else if (strncmp(opt, "--run-ranks=", 12) == 0) {

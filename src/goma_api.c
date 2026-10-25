@@ -67,11 +67,13 @@ extern void handle_ieee(void);
 #include "mm_as_alloc.h"
 #include "mm_as_const.h"
 #include "mm_as_structs.h"
+#include "mm_assembly.h"
 #include "mm_eh.h"
 #include "mm_elem_block_structs.h"
 #include "mm_input.h"
 #ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
 #include "mm_kokkos_assembly.h"
+#include "mm_kokkos_legacy.h"
 #endif
 #include "mm_prob_def.h"
 #include "rd_dpi.h"
@@ -144,7 +146,8 @@ static char *legal_notice[] = {
 enum goma_stage {
   GOMA_STAGE_CREATED,
   GOMA_STAGE_SETUP,
-  GOMA_STAGE_ADVANCING, /* goma_advance_* started solve_problem() */
+  GOMA_STAGE_SETUP_FAILED, /* setup completed, but the backend preflight rejected the problem */
+  GOMA_STAGE_ADVANCING,    /* goma_advance_* started solve_problem() */
   GOMA_STAGE_SOLVED,
 };
 
@@ -764,6 +767,14 @@ int goma_setup(goma_context *ctx) {
 #endif
 
   ctx->stage = GOMA_STAGE_SETUP;
+#ifdef GOMA_ENABLE_KOKKOS_ASSEMBLY
+  if (upd->AssemblyBackend == GOMA_ASSEMBLY_KOKKOS) {
+    if (goma_kokkos_preflight_legacy(EXO_ptr) != GOMA_KOKKOS_SUCCESS) {
+      ctx->stage = GOMA_STAGE_SETUP_FAILED;
+      return -1;
+    }
+  }
+#endif
   return 0;
 }
 

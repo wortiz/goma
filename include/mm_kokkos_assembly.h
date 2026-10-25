@@ -12,7 +12,8 @@ typedef enum {
   GOMA_KOKKOS_SUCCESS = 0,
   GOMA_KOKKOS_INVALID_ARGUMENT = -1,
   GOMA_KOKKOS_BAD_STATE = -2,
-  GOMA_KOKKOS_RUNTIME_ERROR = -3
+  GOMA_KOKKOS_RUNTIME_ERROR = -3,
+  GOMA_KOKKOS_UNSUPPORTED = -4
 } goma_kokkos_status;
 
 /* Host calls are serialized, as for the rest of the Goma library interface.

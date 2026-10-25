@@ -59,7 +59,7 @@ if(ENABLE_KOKKOS_ASSEMBLY)
   set_tests_properties(goma_kokkos_scatter_mpi PROPERTIES PROCESSORS 2)
 
   add_executable(goma_kokkos_element_tests unit_tests_main.cpp assembly/kokkos_element.cpp
-                                          assembly/kokkos_constraints.cpp)
+                                          assembly/kokkos_constraints.cpp assembly/kokkos_host.cpp)
   target_compile_definitions(goma_kokkos_element_tests PRIVATE GOMA_UNIT_TESTS_LINK_GOMA
                                                              GOMA_KOKKOS_UNIT_TESTS)
   target_link_libraries(goma_kokkos_element_tests PRIVATE Catch2::Catch2 goma goma_user goma_util
@@ -98,6 +98,17 @@ if(Python3_FOUND AND EXISTS ${GOMA_GUTS_DIR}/problems)
       ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/goma_lib_regression.py
       --driver $<TARGET_FILE:goma_lib_sequence> --goma $<TARGET_FILE:goma_exe>
       --guts-dir ${GOMA_GUTS_DIR} -j 1)
+  if(ENABLE_KOKKOS_ASSEMBLY AND ENABLE_AZTEC AND MDE GREATER_EQUAL 12
+     AND MAX_CONC GREATER_EQUAL 2 AND MAX_PROB_VAR GREATER_EQUAL 5)
+    add_test(NAME goma_kokkos_preflight
+             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/library/kokkos_preflight.py
+                     --driver $<TARGET_FILE:goma_lib_sequence>
+                     --problem-dir ${GOMA_GUTS_DIR}/problems/p_C_T_U
+                     --output-dir ${CMAKE_CURRENT_BINARY_DIR}/goma_kokkos_preflight
+                     --mpiexec ${MPIEXEC_EXECUTABLE})
+    set_tests_properties(goma_kokkos_preflight PROPERTIES PROCESSORS 2 TIMEOUT 120
+                                                        LABELS "library;assembly;kokkos")
+  endif()
   # same problem twice, after teardown of a context stopped after create and setup
   add_test(NAME goma_lib_repeat
            COMMAND ${GOMA_LIB_REGRESSION} --output-dir goma_lib_repeat --partial

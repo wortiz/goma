@@ -1015,6 +1015,7 @@ void noahs_ark(void) {
   ddd_add_member(n, &upd->Light_Cosmu, 1, MPI_DOUBLE);
   ddd_add_member(n, &upd->SegregatedSolve, 1, MPI_INT);
   ddd_add_member(n, &upd->SegregatedSubcycles, 1, MPI_INT);
+  ddd_add_member(n, &upd->AssemblyBackend, 1, MPI_INT);
   ddd_add_member(n, &upd->AutoDiff, 1, MPI_INT);
   ddd_add_member(n, &upd->disable_pspg_tau_sensitivities, 1, MPI_INT);
   ddd_add_member(n, &upd->disable_supg_tau_sensitivities, 1, MPI_INT);

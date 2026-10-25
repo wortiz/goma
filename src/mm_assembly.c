@@ -24,15 +24,11 @@ const char *goma_assembly_backend_check(goma_assembly_backend backend, int autod
   if (backend != GOMA_ASSEMBLY_KOKKOS) {
     return "Invalid assembly backend";
   }
-#ifndef GOMA_ENABLE_KOKKOS_ASSEMBLY
   (void)autodiff;
+#ifndef GOMA_ENABLE_KOKKOS_ASSEMBLY
   return "Assembly Backend = kokkos requires a build with ENABLE_KOKKOS_ASSEMBLY=ON";
 #else
-  if (autodiff) {
-    return "Assembly Backend = kokkos does not yet support Use AutoDiff Assembly = yes";
-  }
-  return "Assembly Backend = kokkos is not yet available: solver integration and capability checks "
-         "are not "
-         "implemented";
+  /* Complete-system capability checks run after problem setup on all ranks. */
+  return NULL;
 #endif
 }

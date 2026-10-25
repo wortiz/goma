@@ -865,11 +865,15 @@ set(GOMA_SOURCES
     src/brkfix/fix_exo_file.c)
 
 if(ENABLE_KOKKOS_ASSEMBLY)
-  list(APPEND GOMA_SOURCES src/mm_kokkos_assembly.cpp src/mm_kokkos_tpetra.cpp)
+  list(APPEND GOMA_SOURCES src/mm_kokkos_assembly.cpp src/mm_kokkos_tpetra.cpp
+                           src/mm_kokkos_legacy.cpp)
   list(APPEND GOMA_INCLUDES include/mm_kokkos_assembly.h include/mm_kokkos_flow.hpp
                            include/mm_kokkos_basis.hpp include/mm_kokkos_element.hpp
-                           include/mm_kokkos_constraints.hpp include/mm_kokkos_tpetra.hpp)
+                           include/mm_kokkos_constraints.hpp include/mm_kokkos_tpetra.hpp
+                           include/mm_kokkos_host.hpp include/mm_kokkos_legacy.h
+                           include/mm_kokkos_legacy.hpp)
   set_source_files_properties(src/mm_kokkos_assembly.cpp src/mm_kokkos_tpetra.cpp
+                              src/mm_kokkos_legacy.cpp
                               PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 

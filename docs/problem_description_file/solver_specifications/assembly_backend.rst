@@ -14,10 +14,12 @@ infrastructure with ``-DENABLE_KOKKOS_ASSEMBLY=ON``; this requires C++20 and a
 Trilinos installation containing Kokkos, Tpetra, and Stratimikos, with the latter
 two enabled in Goma. Legacy-only builds continue to use C++17 and C11.
 
-The Kokkos assembly path is still under development. Selecting ``kokkos``
-reports an error before assembly, including in an enabled build. It never
-falls back to legacy assembly. Kokkos with ``Use AutoDiff Assembly = yes`` is
-also unavailable.
+The Kokkos assembly path is still under development. A build without the
+feature rejects ``kokkos`` during input parsing. An enabled build accepts the
+selection and runs collective preflight after problem setup, then rejects
+execution before assembly. It never falls back to legacy assembly. Kokkos
+with ``Use AutoDiff Assembly = yes`` is also unavailable; that incompatibility
+is reported with the other preflight diagnostics.
 
 Enabled builds initialize Kokkos for the Goma library lifetime, borrowing an
 already initialized host runtime when present. Assembly contexts own device
@@ -122,7 +124,37 @@ empty ranks, and collective rejection of failed elements on one and two MPI
 ranks with the Serial execution space. These checks do not yet qualify other
 Kokkos execution spaces or establish end-to-end solver parity.
 
-The input option remains unavailable. Complete-system capability checks,
-legacy field/DOF/constraint adaptation, nonlinear-solver routing, and complete
-legacy assembly comparisons must be implemented before enabling Kokkos flow
-solves.
+Host adaptation and preflight
+-----------------------------
+
+Preflight examines initialized problem, material, mesh-block, and boundary
+metadata on every rank. It collects known incompatibilities and prints their
+union once on the problem communicator's rank zero. Checks include coupled
+matrix and material counts, active variables and equations, term flags and
+multipliers, Q2/Q1 trial and test interpolation, the resolved geometry mapping,
+constant Newtonian material models, stabilization, boundary types, and the
+Tpetra/Stratimikos solver settings. An explicit constant nodal P condition is
+required. Element-based pressure-datum handling remains unsupported.
+
+The backend selection is broadcast with the other input settings. A rejected
+setup cannot be solved, advanced, or retried; destroy its context before
+creating the next one. The context retains its setup allocations until
+``goma_destroy``, so cleanup follows the same path as an initialized problem.
+Tests reject a Kokkos setup on two ranks and then solve a legacy problem in
+the same library lifetime.
+
+The host snapshot builder copies coordinates, constant material data, equation
+term switches and multipliers, element DOF indices, global IDs, and nodal DBC
+constraints. It accepts a host-side DOF resolver for the existing unknown map;
+pressure DOFs are requested only at corner nodes. Snapshot data owns its
+storage. The field-map adapter copies host vectors in bulk and gathers
+component-major element fields on the device, without capturing legacy
+pointers or invoking host callbacks in kernels. The caller must exchange
+ghost values and impose hard-set solution values and time derivatives first.
+Steady gathers do not need a time-derivative vector.
+
+Solver routing remains unavailable even when the subset checks pass. The
+snapshot and gather infrastructure is not yet connected to the nonlinear
+assembly loop or the opaque context. Complete legacy assembly comparisons
+and end-to-end steady/transient flow qualification are still required before
+enabling Kokkos flow solves.

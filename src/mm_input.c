@@ -7205,6 +7205,8 @@ void rd_solver_specs(FILE *ifp, char *input) {
   goma_assembly_backend assembly_backend = GOMA_ASSEMBLY_LEGACY;
   iread = look_for_optional(ifp, "Assembly Backend", input, '=');
   if (iread == 1) {
+    (void)read_string(ifp, input, '\n');
+    strip(input);
     if (goma_assembly_backend_parse(input, &assembly_backend) != 0) {
       GOMA_EH(GOMA_ERROR, "Assembly Backend should equal legacy or kokkos, instead found %s",
               input);
@@ -7218,13 +7220,15 @@ void rd_solver_specs(FILE *ifp, char *input) {
   upd->AutoDiff = 0;
   iread = look_for_optional(ifp, "Use AutoDiff Assembly", input, '=');
   if (iread == 1) {
+    (void)read_string(ifp, input, '\n');
+    strip(input);
     upd->AutoDiff = -1;
     if (strcmp(input, "no") == 0) {
       upd->AutoDiff = 0;
     } else if (strcmp(input, "yes") == 0) {
       upd->AutoDiff = 1;
     }
-    if (upd->SegregatedSubcycles < 1) {
+    if (upd->AutoDiff < 0) {
       GOMA_EH(GOMA_ERROR, "Use AutoDiff Assembly should equal yes or no, instead found %s", input);
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Use AutoDiff Assembly", input);
