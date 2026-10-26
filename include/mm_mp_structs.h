@@ -688,6 +688,7 @@ struct Material_Properties {
 
   dbl momentum_source[DIM];
   dbl d_momentum_source[DIM][MAX_VARIABLE_TYPES + MAX_CONC];
+  int momentum_source_external_field[DIM];
   int MomentumSourceModel;
   int len_u_momentum_source;
   dbl *u_momentum_source;

@@ -3834,6 +3834,14 @@ int momentum_source_term(dbl f[DIM], /* Body force. */
         }
       }
     }
+  } else if (mp->MomentumSourceModel == EXTERNAL_FIELD) {
+    /* Prescribed force per volume: no density factor or solution derivatives. */
+    for (a = 0; a < dim; ++a) {
+      eqn = R_MOMENTUM1 + a;
+      if (pd->e[upd->matrix_index[eqn]][eqn] & T_SOURCE) {
+        f[a] = fv->external_field[mp->momentum_source_external_field[a]];
+      }
+    }
   } else if (mp->MomentumSourceModel == CONSTANT) {
     int force_dim = dim;
     if (pd->CoordinateSystem == CARTESIAN_2pt5D) {

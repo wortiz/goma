@@ -8547,7 +8547,29 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
                                  mat_ptr->momentum_source, &(mat_ptr->u_momentum_source),
                                  &(mat_ptr->len_u_momentum_source), model_name, VECTOR_INPUT,
                                  &NO_SPECIES, es);
-  if (!strcmp(model_name, "BOUSS")) {
+  if (!strcmp(model_name, "EXTERNAL_FIELD")) {
+    for (i = 0; i < DIM; ++i) {
+      char field_name[21];
+      if (fscanf(imp, "%20s", field_name) != 1) {
+        GOMA_EH(GOMA_ERROR, "Navier-Stokes Source EXTERNAL_FIELD requires three field names");
+      }
+      mat_ptr->momentum_source_external_field[i] = -1;
+      for (j = 0; j < efv->Num_external_field; ++j) {
+        if (!strcmp(efv->name[j], field_name)) {
+          if (strcmp(efv->file_nm[j], "IMPORT") != 0) {
+            GOMA_EH(GOMA_ERROR, "Navier-Stokes Source requires imported nodal fields (IMPORT)");
+          }
+          mat_ptr->momentum_source_external_field[i] = j;
+          break;
+        }
+      }
+      if (mat_ptr->momentum_source_external_field[i] < 0) {
+        GOMA_EH(GOMA_ERROR, "Unknown Navier-Stokes Source external field");
+      }
+    }
+    mat_ptr->MomentumSourceModel = EXTERNAL_FIELD;
+    model_read = 1;
+  } else if (!strcmp(model_name, "BOUSS")) {
     MomentumSourceModel = BOUSS;
     model_read = 1;
     mat_ptr->MomentumSourceModel = MomentumSourceModel;

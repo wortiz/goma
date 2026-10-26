@@ -1638,6 +1638,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->PorousMediaType, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->MeshSourceModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->RealSolidSourceModel, 1, MPI_INT);
+    ddd_add_member(n, mp_glob[i]->momentum_source_external_field, DIM, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->MomentumSourceModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousCompressibilityModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PermeabilityModel, 1, MPI_INT);

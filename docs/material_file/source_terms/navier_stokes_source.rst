@@ -37,6 +37,20 @@ Definitions of the input parameters are as follows:
 |                          |is determined by the selection for {model _name}.                                    |
 +--------------------------+-------------------------------------------------------------------------------------+
 
+The imported-field model uses three field names instead of floating point constants::
+
+   Navier-Stokes Source = EXTERNAL_FIELD FX FY FZ
+
+Declare these fields with ``External Field = FX Q2 IMPORT`` (and similarly for
+FY and FZ), or through ``goma_declare_external_field`` before creating the
+problem. Values are force per unit volume (N/m^3 in SI), interpolated at
+quadrature points using each external field's interpolation. Positive values
+act in the positive coordinate direction, with the same residual sign and
+normalization as ``CONSTANT``. No density multiplier is applied. Fields remain
+prescribed throughout each solve, so their solution derivatives are zero.
+Hosts must set all imported fields before initializing the advancing state,
+including zero values when there is initially no feedback.
+
 Choices for {model_name} and the accompanying parameter list are given below;
 additional user guidance can be found in the Technical Discussion section following
 the Examples.
