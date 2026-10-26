@@ -1967,7 +1967,7 @@ extern "C" void ad_film_flow_n_dot_T_nobc(double func[DIM],
   ADType stress[DIM][DIM];
   for (int a = 0; a < 3; a++) {
     for (int b = 0; b < 3; b++) {
-      gamma[a][b] = 0*grad_v[a][b] + grad_v[b][a];
+      gamma[a][b] = grad_v[a][b] + grad_v[b][a];
     }
   }
 
@@ -1990,7 +1990,7 @@ extern "C" void ad_film_flow_n_dot_T_nobc(double func[DIM],
   ADType mup = 0;
   if (pd->gv[VELOCITY_GRADIENT11]) {
     for (int mode = 0; mode < vn->modes; mode++) {
-      //evss_f = 1.0;
+      evss_f = 1.0;
       ADType mup_mode = ad_viscosity(ve[mode]->gn, gamma);
       mup += mup_mode;
     }

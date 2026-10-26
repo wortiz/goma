@@ -30,7 +30,7 @@
 /* GOMA include files */
 #include "ac_stability.h"
 #include "ac_stability_util.h"
-#include "ad_momentum.h"
+#include "ad/momentum.h"
 #include "bc/rotate_coordinates.h"
 #include "bc_colloc.h"
 #include "bc_integ.h"
