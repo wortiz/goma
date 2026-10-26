@@ -1254,7 +1254,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
               if (pd->TimeIntegration != STEADY) {
                 if (pd->e[pg->imtrx][eqn] & T_MASS) {
                   mass = S_dot[ii][jj];
-                  mass *= wt_func * at * lambda * det_J * wt;
+                  mass *= bf[eqn]->phi[i] * at * lambda * det_J * wt;
                   mass *= h3;
                   mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
                 }
@@ -1294,7 +1294,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
               if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
                 // consider whether saramitoCoeff should multiply here
                 source = source_term[ii][jj];
-                source *= wt_func * det_J * h3 * wt;
+                source *= bf[eqn]->phi[i] * det_J * h3 * wt;
 
                 source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
               }
