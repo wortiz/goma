@@ -676,13 +676,18 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
                                monolith->num_side_sets);
       CHECK_EX_ERROR(err, "ex_put_init_global");
 
-      err = ex_put_ns_param_global(exoid, monolith->ns_id, monolith->ns_num_nodes,
-                                   monolith->ns_num_distfacts);
-      CHECK_EX_ERROR(err, "ex_put_ns_param_global");
+      /* Exodus omits the global set variables when the corresponding count is zero. */
+      if (monolith->num_node_sets > 0) {
+        err = ex_put_ns_param_global(exoid, monolith->ns_id, monolith->ns_num_nodes,
+                                     monolith->ns_num_distfacts);
+        CHECK_EX_ERROR(err, "ex_put_ns_param_global");
+      }
 
-      err = ex_put_ss_param_global(exoid, monolith->ss_id, monolith->ss_num_sides,
-                                   monolith->ss_num_distfacts);
-      CHECK_EX_ERROR(err, "ex_put_ss_param_global");
+      if (monolith->num_side_sets > 0) {
+        err = ex_put_ss_param_global(exoid, monolith->ss_id, monolith->ss_num_sides,
+                                     monolith->ss_num_distfacts);
+        CHECK_EX_ERROR(err, "ex_put_ss_param_global");
+      }
 
       err = ex_put_eb_info_global(exoid, monolith->eb_id, monolith->eb_num_elems);
       CHECK_EX_ERROR(err, "ex_put_eb_info_global");

@@ -201,7 +201,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
               &requests[dpi->num_neighbors + i]);
   }
 
-  MPI_Waitall(dpi->num_neighbors, requests.data(), MPI_STATUSES_IGNORE);
+  MPI_Waitall(2 * dpi->num_neighbors, requests.data(), MPI_STATUSES_IGNORE);
 
   std::vector<std::vector<shared_elem>> recv_elems_neighbor(dpi->num_neighbors);
   std::vector<std::vector<shared_node>> recv_shared_node(dpi->num_neighbors);
@@ -646,7 +646,8 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
 
   std::vector<std::vector<int>> ns_recv_nodes(dpi->num_neighbors);
 
-  std::vector<MPI_Request> ns_requests(2 * dpi->num_neighbors * exo->num_node_sets);
+  // The count exchange posts one request per neighbor even with no sets.
+  std::vector<MPI_Request> ns_requests(2 * dpi->num_neighbors * std::max(1, exo->num_node_sets));
 
   int req_offset = 0;
   // exchange with neighbors
@@ -660,7 +661,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     num_send[j] = ns_boundary_nodes[j].size();
   }
   for (int i = 0; i < dpi->num_neighbors; i++) {
-    MPI_Isend(&num_send[0], exo->num_node_sets, MPI_INT, dpi->neighbor[i], 208, goma_comm,
+    MPI_Isend(num_send.data(), exo->num_node_sets, MPI_INT, dpi->neighbor[i], 208, goma_comm,
               &ns_requests[req_offset++]);
   }
   MPI_Waitall(req_offset, ns_requests.data(), MPI_STATUSES_IGNORE);
@@ -764,7 +765,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
     num_send_sides[ins] = ss_sides[ins].size();
   }
 
-  std::vector<MPI_Request> ss_requests(2 * dpi->num_neighbors * exo->num_side_sets);
+  std::vector<MPI_Request> ss_requests(2 * dpi->num_neighbors * std::max(1, exo->num_side_sets));
 
   req_offset = 0;
   // exchange with neighbors
@@ -774,7 +775,7 @@ goma_error generate_ghost_elems(Exo_DB *exo, Dpi *dpi) {
               goma_comm, &ss_requests[req_offset++]);
   }
   for (int i = 0; i < dpi->num_neighbors; i++) {
-    MPI_Isend(&num_send_sides[0], exo->num_side_sets, MPI_INT, dpi->neighbor[i], 210, goma_comm,
+    MPI_Isend(num_send_sides.data(), exo->num_side_sets, MPI_INT, dpi->neighbor[i], 210, goma_comm,
               &ss_requests[req_offset++]);
   }
   MPI_Waitall(req_offset, ss_requests.data(), MPI_STATUSES_IGNORE);

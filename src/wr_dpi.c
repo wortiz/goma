@@ -104,13 +104,17 @@ int wr_dpi(Dpi *d, char *filename) {
                          d->num_node_sets_global, d->num_side_sets_global);
   CHECK_EX_ERROR(ex_error, "ex_put_init_global");
 
-  ex_error = ex_put_ns_param_global(exoid, d->ns_id_global, d->num_ns_global_node_counts,
-                                    d->num_ns_global_df_counts);
-  CHECK_EX_ERROR(ex_error, "ex_put_ns_param_global");
+  if (d->num_node_sets_global > 0) {
+    ex_error = ex_put_ns_param_global(exoid, d->ns_id_global, d->num_ns_global_node_counts,
+                                      d->num_ns_global_df_counts);
+    CHECK_EX_ERROR(ex_error, "ex_put_ns_param_global");
+  }
 
-  ex_error = ex_put_ss_param_global(exoid, d->ss_id_global, d->num_ss_global_side_counts,
-                                    d->num_ss_global_df_counts);
-  CHECK_EX_ERROR(ex_error, "ex_put_ss_param_global");
+  if (d->num_side_sets_global > 0) {
+    ex_error = ex_put_ss_param_global(exoid, d->ss_id_global, d->num_ss_global_side_counts,
+                                      d->num_ss_global_df_counts);
+    CHECK_EX_ERROR(ex_error, "ex_put_ss_param_global");
+  }
 
   ex_error = ex_put_eb_info_global(exoid, d->global_elem_block_ids, d->global_elem_block_counts);
   CHECK_EX_ERROR(ex_error, "ex_put_eb_info_global");

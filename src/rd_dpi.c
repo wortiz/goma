@@ -63,21 +63,23 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
 
   CHECK_EX_ERROR(ex_error, "ex_get_init_global");
 
-  // Node Set Global
-  d->ns_id_global = alloc_int_1(d->num_node_sets_global, 0);
-  d->num_ns_global_node_counts = alloc_int_1(d->num_node_sets_global, 0);
-  d->num_ns_global_df_counts = alloc_int_1(d->num_node_sets_global, 0);
-  ex_error = ex_get_ns_param_global(exoid, d->ns_id_global, d->num_ns_global_node_counts,
-                                    d->num_ns_global_df_counts);
-  CHECK_EX_ERROR(ex_error, "ex_get_ns_param_global");
-  // Side Set Global
-  d->ss_id_global = alloc_int_1(d->num_side_sets_global, 0);
-  d->num_ss_global_side_counts = alloc_int_1(d->num_side_sets_global, 0);
-  d->num_ss_global_df_counts = alloc_int_1(d->num_side_sets_global, 0);
-  ex_error = ex_get_ss_param_global(exoid, d->ss_id_global, d->num_ss_global_side_counts,
-                                    d->num_ss_global_df_counts);
-
-  CHECK_EX_ERROR(ex_error, "ex_get_ss_param_global");
+  /* Exodus has no global set arrays when a set count is zero. */
+  if (d->num_node_sets_global > 0) {
+    d->ns_id_global = alloc_int_1(d->num_node_sets_global, 0);
+    d->num_ns_global_node_counts = alloc_int_1(d->num_node_sets_global, 0);
+    d->num_ns_global_df_counts = alloc_int_1(d->num_node_sets_global, 0);
+    ex_error = ex_get_ns_param_global(exoid, d->ns_id_global, d->num_ns_global_node_counts,
+                                      d->num_ns_global_df_counts);
+    CHECK_EX_ERROR(ex_error, "ex_get_ns_param_global");
+  }
+  if (d->num_side_sets_global > 0) {
+    d->ss_id_global = alloc_int_1(d->num_side_sets_global, 0);
+    d->num_ss_global_side_counts = alloc_int_1(d->num_side_sets_global, 0);
+    d->num_ss_global_df_counts = alloc_int_1(d->num_side_sets_global, 0);
+    ex_error = ex_get_ss_param_global(exoid, d->ss_id_global, d->num_ss_global_side_counts,
+                                      d->num_ss_global_df_counts);
+    CHECK_EX_ERROR(ex_error, "ex_get_ss_param_global");
+  }
   // Block Global
   d->global_elem_block_ids = alloc_int_1(d->num_elem_blocks_global, 0);
   d->global_elem_block_counts = alloc_int_1(d->num_elem_blocks_global, 0);
@@ -263,13 +265,15 @@ int rd_dpi(Exo_DB *exo, Dpi *d, char *fn, bool parallel_call) {
 
   if (parallel_call) {
     const int num_mpi_async = 2;
-    MPI_Request request_array[2];
+    MPI_Request request_array[2] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL};
 
     MPI_Iallreduce(eb_num_nodes_local, d->eb_num_nodes_per_elem_global, d->num_elem_blocks_global,
                    MPI_INT, MPI_MAX, goma_comm, &(request_array[0]));
 
-    MPI_Iallreduce(global_ss_internal, d->ss_internal_global, d->num_side_sets_global, MPI_INT,
-                   MPI_MAX, goma_comm, &(request_array[1]));
+    if (d->num_side_sets_global > 0) {
+      MPI_Iallreduce(global_ss_internal, d->ss_internal_global, d->num_side_sets_global, MPI_INT,
+                     MPI_MAX, goma_comm, &(request_array[1]));
+    }
 
     MPI_Waitall(num_mpi_async, request_array, MPI_STATUSES_IGNORE);
 
