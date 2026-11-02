@@ -86,8 +86,10 @@ int ad_tensor_dot(ADType t1[DIM][DIM],
   return (status);
 }
 void ad_compute_a_dot_b(ADType b[DIM][DIM], ADType G[DIM][DIM], ADType a_dot_b[DIM][DIM]) {
+  int sdim = VIM;
+  if (pd->gv[FILM_HEIGHT]) sdim = 3;
 
-  if (VIM == 2) {
+  if (sdim == 2) {
 
     ADType a12 =
         ((b[0][1] * G[0][0] - b[0][0] * G[0][1]) + (b[1][1] * G[1][0] - b[1][0] * G[1][1])) /
@@ -209,9 +211,7 @@ int ad_film_height_stress_source(int mode,
 
     ADType trace = 0;
     for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        trace += S[i][j];
-      }
+      trace += S[i][i];
     }
 
     ADType Z = 1.0;
@@ -1267,7 +1267,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
               if (pd->TimeIntegration != STEADY) {
                 if (pd->e[pg->imtrx][eqn] & T_MASS) {
                   mass = S_dot[ii][jj];
-                  mass *= bf[eqn]->phi[i] * at * lambda * det_J * wt;
+                  mass *= wt_func * at * lambda * det_J * wt;
                   mass *= h3;
                   mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
                 }
@@ -1307,7 +1307,7 @@ extern "C" int ad_assemble_film_height_stress(dbl tt, /* parameter to vary time 
               if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
                 // consider whether saramitoCoeff should multiply here
                 source = source_term[ii][jj];
-                source *= bf[eqn]->phi[i] * det_J * h3 * wt;
+                source *= wt_func * det_J * h3 * wt;
 
                 source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
               }
