@@ -148,3 +148,27 @@ TEST_CASE("goma context set current and destroy", "[util][goma_context]") {
 
   goma_context_destroy(nullptr);
 }
+
+static int fem_release_calls = 0;
+static void count_fem_release(GomaFem *fem) {
+  fem_release_calls++;
+  REQUIRE(fem->fv != nullptr); // hook runs before the struct is cleared
+}
+
+TEST_CASE("goma context release calls the fem release hook", "[util][goma_context]") {
+  GomaContext *ctx = goma_context_create();
+  int dummy = 0;
+  ctx->fem.fv = reinterpret_cast<struct Field_Variables *>(&dummy);
+  ctx->fem.release = count_fem_release;
+  fem_release_calls = 0;
+
+  goma_context_release(ctx);
+  REQUIRE(fem_release_calls == 1);
+  REQUIRE(ctx->fem.fv == nullptr);
+  REQUIRE(ctx->fem.release == nullptr);
+
+  // Without a hook, releasing just clears the pointers.
+  goma_context_release(ctx);
+  REQUIRE(fem_release_calls == 1);
+  goma_context_destroy(ctx);
+}

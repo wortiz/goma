@@ -75,6 +75,291 @@ dbl zero = 0.0;
 #include "mm_eh.h"
 
 /****************************************************************************/
+
+static void Element_Indices_free(struct Element_Indices *ei_ptr) {
+  if (ei_ptr == NULL) {
+    return;
+  }
+  free(ei_ptr->Num_Lvdesc_Per_Var_Type);
+  free(ei_ptr->Lvdesc_First_Var_Type);
+  free(ei_ptr->Lvdesc_to_ledof);
+  free(ei_ptr->Lvdesc_to_lvdof);
+  free(ei_ptr->Lvdesc_to_Var_Type);
+  free(ei_ptr->Lvdesc_to_MatID);
+  free(ei_ptr->Lvdesc_Numdof);
+  free(ei_ptr->Lvdesc_to_Gnn);
+  free(ei_ptr->Lvdesc_to_Gun);
+  free(ei_ptr->Lvdesc_to_MFSubvar);
+  free(ei_ptr->Lvdesc_to_Lnn);
+  free(ei_ptr->Lvdesc_Lnn_to_Offset);
+  free(ei_ptr->Lvdesc_Lnn_to_lvdof);
+  free(ei_ptr->lvdof_to_lvdesc);
+  free(ei_ptr->lvdof_to_lvdesc_dof);
+  free(ei_ptr->Lvdesc_Lnn_Numdof);
+  free(ei_ptr->Lvdesc_vd_ptr);
+  free(ei_ptr->owningElementForColVar);
+  free(ei_ptr->dof);
+  free(ei_ptr->dof_ext);
+  free(ei_ptr->Baby_Dolphin);
+  free(ei_ptr->dof_list);
+  free(ei_ptr->gnn_list);
+  free(ei_ptr->gun_list);
+  free(ei_ptr->ln_to_dof);
+  free(ei_ptr->ln_to_first_dof);
+  free(ei_ptr->lvdof_to_row_lvdof);
+  free(ei_ptr->lvdof_to_ledof);
+  free(ei_ptr->owned_ledof);
+  free(ei_ptr->ieqn_ledof);
+  free(ei_ptr->matID_ledof);
+  free(ei_ptr->active_interp_ledof);
+  free(ei_ptr->MFsubvar_Offset);
+  free(ei_ptr);
+}
+
+static void Element_Stiffness_Pointers_free(struct Element_Stiffness_Pointers *e) {
+  if (e == NULL) {
+    return;
+  }
+  /* a0 points into the global Jacobian and is not owned */
+  free(e->T);
+  free(e->v);
+  free(e->v_star);
+  free(e->d);
+  free(e->d_rs);
+  free(e->c);
+  free(e->P);
+  free(e->P_star);
+  free(e->S);
+  free(e->G);
+  free(e->V);
+  free(e->qs);
+  free(e->F);
+  free(e->SH);
+  free(e->Enorm);
+  free(e->H);
+  free(e->pv);
+  free(e->p_liq);
+  free(e->p_gas);
+  free(e->porosity);
+  free(e->vd);
+  free(e->vlambda);
+  free(e->nn);
+  free(e->lm);
+  free(e->ext_v);
+  free(e->E_field);
+  free(e->n);
+  free(e->sh_K);
+  free(e->sh_K2);
+  free(e->sh_tens);
+  free(e->sh_x);
+  free(e->sh_y);
+  free(e->sh_u);
+  free(e->sh_ang);
+  free(e->div_s_v);
+  free(e->curv);
+  free(e->grad_v_dot_n);
+  free(e->n_dot_curl_s_v);
+  free(e->pF);
+  free(e->sh_J);
+  free(e->sh_Kd);
+  free(e->apr);
+  free(e->api);
+  free(e->ars);
+  free(e->epr);
+  free(e->epi);
+  free(e->sink_mass);
+  free(e->sh_bv);
+  free(e->sh_p);
+  free(e->lubp);
+  free(e->lubp_2);
+  free(e->sh_fp);
+  free(e->sh_fh);
+  free(e->sh_pc);
+  free(e->sh_sat_closed);
+  free(e->sh_p_open);
+  free(e->sh_p_open_2);
+  free(e->sh_t);
+  free(e->sh_dh);
+  free(e->sh_l_curv);
+  free(e->sh_l_curv_2);
+  free(e->sh_sat_gasn);
+  free(e->sh_shear_top);
+  free(e->sh_shear_bot);
+  free(e->sh_cross_shear);
+  free(e->max_strain);
+  free(e->cur_strain);
+  free(e->poynt);
+  free(e->tfmp_pres);
+  free(e->tfmp_sat);
+  free(e->moment);
+  free(e->rho);
+  free(e->restime);
+  free(e->em_er);
+  free(e->em_ei);
+  free(e->em_hr);
+  free(e->em_hi);
+  free(e->sh_sat_1);
+  free(e->sh_sat_2);
+  free(e->sh_sat_3);
+  free(e->eddy_nu);
+  free(e->turb_k);
+  free(e->turb_omega);
+  free(e->film_height);
+  free(e);
+}
+
+static void Porous_Media_Variables_Hysteresis_free(struct Porous_Media_Variables_Hysteresis *h) {
+  if (h == NULL) {
+    return;
+  }
+  for (size_t i = 0; i < sizeof(h->curve_type) / sizeof(h->curve_type[0]); i++) {
+    free(h->curve_type[i]);
+    free(h->curve_type_old[i]);
+    free(h->curve_switch[i]);
+    free(h->num_switch[i]);
+    free(h->sat_switch[i]);
+    free(h->cap_pres_switch[i]);
+    free(h->sat_min_imbibe[i]);
+    free(h->sat_max_drain[i]);
+  }
+  free(h);
+}
+
+/*
+ * fem_structures_free():
+ *     Free the structures allocated by the *_alloc() routines in this file and
+ *     by assembly_alloc(). Installed as the GomaFem release hook by pd_alloc()
+ *     so that goma_context_release() can call it.
+ *
+ *     Not yet released: memory hung off these structures while reading input or
+ *     solving (material property tables, augmenting/continuation/hunting
+ *     conditions, level set and phase function data, rotation vectors).
+ */
+void fem_structures_free(GomaFem *fem) {
+  int mn, mode;
+
+  if (fem->ei != NULL && fem->upd != NULL) {
+    for (int imtrx = 0; imtrx < fem->upd->Total_Num_Matrices; imtrx++) {
+      Element_Indices_free(fem->ei[imtrx]);
+    }
+  }
+  free(fem->ei);
+  if (fem->ei_related != NULL) {
+    for (mn = 0; mn < MAX_ELEMENT_INDICES_RELATED; mn++) {
+      Element_Indices_free(fem->ei_related[mn]);
+    }
+  }
+  free(fem->ei_related);
+
+  Element_Stiffness_Pointers_free(fem->esp);
+  free(fem->esp_old);
+  free(fem->esp_dot);
+  free(fem->esp_dbl_dot);
+  free(fem->evp);
+  free(fem->eqm);
+  free(fem->lec);
+  free(fem->af);
+
+  /* bf, bfi and bfex hold pointers into bfd */
+  if (fem->bfd != NULL) {
+    for (int b = 0; b < Num_Basis_Functions; b++) {
+      if (fem->bfd[b] != NULL) {
+        free(fem->bfd[b]->Var_Type_MatID);
+        free(fem->bfd[b]);
+      }
+    }
+  }
+  free(fem->bfd);
+  free(fem->bfi);
+  free(fem->bf);
+  free(fem->bfex);
+
+  free(fem->fv);
+  free(fem->fv_sens);
+  free(fem->fv_old);
+  free(fem->fv_dot);
+  free(fem->fv_dot_old);
+  free(fem->fv_dot_dot);
+  free(fem->fv_dot_dot_old);
+  free(fem->efv);
+  free(fem->pmv);
+  free(fem->pmv_old);
+  free(fem->pmv_ml);
+  Porous_Media_Variables_Hysteresis_free(fem->pmv_hyst);
+  free(fem->lub_aux);
+  free(fem->lub_aux_old);
+  free(fem->stab);
+
+  free(fem->ve); /* rf_solve may already have freed this and cleared it */
+  if (fem->ve_glob != NULL) {
+    for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
+      for (mode = 0; mode < MAX_MODES; mode++) {
+        if (fem->ve_glob[mn][mode] != NULL) {
+          free(fem->ve_glob[mn][mode]->gn);
+          free(fem->ve_glob[mn][mode]->time_const_st);
+          free(fem->ve_glob[mn][mode]);
+        }
+      }
+    }
+  }
+  free(fem->ve_glob);
+
+  for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
+    if (fem->evpl_glob != NULL && fem->evpl_glob[mn] != NULL) {
+      struct Viscoplastic_Constitutive *v = fem->evpl_glob[mn];
+      free(v->F_vp_glob);
+      free(v->F_vp_old_glob);
+      free(v->TT_glob);
+      free(v->TT_old_glob);
+      free(v->dTT_dx_glob);
+      free(v->dTT_dx_old_glob);
+      free(v->dTT_dc_glob);
+      free(v->dTT_dc_old_glob);
+      free(v);
+    }
+    if (fem->vn_glob != NULL) {
+      free(fem->vn_glob[mn]);
+    }
+    if (fem->elc_glob != NULL) {
+      free(fem->elc_glob[mn]);
+    }
+    if (fem->elc_rs_glob != NULL) {
+      free(fem->elc_rs_glob[mn]);
+    }
+    if (fem->gn_glob != NULL) {
+      free(fem->gn_glob[mn]);
+    }
+    if (fem->cr_glob != NULL) {
+      free(fem->cr_glob[mn]);
+    }
+    if (fem->mp_glob != NULL) {
+      free(fem->mp_glob[mn]);
+    }
+    if (fem->pd_glob != NULL) {
+      free(fem->pd_glob[mn]);
+    }
+  }
+  free(fem->evpl_glob);
+  free(fem->vn_glob);
+  free(fem->elc_glob);
+  free(fem->elc_rs_glob);
+  free(fem->gn_glob);
+  free(fem->cr_glob);
+  free(fem->mp_glob);
+  free(fem->mp_old);
+  free(fem->pd_glob);
+
+  free(fem->tran);
+  free(fem->libio);
+  free(fem->eigen);
+  free(fem->cont);
+  free(fem->loca_in);
+
+  free(fem->pg);
+  free(fem->upd);
+}
+
+/****************************************************************************/
 /****************************************************************************/
 /****************************************************************************/
 
@@ -90,6 +375,7 @@ int pd_alloc(void)
   int status = 0;
   int mn;
   static char yo[] = "pd_alloc";
+  goma_ctx->fem.release = fem_structures_free;
   goma_ctx->fem.upd = alloc_struct_1(struct Uniform_Problem_Description, 1);
   goma_ctx->fem.upd->Species_Var_Type = SPECIES_UNDEFINED_FORM;
 

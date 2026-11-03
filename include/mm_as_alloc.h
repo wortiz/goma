@@ -18,6 +18,8 @@
 #include "exo_struct.h"
 #include "md_timer.h"
 
+#include "util/goma_context.h"
+
 struct Problem_Description;
 #ifdef EXTERN
 #undef EXTERN
@@ -32,6 +34,8 @@ struct Problem_Description;
 #endif
 
 EXTERN int pd_alloc(void);
+
+EXTERN void fem_structures_free(GomaFem *fem); /* frees what the *_alloc() routines allocate */
 
 EXTERN int efv_alloc(void);
 

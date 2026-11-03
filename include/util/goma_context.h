@@ -318,6 +318,12 @@ typedef struct GomaFem {
 
   /* Rotated boundary condition vectors */
   struct Rotation_Vectors ****rotation;
+
+  /*
+   * Frees the structures above. Installed by the library that allocates them
+   * (fem_structures_free() in mm_as_alloc.c) and called by goma_context_release().
+   */
+  void (*release)(struct GomaFem *fem);
 } GomaFem;
 
 /*
@@ -399,7 +405,8 @@ typedef struct GomaContext {
  *   spec_source_lumped_mass, mesh.coor (the pointer table only; the rows
  *   alias Exo_DB coordinates), mesh.proc_ss_node_count, and the particle
  *   arrays (number_samples*, number_output_variables, output_variables,
- *   filename_template, pbcs, element_info).
+ *   filename_template, pbcs, element_info), and through fem.release the
+ *   problem description, material and element structures from mm_as_alloc.c.
  *
  * All other mesh pointers alias Exo_DB storage and are only cleared.
  */
@@ -422,7 +429,8 @@ void goma_context_reset(GomaContext *ctx);
  */
 void goma_context_destroy(GomaContext *ctx);
 
-/* Free memory owned by the mesh / particle portions of a context. */
+/* Free memory owned by the mesh / particle / fem portions of a context. */
+void goma_fem_release(GomaFem *fem);
 void goma_mesh_release(GomaMesh *mesh);
 void goma_particles_release(GomaParticles *particles);
 void goma_particles_release_element_info(GomaParticles *particles);

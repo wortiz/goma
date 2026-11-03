@@ -106,6 +106,13 @@ void goma_particles_release(GomaParticles *particles) {
   goma_particles_release_element_info(particles);
 }
 
+void goma_fem_release(GomaFem *fem) {
+  if (fem->release != NULL) {
+    fem->release(fem);
+  }
+  memset(fem, 0, sizeof(*fem));
+}
+
 void goma_context_release(GomaContext *ctx) {
   free(ctx->request);
   ctx->request = NULL;
@@ -127,6 +134,7 @@ void goma_context_release(GomaContext *ctx) {
   free(ctx->spec_source_lumped_mass);
   ctx->spec_source_lumped_mass = NULL;
 
+  goma_fem_release(&ctx->fem);
   goma_mesh_release(&ctx->mesh);
   goma_particles_release(&ctx->particles);
 }
