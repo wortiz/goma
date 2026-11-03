@@ -3094,6 +3094,7 @@ void rd_levelset_specs(FILE *ifp, char *input) {
 #endif
       }
 
+      free(goma_ctx->fem.lsi); /* the level set section may have made one */
       goma_ctx->fem.lsi = alloc_struct_1(struct Level_Set_Interface, 1);
 
       ECHO("\n***Phase Function Section***\n", echo_file);
@@ -11343,7 +11344,7 @@ int look_for_mat_proptable(FILE *imp,              /* ptr to input stream (in)*/
         GOMA_EH(GOMA_ERROR, "Maximum TABLE_MPs exceeded .");
       }
 
-      table_local = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+      table_local = alloc_struct_1(struct Data_Table, 1);
       goma_ctx->bc.mp_tables[goma_ctx->bc.num_mp_tables] =
           setup_table_MP(imp, table_local, search_string);
       *tableindex = goma_ctx->bc.num_mp_tables++;
@@ -12587,7 +12588,7 @@ setup_table_BC(FILE *ifp, char *input, struct Boundary_Condition *BC_Type, char 
 
   es = endofstring(echo_string);
 
-  BC_Type->table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+  BC_Type->table = alloc_struct_1(struct Data_Table, 1);
 
   if (BC_Type->BC_Name == TABLE_WICV_BC) {
     BC_Type->table->columns = 3;
@@ -13394,7 +13395,7 @@ setup_gd_table_BC(FILE *ifp, char *input, struct Boundary_Condition *BC_Type, ch
 
   yo = "setup_gd_table_BC";
 
-  BC_Type->table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+  BC_Type->table = alloc_struct_1(struct Data_Table, 1);
   BC_Type->table->columns = 2;
 
   BC_Type->table->t_index[0] = BC_Type->BC_Data_Int[2];
@@ -15056,7 +15057,7 @@ struct Data_Table *setup_table_external(char *filename, struct Data_Table *table
   FILE *datafile = NULL;
   yo = "setup_table_external";
 
-  table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+  table = alloc_struct_1(struct Data_Table, 1);
 
   table->columns = goma_ctx->fem.pd->Num_Dim + 1;
 
@@ -15097,7 +15098,7 @@ setup_table_AC(char *filename, struct Data_Table *table, char *var_name, char *i
   FILE *datafile = NULL;
   yo = "setup_table_AC";
 
-  table = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+  table = alloc_struct_1(struct Data_Table, 1);
 
   /*
    * "x-axis" of table

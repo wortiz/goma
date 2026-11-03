@@ -380,9 +380,10 @@ void setup_dof_comm_map(Exo_DB *exo, Dpi *dpi, Comm_Ex **cx)
    *  solution vector to the i'th dof that needs to be sent to
    *  a neighboring processor.
    *
-   *     list_dof_send[] is allocated here, and is never freed.
+   *     list_dof_send[] is allocated here and freed by problem_setup_release().
    */
-  goma_ctx->problem.list_dof_send = malloc(sizeof(int *) * goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->problem.list_dof_send =
+      calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
   for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
     if (goma_ctx->problem.ptr_dof_send[imtrx][dpi->num_neighbors] > 0) {
       goma_ctx->problem.list_dof_send[imtrx] =

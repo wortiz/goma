@@ -383,12 +383,6 @@ typedef struct GomaFem {
 
   struct AD_Field_Variables *ad_fv; /* automatic differentiation field variables */
   double mm_fill_total;             /* time spent in matrix_fill */
-
-  /*
-   * Frees the structures above. Installed by the library that allocates them
-   * (fem_structures_free() in mm_as_alloc.c) and called by goma_context_release().
-   */
-  void (*release)(struct GomaFem *fem);
 } GomaFem;
 
 /*
@@ -872,6 +866,15 @@ typedef struct GomaContext {
   GomaProblem problem;     /* problem setup, continuation parameters and unknown maps */
   GomaBC bc;               /* boundary conditions, rotations and data tables */
   GomaPost post;           /* post-processing requests and variable flags */
+
+  /*
+   * Frees what the solver library allocated through this context: the input
+   * deck, problem setup, Exodus/decomposition databases and the fem
+   * structures. Installed by the library that allocates them
+   * (goma_problem_release() in rf_release.c, set by pd_alloc()) and called by
+   * goma_context_release() with ctx current.
+   */
+  void (*release_problem)(struct GomaContext *ctx);
 } GomaContext;
 
 /*
@@ -882,8 +885,12 @@ typedef struct GomaContext {
  *   spec_source_lumped_mass, mesh.coor (the pointer table only; the rows
  *   alias Exo_DB coordinates), mesh.proc_ss_node_count, and the particle
  *   arrays (number_samples*, number_output_variables, output_variables,
- *   filename_template, pbcs, element_info), and through fem.release the
- *   problem description, material and element structures from mm_as_alloc.c.
+ *   filename_template, pbcs, element_info), and through release_problem
+ *   everything the solver library allocated: input deck data (materials,
+ *   boundary conditions, data tables, continuation and augmenting
+ *   conditions, level set, post-processing requests), problem setup (unknown
+ *   and communication maps, nodes, element blocks, BC lists), exo, dpi, and
+ *   the problem description and element structures from mm_as_alloc.c.
  *
  * All other mesh pointers alias Exo_DB storage and are only cleared.
  */
@@ -906,8 +913,7 @@ void goma_context_reset(GomaContext *ctx);
  */
 void goma_context_destroy(GomaContext *ctx);
 
-/* Free memory owned by the mesh / particle / fem portions of a context. */
-void goma_fem_release(GomaFem *fem);
+/* Free memory owned by the mesh / particle portions of a context. */
 void goma_mesh_release(GomaMesh *mesh);
 void goma_particles_release(GomaParticles *particles);
 void goma_particles_release_element_info(GomaParticles *particles);

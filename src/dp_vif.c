@@ -104,6 +104,14 @@ void noahs_raven(void) {
    */
 
   MPI_Bcast(goma_ctx->fem.upd, sizeof(UPD_STRUCT), MPI_BYTE, 0, MPI_COMM_WORLD);
+  if (goma_ctx->proc_id != 0) {
+    /* pointers arrive with proc 0's addresses; the landing pads are made below */
+    goma_ctx->fem.upd->turbulent_info = NULL;
+    goma_ctx->fem.upd->solver_info = NULL;
+    goma_ctx->fem.upd->mesh_correction_damping = NULL;
+    goma_ctx->fem.upd->mesh_correction_tolerances = NULL;
+    goma_ctx->fem.upd->petsc_post_proc_data = NULL;
+  }
 
   Noahs_Raven = ddd_alloc();
   n = Noahs_Raven;
@@ -211,8 +219,7 @@ void raven_landing(void) {
   }
 
   if (goma_ctx->problem.num_bc > 0) {
-    goma_ctx->bc.bc_types = (struct Boundary_Condition *)array_alloc(
-        1, goma_ctx->problem.num_bc, sizeof(struct Boundary_Condition));
+    goma_ctx->bc.bc_types = alloc_struct_1(struct Boundary_Condition, goma_ctx->problem.num_bc);
   }
 
   /* Broadcast input wave number array for 3D of 2D LSA */
@@ -250,7 +257,7 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < goma_ctx->bc.num_ac_tables; i++) {
-    goma_ctx->bc.ac_tables[i] = smalloc(sizeof(struct Data_Table));
+    goma_ctx->bc.ac_tables[i] = alloc_struct_1(struct Data_Table, 1);
   }
 
   /*
@@ -258,7 +265,7 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < goma_ctx->bc.num_bc_tables; i++) {
-    goma_ctx->bc.bc_tables[i] = smalloc(sizeof(struct Data_Table));
+    goma_ctx->bc.bc_tables[i] = alloc_struct_1(struct Data_Table, 1);
   }
 
   /*
@@ -266,7 +273,7 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < goma_ctx->bc.num_mp_tables; i++) {
-    goma_ctx->bc.mp_tables[i] = smalloc(sizeof(struct Data_Table));
+    goma_ctx->bc.mp_tables[i] = alloc_struct_1(struct Data_Table, 1);
   }
 
   /*
@@ -274,7 +281,7 @@ void raven_landing(void) {
    */
 
   for (i = 0; i < goma_ctx->bc.num_ext_tables; i++) {
-    goma_ctx->bc.ext_tables[i] = smalloc(sizeof(struct Data_Table));
+    goma_ctx->bc.ext_tables[i] = alloc_struct_1(struct Data_Table, 1);
   }
 
   /*
@@ -354,8 +361,7 @@ void raven_landing(void) {
         1, goma_ctx->post.nn_volume, sizeof(struct Post_Processing_Volumetric *));
 
     for (i = 0; i < goma_ctx->post.nn_volume; i++) {
-      goma_ctx->post.pp_volume[i] = (struct Post_Processing_Volumetric *)array_alloc(
-          1, 1, sizeof(struct Post_Processing_Volumetric));
+      goma_ctx->post.pp_volume[i] = alloc_struct_1(struct Post_Processing_Volumetric, 1);
     }
   }
 

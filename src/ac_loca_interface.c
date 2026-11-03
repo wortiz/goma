@@ -317,7 +317,6 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   int iAC;
   int eb_indx, ev_indx;
   int num_pvector = 0;
-  int n; /* ni; */
   int nstep;
   int nprint;
   int i, err, error;
@@ -795,9 +794,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
         goma_ctx->problem.linear_stability == LSA_3D_OF_2D_SAVE) {
       /* Temporary error message - EDW */
       passdown.do_3D_of_2D = TRUE;
-      n = goma_ctx->problem.lsa_number_wave_numbers;
-    } else
-      n = 1;
+    }
     err = create_eigen_outfiles(passdown.exo, passdown.dpi, passdown.rd, passdown.gvec_elem);
     GOMA_EH(err, "Unable to open eigenvector output files!");
   }
@@ -1170,17 +1167,10 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
   safer_free((void **)&rd);
 
-  for (i = 0; i < MAX_NUMBER_MATLS; i++) {
-    for (n = 0; n < MAX_MODES; n++) {
-      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->gn));
-      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]));
-    }
-    safer_free((void **)&(goma_ctx->fem.vn_glob[i]));
-  }
+  /* ve_glob and vn_glob are freed with the Goma context */
 
   safer_free((void **)&gvec_elem);
-  safer_free((void **)&goma_ctx->problem.local_offset);
-  safer_free((void **)&goma_ctx->problem.dolphin);
+  /* local_offset and dolphin are freed with the Goma context */
 
   safer_free((void **)&passdown.sv_index);
   safer_free((void **)&passdown.sv_count);
@@ -1197,7 +1187,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   safer_free((void **)&con.hopf_info.y_vec);
   safer_free((void **)&con.hopf_info.z_vec);
 
-  free(goma_ctx->fem.pg->matrices);
+  safer_free((void **)&goma_ctx->fem.pg->matrices);
 
   return nstep;
 } /**************** END of do_loca() *****************************************/

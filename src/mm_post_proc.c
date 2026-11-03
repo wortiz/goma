@@ -9150,7 +9150,7 @@ void rd_post_process_specs(FILE *ifp, char *input) {
     sz = sizeof(struct Post_Processing_Volumetric);
 
     for (i = 0; i < goma_ctx->post.nn_volume; i++) {
-      goma_ctx->post.pp_volume[i] = (struct Post_Processing_Volumetric *)array_alloc(1, 1, sz);
+      goma_ctx->post.pp_volume[i] = alloc_struct_1(struct Post_Processing_Volumetric, 1);
     }
 
     for (i = 0; i < goma_ctx->post.nn_volume; i++) {

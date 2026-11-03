@@ -2768,8 +2768,8 @@ free_and_clear:
   }
 
   if (goma_ctx->fem.tran->solid_inertia) {
-    free(goma_ctx->fem.tran->xdbl_dot);
-    free(goma_ctx->fem.tran->xdbl_dot_old);
+    safer_free((void **)&goma_ctx->fem.tran->xdbl_dot);
+    safer_free((void **)&goma_ctx->fem.tran->xdbl_dot_old);
   }
   safer_free((void **)&x_update);
 
@@ -2783,16 +2783,7 @@ free_and_clear:
     Dmatrix_death(x_sens_p, num_pvector, numProcUnknowns);
   }
 
-  if (last_call) {
-    for (i = 0; i < MAX_NUMBER_MATLS; i++) {
-      for (n = 0; n < MAX_MODES; n++) {
-        safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->gn));
-        safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->time_const_st));
-        safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]));
-      }
-      safer_free((void **)&(goma_ctx->fem.vn_glob[i]));
-    }
-  }
+  /* ve_glob and vn_glob are freed with the Goma context */
 
   safer_free((void **)&goma_ctx->fem.ve);
 

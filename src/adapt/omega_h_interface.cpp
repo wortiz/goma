@@ -1108,8 +1108,8 @@ void convert_omega_h_to_goma(
   free(goma_ctx->problem.idv);
   goma_ctx->problem.idv = NULL;
 
-  free_Surf_BC(goma_ctx->bc.first_elem_side_bc_array, exo);
-  free_Edge_BC(goma_ctx->bc.first_elem_edge_bc_array, exo, dpi);
+  free_Surf_BC(&goma_ctx->bc.first_elem_side_bc_array, goma_ctx->mesh.num_internal_elems);
+  free_Edge_BC(&goma_ctx->bc.first_elem_edge_bc_array, goma_ctx->mesh.num_internal_elems);
   free_nodes();
   if (goma_ctx->num_proc == 1) {
     free_dpi_uni(dpi);
@@ -1186,14 +1186,14 @@ void convert_omega_h_to_goma(
   if (dpi->num_neighbors > 0) {
     for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       free(goma_ctx->cx[imtrx]);
-      free(goma_ctx->request);
-      free(goma_ctx->status);
       goma_ctx->cx[imtrx] = alloc_struct_1(Comm_Ex, goma_ctx->dpi->num_neighbors);
-      goma_ctx->request =
-          alloc_struct_1(MPI_Request, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
-      goma_ctx->status =
-          alloc_struct_1(MPI_Status, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
     }
+    free(goma_ctx->request);
+    free(goma_ctx->status);
+    goma_ctx->request =
+        alloc_struct_1(MPI_Request, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
+    goma_ctx->status =
+        alloc_struct_1(MPI_Status, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
   }
 
   end_code();

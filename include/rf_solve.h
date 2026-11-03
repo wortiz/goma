@@ -89,9 +89,6 @@ EXTERN int variable_stats /* rf_solve.c */
 EXTERN int setup_problem(Exo_DB *, /* exo - ptr to finite element mesh database */
                          Dpi *);   /* dpi - ptr to distributed processing info */
 
-EXTERN int free_problem(Exo_DB *, /* exo - ptr to finite element mesh database */
-                        Dpi *);   /* dpi - ptr to distributed processing info */
-
 void set_matrix_index_and_global_v(void);
 
 void predict_solution(int N,

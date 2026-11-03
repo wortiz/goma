@@ -631,6 +631,7 @@ set(GOMA_INCLUDES
     include/rf_mp.h
     include/rf_node_const.h
     include/rf_pre_proc.h
+    include/rf_release.h
     include/rf_shape.h
     include/rf_solve.h
     include/rf_solver_const.h
@@ -794,6 +795,7 @@ set(GOMA_SOURCES
     src/rf_node.c
     src/rf_node_vars.c
     src/rf_pre_proc.c
+    src/rf_release.c
     src/rf_setup_problem.c
     src/rf_shape.c
     src/rf_solve.c

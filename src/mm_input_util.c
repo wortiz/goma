@@ -1745,7 +1745,7 @@ int look_for_species_proptable(FILE *imp,
               mat_ptr->Material_Name, search_string);
     }
 
-    table_local = (struct Data_Table *)smalloc(sizeof(struct Data_Table));
+    table_local = alloc_struct_1(struct Data_Table, 1);
     goma_ctx->bc.mp_tables[goma_ctx->bc.num_mp_tables] =
         setup_table_MP(imp, table_local, search_string);
     species_ID = goma_ctx->bc.mp_tables[goma_ctx->bc.num_mp_tables]->species_eq;

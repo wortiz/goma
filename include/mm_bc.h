@@ -50,12 +50,11 @@ EXTERN void set_up_Surf_BC(struct elem_side_bc_struct **[], /* First_Elem_Side_B
                            Exo_DB *, /* exo - ptr to FE db                        */
                            Dpi *);   /* dpi - ptr to dist proc info               */
 
-EXTERN void free_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[],
-                         Exo_DB *exo); /* dpi - ptr to dist proc info               */
+EXTERN void free_Surf_BC(struct elem_side_bc_struct ****First_Elem_Side_BC_Array,
+                         const int num_elems);
 
-EXTERN void free_Edge_BC(struct elem_edge_bc_struct **[], /* First_Elem_Side_BC_Array          */
-                         Exo_DB *, /* exo - ptr to FE db                        */
-                         Dpi *);   /* dpi - ptr to dist proc info               */
+EXTERN void free_Edge_BC(struct elem_edge_bc_struct ****First_Elem_Edge_BC_Array,
+                         const int num_elems);
 
 EXTERN void setup_Point_BC(struct elem_side_bc_struct **[], /* First_Elem_Side_BC_Array          */
                            Exo_DB *, /* exo - ptr to FE db                        */

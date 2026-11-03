@@ -35,6 +35,7 @@
 #include "mm_names.h"
 #include "mm_ns_bc.h"
 #include "mm_post_proc.h"
+#include "mm_qp_storage.h"
 #include "mm_unknown_map.h"
 #include "rd_mesh.h"
 #include "rf_allo.h"
@@ -1315,70 +1316,68 @@ void set_up_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo
 /*****************************************************************************/
 /*****************************************************************************/
 
-void free_Surf_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[], Exo_DB *exo) {
-  int e_start, e_end;
-  int ielem;
-  int imtrx;
-  struct elem_side_bc_struct *current_bc;
-  struct elem_side_bc_struct *next_bc;
-
-  e_start = exo->eb_ptr[0];
-  e_end = exo->eb_ptr[exo->num_elem_blocks];
-  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    for (ielem = e_start; ielem < e_end; ielem++) {
-      if (First_Elem_Side_BC_Array[imtrx][ielem] != NULL) {
-        current_bc = First_Elem_Side_BC_Array[imtrx][ielem];
-
-        do {
-          safer_free((void **)&current_bc->local_node_id);
-          safer_free((void **)&current_bc->local_elem_node_id);
-          /*				elem_qp_storage_free( current_bc );*/
-
-          next_bc = current_bc->next_side_bc;
-
-          safer_free((void **)&current_bc);
-
-          current_bc = next_bc;
-        } while (current_bc != NULL);
-      }
-    }
+/*
+ * free_Surf_BC() / free_Edge_BC():
+ *    Free the per-element side and edge BC lists built by set_up_Surf_BC() and
+ *    set_up_Edge_BC() for every matrix, including the per-matrix arrays from
+ *    alloc_First_Elem_BC(), and clear *First_Elem_Side_BC_Array /
+ *    *First_Elem_Edge_BC_Array. num_elems is the length alloc_First_Elem_BC()
+ *    was given. Side lists may hold quadrature point storage, which needs
+ *    goma_ctx->exo to size it.
+ */
+static void free_side_bc_list(struct elem_side_bc_struct *side) {
+  if (side != NULL && goma_ctx->exo != NULL) {
+    elem_qp_storage_free(side);
   }
-
-  safer_free((void **)&First_Elem_Side_BC_Array);
+  while (side != NULL) {
+    struct elem_side_bc_struct *next = side->next_side_bc;
+    free(side->local_node_id);
+    free(side->local_elem_node_id);
+    free(side->BC_input_id);
+    free(side);
+    side = next;
+  }
 }
 
-void free_Edge_BC(struct elem_edge_bc_struct **First_Elem_Edge_BC_Array[], Exo_DB *exo, Dpi *dpi) {
-  int e_start, e_end;
-  int ielem;
-  int imtrx;
-  struct elem_edge_bc_struct *current_bc;
-  struct elem_edge_bc_struct *next_bc;
-
-  e_start = exo->eb_ptr[0];
-  e_end = exo->eb_ptr[exo->num_elem_blocks];
-  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    for (ielem = e_start; ielem < e_end; ielem++) {
-      if (First_Elem_Edge_BC_Array[imtrx][ielem] != NULL) {
-        current_bc = First_Elem_Edge_BC_Array[imtrx][ielem];
-
-        do {
-          safer_free((void **)&current_bc->elem_side_bc_1->local_node_id);
-          safer_free((void **)&current_bc->elem_side_bc_1->local_elem_node_id);
-          safer_free((void **)&current_bc->elem_side_bc_2->local_node_id);
-          safer_free((void **)&current_bc->elem_side_bc_2->local_elem_node_id);
-
-          safer_free((void **)&current_bc->elem_side_bc_1);
-          safer_free((void **)&current_bc->elem_side_bc_2);
-          next_bc = current_bc->next_edge_bc;
-
-          safer_free((void **)&current_bc);
-
-          current_bc = next_bc;
-        } while (current_bc != NULL);
+void free_Surf_BC(struct elem_side_bc_struct ****First_Elem_Side_BC_Array, const int num_elems) {
+  struct elem_side_bc_struct ***arrays = *First_Elem_Side_BC_Array;
+  if (arrays == NULL) {
+    return;
+  }
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (arrays[imtrx] != NULL) {
+      for (int ielem = 0; ielem < num_elems; ielem++) {
+        free_side_bc_list(arrays[imtrx][ielem]);
       }
+      free(arrays[imtrx]);
     }
   }
-  safer_free((void **)&First_Elem_Edge_BC_Array);
+  free(arrays);
+  *First_Elem_Side_BC_Array = NULL;
+}
+
+void free_Edge_BC(struct elem_edge_bc_struct ****First_Elem_Edge_BC_Array, const int num_elems) {
+  struct elem_edge_bc_struct ***arrays = *First_Elem_Edge_BC_Array;
+  if (arrays == NULL) {
+    return;
+  }
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    if (arrays[imtrx] != NULL) {
+      for (int ielem = 0; ielem < num_elems; ielem++) {
+        struct elem_edge_bc_struct *edge = arrays[imtrx][ielem];
+        while (edge != NULL) {
+          struct elem_edge_bc_struct *next = edge->next_edge_bc;
+          free_side_bc_list(edge->elem_side_bc_1);
+          free_side_bc_list(edge->elem_side_bc_2);
+          free(edge);
+          edge = next;
+        }
+      }
+      free(arrays[imtrx]);
+    }
+  }
+  free(arrays);
+  *First_Elem_Edge_BC_Array = NULL;
 }
 
 void setup_Point_BC(struct elem_side_bc_struct **First_Elem_Side_BC_Array[],

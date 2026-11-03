@@ -1029,6 +1029,7 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   free(node_indicators);
   free(elem_indicators);
   free(goma_ctx->problem.matilda);
+  goma_ctx->problem.matilda = NULL;
   free(elem_adj_list);
   free(elem_adj_pntr);
   free(vwgt);
@@ -1037,9 +1038,11 @@ goma_error goma_metis_decomposition(char **filenames, int n_files) {
   free(monolith);
   free(dpi);
   free(goma_ctx->fem.element_blocks);
+  goma_ctx->fem.element_blocks = NULL;
 
   for (int i = 0; i < MAX_MAT_PER_SS + 1; i++) {
     free(goma_ctx->bc.ss_to_blks[i]);
+    goma_ctx->bc.ss_to_blks[i] = NULL;
   }
   free(goma_ctx->mesh.proc_ss_node_count);
   goma_ctx->mesh.proc_ss_node_count = NULL;

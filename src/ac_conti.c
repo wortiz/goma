@@ -1345,13 +1345,7 @@ free_and_clear:
   if ((goma_ctx->post.nn_post_data_sens + goma_ctx->post.nn_post_fluxes_sens) > 0)
     Dmatrix_death(x_sens_p, num_pvector, numProcUnknowns);
 
-  for (i = 0; i < MAX_NUMBER_MATLS; i++) {
-    for (n = 0; n < MAX_MODES; n++) {
-      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]->gn));
-      safer_free((void **)&(goma_ctx->fem.ve_glob[i][n]));
-    }
-    safer_free((void **)&(goma_ctx->fem.vn_glob[i]));
-  }
+  /* ve_glob and vn_glob are freed with the Goma context */
 
   sl_free(matrix_systems_mask, ams);
 
@@ -1385,7 +1379,7 @@ free_and_clear:
   safer_free((void **)&goma_ctx->problem.local_offset);
   safer_free((void **)&goma_ctx->problem.dolphin);
 
-  free(goma_ctx->fem.pg->matrices);
+  safer_free((void **)&goma_ctx->fem.pg->matrices);
 
   if (file != NULL)
     fclose(file);

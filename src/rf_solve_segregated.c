@@ -2902,7 +2902,7 @@ free_and_clear:
         free(goma_ctx->fem.pg->sub_step_solutions[imtrx].x_update);
       }
     }
-    free(goma_ctx->fem.pg->sub_step_solutions);
+    safer_free((void **)&goma_ctx->fem.pg->sub_step_solutions);
   }
 
   for (goma_ctx->fem.pg->imtrx = 0; goma_ctx->fem.pg->imtrx < goma_ctx->fem.upd->Total_Num_Matrices;

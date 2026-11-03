@@ -37,6 +37,7 @@
 #include "mm_mp_const.h"
 #include "mm_mp_structs.h"
 #include "rd_mesh.h"
+#include "rf_release.h"
 #include "rf_vars_const.h"
 
 #define GOMA_MM_AS_ALLOC_C
@@ -111,6 +112,7 @@ static void Element_Indices_free(struct Element_Indices *ei_ptr) {
   free(ei_ptr->matID_ledof);
   free(ei_ptr->active_interp_ledof);
   free(ei_ptr->MFsubvar_Offset);
+  free(ei_ptr->VDindex_to_Lvdesc);
   free(ei_ptr);
 }
 
@@ -226,12 +228,9 @@ static void Porous_Media_Variables_Hysteresis_free(struct Porous_Media_Variables
 /*
  * fem_structures_free():
  *     Free the structures allocated by the *_alloc() routines in this file and
- *     by assembly_alloc(). Installed as the GomaFem release hook by pd_alloc()
- *     so that goma_context_release() can call it.
- *
- *     Not yet released: memory hung off these structures while reading input or
- *     solving (material property tables, augmenting/continuation/hunting
- *     conditions, level set and phase function data, rotation vectors).
+ *     by assembly_alloc(). Called last by goma_problem_release() (rf_release.c),
+ *     which first frees what reading the input and setting up the problem hung
+ *     off these structures.
  */
 void fem_structures_free(GomaFem *fem) {
   int mn, mode;
@@ -373,7 +372,7 @@ int pd_alloc(void)
   int status = 0;
   int mn;
   static char yo[] = "pd_alloc";
-  goma_ctx->fem.release = fem_structures_free;
+  goma_ctx->release_problem = goma_problem_release;
   goma_ctx->fem.upd = alloc_struct_1(struct Uniform_Problem_Description, 1);
   goma_ctx->fem.upd->Species_Var_Type = SPECIES_UNDEFINED_FORM;
 
@@ -592,7 +591,7 @@ int ve_alloc(void) {
   sz = sizeof(struct Viscoelastic_Nonmodal);
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    goma_ctx->fem.vn_glob[mn] = (struct Viscoelastic_Nonmodal *)smalloc(sz);
+    goma_ctx->fem.vn_glob[mn] = alloc_struct_1(struct Viscoelastic_Nonmodal, 1);
     init_Viscoelastic_Nonmodal(goma_ctx->fem.vn_glob[mn]);
   }
 
@@ -607,7 +606,7 @@ int ve_alloc(void) {
 
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
     for (mode = 0; mode < MAX_MODES; mode++) {
-      goma_ctx->fem.ve_glob[mn][mode] = (struct Viscoelastic_Constitutive *)smalloc(sz);
+      goma_ctx->fem.ve_glob[mn][mode] = alloc_struct_1(struct Viscoelastic_Constitutive, 1);
       init_Viscoelastic_Constitutive(goma_ctx->fem.ve_glob[mn][mode]);
     }
   }
@@ -691,7 +690,7 @@ int evp_alloc(void) {
 
   sz = sizeof(struct Viscoplastic_Constitutive);
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    goma_ctx->fem.evpl_glob[mn] = (struct Viscoplastic_Constitutive *)smalloc(sz);
+    goma_ctx->fem.evpl_glob[mn] = alloc_struct_1(struct Viscoplastic_Constitutive, 1);
     init_Viscoplastic_Constitutive(goma_ctx->fem.evpl_glob[mn]);
   }
 
@@ -801,7 +800,7 @@ int elc_rs_alloc(void) {
 
   sz = sizeof(struct Elastic_Constitutive);
   for (mn = 0; mn < MAX_NUMBER_MATLS; mn++) {
-    goma_ctx->fem.elc_rs_glob[mn] = (struct Elastic_Constitutive *)smalloc(sz);
+    goma_ctx->fem.elc_rs_glob[mn] = alloc_struct_1(struct Elastic_Constitutive, 1);
     init_Elastic_Constitutive(goma_ctx->fem.elc_rs_glob[mn]);
   }
 
@@ -830,7 +829,7 @@ int tran_alloc(void) {
    */
 
   sz = sizeof(struct Transient_Information);
-  goma_ctx->fem.tran = (struct Transient_Information *)array_alloc(1, 1, sz);
+  goma_ctx->fem.tran = alloc_struct_1(struct Transient_Information, 1);
   if (goma_ctx->debug_flag) {
     DPRINTF(stdout, "%s: Transient_Information @ %p has %d bytes", yo, (void *)goma_ctx->fem.tran,
             sz);

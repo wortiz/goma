@@ -643,17 +643,17 @@ int main(int argc, char **argv)
    * Allocate space for each communication exchange description.
    */
 #ifdef PARALLEL
-  goma_ctx->cx = malloc(sizeof(Comm_Ex *) * goma_ctx->fem.upd->Total_Num_Matrices);
+  goma_ctx->cx = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(Comm_Ex *));
   if (goma_ctx->dpi->num_neighbors > 0) {
 
     int imtrx;
     for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
       goma_ctx->cx[imtrx] = alloc_struct_1(Comm_Ex, goma_ctx->dpi->num_neighbors);
-      goma_ctx->request =
-          alloc_struct_1(MPI_Request, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
-      goma_ctx->status =
-          alloc_struct_1(MPI_Status, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
     }
+    goma_ctx->request =
+        alloc_struct_1(MPI_Request, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
+    goma_ctx->status =
+        alloc_struct_1(MPI_Status, goma_ctx->num_requests * goma_ctx->dpi->num_neighbors);
   }
 #endif
 
@@ -800,20 +800,9 @@ int main(int argc, char **argv)
    *       FREE MEMORY ALLOCATED BY THE PROGRAM
    */
   /*
-   * free the element block / element based structures
-   */
-  free_element_blocks(goma_ctx->exo);
-
-  /*
-   * free nodal based structures
-   */
-  free_nodes();
-#ifdef FREE_PROBLEM
-  free_problem(goma_ctx->exo, goma_ctx->dpi);
-#endif
-
-  /*
-   * Free command line stuff
+   * Free command line stuff. Everything reached through goma_ctx (input deck,
+   * problem setup, nodes, element blocks, exo, dpi) is freed by
+   * goma_context_reset() below.
    */
   if (goma_ctx->proc_id == 0) {
     if (argc > 1) {
@@ -824,20 +813,6 @@ int main(int argc, char **argv)
       safer_free((void **)&clc);
     }
   }
-
-  /*
-   * Free exodus database structures
-   */
-  free_exo(goma_ctx->exo);
-  safer_free((void **)&goma_ctx->exo);
-
-  if (goma_ctx->num_proc > 1) {
-    free_dpi(goma_ctx->dpi);
-  } else {
-    free_dpi_uni(goma_ctx->dpi);
-  }
-
-  safer_free((void **)&goma_ctx->dpi);
 
   /*
    * Remove front scratch file [/tmp/lu.'pid'.0]
@@ -867,7 +842,7 @@ int main(int argc, char **argv)
   fflush(stdout);
   fflush(stderr);
   log_msg("GOMA ends normally.");
-  goma_context_release(goma_ctx);
+  goma_context_reset(goma_ctx);
   return (0);
 }
 /***********************************************************************/

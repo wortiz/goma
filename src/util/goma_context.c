@@ -144,14 +144,15 @@ void goma_particles_release(GomaParticles *particles) {
   goma_particles_release_element_info(particles);
 }
 
-void goma_fem_release(GomaFem *fem) {
-  if (fem->release != NULL) {
-    fem->release(fem);
-  }
-  memset(fem, 0, sizeof(*fem));
-}
-
 void goma_context_release(GomaContext *ctx) {
+  if (ctx->release_problem != NULL) {
+    /* the solver library reaches its data through goma_ctx */
+    GomaContext *previous = goma_context_set_current(ctx);
+    ctx->release_problem(ctx);
+    ctx->release_problem = NULL;
+    goma_context_set_current(previous);
+  }
+
   free(ctx->request);
   ctx->request = NULL;
   free(ctx->status);
@@ -172,7 +173,7 @@ void goma_context_release(GomaContext *ctx) {
   free(ctx->spec_source_lumped_mass);
   ctx->spec_source_lumped_mass = NULL;
 
-  goma_fem_release(&ctx->fem);
+  memset(&ctx->fem, 0, sizeof(ctx->fem));
   goma_mesh_release(&ctx->mesh);
   goma_particles_release(&ctx->particles);
 }

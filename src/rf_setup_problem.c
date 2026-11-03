@@ -432,22 +432,6 @@ int setup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
 }
 /************************************************************************/
 
-int free_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
-                 Dpi *dpi)    /* distributed processing information */
-                              /*
-                               *  this is the deconstructor routine to the setup_problem routine.
-                               *  It's designed to deallocate all the arrays and structures allocated in setup_problem
-                               */
-{
-  /*
-   * Free up the First_Elem_Side_BC_Array array
-   */
-  free_Surf_BC(goma_ctx->bc.first_elem_side_bc_array, exo);
-  free_Edge_BC(goma_ctx->bc.first_elem_edge_bc_array, exo, dpi);
-  return 0;
-}
-/************************************************************************/
-
 static void
 check_discontinuous_interp_type(PROBLEM_DESCRIPTION_STRUCT *curr_pd, int var_type, int imtrx)
 
