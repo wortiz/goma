@@ -2985,13 +2985,13 @@ Revised:	   1997/10/28 16:48 MST pasacki@sandia.gov
      flux sensitivities, modified newton schemes, augmenting conditions,
      and continuation */
 
-  save_old_A = FALSE;
-  if (modified_newton || nAC > 0 || nn_post_data_sens > 0 || nn_post_fluxes_sens > 0 ||
-      Continuation > 0) {
-    save_old_A = TRUE;
+  goma_ctx->solver.save_old_a = FALSE;
+  if (goma_ctx->solver.modified_newton || nAC > 0 || nn_post_data_sens > 0 ||
+      nn_post_fluxes_sens > 0 || Continuation > 0) {
+    goma_ctx->solver.save_old_a = TRUE;
   }
 
-  if (save_old_A) {
+  if (goma_ctx->solver.save_old_a) {
     a_old = alloc_dbl_1(nnz, 0.0);
   } else {
     a_old = NULL;
@@ -3080,13 +3080,13 @@ void alloc_VBR_sparse_arrays(struct GomaLinearSolverData *ams, Exo_DB *exo, Dpi 
      flux sensitivities, modified newton schemes, augmenting conditions,
      and continuation */
 
-  save_old_A = FALSE;
-  if (modified_newton || nAC > 0 || nn_post_data_sens > 0 || nn_post_fluxes_sens > 0 ||
-      Continuation > 0) {
-    save_old_A = TRUE;
+  goma_ctx->solver.save_old_a = FALSE;
+  if (goma_ctx->solver.modified_newton || nAC > 0 || nn_post_data_sens > 0 ||
+      nn_post_fluxes_sens > 0 || Continuation > 0) {
+    goma_ctx->solver.save_old_a = TRUE;
   }
 
-  if (save_old_A) {
+  if (goma_ctx->solver.save_old_a) {
     asdv(&(ams->val_old), nnz);
   }
 

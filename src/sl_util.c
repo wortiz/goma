@@ -184,7 +184,7 @@ void sl_init(unsigned int option_mask, /* option flag */
 #ifdef GOMA_ENABLE_AZTEC
         A->data_org = (int *)array_alloc(1, AZ_COMM_SIZE + 0, sizeof(int));
 
-        if (strcmp(Matrix_Format, "vbr") == 0) {
+        if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
           A->data_org[AZ_matrix_type] = AZ_VBR_MATRIX;
           A->mat_type = AZ_VBR_MATRIX;
           A->data_org[AZ_N_int_blk] = dpi->num_internal_nodes;
@@ -247,7 +247,7 @@ void sl_init(unsigned int option_mask, /* option flag */
         A->data_org[AZ_N_border] = num_boundary_dofs[imtrx];
         A->data_org[AZ_N_external] = num_external_dofs[imtrx];
 
-        if (strcmp(Matrix_Format, "vbr") == 0) {
+        if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
           A->data_org[AZ_matrix_type] = AZ_VBR_MATRIX;
           A->mat_type = AZ_VBR_MATRIX;
           A->data_org[AZ_N_int_blk] = dpi->num_internal_nodes;
@@ -298,7 +298,7 @@ void sl_init(unsigned int option_mask, /* option flag */
         if (err != 0)
           AZ_print_error(err);
 
-        if (strcmp(Matrix_Format, "vbr") == 0) {
+        if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
           AZ_check_vbr(A->N_update, A->N_external, AZ_GLOBAL, A->bindx, A->bpntr, A->cpntr,
                        A->rpntr, A->proc_config);
         } else {
@@ -412,71 +412,71 @@ void set_aztec_options_params(int options[], double params[]) {
 #endif
 
 #ifdef GOMA_ENABLE_AZTEC
-  if (strcmp(Matrix_Solver, "cg") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_solver, "cg") == 0) {
     options[AZ_solver] = AZ_cg;
-  } else if (strcmp(Matrix_Solver, "gmres") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "gmres") == 0) {
     options[AZ_solver] = AZ_gmres;
-  } else if (strcmp(Matrix_Solver, "cgs") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "cgs") == 0) {
     options[AZ_solver] = AZ_cgs;
-  } else if (strcmp(Matrix_Solver, "tfqmr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "tfqmr") == 0) {
     options[AZ_solver] = AZ_tfqmr;
-  } else if (strcmp(Matrix_Solver, "bicgstab") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "bicgstab") == 0) {
     options[AZ_solver] = AZ_bicgstab;
-  } else if (strcmp(Matrix_Solver, "y12m") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "y12m") == 0) {
     options[AZ_solver] = AZ_lu;
-  } else if (strcmp(Matrix_Solver, "ma28") == 0) {
-    Linear_Solver = MA28;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "ma28") == 0) {
+    goma_ctx->solver.linear_solver = MA28;
     options[AZ_solver] = -1;
   } else
 #endif
-      if (strcmp(Matrix_Solver, "lu") == 0) {
-    Linear_Solver = SPARSE13a;
+      if (strcmp(goma_ctx->solver.matrix_solver, "lu") == 0) {
+    goma_ctx->solver.linear_solver = SPARSE13a;
     options[AZ_solver] = -1;
   }
   /*IGBRK*/
-  else if (strcmp(Matrix_Solver, "umf") == 0) {
-    Linear_Solver = UMFPACK2;
+  else if (strcmp(goma_ctx->solver.matrix_solver, "umf") == 0) {
+    goma_ctx->solver.linear_solver = UMFPACK2;
     options[AZ_solver] = -1;
   }
   /*IGBRK*/
-  else if (strcmp(Matrix_Solver, "umff") == 0) {
-    Linear_Solver = UMFPACK2F;
+  else if (strcmp(goma_ctx->solver.matrix_solver, "umff") == 0) {
+    goma_ctx->solver.linear_solver = UMFPACK2F;
     options[AZ_solver] = -1;
-  } else if (strcmp(Matrix_Solver, "front") == 0) {
-    Linear_Solver = FRONT;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "front") == 0) {
+    goma_ctx->solver.linear_solver = FRONT;
     options[AZ_solver] = -1;
-  } else if (strcmp(Matrix_Solver, "amesos") == 0) {
-    Linear_Solver = AMESOS;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "amesos") == 0) {
+    goma_ctx->solver.linear_solver = AMESOS;
     options[AZ_solver] = -1;
-  } else if (strcmp(Matrix_Solver, "mumps") == 0) {
-    Linear_Solver = MUMPS;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "mumps") == 0) {
+    goma_ctx->solver.linear_solver = MUMPS;
     options[AZ_solver] = -1;
-  } else if (strcmp(Matrix_Solver, "amesos2") == 0) {
-    Linear_Solver = AMESOS2;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "amesos2") == 0) {
+    goma_ctx->solver.linear_solver = AMESOS2;
     options[AZ_solver] = -1;
-  } else if (strcmp(Matrix_Solver, "stratimikos") == 0) {
-    Linear_Solver = STRATIMIKOS;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "stratimikos") == 0) {
+    goma_ctx->solver.linear_solver = STRATIMIKOS;
     options[AZ_solver] = -1;
-  } else if (strcmp(Matrix_Solver, "petsc") == 0) {
-    Linear_Solver = PETSC_SOLVER;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "petsc") == 0) {
+    goma_ctx->solver.linear_solver = PETSC_SOLVER;
     options[AZ_solver] = -1;
-  } else if (strcmp(Matrix_Solver, "petsc_complex") == 0) {
-    Linear_Solver = PETSC_COMPLEX_SOLVER;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "petsc_complex") == 0) {
+    goma_ctx->solver.linear_solver = PETSC_COMPLEX_SOLVER;
     options[AZ_solver] = -1;
 #ifdef GOMA_ENABLE_AZTEC
-  } else if (strcmp(Matrix_Solver, "aztecoo") == 0) {
-    Linear_Solver = AZTECOO;
-    if (strcmp(AztecOO_Solver, "cg") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "aztecoo") == 0) {
+    goma_ctx->solver.linear_solver = AZTECOO;
+    if (strcmp(goma_ctx->solver.aztecoo_solver, "cg") == 0) {
       options[AZ_solver] = AZ_cg;
-    } else if (strcmp(AztecOO_Solver, "gmres") == 0) {
+    } else if (strcmp(goma_ctx->solver.aztecoo_solver, "gmres") == 0) {
       options[AZ_solver] = AZ_gmres;
-    } else if (strcmp(AztecOO_Solver, "cgs") == 0) {
+    } else if (strcmp(goma_ctx->solver.aztecoo_solver, "cgs") == 0) {
       options[AZ_solver] = AZ_cgs;
-    } else if (strcmp(AztecOO_Solver, "tfqmr") == 0) {
+    } else if (strcmp(goma_ctx->solver.aztecoo_solver, "tfqmr") == 0) {
       options[AZ_solver] = AZ_tfqmr;
-    } else if (strcmp(AztecOO_Solver, "bicgstab") == 0) {
+    } else if (strcmp(goma_ctx->solver.aztecoo_solver, "bicgstab") == 0) {
       options[AZ_solver] = AZ_bicgstab;
-    } else if (strcmp(AztecOO_Solver, "y12m") == 0) {
+    } else if (strcmp(goma_ctx->solver.aztecoo_solver, "y12m") == 0) {
       options[AZ_solver] = AZ_lu;
     }
 #endif
@@ -490,17 +490,18 @@ void set_aztec_options_params(int options[], double params[]) {
    * Matrix scaling
    */
 
-  if (strcmp(Matrix_Scaling, "none") == 0 || strcmp(Matrix_Scaling, "") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_scaling, "none") == 0 ||
+      strcmp(goma_ctx->solver.matrix_scaling, "") == 0) {
     options[AZ_scaling] = AZ_none;
-  } else if (strcmp(Matrix_Scaling, "Jacobi") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_scaling, "Jacobi") == 0) {
     options[AZ_scaling] = AZ_Jacobi;
-  } else if (strcmp(Matrix_Scaling, "BJacobi") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_scaling, "BJacobi") == 0) {
     options[AZ_scaling] = AZ_BJacobi;
-  } else if (strcmp(Matrix_Scaling, "row_sum") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_scaling, "row_sum") == 0) {
     options[AZ_scaling] = AZ_row_sum;
-  } else if (strcmp(Matrix_Scaling, "sym_diag") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_scaling, "sym_diag") == 0) {
     options[AZ_scaling] = AZ_sym_diag;
-  } else if (strcmp(Matrix_Scaling, "sym_row_sum") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_scaling, "sym_row_sum") == 0) {
     options[AZ_scaling] = AZ_sym_row_sum;
   } else {
     fprintf(stderr, "Valid scalings are: none, Jacobi, BJacobi, row_sum, sym_diag, sym_row_sum\n");
@@ -514,15 +515,16 @@ void set_aztec_options_params(int options[], double params[]) {
    */
   options[AZ_precond] = AZ_none;
 
-  if (strcmp(Matrix_Preconditioner, "none") == 0 || strcmp(Matrix_Preconditioner, "") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_preconditioner, "none") == 0 ||
+      strcmp(goma_ctx->solver.matrix_preconditioner, "") == 0) {
     options[AZ_precond] = AZ_none;
-  } else if (strcmp(Matrix_Preconditioner, "Jacobi") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_preconditioner, "Jacobi") == 0) {
     options[AZ_precond] = AZ_Jacobi;
-  } else if (strcmp(Matrix_Preconditioner, "Neumann") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_preconditioner, "Neumann") == 0) {
     options[AZ_precond] = AZ_Neumann;
-  } else if (strcmp(Matrix_Preconditioner, "ls") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_preconditioner, "ls") == 0) {
     options[AZ_precond] = AZ_ls;
-  } else if (strcmp(Matrix_Preconditioner, "sym_GS") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_preconditioner, "sym_GS") == 0) {
     options[AZ_precond] = AZ_sym_GS;
   }
 
@@ -531,7 +533,7 @@ void set_aztec_options_params(int options[], double params[]) {
    * options to AZ_subdomain_solve...
    */
 
-  else if (strcmp(Matrix_Preconditioner, "dom_decomp") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_preconditioner, "dom_decomp") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
   }
 
@@ -539,93 +541,99 @@ void set_aztec_options_params(int options[], double params[]) {
    * Strive for some backwards compatibility...
    */
 
-  else if (strcmp(Matrix_Preconditioner, "lu") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_preconditioner, "lu") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
     if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
-      DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
+      DPRINTF(stderr, "Matrix subdomain solver          = %s\n",
+              goma_ctx->solver.matrix_preconditioner);
     }
     /*
      * Save for subsequent parsing...
      */
 
-    strcpy(Matrix_Subdomain_Solver, Matrix_Preconditioner);
+    strcpy(goma_ctx->solver.matrix_subdomain_solver, goma_ctx->solver.matrix_preconditioner);
   }
 
-  else if (strcmp(Matrix_Preconditioner, "ilu") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_preconditioner, "ilu") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
     if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
-      DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
+      DPRINTF(stderr, "Matrix subdomain solver          = %s\n",
+              goma_ctx->solver.matrix_preconditioner);
     }
     /*
      * Save for subsequent parsing...
      */
 
-    strcpy(Matrix_Subdomain_Solver, Matrix_Preconditioner);
+    strcpy(goma_ctx->solver.matrix_subdomain_solver, goma_ctx->solver.matrix_preconditioner);
   }
 
-  else if (strcmp(Matrix_Preconditioner, "ilut") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_preconditioner, "ilut") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
     if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
-      DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
+      DPRINTF(stderr, "Matrix subdomain solver          = %s\n",
+              goma_ctx->solver.matrix_preconditioner);
     }
     /*
      * Save for subsequent parsing...
      */
 
-    strcpy(Matrix_Subdomain_Solver, Matrix_Preconditioner);
+    strcpy(goma_ctx->solver.matrix_subdomain_solver, goma_ctx->solver.matrix_preconditioner);
   }
 
-  else if (strcmp(Matrix_Preconditioner, "bilu") == 0) {
-    if (strcmp(Matrix_Format, "vbr"))
+  else if (strcmp(goma_ctx->solver.matrix_preconditioner, "bilu") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "vbr"))
       GOMA_EH(-1, "BILU requires VBR matrix format!");
     options[AZ_precond] = AZ_dom_decomp;
     if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
-      DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
+      DPRINTF(stderr, "Matrix subdomain solver          = %s\n",
+              goma_ctx->solver.matrix_preconditioner);
     }
 
     /*
      * Save for subsequent parsing...
      */
 
-    strcpy(Matrix_Subdomain_Solver, Matrix_Preconditioner);
+    strcpy(goma_ctx->solver.matrix_subdomain_solver, goma_ctx->solver.matrix_preconditioner);
   }
 
-  else if (strcmp(Matrix_Preconditioner, "rilu") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_preconditioner, "rilu") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
     if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
-      DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
+      DPRINTF(stderr, "Matrix subdomain solver          = %s\n",
+              goma_ctx->solver.matrix_preconditioner);
     }
 
     /*
      * Save for subsequent parsing...
      */
 
-    strcpy(Matrix_Subdomain_Solver, Matrix_Preconditioner);
+    strcpy(goma_ctx->solver.matrix_subdomain_solver, goma_ctx->solver.matrix_preconditioner);
   }
 
-  else if (strcmp(Matrix_Preconditioner, "icc") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_preconditioner, "icc") == 0) {
     options[AZ_precond] = AZ_dom_decomp;
     if (goma_ctx->debug_flag > 1) {
       DPRINTF(stderr, "Deprecated Aztec 1.x usage of Preconditioner.  Prefer:\n");
       DPRINTF(stderr, "Preconditioner                  = dom_decomp\n");
-      DPRINTF(stderr, "Matrix subdomain solver          = %s\n", Matrix_Preconditioner);
+      DPRINTF(stderr, "Matrix subdomain solver          = %s\n",
+              goma_ctx->solver.matrix_preconditioner);
     }
 
     /*
      * Save for subsequent parsing...
      */
 
-    strcpy(Matrix_Subdomain_Solver, Matrix_Preconditioner);
+    strcpy(goma_ctx->solver.matrix_subdomain_solver, goma_ctx->solver.matrix_preconditioner);
   }
 
   else {
@@ -636,26 +644,27 @@ void set_aztec_options_params(int options[], double params[]) {
   }
 
   if (options[AZ_precond] == AZ_dom_decomp) {
-    if (strcmp(Matrix_Subdomain_Solver, "lu") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_subdomain_solver, "lu") == 0) {
       options[AZ_subdomain_solve] = AZ_lu;
-    } else if (strcmp(Matrix_Subdomain_Solver, "ilut") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_subdomain_solver, "ilut") == 0) {
       options[AZ_subdomain_solve] = AZ_ilut;
-    } else if (strcmp(Matrix_Subdomain_Solver, "ilu") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_subdomain_solver, "ilu") == 0) {
       options[AZ_subdomain_solve] = AZ_ilu;
-    } else if (strcmp(Matrix_Subdomain_Solver, "rilu") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_subdomain_solver, "rilu") == 0) {
       options[AZ_subdomain_solve] = AZ_rilu;
-    } else if (strcmp(Matrix_Subdomain_Solver, "bilu") == 0) {
-      if (strcmp(Matrix_Format, "vbr"))
+    } else if (strcmp(goma_ctx->solver.matrix_subdomain_solver, "bilu") == 0) {
+      if (strcmp(goma_ctx->solver.matrix_format, "vbr"))
         GOMA_EH(-1, "BILU requires VBR matrix format!");
 /* NOTE: Trilinos does not support the AZ_bilu_ifp option at this time! */
 #if 0
           options[AZ_subdomain_solve] = AZ_bilu_ifp;
 #endif
       options[AZ_subdomain_solve] = AZ_bilu;
-    } else if (strcmp(Matrix_Subdomain_Solver, "icc") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_subdomain_solver, "icc") == 0) {
       options[AZ_subdomain_solve] = AZ_icc;
     } else {
-      fprintf(stderr, "Matrix subdomain solver = %s ?!?\n", Matrix_Subdomain_Solver);
+      fprintf(stderr, "Matrix subdomain solver = %s ?!?\n",
+              goma_ctx->solver.matrix_subdomain_solver);
       GOMA_EH(
           GOMA_ERROR,
           "Unknown specification. Valid Matrix subdomain solver = lu, ilu, ilut, rilu, bilu, icc");
@@ -666,17 +675,18 @@ void set_aztec_options_params(int options[], double params[]) {
    * Matrix residual norm expression
    */
 
-  if (strcmp(Matrix_Residual_Norm_Type, "r0") == 0 || strcmp(Matrix_Residual_Norm_Type, "") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_residual_norm_type, "r0") == 0 ||
+      strcmp(goma_ctx->solver.matrix_residual_norm_type, "") == 0) {
     options[AZ_conv] = AZ_r0;
-  } else if (strcmp(Matrix_Residual_Norm_Type, "rhs") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_residual_norm_type, "rhs") == 0) {
     options[AZ_conv] = AZ_rhs;
-  } else if (strcmp(Matrix_Residual_Norm_Type, "Anorm") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_residual_norm_type, "Anorm") == 0) {
     options[AZ_conv] = AZ_Anorm;
-  } else if (strcmp(Matrix_Residual_Norm_Type, "noscaled") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_residual_norm_type, "noscaled") == 0) {
     options[AZ_conv] = AZ_noscaled;
-  } else if (strcmp(Matrix_Residual_Norm_Type, "sol") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_residual_norm_type, "sol") == 0) {
     options[AZ_conv] = AZ_sol;
-  } else if (strcmp(Matrix_Residual_Norm_Type, "weighted") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_residual_norm_type, "weighted") == 0) {
     options[AZ_conv] = AZ_weighted;
     GOMA_EH(GOMA_ERROR, "Weighted norm unavailable; allocate bigger params[].");
   } else {
@@ -688,17 +698,17 @@ void set_aztec_options_params(int options[], double params[]) {
    * Matrix output type.
    */
 
-  if (strcmp(Matrix_Output_Type, "all") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_output_type, "all") == 0) {
     options[AZ_output] = AZ_all;
-  } else if (strcmp(Matrix_Output_Type, "none") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_output_type, "none") == 0) {
     options[AZ_output] = AZ_none;
-  } else if (strcmp(Matrix_Output_Type, "last") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_output_type, "last") == 0) {
     options[AZ_output] = AZ_last;
-  } else if (strcmp(Matrix_Output_Type, "warnings") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_output_type, "warnings") == 0) {
     options[AZ_output] = AZ_warnings;
-  } else if (strcmp(Matrix_Output_Type, "") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_output_type, "") == 0) {
     options[AZ_output] = 1;
-  } else if (sscanf(Matrix_Output_Type, "%d", &i) > 0) {
+  } else if (sscanf(goma_ctx->solver.matrix_output_type, "%d", &i) > 0) {
     if (i < 0) {
       GOMA_EH(GOMA_ERROR, "Matrix output type must specify a *positive* integer.");
     }
@@ -721,12 +731,12 @@ void set_aztec_options_params(int options[], double params[]) {
    * Matrix factorization reuse.
    */
 
-  if (strcmp(Matrix_Factorization_Reuse, "calc") == 0 ||
-      strcmp(Matrix_Factorization_Reuse, "") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "calc") == 0 ||
+      strcmp(goma_ctx->solver.matrix_factorization_reuse, "") == 0) {
     options[AZ_pre_calc] = AZ_calc;
-  } else if (strcmp(Matrix_Factorization_Reuse, "recalc") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "recalc") == 0) {
     options[AZ_pre_calc] = AZ_recalc;
-  } else if (strcmp(Matrix_Factorization_Reuse, "reuse") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "reuse") == 0) {
     options[AZ_pre_calc] = AZ_reuse;
   } else {
     fprintf(stderr, "Valid factorization reuses are: calc, recalc, reuse\n");
@@ -737,14 +747,14 @@ void set_aztec_options_params(int options[], double params[]) {
    * Level of graph fill-in (Aztec 2.x) for incomplete factorizations...
    */
 
-  iread = sscanf(Matrix_Graph_Fillin, "%d", &i);
+  iread = sscanf(goma_ctx->solver.matrix_graph_fillin, "%d", &i);
   if (iread == 1) {
     if (i < 0) {
       GOMA_EH(GOMA_ERROR, "Matrix graph fillin should be positive.");
     }
     options[AZ_graph_fill] = i;
   } else {
-    fprintf(stderr, "\nYou said \"%s\"\n", Matrix_Graph_Fillin);
+    fprintf(stderr, "\nYou said \"%s\"\n", goma_ctx->solver.matrix_graph_fillin);
     fprintf(stderr, "Found %d args\n", iread);
     fprintf(stderr, "Valid argument is a single nonnegative integer.\n");
     GOMA_EH(GOMA_ERROR, "Undecipherable Matrix graph fillin argument.");
@@ -754,14 +764,14 @@ void set_aztec_options_params(int options[], double params[]) {
    * Maximum number of iterations.
    */
 
-  iread = sscanf(Matrix_Maximum_Iterations, "%d", &i);
+  iread = sscanf(goma_ctx->solver.matrix_maximum_iterations, "%d", &i);
   if (iread == 1) {
     /*
      * This ought to be like "Maxits"
      */
     options[AZ_max_iter] = i;
   } else {
-    fprintf(stderr, "\nYou said \"%s\"\n", Matrix_Maximum_Iterations);
+    fprintf(stderr, "\nYou said \"%s\"\n", goma_ctx->solver.matrix_maximum_iterations);
     fprintf(stderr, "Found %d args\n", iread);
     fprintf(stderr, "Valid argument is a single positive integer.\n");
     GOMA_EH(GOMA_ERROR, "Undecipherable maximum linear solve iteration argument.");
@@ -771,15 +781,16 @@ void set_aztec_options_params(int options[], double params[]) {
    * Polynomial order when using polynomial preconditioning.
    */
 
-  if (sscanf(Matrix_Polynomial_Order, "%d", &i) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_polynomial_order, "%d", &i) == 1) {
     options[AZ_poly_ord] = i;
   }
 
-  if (strcmp(Matrix_Factor_Overlap, "none") == 0 || strcmp(Matrix_Factor_Overlap, "") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_factor_overlap, "none") == 0 ||
+      strcmp(goma_ctx->solver.matrix_factor_overlap, "") == 0) {
     options[AZ_overlap] = AZ_none;
-  } else if (strcmp(Matrix_Factor_Overlap, "diag") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_factor_overlap, "diag") == 0) {
     options[AZ_overlap] = AZ_diag;
-  } else if (sscanf(Matrix_Factor_Overlap, "%d", &i) == 1) {
+  } else if (sscanf(goma_ctx->solver.matrix_factor_overlap, "%d", &i) == 1) {
     if (i < 0) {
       GOMA_EH(GOMA_ERROR, "Matrix factorization overlap must be nonnegative.");
     }
@@ -793,9 +804,9 @@ void set_aztec_options_params(int options[], double params[]) {
    * Matrix overlap type (Aztec 2)
    */
 
-  if (strcmp(Matrix_Overlap_Type, "standard") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_overlap_type, "standard") == 0) {
     options[AZ_type_overlap] = AZ_standard;
-  } else if (strcmp(Matrix_Overlap_Type, "symmetric") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_overlap_type, "symmetric") == 0) {
     options[AZ_type_overlap] = AZ_symmetric;
   } else {
     fprintf(stderr, "Valid Matrix overlap types: standard, symmetric.\n");
@@ -806,7 +817,7 @@ void set_aztec_options_params(int options[], double params[]) {
    * Size of Krylov subspace.
    */
 
-  if (sscanf(Matrix_Krylov_Subspace, "%d", &i) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_krylov_subspace, "%d", &i) == 1) {
     options[AZ_kspace] = i;
   }
 
@@ -814,10 +825,10 @@ void set_aztec_options_params(int options[], double params[]) {
    * Orthogonalization scheme for GMRES.
    */
 
-  if (strcmp(Matrix_Orthogonalization, "classic") == 0 ||
-      strcmp(Matrix_Orthogonalization, "classical") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_orthogonalization, "classic") == 0 ||
+      strcmp(goma_ctx->solver.matrix_orthogonalization, "classical") == 0) {
     options[AZ_orthog] = AZ_classic;
-  } else if (strcmp(Matrix_Orthogonalization, "modified") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_orthogonalization, "modified") == 0) {
     options[AZ_orthog] = AZ_modified;
   } else {
     fprintf(stderr, "\nValid Aztec orthogonalizations: classic, modified.\n");
@@ -828,9 +839,9 @@ void set_aztec_options_params(int options[], double params[]) {
    * Auxiliary vector (reqd for some iterative schemes.)
    */
 
-  if (strcmp(Matrix_Auxiliary_Vector, "resid") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_auxiliary_vector, "resid") == 0) {
     options[AZ_aux_vec] = AZ_resid;
-  } else if (strcmp(Matrix_Auxiliary_Vector, "rand") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_auxiliary_vector, "rand") == 0) {
     options[AZ_aux_vec] = AZ_rand;
   } else {
     fprintf(stderr, "Valid auxiliary vectors: resid, rand.\n");
@@ -841,7 +852,7 @@ void set_aztec_options_params(int options[], double params[]) {
    * Matrix factorization information save....(Aztec 2)
    */
 
-  if (sscanf(Matrix_Factorization_Save, "%d", &i) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_factorization_save, "%d", &i) == 1) {
     if (i < 0 || i > 1) {
       GOMA_EH(GOMA_ERROR, "Matrix factorization save must be 0 or 1.");
     }
@@ -856,37 +867,38 @@ void set_aztec_options_params(int options[], double params[]) {
    * an RCM that is frequently helpful.
    */
 
-  if (strcmp(Matrix_Reorder, "none") == 0 || strcmp(Matrix_Reorder, "") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_reorder, "none") == 0 ||
+      strcmp(goma_ctx->solver.matrix_reorder, "") == 0) {
     options[AZ_reorder] = 0;
-  } else if (strcmp(Matrix_Reorder, "rcm") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_reorder, "rcm") == 0) {
     options[AZ_reorder] = 1;
   } else {
     fprintf(stderr, "Valid Matrix reorder options: none, rcm.\n");
     GOMA_EH(GOMA_ERROR, "Unknown Matrix reorder specification.");
   }
 
-  if (sscanf(Matrix_Convergence_Tolerance, "%lf", &f) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_convergence_tolerance, "%lf", &f) == 1) {
     params[AZ_tol] = f;
   } else {
     fprintf(stderr, "Valid Residual Ratio Tolerance is 1 float.\n");
     GOMA_EH(GOMA_ERROR, "Unknown Residual Ratio Tolerance.");
   }
 
-  if (sscanf(Matrix_Drop_Tolerance, "%lf", &f) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_drop_tolerance, "%lf", &f) == 1) {
     params[AZ_drop] = f;
   } else {
     fprintf(stderr, "Valid matrix drop tolerance is 1 float.\n");
     GOMA_EH(GOMA_ERROR, "Unknown matrix drop tolerance.");
   }
 
-  if (sscanf(Matrix_ILUT_Fill_Factor, "%lf", &f) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_ilut_fill_factor, "%lf", &f) == 1) {
     params[AZ_ilut_fill] = f;
   } else {
     fprintf(stderr, "Valid Matrix ILUT fill factor is 1 float.\n");
     GOMA_EH(GOMA_ERROR, "Unknown Matrix ILUT fill factor specification.");
   }
 
-  if (sscanf(Matrix_RILU_Relax_Factor, "%lf", &f) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_rilu_relax_factor, "%lf", &f) == 1) {
     params[AZ_omega] = f;
   } else {
     fprintf(stderr, "Valid Matrix RILU relax factor is 1 float.\n");
@@ -894,7 +906,7 @@ void set_aztec_options_params(int options[], double params[]) {
   }
 
 #ifdef TRILINOS
-  if (sscanf(Matrix_BILU_Threshold, "%lf", &f) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_bilu_threshold, "%lf", &f) == 1) {
     params[AZ_rthresh] = f;
     params[AZ_athresh] = f;
   } else {
@@ -902,14 +914,14 @@ void set_aztec_options_params(int options[], double params[]) {
     GOMA_EH(GOMA_ERROR, "Unknown Matrix BILU Threshold specification.");
   }
 
-  if (sscanf(Matrix_Relative_Threshold, "%lf", &f) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_relative_threshold, "%lf", &f) == 1) {
     params[AZ_rthresh] = f;
   } else {
     fprintf(stderr, "Valid Matrix Relative Threshold is 1 float.\n");
     GOMA_EH(GOMA_ERROR, "Unknown Matrix Relative Threshold specification.");
   }
 
-  if (sscanf(Matrix_Absolute_Threshold, "%lf", &f) == 1) {
+  if (sscanf(goma_ctx->solver.matrix_absolute_threshold, "%lf", &f) == 1) {
     params[AZ_athresh] = f;
   } else {
     fprintf(stderr, "Valid Matrix Absolute Threshold is 1 float.\n");
@@ -925,8 +937,8 @@ void set_aztec_options_params(int options[], double params[]) {
    */
   options[AZ_print_freq] = 0;
 
-  if (strcmp(Matrix_Subdomain_Solver, "bilu") == 0) {
-    if (strcmp(Matrix_Format, "vbr") != 0) {
+  if (strcmp(goma_ctx->solver.matrix_subdomain_solver, "bilu") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "vbr") != 0) {
       GOMA_EH(-1, "bilu Matrix subdomain solver requires the vbr Matrix storage format.");
     }
 #ifdef TRILINOS

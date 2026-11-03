@@ -921,15 +921,16 @@ void rd_genl_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Print 3D BC Dup", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &Print3DBCDup) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->solver.print3dbcdup) != 1) {
       DPRINTF(stderr, "%s:\tError reading Print 3D BC Dup Level\n", yo);
       exit(-1);
     }
   } else {
-    Print3DBCDup = 0;
+    goma_ctx->solver.print3dbcdup = 0;
   }
 
-  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Print 3D BC Dup", Print3DBCDup);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Print 3D BC Dup",
+           goma_ctx->solver.print3dbcdup);
   ECHO(echo_string, echo_file);
 
 #ifdef MATRIX_DUMP
@@ -955,17 +956,17 @@ void rd_genl_specs(FILE *ifp, char *input) {
       break;
     case 1:
       if (strcasecmp(first_string, "zero") == 0) {
-        Guess_Flag = 0;
+        goma_ctx->solver.guess_flag = 0;
       } else if (strcasecmp(first_string, "random") == 0) {
-        Guess_Flag = 1;
+        goma_ctx->solver.guess_flag = 1;
       } else if (strcasecmp(first_string, "one") == 0) {
-        Guess_Flag = 2;
+        goma_ctx->solver.guess_flag = 2;
       } else if (strcasecmp(first_string, "sines") == 0) {
-        Guess_Flag = 3;
+        goma_ctx->solver.guess_flag = 3;
       } else if (strcasecmp(first_string, "read") == 0) {
-        Guess_Flag = 4;
+        goma_ctx->solver.guess_flag = 4;
       } else if (strcasecmp(first_string, "read_exoII") == 0) {
-        Guess_Flag = 5;
+        goma_ctx->solver.guess_flag = 5;
       } else if (strcasecmp(first_string, "read_exoII_file") == 0) {
         GOMA_EH(GOMA_ERROR, "Read from *what* exoII file?");
       }
@@ -976,7 +977,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
       }
       FALLTHROUGH;
     case 2:
-      Guess_Flag = 6;
+      goma_ctx->solver.guess_flag = 6;
       strcpy(goma_ctx->exo_aux_file, second_string);
       break;
     default:
@@ -997,7 +998,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
     }
     ECHO(echo_string, echo_file);
   } else {
-    Guess_Flag = 0;
+    goma_ctx->solver.guess_flag = 0;
     ECHO("Initial Guess card not read correctly", echo_file);
   }
 
@@ -1043,9 +1044,9 @@ void rd_genl_specs(FILE *ifp, char *input) {
       GOMA_EH(GOMA_ERROR, "Found zero arguments for Conformation Map");
     } else if (nargs == 1) {
       if (strcasecmp(first_string, "no") == 0) {
-        Conformation_Flag = 0;
+        goma_ctx->solver.conformation_flag = 0;
       } else if (strcasecmp(first_string, "yes") == 0) {
-        Conformation_Flag = 1;
+        goma_ctx->solver.conformation_flag = 1;
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Conformation Map", first_string);
@@ -1056,7 +1057,7 @@ void rd_genl_specs(FILE *ifp, char *input) {
       exit(-1);
     }
   } else {
-    Conformation_Flag = 0;
+    goma_ctx->solver.conformation_flag = 0;
   }
 
   /*
@@ -5909,33 +5910,33 @@ void rd_solver_specs(FILE *ifp, char *input) {
    *
    */
 
-  strcpy(Matrix_Solver, "lu"); /* Kundert's - not y12m ! */
-  strcpy(Matrix_Format, "msr");
-  strcpy(Matrix_Scaling, "none");
-  strcpy(Matrix_Preconditioner, "none");
-  strcpy(Matrix_Subdomain_Solver, "ilut"); /* Aztec 2 */
-  strcpy(Matrix_Residual_Norm_Type, "r0");
-  strcpy(Matrix_Output_Type, "none");
-  strcpy(Matrix_Factorization_Reuse, "recalc");
-  strcpy(Matrix_Graph_Fillin, "0"); /* Aztec 2 */
-  strcpy(Matrix_Maximum_Iterations, "500");
-  strcpy(Matrix_Polynomial_Order, "3");
-  strcpy(Matrix_Factor_Overlap, "none");
-  strcpy(Matrix_Overlap_Type, "standard");
-  strcpy(Matrix_Krylov_Subspace, "30");
-  strcpy(Matrix_Orthogonalization, "classic");
-  strcpy(Matrix_Auxiliary_Vector, "resid");
-  strcpy(Matrix_Convergence_Tolerance, "1e-6");
-  strcpy(Matrix_Drop_Tolerance, "0");
-  strcpy(Matrix_Factorization_Save, "0");
-  strcpy(Matrix_ILUT_Fill_Factor, "1");
-  strcpy(Matrix_RILU_Relax_Factor, "1");
-  strcpy(Matrix_BILU_Threshold, "0");
-  strcpy(Matrix_Relative_Threshold, "0");
-  strcpy(Matrix_Absolute_Threshold, "0");
-  strcpy(Matrix_Reorder, "none");
-  strcpy(Amesos_Package, "KLU");
-  strcpy(Amesos2_Package, "KLU2");
+  strcpy(goma_ctx->solver.matrix_solver, "lu"); /* Kundert's - not y12m ! */
+  strcpy(goma_ctx->solver.matrix_format, "msr");
+  strcpy(goma_ctx->solver.matrix_scaling, "none");
+  strcpy(goma_ctx->solver.matrix_preconditioner, "none");
+  strcpy(goma_ctx->solver.matrix_subdomain_solver, "ilut"); /* Aztec 2 */
+  strcpy(goma_ctx->solver.matrix_residual_norm_type, "r0");
+  strcpy(goma_ctx->solver.matrix_output_type, "none");
+  strcpy(goma_ctx->solver.matrix_factorization_reuse, "recalc");
+  strcpy(goma_ctx->solver.matrix_graph_fillin, "0"); /* Aztec 2 */
+  strcpy(goma_ctx->solver.matrix_maximum_iterations, "500");
+  strcpy(goma_ctx->solver.matrix_polynomial_order, "3");
+  strcpy(goma_ctx->solver.matrix_factor_overlap, "none");
+  strcpy(goma_ctx->solver.matrix_overlap_type, "standard");
+  strcpy(goma_ctx->solver.matrix_krylov_subspace, "30");
+  strcpy(goma_ctx->solver.matrix_orthogonalization, "classic");
+  strcpy(goma_ctx->solver.matrix_auxiliary_vector, "resid");
+  strcpy(goma_ctx->solver.matrix_convergence_tolerance, "1e-6");
+  strcpy(goma_ctx->solver.matrix_drop_tolerance, "0");
+  strcpy(goma_ctx->solver.matrix_factorization_save, "0");
+  strcpy(goma_ctx->solver.matrix_ilut_fill_factor, "1");
+  strcpy(goma_ctx->solver.matrix_rilu_relax_factor, "1");
+  strcpy(goma_ctx->solver.matrix_bilu_threshold, "0");
+  strcpy(goma_ctx->solver.matrix_relative_threshold, "0");
+  strcpy(goma_ctx->solver.matrix_absolute_threshold, "0");
+  strcpy(goma_ctx->solver.matrix_reorder, "none");
+  strcpy(goma_ctx->solver.amesos_package, "KLU");
+  strcpy(goma_ctx->solver.amesos2_package, "KLU2");
 
   /*  Read in Solver specifications */
 
@@ -6016,10 +6017,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Solver, input); /* save string for aztec use */
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Solver);
+    strcpy(goma_ctx->solver.matrix_solver, input); /* save string for aztec use */
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string,
+             goma_ctx->solver.matrix_solver);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Solver);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string,
+             goma_ctx->solver.matrix_solver);
     strcat(echo_string, default_string);
   }
 
@@ -6043,49 +6046,49 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
    */
 
-  if (strcmp(Matrix_Solver, "umf") == 0) {
-    Linear_Solver = UMFPACK2;
-  } else if (strcmp(Matrix_Solver, "umff") == 0) {
-    Linear_Solver = UMFPACK2F;
-  } else if (strcmp(Matrix_Solver, "lu") == 0) {
-    Linear_Solver = SPARSE13a;
-  } else if (strcmp(Matrix_Solver, "ma28") == 0) {
-    Linear_Solver = MA28;
-  } else if (strcmp(Matrix_Solver, "front") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_solver, "umf") == 0) {
+    goma_ctx->solver.linear_solver = UMFPACK2;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "umff") == 0) {
+    goma_ctx->solver.linear_solver = UMFPACK2F;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "lu") == 0) {
+    goma_ctx->solver.linear_solver = SPARSE13a;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "ma28") == 0) {
+    goma_ctx->solver.linear_solver = MA28;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "front") == 0) {
     i = sizeof(c);
     if (i == 4) {
-      Linear_Solver = FRONT;
+      goma_ctx->solver.linear_solver = FRONT;
     } else if (i == 8) {
       GOMA_EH(GOMA_ERROR, "Benner's frontal solver not functional on 64-bit builds. We suggest "
                           "using umf or at your own risk remove this error-handler statement");
     } else {
       GOMA_EH(GOMA_ERROR, "frontal solver not available on this architecture. Please use umf");
     }
-  } else if (strcmp(Matrix_Solver, "amesos") == 0) {
-    Linear_Solver = AMESOS;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "amesos") == 0) {
+    goma_ctx->solver.linear_solver = AMESOS;
     is_Solver_Serial = FALSE;
-  } else if (strcmp(Matrix_Solver, "mumps") == 0) {
-    Linear_Solver = MUMPS;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "mumps") == 0) {
+    goma_ctx->solver.linear_solver = MUMPS;
     is_Solver_Serial = FALSE;
-  } else if (strcmp(Matrix_Solver, "amesos2") == 0) {
-    Linear_Solver = AMESOS2;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "amesos2") == 0) {
+    goma_ctx->solver.linear_solver = AMESOS2;
     is_Solver_Serial = FALSE;
-  } else if (strcmp(Matrix_Solver, "aztecoo") == 0) {
-    Linear_Solver = AZTECOO;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "aztecoo") == 0) {
+    goma_ctx->solver.linear_solver = AZTECOO;
     is_Solver_Serial = FALSE;
-  } else if (strcmp(Matrix_Solver, "stratimikos") == 0) {
-    Linear_Solver = STRATIMIKOS;
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "stratimikos") == 0) {
+    goma_ctx->solver.linear_solver = STRATIMIKOS;
     is_Solver_Serial = FALSE;
-  } else if (strcmp(Matrix_Solver, "petsc") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "petsc") == 0) {
 #ifdef GOMA_ENABLE_PETSC
-    Linear_Solver = PETSC_SOLVER;
+    goma_ctx->solver.linear_solver = PETSC_SOLVER;
     is_Solver_Serial = FALSE;
 #else
     GOMA_EH(GOMA_ERROR, "Goma not compiled with PETSc support");
 #endif
-  } else if (strcmp(Matrix_Solver, "petsc_complex") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "petsc_complex") == 0) {
 #ifdef PETSC_USE_COMPLEX
-    Linear_Solver = PETSC_COMPLEX_SOLVER;
+    goma_ctx->solver.linear_solver = PETSC_COMPLEX_SOLVER;
     is_Solver_Serial = FALSE;
 #else
     GOMA_EH(GOMA_ERROR, "Goma not compiled with a complex petsc");
@@ -6094,27 +6097,31 @@ void rd_solver_specs(FILE *ifp, char *input) {
     GOMA_EH(GOMA_ERROR, "Goma not compiled with PETSc support");
 #endif
   } else {
-    Linear_Solver = AZTEC;
+    goma_ctx->solver.linear_solver = AZTEC;
     is_Solver_Serial = FALSE;
   }
 
-  if (strcmp(Matrix_Solver, "aztecoo") == 0) {
-    strcpy(Matrix_Format, "epetra"); /* save string for aztec use */
+  if (strcmp(goma_ctx->solver.matrix_solver, "aztecoo") == 0) {
+    strcpy(goma_ctx->solver.matrix_format, "epetra"); /* save string for aztec use */
     strcpy(search_string, "Matrix storage format");
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
-  } else if (strcmp(Matrix_Solver, "petsc") == 0) {
-    strcpy(Matrix_Format, "petsc"); /* save string for aztec use */
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string,
+             goma_ctx->solver.matrix_format);
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "petsc") == 0) {
+    strcpy(goma_ctx->solver.matrix_format, "petsc"); /* save string for aztec use */
     strcpy(search_string, "Matrix storage format");
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
-  } else if (strcmp(Matrix_Solver, "petsc_complex") == 0) {
-    strcpy(Matrix_Format, "petsc_complex"); /* save string for aztec use */
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string,
+             goma_ctx->solver.matrix_format);
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "petsc_complex") == 0) {
+    strcpy(goma_ctx->solver.matrix_format, "petsc_complex"); /* save string for aztec use */
     strcpy(search_string, "Matrix storage format");
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
-  } else if (strcmp(Matrix_Solver, "amesos2") == 0) {
-    strcpy(Matrix_Format, "tpetra"); /* save string for aztec use */
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string,
+             goma_ctx->solver.matrix_format);
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "amesos2") == 0) {
+    strcpy(goma_ctx->solver.matrix_format, "tpetra"); /* save string for aztec use */
     strcpy(search_string, "Matrix storage format");
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
-  } else if (strcmp(Matrix_Solver, "front") != 0) {
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string,
+             goma_ctx->solver.matrix_format);
+  } else if (strcmp(goma_ctx->solver.matrix_solver, "front") != 0) {
     /*  Read in Matrix Format only if we are going to assemble one */
 
     strcpy(search_string, "Matrix storage format");
@@ -6122,15 +6129,16 @@ void rd_solver_specs(FILE *ifp, char *input) {
     if (iread == 1) {
       read_string(ifp, input, '\n');
       strip(input);
-      strcpy(Matrix_Format, input); /* save string for aztec use */
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
+      strcpy(goma_ctx->solver.matrix_format, input); /* save string for aztec use */
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string,
+               goma_ctx->solver.matrix_format);
     } else {
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Format,
-               default_string);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+               goma_ctx->solver.matrix_format, default_string);
     }
     ECHO(echo_string, echo_file);
   } else {
-    strcpy(Matrix_Format, "front");
+    strcpy(goma_ctx->solver.matrix_format, "front");
   }
 
   /*
@@ -6139,18 +6147,19 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   */
 
-  UMFPACK_IDIM = -1;
+  goma_ctx->solver.umfpack_idim = -1;
 
   strcpy(search_string, "UMF IDIM");
   iread = look_for_optional(ifp, search_string, input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &UMFPACK_IDIM) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->solver.umfpack_idim) != 1) {
       iread = -1;
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", search_string, UMFPACK_IDIM,
-               default_string);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", search_string,
+               goma_ctx->solver.umfpack_idim, default_string);
       ECHO(echo_string, echo_file);
     } else {
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", search_string, UMFPACK_IDIM);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", search_string,
+               goma_ctx->solver.umfpack_idim);
       ECHO(echo_string, echo_file);
     }
   }
@@ -6161,17 +6170,18 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   */
 
-  UMFPACK_XDIM = -1;
+  goma_ctx->solver.umfpack_xdim = -1;
 
   iread = look_for_optional(ifp, "UMF XDIM", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &UMFPACK_XDIM) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->solver.umfpack_xdim) != 1) {
       iread = -1;
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", "UMF_XDIM", UMFPACK_XDIM,
-               default_string);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, " (%s = %d) %s", "UMF_XDIM",
+               goma_ctx->solver.umfpack_xdim, default_string);
       ECHO(echo_string, echo_file);
     } else
-      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "UMF_XDIM", UMFPACK_XDIM);
+      snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "UMF_XDIM",
+               goma_ctx->solver.umfpack_xdim);
     ECHO(echo_string, echo_file);
   }
 
@@ -6181,13 +6191,13 @@ void rd_solver_specs(FILE *ifp, char *input) {
     read_string(ifp, input, '\n');
     strip(input);
     stringup(input);
-    strcpy(AztecOO_Solver, input);
+    strcpy(goma_ctx->solver.aztecoo_solver, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
     // Set gmres as the default AztecOO Solver
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, "gmres", default_string);
-    strcpy(AztecOO_Solver, "gmres");
+    strcpy(goma_ctx->solver.aztecoo_solver, "gmres");
     ECHO(echo_string, echo_file);
   }
 
@@ -6196,19 +6206,19 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Stratimikos_File[0], input);
+    strcpy(goma_ctx->solver.stratimikos_file[0], input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
     // Set stratimikos.xml as defualt stratimikos file
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, "stratimikos.xml",
              default_string);
-    strcpy(Stratimikos_File[0], "stratimikos.xml");
+    strcpy(goma_ctx->solver.stratimikos_file[0], "stratimikos.xml");
     ECHO(echo_string, echo_file);
   }
 
   for (int i = 1; i < MAX_NUM_MATRICES; i++) {
-    strcpy(Stratimikos_File[i], Stratimikos_File[0]);
+    strcpy(goma_ctx->solver.stratimikos_file[i], goma_ctx->solver.stratimikos_file[0]);
   }
 
   strcpy(search_string, "Amesos2 File");
@@ -6216,23 +6226,23 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Amesos2_File[0], input);
+    strcpy(goma_ctx->solver.amesos2_file[0], input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
     // Set stratimikos.xml as defualt stratimikos file
-    strcpy(Amesos2_File[0], "");
+    strcpy(goma_ctx->solver.amesos2_file[0], "");
   }
 
   for (int i = 1; i < MAX_NUM_MATRICES; i++) {
-    strcpy(Amesos2_File[i], Amesos2_File[0]);
+    strcpy(goma_ctx->solver.amesos2_file[i], goma_ctx->solver.amesos2_file[0]);
   }
 
   // Optional MUMPS controls
   if (upd->solver_info == NULL) {
     upd->solver_info = calloc(1, sizeof(solver_information));
   }
-  if (Linear_Solver == MUMPS) {
+  if (goma_ctx->solver.linear_solver == MUMPS) {
     // have to figure out which ones we actually want to be setable
     const int num_icntl = 27;
     const int readable_parameters[27] = {4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17,
@@ -6284,13 +6294,14 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Preconditioner, input); /* save string for aztec use */
+    strcpy(goma_ctx->solver.matrix_preconditioner, input); /* save string for aztec use */
 
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Preconditioner);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string,
+             goma_ctx->solver.matrix_preconditioner);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Preconditioner,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_preconditioner, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6299,12 +6310,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Subdomain_Solver, input); /* save string for aztec use */
+    strcpy(goma_ctx->solver.matrix_subdomain_solver, input); /* save string for aztec use */
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Subdomain_Solver,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_subdomain_solver, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6313,12 +6324,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Scaling, input);
+    strcpy(goma_ctx->solver.matrix_scaling, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Scaling,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_scaling, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6327,12 +6338,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Residual_Norm_Type, input);
+    strcpy(goma_ctx->solver.matrix_residual_norm_type, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Residual_Norm_Type,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_residual_norm_type, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6341,12 +6352,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Output_Type, input);
+    strcpy(goma_ctx->solver.matrix_output_type, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Output_Type,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_output_type, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6355,12 +6366,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Factorization_Reuse, input);
+    strcpy(goma_ctx->solver.matrix_factorization_reuse, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Factorization_Reuse,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_factorization_reuse, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6369,12 +6380,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Graph_Fillin, input);
+    strcpy(goma_ctx->solver.matrix_graph_fillin, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Graph_Fillin,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_graph_fillin, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6383,12 +6394,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Factor_Overlap, input);
+    strcpy(goma_ctx->solver.matrix_factor_overlap, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Factor_Overlap,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_factor_overlap, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6397,12 +6408,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Overlap_Type, input);
+    strcpy(goma_ctx->solver.matrix_overlap_type, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Overlap_Type,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_overlap_type, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6411,12 +6422,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Auxiliary_Vector, input);
+    strcpy(goma_ctx->solver.matrix_auxiliary_vector, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Auxiliary_Vector,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_auxiliary_vector, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6425,12 +6436,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Drop_Tolerance, input);
+    strcpy(goma_ctx->solver.matrix_drop_tolerance, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Drop_Tolerance,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_drop_tolerance, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6439,12 +6450,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Polynomial_Order, input);
+    strcpy(goma_ctx->solver.matrix_polynomial_order, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Polynomial_Order,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_polynomial_order, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6460,12 +6471,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Reorder, input);
+    strcpy(goma_ctx->solver.matrix_reorder, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Reorder,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_reorder, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6478,12 +6489,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Factorization_Save, input);
+    strcpy(goma_ctx->solver.matrix_factorization_save, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Factorization_Save,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_factorization_save, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6496,12 +6507,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_ILUT_Fill_Factor, input);
+    strcpy(goma_ctx->solver.matrix_ilut_fill_factor, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_ILUT_Fill_Factor,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_ilut_fill_factor, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6514,12 +6525,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_RILU_Relax_Factor, input);
+    strcpy(goma_ctx->solver.matrix_rilu_relax_factor, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_RILU_Relax_Factor,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_rilu_relax_factor, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6528,12 +6539,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_BILU_Threshold, input);
+    strcpy(goma_ctx->solver.matrix_bilu_threshold, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_BILU_Threshold,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_bilu_threshold, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6543,12 +6554,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Relative_Threshold, input);
+    strcpy(goma_ctx->solver.matrix_relative_threshold, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Relative_Threshold,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_relative_threshold, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6557,12 +6568,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Absolute_Threshold, input);
+    strcpy(goma_ctx->solver.matrix_absolute_threshold, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Absolute_Threshold,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_absolute_threshold, default_string);
     ECHO(echo_string, echo_file);
   }
 #endif
@@ -6572,12 +6583,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Krylov_Subspace, input);
+    strcpy(goma_ctx->solver.matrix_krylov_subspace, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Krylov_Subspace,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_krylov_subspace, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6586,12 +6597,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Orthogonalization, input); /* save for aztec */
+    strcpy(goma_ctx->solver.matrix_orthogonalization, input); /* save for aztec */
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Orthogonalization,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_orthogonalization, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6600,12 +6611,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Maximum_Iterations, input); /* save for aztec */
+    strcpy(goma_ctx->solver.matrix_maximum_iterations, input); /* save for aztec */
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
-    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, Matrix_Maximum_Iterations,
-             default_string);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string,
+             goma_ctx->solver.matrix_maximum_iterations, default_string);
     ECHO(echo_string, echo_file);
   }
 
@@ -6615,7 +6626,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
     read_string(ifp, input, '\n');
     strip(input);
     stringup(input);
-    strcpy(Amesos_Package, input);
+    strcpy(goma_ctx->solver.amesos_package, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
@@ -6628,7 +6639,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Amesos2_Package, input);
+    strcpy(goma_ctx->solver.amesos2_package, input);
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
     ECHO(echo_string, echo_file);
   } else {
@@ -6637,123 +6648,129 @@ void rd_solver_specs(FILE *ifp, char *input) {
   }
 
   /* first initialize modified newton parameter to false */
-  modified_newton = FALSE;
+  goma_ctx->solver.modified_newton = FALSE;
 
   look_for(ifp, "Number of Newton Iterations", input, '=');
-  if (fscanf(ifp, "%d", &Max_Newton_Steps) != 1) {
+  if (fscanf(ifp, "%d", &goma_ctx->solver.max_newton_steps) != 1) {
     GOMA_EH(GOMA_ERROR, "error reading Number of Newton Iterations");
   }
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Number of Newton Iterations",
-           Max_Newton_Steps);
+           goma_ctx->solver.max_newton_steps);
 
-  if (fscanf(ifp, "%d", &Newt_Jacobian_Reformation_stride) == 1) {
-    if (Newt_Jacobian_Reformation_stride > 1)
-      modified_newton = TRUE;
+  if (fscanf(ifp, "%d", &goma_ctx->solver.newt_jacobian_reformation_stride) == 1) {
+    if (goma_ctx->solver.newt_jacobian_reformation_stride > 1)
+      goma_ctx->solver.modified_newton = TRUE;
 
-    SPF(endofstring(echo_string), " %d", Newt_Jacobian_Reformation_stride);
+    SPF(endofstring(echo_string), " %d", goma_ctx->solver.newt_jacobian_reformation_stride);
   } else {
-    Newt_Jacobian_Reformation_stride = 1;
+    goma_ctx->solver.newt_jacobian_reformation_stride = 1;
   }
 
   ECHO(echo_string, echo_file);
 
   iread = look_for_optional(ifp, "Modified Newton Tolerance", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le %le", &convergence_rate_tolerance, &modified_newt_norm_tol) != 2) {
+    if (fscanf(ifp, "%le %le", &goma_ctx->solver.convergence_rate_tolerance,
+               &goma_ctx->solver.modified_newt_norm_tol) != 2) {
       GOMA_EH(GOMA_ERROR, "ERROR reading Modified Newton Tolerance card");
     } else {
-      if (convergence_rate_tolerance != 0. && modified_newt_norm_tol != 0.) {
-        modified_newton = TRUE;
+      if (goma_ctx->solver.convergence_rate_tolerance != 0. &&
+          goma_ctx->solver.modified_newt_norm_tol != 0.) {
+        goma_ctx->solver.modified_newton = TRUE;
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g %.4g", "Modified Newton Tolerance",
-               convergence_rate_tolerance, modified_newt_norm_tol);
+               goma_ctx->solver.convergence_rate_tolerance,
+               goma_ctx->solver.modified_newt_norm_tol);
       ECHO(echo_string, echo_file);
     }
   } else {
-    convergence_rate_tolerance = 0.;
-    modified_newt_norm_tol = 0.;
+    goma_ctx->solver.convergence_rate_tolerance = 0.;
+    goma_ctx->solver.modified_newt_norm_tol = 0.;
   }
 
   iread = look_for_optional(ifp, "Jacobian Reform Time Stride", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%d", &Time_Jacobian_Reformation_stride) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->solver.time_jacobian_reformation_stride) != 1) {
       GOMA_EH(GOMA_ERROR, "ERROR reading Jacobian Reform Stride card");
     } else {
-      if (Time_Jacobian_Reformation_stride > 1)
-        modified_newton = TRUE;
+      if (goma_ctx->solver.time_jacobian_reformation_stride > 1)
+        goma_ctx->solver.modified_newton = TRUE;
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Jacobian Reform Time Stride",
-               Time_Jacobian_Reformation_stride);
+               goma_ctx->solver.time_jacobian_reformation_stride);
       ECHO(echo_string, echo_file);
     }
   } else {
-    Time_Jacobian_Reformation_stride = 0;
+    goma_ctx->solver.time_jacobian_reformation_stride = 0;
   }
 
   char ls_type[MAX_CHAR_IN_INPUT] = "FULL_STEP";
   ;
-  Newton_Line_Search_Type = NLS_FULL_STEP;
+  goma_ctx->solver.newton_line_search_type = NLS_FULL_STEP;
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
   int lsread = look_for_optional_string(ifp, "Newton line search type", ls_type, MAX_CHAR_IN_INPUT);
   if (lsread >= 1) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
     if (strcmp("FULL_STEP", ls_type) == 0) {
-      Newton_Line_Search_Type = NLS_FULL_STEP;
+      goma_ctx->solver.newton_line_search_type = NLS_FULL_STEP;
     } else if (strcmp("BACKTRACK", ls_type) == 0) {
-      Newton_Line_Search_Type = NLS_BACKTRACK;
+      goma_ctx->solver.newton_line_search_type = NLS_BACKTRACK;
     } else if (strcmp("BACKTRACK_MESH", ls_type) == 0) {
-      Newton_Line_Search_Type = NLS_BACKTRACK_MESH;
+      goma_ctx->solver.newton_line_search_type = NLS_BACKTRACK_MESH;
     } else {
       GOMA_EH(GOMA_ERROR, "Unknown Newton line search type: %s", ls_type);
     }
   }
   ECHO(echo_string, echo_file);
 
-  Line_Search_Minimum_Damping = 0.05;
+  goma_ctx->solver.line_search_minimum_damping = 0.05;
   lsread = look_for_optional_string(ifp, "Line search minimum damping", ls_type, MAX_CHAR_IN_INPUT);
   if (lsread >= 1) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Line search minimum damping", ls_type);
-    if (sscanf(ls_type, "%lf", &Line_Search_Minimum_Damping) != 1) {
+    if (sscanf(ls_type, "%lf", &goma_ctx->solver.line_search_minimum_damping) != 1) {
       GOMA_EH(GOMA_ERROR, "Unknown Line search minimum damping: %s", ls_type);
     }
     ECHO(echo_string, echo_file);
   } else {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %lf", "Line search minimum damping",
-             Line_Search_Minimum_Damping);
+             goma_ctx->solver.line_search_minimum_damping);
     ECHO(echo_string, echo_file);
   }
 
-  if (Newton_Line_Search_Type == NLS_FULL_STEP) {
+  if (goma_ctx->solver.newton_line_search_type == NLS_FULL_STEP) {
     look_for(ifp, "Newton correction factor", input, '=');
-    if (fscanf(ifp, "%le", &damp_factor1) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->solver.damp_factor1) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Newton correction factor, expected at least one float");
     }
 
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Newton correction factor",
-             damp_factor1);
+             goma_ctx->solver.damp_factor1);
 
-    if (fscanf(ifp, "%le %le %le %le %le", &custom_tol1, &damp_factor2, &custom_tol2, &damp_factor3,
-               &custom_tol3) != 5) {
-      damp_factor2 = damp_factor3 = -1.;
-      custom_tol1 = custom_tol2 = custom_tol3 = -1;
+    if (fscanf(ifp, "%le %le %le %le %le", &goma_ctx->solver.custom_tol1,
+               &goma_ctx->solver.damp_factor2, &goma_ctx->solver.custom_tol2,
+               &goma_ctx->solver.damp_factor3, &goma_ctx->solver.custom_tol3) != 5) {
+      goma_ctx->solver.damp_factor2 = goma_ctx->solver.damp_factor3 = -1.;
+      goma_ctx->solver.custom_tol1 = goma_ctx->solver.custom_tol2 = goma_ctx->solver.custom_tol3 =
+          -1;
       rewind(ifp); /* Added to make ibm happy when single relaxation value input. dal/1-6-99 */
     } else {
-      if ((damp_factor1 <= 1. && damp_factor1 >= 0.) &&
-          (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
-          (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
-        SPF(endofstring(echo_string), " %.4g %.4g %.4g %.4g %.4g", custom_tol1, damp_factor2,
-            custom_tol2, damp_factor3, custom_tol3);
+      if ((goma_ctx->solver.damp_factor1 <= 1. && goma_ctx->solver.damp_factor1 >= 0.) &&
+          (goma_ctx->solver.damp_factor2 <= 1. && goma_ctx->solver.damp_factor2 >= 0.) &&
+          (goma_ctx->solver.damp_factor3 <= 1. && goma_ctx->solver.damp_factor3 >= 0.)) {
+        SPF(endofstring(echo_string), " %.4g %.4g %.4g %.4g %.4g", goma_ctx->solver.custom_tol1,
+            goma_ctx->solver.damp_factor2, goma_ctx->solver.custom_tol2,
+            goma_ctx->solver.damp_factor3, goma_ctx->solver.custom_tol3);
       } else {
         GOMA_EH(GOMA_ERROR, "All damping factors must be in the range 0 <= fact <=1");
       }
     }
     ECHO(echo_string, echo_file);
   } else {
-    damp_factor1 = 1.;
-    damp_factor2 = -1.;
-    damp_factor3 = -1.;
-    custom_tol1 = -1.;
-    custom_tol2 = -1.;
-    custom_tol3 = -1.;
+    goma_ctx->solver.damp_factor1 = 1.;
+    goma_ctx->solver.damp_factor2 = -1.;
+    goma_ctx->solver.damp_factor3 = -1.;
+    goma_ctx->solver.custom_tol1 = -1.;
+    goma_ctx->solver.custom_tol2 = -1.;
+    goma_ctx->solver.custom_tol3 = -1.;
   }
 
   iread = look_for_optional(ifp, "Mesh correction damping", input, '=');
@@ -6783,7 +6800,8 @@ void rd_solver_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
-  if (Newton_Line_Search_Type == NLS_BACKTRACK_MESH && upd->n_mesh_corrections < 1) {
+  if (goma_ctx->solver.newton_line_search_type == NLS_BACKTRACK_MESH &&
+      upd->n_mesh_corrections < 1) {
     GOMA_WH(
         GOMA_ERROR,
         "You have selected the BACKTRACK_MESH backtracking line search, but have not specified any "
@@ -6817,7 +6835,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   /* initialize variable specific damping */
   for (k = 0; k < MAX_VARIABLE_TYPES; k++) {
-    var_damp[k] = 1.;
+    goma_ctx->solver.var_damp[k] = 1.;
   }
 
   while ((iread = look_forward_optional(ifp, "Variable Type Newton correction factor", input,
@@ -6841,39 +6859,40 @@ void rd_solver_specs(FILE *ifp, char *input) {
               "Could not identify variable type for Variable Type Newton Correction Factor!");
     }
 
-    if (fscanf(ifp, "%le", &var_damp[var]) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->solver.var_damp[var]) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading value of variable type Newton correction factor");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s %.4g",
-             "Variable Type Newton correction factor", Var_Name[k].name1, var_damp[var]);
+             "Variable Type Newton correction factor", Var_Name[k].name1,
+             goma_ctx->solver.var_damp[var]);
     ECHO(echo_string, echo_file);
   }
 
   look_for(ifp, "Normalized Residual Tolerance", input, '=');
-  if (fscanf(ifp, "%le", &Epsilon[0][0]) != 1) {
+  if (fscanf(ifp, "%le", &goma_ctx->solver.epsilon[0][0]) != 1) {
     GOMA_EH(GOMA_ERROR, "error reading Normalized (Newton) Residual Tolerance");
   }
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Normalized Residual Tolerance",
-           Epsilon[0][0]);
+           goma_ctx->solver.epsilon[0][0]);
   ECHO(echo_string, echo_file);
 
   for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    Epsilon[imtrx][0] = Epsilon[0][0];
+    goma_ctx->solver.epsilon[imtrx][0] = goma_ctx->solver.epsilon[0][0];
   }
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Normalized Residual Tolerance",
-           Epsilon[0][0]);
+           goma_ctx->solver.epsilon[0][0]);
   ECHO(echo_string, echo_file);
 
   iread = look_for_optional(ifp, "Normalized Correction Tolerance", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &Epsilon[0][2]) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->solver.epsilon[0][2]) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Normalized (Newton) Correction Tolerance");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Normalized Correction Tolerance",
-             Epsilon[0][2]);
+             goma_ctx->solver.epsilon[0][2]);
     ECHO(echo_string, echo_file);
   } else {
-    Epsilon[0][2] = 1.0e+10;
+    goma_ctx->solver.epsilon[0][2] = 1.0e+10;
   }
 
   iread = look_for_optional(ifp, "Residual Relative Tolerance", input, '=');
@@ -6892,15 +6911,15 @@ void rd_solver_specs(FILE *ifp, char *input) {
   }
 
   for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    Epsilon[imtrx][0] = Epsilon[0][0];
+    goma_ctx->solver.epsilon[imtrx][0] = goma_ctx->solver.epsilon[0][0];
   }
 
   for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    Epsilon[imtrx][2] = Epsilon[0][2];
+    goma_ctx->solver.epsilon[imtrx][2] = goma_ctx->solver.epsilon[0][2];
   }
 
   for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
-    Epsilon[imtrx][1] = 0.;
+    goma_ctx->solver.epsilon[imtrx][1] = 0.;
   }
 
   /**  Bit-wise code to request columns of solver output:
@@ -6908,70 +6927,79 @@ void rd_solver_specs(FILE *ifp, char *input) {
           Max value: 4095 (2^12 - 1)
   **/
 
-  Solver_Output_Format = 1023;
+  goma_ctx->solver.solver_output_format = 1023;
   iread = look_for_optional(ifp, "Solver Output Format Bitmap", input, '=');
   if (iread == 1) {
     int no_chars = 80;
-    if (fscanf(ifp, "%d", &Solver_Output_Format) != 1) {
+    if (fscanf(ifp, "%d", &goma_ctx->solver.solver_output_format) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Solver Format");
     }
-    SPF(echo_string, "%s = %d", "Solver Output Format Bitmap", Solver_Output_Format);
-    no_chars = (Solver_Output_Format & 1) * 9 + (Solver_Output_Format & 2) * 2 +
-               (Solver_Output_Format & 4) * 2 + (Solver_Output_Format & 8) * 1 +
-               (Solver_Output_Format & 16) / 2 + (Solver_Output_Format & 32) / 4 +
-               (Solver_Output_Format & 64) / 8 + (Solver_Output_Format & 128) / 16 +
-               (Solver_Output_Format & 256) / 64 + (Solver_Output_Format & 512) / 32 +
-               (Solver_Output_Format & 1024) / 128 + (Solver_Output_Format & 2048) / 256;
+    SPF(echo_string, "%s = %d", "Solver Output Format Bitmap",
+        goma_ctx->solver.solver_output_format);
+    no_chars = (goma_ctx->solver.solver_output_format & 1) * 9 +
+               (goma_ctx->solver.solver_output_format & 2) * 2 +
+               (goma_ctx->solver.solver_output_format & 4) * 2 +
+               (goma_ctx->solver.solver_output_format & 8) * 1 +
+               (goma_ctx->solver.solver_output_format & 16) / 2 +
+               (goma_ctx->solver.solver_output_format & 32) / 4 +
+               (goma_ctx->solver.solver_output_format & 64) / 8 +
+               (goma_ctx->solver.solver_output_format & 128) / 16 +
+               (goma_ctx->solver.solver_output_format & 256) / 64 +
+               (goma_ctx->solver.solver_output_format & 512) / 32 +
+               (goma_ctx->solver.solver_output_format & 1024) / 128 +
+               (goma_ctx->solver.solver_output_format & 2048) / 256;
     if (no_chars > 80)
       GOMA_WH(-1, "Solver Output greater than 80 characters...\n");
   }
 
   /*  Toggle for Outputting Variable Statistics, i.e. min, max, mean,...  */
 
-  Output_Variable_Stats = 0;
+  goma_ctx->solver.output_variable_stats = 0;
   iread = look_for_optional(ifp, "Output Variable Statistics", input, '=');
   if (iread == 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0) {
-      Output_Variable_Stats = FALSE;
+      goma_ctx->solver.output_variable_stats = FALSE;
     } else if (strcmp(input, "yes") == 0) {
-      Output_Variable_Stats = TRUE;
+      goma_ctx->solver.output_variable_stats = TRUE;
     } else {
       GOMA_EH(GOMA_ERROR, "error reading Variable Stats");
     }
-    SPF(echo_string, "%s = %d", "Output Variable Statistics", Output_Variable_Stats);
+    SPF(echo_string, "%s = %d", "Output Variable Statistics",
+        goma_ctx->solver.output_variable_stats);
   }
 
-  Output_Variable_Regression = 0;
+  goma_ctx->solver.output_variable_regression = 0;
   iread = look_for_optional(ifp, "Output Variable Regression", input, '=');
   if (iread == 1) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0) {
-      Output_Variable_Regression = FALSE;
+      goma_ctx->solver.output_variable_regression = FALSE;
     } else if (strcmp(input, "yes") == 0) {
-      Output_Variable_Regression = TRUE;
+      goma_ctx->solver.output_variable_regression = TRUE;
     } else {
       GOMA_EH(GOMA_ERROR, "error reading Variable Regression");
     }
-    SPF(echo_string, "%s = %d", "Output Variable Regression", Output_Variable_Regression);
+    SPF(echo_string, "%s = %d", "Output Variable Regression",
+        goma_ctx->solver.output_variable_regression);
   }
 
   iread = look_for_optional(ifp, "Residual Ratio Tolerance", input, '=');
   if (iread == 1) {
     read_string(ifp, input, '\n');
     strip(input);
-    strcpy(Matrix_Convergence_Tolerance, input); /* save for aztec use */
-    if (sscanf(input, "%le", &Epsilon[0][1]) != 1) {
+    strcpy(goma_ctx->solver.matrix_convergence_tolerance, input); /* save for aztec use */
+    if (sscanf(input, "%le", &goma_ctx->solver.epsilon[0][1]) != 1) {
       GOMA_EH(GOMA_ERROR, "Bad residual ratio (matrix convergence) tolerance.");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Residual Ratio Tolerance",
-             Epsilon[0][1]);
+             goma_ctx->solver.epsilon[0][1]);
     ECHO(echo_string, echo_file);
 
     for (imtrx = 1; imtrx < upd->Total_Num_Matrices; imtrx++) {
-      Epsilon[imtrx][1] = Epsilon[0][1];
+      goma_ctx->solver.epsilon[imtrx][1] = goma_ctx->solver.epsilon[0][1];
     }
   }
 
@@ -6980,26 +7008,26 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0) {
-      PSPG = 0;
-      PSPP = 0;
+      goma_ctx->solver.pspg = 0;
+      goma_ctx->solver.pspp = 0;
     } else if (strcmp(input, "yes") == 0 || strcmp(input, "global") == 0) {
-      PSPG = 1;
-      PSPP = 0;
+      goma_ctx->solver.pspg = 1;
+      goma_ctx->solver.pspp = 0;
     } else if (strcmp(input, "local") == 0) {
-      PSPG = 2;
-      PSPP = 0;
+      goma_ctx->solver.pspg = 2;
+      goma_ctx->solver.pspp = 0;
     } else if (strcmp(input, "pspg_shakib") == 0) {
-      PSPG = 3;
-      PSPP = 0;
+      goma_ctx->solver.pspg = 3;
+      goma_ctx->solver.pspp = 0;
     } else if (strcmp(input, "pspp") == 0) {
-      PSPG = 0;
-      PSPP = 1;
+      goma_ctx->solver.pspg = 0;
+      goma_ctx->solver.pspp = 1;
     } else if (strcmp(input, "pspp_e") == 0) {
-      PSPG = 0;
-      PSPP = 2;
+      goma_ctx->solver.pspg = 0;
+      goma_ctx->solver.pspp = 2;
     } else if (strcmp(input, "pspp_time") == 0) {
-      PSPG = 0;
-      PSPP = 3;
+      goma_ctx->solver.pspg = 0;
+      goma_ctx->solver.pspp = 3;
     } else {
       GOMA_EH(
           -1,
@@ -7009,21 +7037,21 @@ void rd_solver_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Pressure Stabilization", input);
     ECHO(echo_string, echo_file);
   } else {
-    PSPG = 0;
-    PSPP = 0;
+    goma_ctx->solver.pspg = 0;
+    goma_ctx->solver.pspp = 0;
     ECHO("(Pressure Stabilization = NONE) (default)", echo_file);
   }
 
   iread = look_for_optional(ifp, "Pressure Stabilization Scaling", input, '=');
   if (iread == 1) {
-    if (fscanf(ifp, "%le", &PS_scaling) != 1) {
+    if (fscanf(ifp, "%le", &goma_ctx->solver.ps_scaling) != 1) {
       GOMA_EH(GOMA_ERROR, "error reading Pressure Stabilization Scaling");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g", "Pressure Stabilization Scaling",
-             PS_scaling);
+             goma_ctx->solver.ps_scaling);
     ECHO(echo_string, echo_file);
   } else {
-    PS_scaling = 0.;
+    goma_ctx->solver.ps_scaling = 0.;
     ECHO("(Pressure Stabilization Scaling = 0.0) (default)", echo_file);
   }
 
@@ -7143,13 +7171,13 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strcmp(input, "no") == 0) {
-      Cont_GLS = 0;
+      goma_ctx->solver.cont_gls = 0;
     } else if (strcmp(input, "yes") == 0) {
-      Cont_GLS = 1;
+      goma_ctx->solver.cont_gls = 1;
     }
 
     else if (strcmp(input, "local") == 0) {
-      Cont_GLS = 2;
+      goma_ctx->solver.cont_gls = 2;
     }
 
     else {
@@ -7159,7 +7187,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
 
   } else {
-    Cont_GLS = 0;
+    goma_ctx->solver.cont_gls = 0;
     ECHO("(Continuity Stabilization = None) (default)", echo_file);
   }
 
@@ -7221,15 +7249,17 @@ void rd_solver_specs(FILE *ifp, char *input) {
 
   iread = look_for_optional(ifp, "Filter Concentration", input, '=');
   if (iread == 1) {
-    Filter_Species = TRUE;
-    if (fscanf(ifp, "%d %le %le", &filter_species_material_number, &c_min, &c_max) != 3) {
+    goma_ctx->solver.filter_species = TRUE;
+    if (fscanf(ifp, "%d %le %le", &goma_ctx->solver.filter_species_material_number,
+               &goma_ctx->solver.c_min, &goma_ctx->solver.c_max) != 3) {
       GOMA_EH(GOMA_ERROR, "error reading Filter Concentration");
     }
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d %.4g %.4g", "Filter Concentration",
-             filter_species_material_number, c_min, c_max);
+             goma_ctx->solver.filter_species_material_number, goma_ctx->solver.c_min,
+             goma_ctx->solver.c_max);
     ECHO(echo_string, echo_file);
   } else {
-    Filter_Species = FALSE;
+    goma_ctx->solver.filter_species = FALSE;
   }
 
   iread = look_for_optional(ifp, "Disable Viscosity Sensitivities", input, '=');
@@ -7237,12 +7267,12 @@ void rd_solver_specs(FILE *ifp, char *input) {
     (void)read_string(ifp, input, '\n');
     strip(input);
     if (strncmp(input, "no", 2) == 0) {
-      Include_Visc_Sens = TRUE;
+      goma_ctx->solver.include_visc_sens = TRUE;
     } else if (strncmp(input, "yes", 3) == 0) {
       char temp_string[80];
-      Include_Visc_Sens = FALSE;
-      if (sscanf(input, "%s %d", temp_string, &Visc_Sens_Factor) != 2) {
-        Visc_Sens_Factor = 2;
+      goma_ctx->solver.include_visc_sens = FALSE;
+      if (sscanf(input, "%s %d", temp_string, &goma_ctx->solver.visc_sens_factor) != 2) {
+        goma_ctx->solver.visc_sens_factor = 2;
       }
     } else {
       GOMA_EH(GOMA_ERROR, "invalid choice for Disable Viscosity Sensitivities:must be yes or no");
@@ -7250,10 +7280,10 @@ void rd_solver_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Disable Viscosity Sensitivities", input);
     ECHO(echo_string, echo_file);
   } else {
-    Include_Visc_Sens = TRUE;
+    goma_ctx->solver.include_visc_sens = TRUE;
   }
 
-  Visc_Sens_Copy = Include_Visc_Sens;
+  goma_ctx->solver.visc_sens_copy = goma_ctx->solver.include_visc_sens;
 
   iread = look_for_optional(ifp, "PETSc solve post proc", input, '=');
   if (iread == 1) {
@@ -8533,7 +8563,7 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     if (iread == 1) {
       read_string(ifp, input, '\n');
       strip(input);
-      strcpy(Stratimikos_File[imtrx], input);
+      strcpy(goma_ctx->solver.stratimikos_file[imtrx], input);
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Stratimikos file = %s for matrix %d", input,
                mtrx_index1);
       ECHO(echo_string, echo_file);
@@ -8541,11 +8571,11 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
 
     iread = look_forward_optional_until(ifp, "Normalized Residual Tolerance", "MATRIX", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%le", &Epsilon[imtrx][0]) != 1) {
+      if (fscanf(ifp, "%le", &goma_ctx->solver.epsilon[imtrx][0]) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Normalized (Newton) Correction Tolerance");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g matrix %d",
-               "Normalized Residual Tolerance", Epsilon[imtrx][0], mtrx_index1);
+               "Normalized Residual Tolerance", goma_ctx->solver.epsilon[imtrx][0], mtrx_index1);
       ECHO(echo_string, echo_file);
     }
 
@@ -8569,21 +8599,21 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
     iread =
         look_forward_optional_until(ifp, "Normalized Correction Tolerance", "MATRIX", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%le", &Epsilon[imtrx][2]) != 1) {
+      if (fscanf(ifp, "%le", &goma_ctx->solver.epsilon[imtrx][2]) != 1) {
         GOMA_EH(GOMA_ERROR, "error reading Normalized (Newton) Correction Tolerance");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g matrix %d",
-               "Normalized Correction Tolerance", Epsilon[imtrx][2], mtrx_index1);
+               "Normalized Correction Tolerance", goma_ctx->solver.epsilon[imtrx][2], mtrx_index1);
       ECHO(echo_string, echo_file);
     }
 
     iread = look_forward_optional_until(ifp, "Residual Ratio Tolerance", "MATRIX", input, '=');
     if (iread == 1) {
-      if (fscanf(ifp, "%le", &Epsilon[imtrx][1]) != 1) {
+      if (fscanf(ifp, "%le", &goma_ctx->solver.epsilon[imtrx][1]) != 1) {
         GOMA_EH(GOMA_ERROR, "Bad residual ratio (matrix convergence) tolerance.");
       }
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %.4g matrix %d", "Residual Ratio Tolerance",
-               Epsilon[imtrx][1], mtrx_index1);
+               goma_ctx->solver.epsilon[imtrx][1], mtrx_index1);
       ECHO(echo_string, echo_file);
     }
     iread = look_forward_optional_until(ifp, "Residual Relative Tolerance", "MATRIX", input, '=');
@@ -12247,8 +12277,8 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
       goma_ctx->debug_flag = clc[i]->i_val;
     } else if (clc[i]->type == NEWTON_NUM) {
       fprintf(stdout, "%s%40s= %d\n%s%40s= %d\n", a, "Number of Newton Iterations",
-              Max_Newton_Steps, b, "Number of Newton Iterations", clc[i]->i_val);
-      Max_Newton_Steps = clc[i]->i_val;
+              goma_ctx->solver.max_newton_steps, b, "Number of Newton Iterations", clc[i]->i_val);
+      goma_ctx->solver.max_newton_steps = clc[i]->i_val;
     } else if (clc[i]->type == TIME_START) {
       fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Initial Time", tran->init_time, b,
               "Initial Time", clc[i]->r_val);
@@ -12259,10 +12289,10 @@ void apply_command_line(struct Command_line_command **clc, int nclc)
       tran->TimeMax = clc[i]->r_val;
     } else if (clc[i]->type == RELAXATION) {
       fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Newton correction factor",
-              damp_factor1, b, "Newton correction factor", clc[i]->r_val);
-      damp_factor1 = clc[i]->r_val;
-      damp_factor2 = -1.;
-      damp_factor3 = -1.; /* To force the override default*/
+              goma_ctx->solver.damp_factor1, b, "Newton correction factor", clc[i]->r_val);
+      goma_ctx->solver.damp_factor1 = clc[i]->r_val;
+      goma_ctx->solver.damp_factor2 = -1.;
+      goma_ctx->solver.damp_factor3 = -1.; /* To force the override default*/
     } else if (clc[i]->type == CONT_BEG_PVALUE) {
       fprintf(stdout, "%s%40s= %g ...\n%s%40s= %g ...\n", a, "Initial parameter value",
               cont->BegParameterValue, b, "Initial parameter value", clc[i]->r_val);
@@ -14290,9 +14320,11 @@ void echo_compiler_settings(void) {
   fprintf(echo_file, "%-30s= %s\n", "CHECK_FINITE", "no");
 #endif
 
-  fprintf(echo_file, "%-30s= %s\n", "Pressure Stabilization (PSPG)", (PSPG > 0 ? "yes" : "no"));
-  fprintf(echo_file, "%-30s= %s\n", "Pressure Stabilization (PSPP)", (PSPP > 0 ? "yes" : "no"));
-  fprintf(echo_file, "%-30s= %f\n", "Stabilization Scaling ", PS_scaling);
+  fprintf(echo_file, "%-30s= %s\n", "Pressure Stabilization (PSPG)",
+          (goma_ctx->solver.pspg > 0 ? "yes" : "no"));
+  fprintf(echo_file, "%-30s= %s\n", "Pressure Stabilization (PSPP)",
+          (goma_ctx->solver.pspp > 0 ? "yes" : "no"));
+  fprintf(echo_file, "%-30s= %f\n", "Stabilization Scaling ", goma_ctx->solver.ps_scaling);
   fprintf(echo_file, "%-30s= %s\n", "Linear Stability",
           (Linear_Stability == LSA_NORMAL
                ? "yes"

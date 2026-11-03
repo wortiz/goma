@@ -1365,7 +1365,7 @@ double path_step_control(int N,
    *    to 1/2 of the max Newton steps -- someday probably
    *    hook up to the input file
    */
-  iter_desired = Max_Newton_Steps / 2;
+  iter_desired = goma_ctx->solver.max_newton_steps / 2;
   beta = (pow(2.0, (float)(iter_desired - inewton)) - 1.0) / (double)iter_desired;
   if (beta > 1.0)
     beta = 3.0;
@@ -1535,7 +1535,7 @@ void init_vec(
     }
   }
 
-  switch (Guess_Flag) {
+  switch (goma_ctx->solver.guess_flag) {
   case 0:
     /* Initialize all of the solution vector to zero */
     for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {

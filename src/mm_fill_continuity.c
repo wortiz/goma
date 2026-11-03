@@ -302,7 +302,7 @@ int assemble_continuity(dbl time_value, /* current time */
     ompvf = 1.0 - fv->c[species];
   }
 
-  if (PSPG) {
+  if (goma_ctx->solver.pspg) {
     calc_pspg(pspg, d_pspg, time_value, tt, dt, pg_data);
   }
 
@@ -602,7 +602,7 @@ int assemble_continuity(dbl time_value, /* current time */
        */
 
       pressure_stabilization = 0.0;
-      if (PSPG) {
+      if (goma_ctx->solver.pspg) {
         for (a = 0; a < WIM; a++) {
           meqn = R_MOMENTUM1 + a;
           if (pd->gv[meqn]) {
@@ -739,7 +739,7 @@ int assemble_continuity(dbl time_value, /* current time */
              * if desired.
              */
             pressure_stabilization = 0.;
-            if (PSPG) {
+            if (goma_ctx->solver.pspg) {
               for (a = 0; a < WIM; a++) {
                 meqn = R_MOMENTUM1 + a;
                 if (pd->e[pg->imtrx][meqn]) {
@@ -761,7 +761,7 @@ int assemble_continuity(dbl time_value, /* current time */
       }
 
       var = EDDY_NU;
-      if (PSPG && pd->v[pg->imtrx][var]) {
+      if (goma_ctx->solver.pspg && pd->v[pg->imtrx][var]) {
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           pvar = upd->vp[pg->imtrx][var];
 
@@ -789,7 +789,7 @@ int assemble_continuity(dbl time_value, /* current time */
        * which comes from the Pressure-Stabilized Petrov-Galerkin term
        */
       var = TEMPERATURE;
-      if (PSPG && pd->v[pg->imtrx][var]) {
+      if (goma_ctx->solver.pspg && pd->v[pg->imtrx][var]) {
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           pvar = upd->vp[pg->imtrx][var];
 
@@ -895,7 +895,7 @@ int assemble_continuity(dbl time_value, /* current time */
            * if desired.
            */
           pressure_stabilization = 0.;
-          if (PSPG) {
+          if (goma_ctx->solver.pspg) {
             for (a = 0; a < WIM; a++) {
               meqn = R_MOMENTUM1 + a;
               if (pd->e[pg->imtrx][meqn] & T_DIFFUSION) {
@@ -917,7 +917,7 @@ int assemble_continuity(dbl time_value, /* current time */
        * J_c_S this term is only present for PSPG
        */
       var = POLYMER_STRESS11;
-      if (PSPG && pdv[var]) {
+      if (goma_ctx->solver.pspg && pdv[var]) {
         for (mode = 0; mode < vn->modes; mode++) {
           for (p = 0; p < VIM; p++) {
             for (q = 0; q < VIM; q++) {
@@ -948,7 +948,7 @@ int assemble_continuity(dbl time_value, /* current time */
        * J_c_G this term is only present for PSPG
        */
       var = VELOCITY_GRADIENT11;
-      if (PSPG && pdv[var]) {
+      if (goma_ctx->solver.pspg && pdv[var]) {
         for (p = 0; p < VIM; p++) {
           for (q = 0; q < VIM; q++) {
             var = v_g[p][q];
@@ -1127,7 +1127,7 @@ int assemble_continuity(dbl time_value, /* current time */
              * if desired.
              */
             pressure_stabilization = 0.0;
-            if (PSPG) {
+            if (goma_ctx->solver.pspg) {
               for (a = 0; a < WIM; a++) {
                 meqn = R_MOMENTUM1 + a;
                 if (pd->e[pg->imtrx][meqn]) {
@@ -1212,7 +1212,7 @@ int assemble_continuity(dbl time_value, /* current time */
              * if desired.
              */
             pressure_stabilization = 0.;
-            if (PSPG) {
+            if (goma_ctx->solver.pspg) {
               for (a = 0; a < WIM; a++) {
                 meqn = R_MOMENTUM1 + a;
                 if (pd->e[pg->imtrx][meqn] & T_DIFFUSION) {
@@ -2563,7 +2563,7 @@ int assemble_projection_time_stabilization(Exo_DB *exo, double time, double tt, 
       if (af->Assemble_Residual) {
         for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
           phi_i = bf[eqn]->phi[i];
-          lec->R[LEC_R_INDEX(peqn, i)] += ls_scale_factor * PS_scaling * dt *
+          lec->R[LEC_R_INDEX(peqn, i)] += ls_scale_factor * goma_ctx->solver.ps_scaling * dt *
                                           (fv_dot->P - P_dot_avg) * (phi_i - phi_avg[i]) / mu *
                                           d_vol;
         }
@@ -2577,9 +2577,9 @@ int assemble_projection_time_stabilization(Exo_DB *exo, double time, double tt, 
           pvar = upd->vp[pg->imtrx][var];
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             phi_j = bf[var]->phi[j];
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += ls_scale_factor * dt * PS_scaling *
-                                                     (((1 + 2. * tt) / dt) * (phi_j - phi_avg[j])) *
-                                                     (phi_i - phi_avg[i]) / mu * d_vol;
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                ls_scale_factor * dt * goma_ctx->solver.ps_scaling *
+                (((1 + 2. * tt) / dt) * (phi_j - phi_avg[j])) * (phi_i - phi_avg[i]) / mu * d_vol;
           }
 
           if (pd->v[pg->imtrx][var = LS]) {
@@ -2589,9 +2589,9 @@ int assemble_projection_time_stabilization(Exo_DB *exo, double time, double tt, 
 
               if (ls != NULL && ls->PSPP_filter) {
 
-                lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += -(lsi->d_delta_dF[j] / lsi->delta_max) *
-                                                         dt * PS_scaling * (fv_dot->P - P_dot_avg) *
-                                                         (phi_i - phi_avg[i]) / mu * d_vol;
+                lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                    -(lsi->d_delta_dF[j] / lsi->delta_max) * dt * goma_ctx->solver.ps_scaling *
+                    (fv_dot->P - P_dot_avg) * (phi_i - phi_avg[i]) / mu * d_vol;
               }
             }
           }
@@ -2712,8 +2712,8 @@ int assemble_projection_stabilization(Exo_DB *exo, double time)
       if (af->Assemble_Residual) {
         for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
           phi_i = bf[eqn]->phi[i];
-          lec->R[LEC_R_INDEX(peqn, i)] +=
-              ls_scale_factor * PS_scaling * (fv->P - P_avg) * (phi_i - phi_avg[i]) / mu * d_vol;
+          lec->R[LEC_R_INDEX(peqn, i)] += ls_scale_factor * goma_ctx->solver.ps_scaling *
+                                          (fv->P - P_avg) * (phi_i - phi_avg[i]) / mu * d_vol;
         }
       }
       if (af->Assemble_Jacobian) {
@@ -2725,7 +2725,7 @@ int assemble_projection_stabilization(Exo_DB *exo, double time)
           pvar = upd->vp[pg->imtrx][var];
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             phi_j = bf[var]->phi[j];
-            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += ls_scale_factor * PS_scaling *
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += ls_scale_factor * goma_ctx->solver.ps_scaling *
                                                      (phi_j - phi_avg[j]) * (phi_i - phi_avg[i]) /
                                                      mu * d_vol;
           }
@@ -2737,13 +2737,13 @@ int assemble_projection_stabilization(Exo_DB *exo, double time)
 
               if (ls != NULL && ls->PSPP_filter) {
 
-                lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= ls_scale_factor * PS_scaling *
-                                                         (fv->P - P_avg) * (phi_i - phi_avg[i]) *
-                                                         d_mu->F[j] / (mu * mu) * d_vol;
+                lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -=
+                    ls_scale_factor * goma_ctx->solver.ps_scaling * (fv->P - P_avg) *
+                    (phi_i - phi_avg[i]) * d_mu->F[j] / (mu * mu) * d_vol;
 
-                lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += -(lsi->d_delta_dF[j] / lsi->delta_max) *
-                                                         PS_scaling * (fv->P - P_avg) *
-                                                         (phi_i - phi_avg[i]) / mu * d_vol;
+                lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
+                    -(lsi->d_delta_dF[j] / lsi->delta_max) * goma_ctx->solver.ps_scaling *
+                    (fv->P - P_avg) * (phi_i - phi_avg[i]) / mu * d_vol;
               }
             }
           }
@@ -2995,7 +2995,7 @@ int assemble_PPPS_generalized(Exo_DB *exo)
       }
     }
 
-    scaling_over_visc_e = my_multiplier * PS_scaling / visc_e;
+    scaling_over_visc_e = my_multiplier * goma_ctx->solver.ps_scaling / visc_e;
     for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
       for (j = 0; j < ei[pg->imtrx]->dof[eqn]; j++) {
         EeT_We_Ee = 0.;
@@ -3067,8 +3067,9 @@ int assemble_PPPS_generalized(Exo_DB *exo)
             EeT_We_Ee += Ee_hat[k][i] * WeEe[k][j];
           }
 
-          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= my_multiplier * PS_scaling * d_visc_e_dv[a][j] *
-                                                   (Me[i][j] - EeT_We_Ee) / visc_e / visc_e;
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] -= my_multiplier * goma_ctx->solver.ps_scaling *
+                                                   d_visc_e_dv[a][j] * (Me[i][j] - EeT_We_Ee) /
+                                                   visc_e / visc_e;
         }
       }
     }

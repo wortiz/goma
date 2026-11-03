@@ -5426,7 +5426,7 @@ int assemble_surface_stress(Exo_DB *exo, /* ptr to basic exodus ii mesh informat
         for (mode = 0; mode < vn->modes; mode++) {
           load_modal_pointers(mode, t_, delta_t, s, s_dot, grad_s, d_grad_s_dmesh);
 
-          if (vn->dg_J_model == FULL_DG && Linear_Solver != FRONT) {
+          if (vn->dg_J_model == FULL_DG && goma_ctx->solver.linear_solver != FRONT) {
             load_neighbor_pointers(exo, ams, neighbor, ielem_type, mode, R_s, v_s, J_S_S_v[mode]);
           }
 
@@ -5485,7 +5485,7 @@ int assemble_surface_stress(Exo_DB *exo, /* ptr to basic exodus ii mesh informat
                           advection = wt * fv->sdet * vdotn * ve[mode]->time_const_st->lambda0 *
                                       phi_v[j] * phi_i;
 
-                          if (Linear_Solver != FRONT) {
+                          if (goma_ctx->solver.linear_solver != FRONT) {
                             *J_S_S_v[mode][a][b][i][a][b][j] += advection;
                           } else {
 
@@ -5946,7 +5946,7 @@ void load_neighbor_pointers(Exo_DB *exo,
     }
   }
 
-  if (strcmp(Matrix_Format, "msr") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     ija = ams->bindx;
     a = ams->val;
     for (meqn1 = 0; meqn1 < VIM; meqn1++) {
@@ -5976,7 +5976,7 @@ void load_neighbor_pointers(Exo_DB *exo,
         }
       }
     }
-  } else if (strcmp(Matrix_Format, "vbr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     rpntr = ams->rpntr;
     bpntr = ams->bpntr;
     bindx = ams->bindx;
@@ -6013,7 +6013,7 @@ void load_neighbor_pointers(Exo_DB *exo,
       }
     }
   } else {
-    GOMA_EH(GOMA_ERROR, "load_neighbor_pointers unsupported by %s", Matrix_Format);
+    GOMA_EH(GOMA_ERROR, "load_neighbor_pointers unsupported by %s", goma_ctx->solver.matrix_format);
   }
 }
 /***************************************************************************/

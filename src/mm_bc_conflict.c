@@ -2542,7 +2542,8 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                                                                                      * BC_list
                                                                                      */
                 BC_dup_ptr[pg->imtrx]++;
-                if ((Print3DBCDup > 1 || goma_ctx->debug_flag > 1) && goma_ctx->unlimited_output) {
+                if ((goma_ctx->solver.print3dbcdup > 1 || goma_ctx->debug_flag > 1) &&
+                    goma_ctx->unlimited_output) {
                   fprintf(ofbc, "New Rot node in dup list %d %d\n", inode + 1,
                           BC_dup_ptr[pg->imtrx]);
                 }
@@ -2721,24 +2722,28 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                 BC_dup_nodes[pg->imtrx][BC_dup_ptr[pg->imtrx]] = inode;
                 BC_dup_list[pg->imtrx][BC_dup_ptr[pg->imtrx]] = BC_Unk_List[inode];
                 BC_dup_ptr[pg->imtrx]++;
-                if ((Print3DBCDup > 1 || goma_ctx->debug_flag > 1) && goma_ctx->unlimited_output) {
+                if ((goma_ctx->solver.print3dbcdup > 1 || goma_ctx->debug_flag > 1) &&
+                    goma_ctx->unlimited_output) {
                   fprintf(ofbc, "New node in duplication list %d %d\n", inode + 1,
                           BC_dup_ptr[pg->imtrx]);
                 }
               }
 
               idup = 0;
-              if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+              if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
+                  goma_ctx->unlimited_output) {
                 fprintf(ofbc, "  DUPLICATE BC at node %d equation %d: ", inode + 1, eqn);
               }
               while (BC_Unk_List[inode][offset][idup] != -1) {
                 ibc = BC_Unk_List[inode][offset][idup];
-                if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+                if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
+                    goma_ctx->unlimited_output) {
                   fprintf(ofbc, "%s, ", BC_Types[ibc].desc->name2);
                 }
                 idup++;
               }
-              if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) && goma_ctx->unlimited_output) {
+              if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
+                  goma_ctx->unlimited_output) {
                 fprintf(ofbc, "\n");
               }
 
@@ -2798,7 +2803,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                     ibc2 = BC_Unk_List[inode][offset][j_DC];
                     bct2 = BC_Types[ibc2].BC_Name;
                     /* RESOLVE CONFLICT */
-                    if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                    if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                         goma_ctx->unlimited_output) {
                       ibc = BC_Unk_List[inode][offset][j_DC];
                       fprintf(ofbc, "    TWO DBC's %s and %s at node %d \n",
@@ -2830,14 +2835,14 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                       if ((bct1 <= GD_TIME_BC && bct1 >= GD_CONST_BC) &&
                           (bct2 <= GD_TIME_BC && bct2 >= GD_CONST_BC)) {
                         if (BC_Types[ibc1].BC_ID == BC_Types[ibc2].BC_ID) {
-                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                          if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                               goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    MULTIPLE GD %s at node %d\n",
                                     BC_Types[ibc2].desc->name2, inode + 1);
                           }
                           save_this_bc[j] = 1;
                         } else {
-                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                          if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                               goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                     BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
@@ -2845,7 +2850,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                           }
                         }
                       } else {
-                        if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                        if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                             goma_ctx->unlimited_output) {
                           fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                   BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
@@ -2870,7 +2875,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                         ibc2 = BC_Unk_List[inode][offset][j_SI];
                         bct2 = BC_Types[ibc2].BC_Name;
                         /* RESOLVE CONFLICT */
-                        if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                        if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                             goma_ctx->unlimited_output) {
                           fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                   BC_Types[ibc2].desc->name2, BC_Types[ibc1].desc->name2,
@@ -2895,7 +2900,7 @@ void check_for_bc_conflicts3D(Exo_DB *exo, Dpi *dpi)
                         if (j_CSWI != -1) {
                           ibc2 = BC_Unk_List[inode][offset][j_CSWI];
                           bct2 = BC_Types[ibc2].BC_Name;
-                          if ((Print3DBCDup > 0 || goma_ctx->debug_flag > 0) &&
+                          if ((goma_ctx->solver.print3dbcdup > 0 || goma_ctx->debug_flag > 0) &&
                               goma_ctx->unlimited_output) {
                             fprintf(ofbc, "    REMOVE %s in favor of %s at node %d\n",
                                     BC_Types[ibc1].desc->name2, BC_Types[ibc2].desc->name2,

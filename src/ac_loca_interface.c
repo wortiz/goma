@@ -571,11 +571,11 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   pg->matrices[pg->imtrx].scale = scale;
   pg->matrices[pg->imtrx].resid_vector = resid_vector;
 
-  if (strcmp(Matrix_Format, "epetra") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
     GOMA_EH(GOMA_ERROR, "Error epetra Matrix format not currently supported with loca interface");
   }
   /* Allocate sparse matrix (MSR format) */
-  else if (strcmp(Matrix_Format, "msr") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     log_msg("alloc_MSR_sparse_arrays...");
     alloc_MSR_sparse_arrays(&ija, &a, &a_old, 0, node_to_fill, exo, dpi);
     /*
@@ -614,14 +614,14 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   }
 
   /* Allocate sparse matrix (VBR format) */
-  else if (strcmp(Matrix_Format, "vbr") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     log_msg("alloc_VBR_sparse_arrays...");
     alloc_VBR_sparse_arrays(ams[JAC], exo, dpi);
     ija_attic = NULL;
     ams[JAC]->belfry = ija_attic;
 
     a = ams[JAC]->val;
-    if (!save_old_A)
+    if (!goma_ctx->solver.save_old_a)
       a_old = ams[JAC]->val_old = NULL;
   } else
     GOMA_EH(GOMA_ERROR, "Attempted to allocate unknown sparse matrix format");
@@ -674,7 +674,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
    * library.
    */
 
-  NZeros = ams[JAC]->nnz;
+  goma_ctx->solver.nzeros = ams[JAC]->nnz;
   passdown.num_mat_fills = 0;
   passdown.num_res_fills = 0;
   passdown.num_linear_its = 0;
@@ -686,12 +686,12 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
   /* Initialize mass matrix and shifted matrix as needed */
   if (loca_in->Cont_Alg == HP_CONTINUATION || Linear_Stability) {
-    passdown.mass_matrix = (double *)array_alloc(1, NZeros + 5, sizeof(double));
-    init_vec_value(passdown.mass_matrix, 0.0, NZeros + 5);
+    passdown.mass_matrix = (double *)array_alloc(1, goma_ctx->solver.nzeros + 5, sizeof(double));
+    init_vec_value(passdown.mass_matrix, 0.0, goma_ctx->solver.nzeros + 5);
 
     /* Create AZ_MATRIX version for VBR matrix format */
 #ifdef GOMA_ENABLE_AZTEC
-    if (strcmp(Matrix_Format, "vbr") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
       passdown.mmat = AZ_matrix_create(NumUnknowns[pg->imtrx]);
       AZ_set_VBR(passdown.mmat, ams[JAC]->rpntr, ams[JAC]->cpntr, ams[JAC]->bpntr, ams[JAC]->indx,
                  ams[JAC]->bindx, passdown.mass_matrix, ams[JAC]->data_org, 0, NULL, AZ_LOCAL);
@@ -748,7 +748,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 
 #ifdef GOMA_ENABLE_AZTEC
   /* This is required for VBR matrix-vector multiply calls: */
-  if (strcmp(Matrix_Format, "vbr") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     passdown.amat = AZ_matrix_create(NumUnknowns[pg->imtrx]);
     AZ_set_VBR(passdown.amat, passdown.ams->rpntr, passdown.ams->cpntr, passdown.ams->bpntr,
                passdown.ams->indx, passdown.ams->bindx, passdown.ams->val, passdown.ams->data_org,
@@ -843,7 +843,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
   con.stepping_info.min_delta_p = cont->Delta_s_min;
   con.stepping_info.max_delta_p = cont->Delta_s_max;
   con.stepping_info.step_ctrl = loca_in->StepAggr;
-  con.stepping_info.max_newton_its = Max_Newton_Steps;
+  con.stepping_info.max_newton_its = goma_ctx->solver.max_newton_steps;
 
   /*
    * The next several con sub-structures are method (strategy) dependent
@@ -959,7 +959,7 @@ int do_loca(Comm_Ex *cx, /* array of communications structures */
 #ifdef GOMA_ENABLE_AZTEC
     /* If using MSR matrix format, instantiate amat (struct AZ_MATRIX).
        VBR case was already handled above. */
-    if (strcmp(Matrix_Format, "msr") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
       passdown.amat = AZ_matrix_create(NumUnknowns[pg->imtrx]);
       AZ_set_MSR(passdown.amat, passdown.ams->bindx, passdown.ams->val, passdown.ams->data_org, 0,
                  NULL, AZ_LOCAL);
@@ -1439,7 +1439,7 @@ int nonlinear_solver_conwrap(double *x, void *con_ptr, int step_num, double lamb
   passdown.num_res_fills += nits + 1;
   passdown.num_mat_fills += nits;
 #ifdef GOMA_ENABLE_AZTEC
-  if (Linear_Solver == AZTEC)
+  if (goma_ctx->solver.linear_solver == AZTEC)
     passdown.num_linear_its += ams->status[AZ_its];
 #endif
 
@@ -1514,30 +1514,31 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
   /* Call chosen linear solver */
 
   s_start = ut();
-  switch (Linear_Solver) {
+  switch (goma_ctx->solver.linear_solver) {
   case UMFPACK2:
   case UMFPACK2F:
-    if (strcmp(Matrix_Format, "msr"))
+    if (strcmp(goma_ctx->solver.matrix_format, "msr"))
       GOMA_EH(GOMA_ERROR, "ERROR: umfpack solver needs msr matrix format");
 
     Factor_Flag = 1;
-    if (Linear_Solver == UMFPACK2F)
+    if (goma_ctx->solver.linear_solver == UMFPACK2F)
       Factor_Flag = 0;
     /*  */
     matr_form = 1;
-    LOCA_UMF_ID = SL_UMF(LOCA_UMF_ID, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                         &NumUnknowns[pg->imtrx], &NZeros, &ija[0], &ija[0], &a[0], &xr[0], &x[0]);
+    goma_ctx->solver.loca_umf_id = SL_UMF(
+        goma_ctx->solver.loca_umf_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
+        &NumUnknowns[pg->imtrx], &goma_ctx->solver.nzeros, &ija[0], &ija[0], &a[0], &xr[0], &x[0]);
     /*  */
     first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
     break;
 
   case SPARSE13a:
-    if (strcmp(Matrix_Format, "msr"))
+    if (strcmp(goma_ctx->solver.matrix_format, "msr"))
       GOMA_EH(GOMA_ERROR, "ERROR: lu solver needs msr matrix format");
 
     dcopy1(NumUnknowns[pg->imtrx], xr, x);
-    lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], NZeros, a, ija, x, 2);
+    lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, x, 2);
     first_linear_solver_call = FALSE;
     /*
      * Note that sl_lu has static variables to keep track of
@@ -1558,7 +1559,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
           else
             { */
 
-    if (strcmp(Matrix_Factorization_Reuse, "calc") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "calc") == 0) {
       /*
        * Gonna start from scratch even though I've cooked a
        * preconditioner in the kitchen all day? Well, then
@@ -1570,9 +1571,9 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
 
       ams->options[AZ_pre_calc] = AZ_calc;
 
-    } else if (strcmp(Matrix_Factorization_Reuse, "recalc") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "recalc") == 0) {
       ams->options[AZ_pre_calc] = AZ_recalc;
-    } else if (strcmp(Matrix_Factorization_Reuse, "reuse") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "reuse") == 0) {
       ams->options[AZ_pre_calc] = AZ_reuse;
     } else {
       GOMA_EH(GOMA_ERROR, "Unknown factorization reuse specification.");
@@ -1632,17 +1633,18 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
 #ifdef GOMA_ENABLE_AMESOS
   case AMESOS:
 
-    if ((strcmp(Matrix_Format, "msr") != 0) && (strcmp(Matrix_Format, "epetra") != 0)) {
+    if ((strcmp(goma_ctx->solver.matrix_format, "msr") != 0) &&
+        (strcmp(goma_ctx->solver.matrix_format, "epetra") != 0)) {
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR and Epetra matrix formats are currently supported with "
                           "the Amesos solver suite\n");
     }
-    amesos_solve(Amesos_Package, ams, x, xr, 1, pg->imtrx);
+    amesos_solve(goma_ctx->solver.amesos_package, ams, x, xr, 1, pg->imtrx);
     strcpy(stringer, " 1 ");
     break;
 #endif
 
   case MUMPS:
-    if (strcmp(Matrix_Format, "msr") != 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "msr") != 0) {
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR matrix format is currently supported with the MUMPS "
                           "solver\n");
     }
@@ -1656,7 +1658,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
      * it is the first call or not.
      */
 #ifdef HARWELL
-    error = cmsr_ma28(NumUnknowns[pg->imtrx], NZeros, a, ija, x, xr);
+    error = cmsr_ma28(NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, x, xr);
 #endif
 #ifndef HARWELL
     GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented.");
@@ -1673,7 +1675,7 @@ int linear_solver_conwrap(double *x, int jac_flag, double *tmp)
   s_end = ut();
   if (goma_ctx->proc_id == 0) {
 #ifdef GOMA_ENABLE_AZTEC
-    if (Linear_Solver == AZTEC) {
+    if (goma_ctx->solver.linear_solver == AZTEC) {
       if (why == AZ_normal) {
         printf("\tResolve time = %7.1e   lits = %s\n", (s_end - s_start), stringer);
       } else {
@@ -1876,8 +1878,8 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
   }
 
   /* Get global element size and velocity norm if needed for PSPG or Cont_GLS */
-  if ((PSPG && Num_Var_In_Type[pg->imtrx][PRESSURE]) ||
-      (Cont_GLS && Num_Var_In_Type[pg->imtrx][VELOCITY1])) {
+  if ((goma_ctx->solver.pspg && Num_Var_In_Type[pg->imtrx][PRESSURE]) ||
+      (goma_ctx->solver.cont_gls && Num_Var_In_Type[pg->imtrx][VELOCITY1])) {
     h_elem_avg = global_h_elem_siz(x, passdown.x_old, passdown.xdot, passdown.resid_vector,
                                    passdown.exo, passdown.dpi);
     U_norm = global_velocity_norm(x, passdown.exo, passdown.dpi);
@@ -1894,14 +1896,14 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
     passdown.num_res_fills++;
     break;
   case MATRIX_ONLY:
-    init_vec_value(ams->val, 0.0, NZeros);
+    init_vec_value(ams->val, 0.0, goma_ctx->solver.nzeros);
     af->Assemble_Residual = FALSE;
     af->Assemble_Jacobian = TRUE;
     passdown.num_mat_fills++;
     break;
   case RHS_MATRIX:
     init_vec_value(passdown.resid_vector, 0.0, NumUnknowns[pg->imtrx]);
-    init_vec_value(ams->val, 0.0, NZeros);
+    init_vec_value(ams->val, 0.0, goma_ctx->solver.nzeros);
     af->Assemble_Residual = TRUE;
     af->Assemble_Jacobian = TRUE;
     passdown.num_res_fills++;
@@ -1913,7 +1915,7 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
   /* Recover old Jacobian only */
 
   if (matflag == RECOVER_MATRIX)
-    dcopy1(NZeros, ams->val_old, ams->val);
+    dcopy1(goma_ctx->solver.nzeros, ams->val_old, ams->val);
 
   /* Remaining cases: perform requested fill */
   else {
@@ -1929,7 +1931,7 @@ void matrix_residual_fill_conwrap(double *x, double *rhs, int matflag)
 
   /* Save unscaled matrix before the first resolve */
   if (save_flag)
-    dcopy1(NZeros, ams->val, ams->val_old);
+    dcopy1(goma_ctx->solver.nzeros, ams->val, ams->val_old);
 }
 /*****************************************************************************/
 /*****************************************************************************/
@@ -1968,7 +1970,7 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
   /* Initialize tmp_matrix array for 3D of 2D stability if needed */
   if (passdown.do_3D_of_2D) {
     passes = 2;
-    tmp_matrix = (double *)array_alloc(1, NZeros + 1, sizeof(double));
+    tmp_matrix = (double *)array_alloc(1, goma_ctx->solver.nzeros + 1, sizeof(double));
   } else
     passes = 1;
 
@@ -1991,8 +1993,8 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
     }
 
   /* Get global element size and velocity norm if needed for PSPG or Cont_GLS */
-  if ((PSPG && Num_Var_In_Type[pg->imtrx][PRESSURE]) ||
-      (Cont_GLS && Num_Var_In_Type[pg->imtrx][VELOCITY1])) {
+  if ((goma_ctx->solver.pspg && Num_Var_In_Type[pg->imtrx][PRESSURE]) ||
+      (goma_ctx->solver.cont_gls && Num_Var_In_Type[pg->imtrx][VELOCITY1])) {
     h_elem_avg = global_h_elem_siz(x, passdown.x_old, passdown.xdot, passdown.resid_vector,
                                    passdown.exo, passdown.dpi);
     U_norm = global_velocity_norm(x, passdown.exo, passdown.dpi);
@@ -2019,7 +2021,7 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
       DPRINTF(stdout, "Assembling LSA Jacobian ...\n");
     }
 
-    for (j = 0; j < NZeros + 1; j++)
+    for (j = 0; j < goma_ctx->solver.nzeros + 1; j++)
       ams->val[j] = 0.0;
     af->Assemble_Residual = TRUE;
     af->Assemble_Jacobian = TRUE;
@@ -2038,7 +2040,7 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
 
   /* Assemble the two passes if doing 3D of 2D */
   if (passdown.do_3D_of_2D) {
-    for (j = 0; j < NZeros + 1; j++)
+    for (j = 0; j < goma_ctx->solver.nzeros + 1; j++)
       jacobian_matrix[j] += tmp_matrix[j];
   }
 
@@ -2079,7 +2081,7 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
       DPRINTF(stdout, "Assembling LSA Mass matrix ...\n");
     }
 
-    for (j = 0; j < NZeros + 1; j++)
+    for (j = 0; j < goma_ctx->solver.nzeros + 1; j++)
       ams->val[j] = 0.0;
     af->Assemble_Residual = TRUE;
     af->Assemble_Jacobian = TRUE;
@@ -2098,7 +2100,7 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
 
   /* Assemble the two passes if doing 3D of 2D */
   if (passdown.do_3D_of_2D) {
-    for (j = 0; j < NZeros + 1; j++)
+    for (j = 0; j < goma_ctx->solver.nzeros + 1; j++)
       passdown.mass_matrix[j] += tmp_matrix[j];
   }
   ams->val = jacobian_matrix;
@@ -2108,7 +2110,7 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
   if (passdown.LSA_flag) {
     matrix_scaling(ams, passdown.mass_matrix, 1.0, scale);
   }
-  for (j = 0; j < NZeros + 1; j++)
+  for (j = 0; j < goma_ctx->solver.nzeros + 1; j++)
     passdown.mass_matrix[j] *= -1.0;
   dcopy1(NumUnknowns[pg->imtrx], scale, passdown.scale);
 
@@ -2128,7 +2130,7 @@ void mass_matrix_fill_conwrap(double *x, double *rhs)
     if (!passdown.do_3D_of_2D)
       LSA_3D_of_2D_wave_number = -1.0;
     output_stability_matrices(passdown.mass_matrix, jacobian_matrix, ija, nnodes,
-                              NumUnknowns[pg->imtrx], NZeros);
+                              NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros);
   }
 
   /* Clean up */
@@ -2168,7 +2170,7 @@ void matvec_mult_conwrap(double *x, double *y)
   exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
 
   /* First, handle MSR matrices */
-  if (strcmp(Matrix_Format, "msr") == 0)
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0)
 
   /* Note: This routine borrowed from "az_matvec_mult.c"! - EDW */
   {
@@ -2194,7 +2196,7 @@ void matvec_mult_conwrap(double *x, double *y)
     }
   }
 #ifdef GOMA_ENABLE_AZTEC
-  else if (strcmp(Matrix_Format, "vbr") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
 
     /* For VBR matrices, use Aztec matvec mult routine */
     AZ_VBR_matvec_mult(x, y, passdown.amat, passdown.proc_config);
@@ -2235,7 +2237,7 @@ void mass_matvec_mult_conwrap(double *x, double *y)
   exchange_dof(passdown.cx, passdown.dpi, x, pg->imtrx);
 
   /* First, handle MSR matrices */
-  if (strcmp(Matrix_Format, "msr") == 0)
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0)
 
   /* Note: This routine borrowed from "az_matvec_mult.c"! - EDW */
   {
@@ -2261,7 +2263,7 @@ void mass_matvec_mult_conwrap(double *x, double *y)
     }
   }
 #ifdef GOMA_ENABLE_AZTEC
-  else if (strcmp(Matrix_Format, "vbr") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
 
     /* For VBR matrices, use Aztec matvec mult routine */
     AZ_VBR_matvec_mult(x, y, passdown.mmat, passdown.proc_config);
@@ -2284,8 +2286,8 @@ void create_shifted_matrix_conwrap(void)
  */
 {
 #ifdef GOMA_ENABLE_ARPACK
-  passdown.shifted_matrix = (double *)array_alloc(1, NZeros + 5, sizeof(double));
-  init_vec_value(passdown.shifted_matrix, 0.0, NZeros + 5);
+  passdown.shifted_matrix = (double *)array_alloc(1, goma_ctx->solver.nzeros + 5, sizeof(double));
+  init_vec_value(passdown.shifted_matrix, 0.0, goma_ctx->solver.nzeros + 5);
 #endif
   return;
 }
@@ -2301,7 +2303,7 @@ void shifted_matrix_fill_conwrap(double sigma)
   struct GomaLinearSolverData *ams = &(passdown.ams[JAC]);
   int i;
 
-  for (i = 0; i < NZeros + 1; i++)
+  for (i = 0; i < goma_ctx->solver.nzeros + 1; i++)
     passdown.shifted_matrix[i] = ams->val[i] - sigma * passdown.mass_matrix[i];
 #endif
 
@@ -2333,7 +2335,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
 
   /* Allocate a separate system for stability if using UMFPACK */
   if (first_linear_solver_call) {
-    if (Linear_Solver != UMFPACK2 && Linear_Solver != UMFPACK2F)
+    if (goma_ctx->solver.linear_solver != UMFPACK2 && goma_ctx->solver.linear_solver != UMFPACK2F)
       first_linear_solver_call = FALSE;
   }
 
@@ -2355,30 +2357,31 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
 #endif
 
   /* Proceed with the chosen linear solver */
-  switch (Linear_Solver) {
+  switch (goma_ctx->solver.linear_solver) {
   case UMFPACK2:
   case UMFPACK2F:
-    if (strcmp(Matrix_Format, "msr"))
+    if (strcmp(goma_ctx->solver.matrix_format, "msr"))
       GOMA_EH(GOMA_ERROR, "ERROR: umfpack solver needs msr matrix format");
 
     Factor_Flag = ((jac_flag == NEW_JACOBIAN) ? 0 : 3);
-    if (Linear_Solver == UMFPACK2F)
+    if (goma_ctx->solver.linear_solver == UMFPACK2F)
       Factor_Flag = 0;
     /*  */
     matr_form = 1;
     stab_umf_id = SL_UMF(stab_umf_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                         &NumUnknowns[pg->imtrx], &NZeros, &ija[0], &ija[0], &a[0], &x[0], &y[0]);
+                         &NumUnknowns[pg->imtrx], &goma_ctx->solver.nzeros, &ija[0], &ija[0], &a[0],
+                         &x[0], &y[0]);
     /*  */
     first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
     break;
 
   case SPARSE13a:
-    if (strcmp(Matrix_Format, "msr"))
+    if (strcmp(goma_ctx->solver.matrix_format, "msr"))
       GOMA_EH(GOMA_ERROR, "ERROR: lu solver needs msr matrix format");
 
     dcopy1(NumUnknowns[pg->imtrx], x, y);
-    lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], NZeros, a, ija, y, 2);
+    lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, y, 2);
     first_linear_solver_call = FALSE;
     /*
      * Note that sl_lu has static variables to keep track of
@@ -2389,18 +2392,19 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
     break;
 #ifdef GOMA_ENABLE_AMESOS
   case AMESOS:
-    if ((strcmp(Matrix_Format, "msr") != 0) && (strcmp(Matrix_Format, "epetra") != 0)) {
+    if ((strcmp(goma_ctx->solver.matrix_format, "msr") != 0) &&
+        (strcmp(goma_ctx->solver.matrix_format, "epetra") != 0)) {
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR and Epetra matrix formats are currently supported with "
                           "the Amesos solver suite\n");
     }
-    amesos_solve(Amesos_Package, ams, y, x, 1, pg->imtrx);
+    amesos_solve(goma_ctx->solver.amesos_package, ams, y, x, 1, pg->imtrx);
     first_linear_solver_call = FALSE;
     strcpy(stringer, " 1 ");
     break;
 #endif
 
   case MUMPS: {
-    if (strcmp(Matrix_Format, "msr") != 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "msr") != 0) {
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR matrix format is currently supported with the MUMPS "
                           "solver\n");
     }
@@ -2419,7 +2423,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
     if (jac_flag == OLD_JACOBIAN) {
       ams->options[AZ_pre_calc] = AZ_reuse;
     } else {
-      if (strcmp(Matrix_Factorization_Reuse, "calc") == 0) {
+      if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "calc") == 0) {
         /*
          * Gonna start from scratch even though I've cooked a
          * preconditioner in the kitchen all day? Well, then
@@ -2431,9 +2435,9 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
 
         ams->options[AZ_pre_calc] = AZ_calc;
 
-      } else if (strcmp(Matrix_Factorization_Reuse, "recalc") == 0) {
+      } else if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "recalc") == 0) {
         ams->options[AZ_pre_calc] = AZ_recalc;
-      } else if (strcmp(Matrix_Factorization_Reuse, "reuse") == 0) {
+      } else if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "reuse") == 0) {
         ams->options[AZ_pre_calc] = AZ_reuse;
       } else {
         GOMA_EH(GOMA_ERROR, "Unknown factorization reuse specification.");
@@ -2516,7 +2520,7 @@ void shifted_linear_solver_conwrap(double *x, double *y, int jac_flag, double to
      * it is the first call or not.
      */
 #ifdef HARWELL
-    err = cmsr_ma28(NumUnknowns[pg->imtrx], NZeros, a, ija, y, x);
+    err = cmsr_ma28(NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, y, x);
 #endif
 #ifndef HARWELL
     GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented.");
@@ -3281,7 +3285,7 @@ static void print_final(double param, int step_num, int mat_fills, int res_fills
   printf("\tNumber of steps            = %d\n", step_num + 1);
   printf("\tNumber of Matrix fills     = %d\n", mat_fills);
   printf("\tNumber of Residual fills   = %d\n", res_fills);
-  if (Linear_Solver == AZTEC) {
+  if (goma_ctx->solver.linear_solver == AZTEC) {
     printf("\tNumber of linear solve its = %d\n", linear_its);
     fprintf(stdout, "\tNumber of linear solve its = %d\n", linear_its);
   }

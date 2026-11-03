@@ -9181,15 +9181,15 @@ void PSPG_consistency_bc(double *func,
   double U_norm = pg_data->U_norm;
 
   /* This is the flag for the standard global PSPG */
-  if (PSPG == 1) {
+  if (goma_ctx->solver.pspg == 1) {
     pspg_global = TRUE;
     pspg_local = FALSE;
   }
   /* This is the flag for the standard local PSPG */
-  else if (PSPG == 2) {
+  else if (goma_ctx->solver.pspg == 2) {
     pspg_global = FALSE;
     pspg_local = TRUE;
-  } else if (PSPG == 3) {
+  } else if (goma_ctx->solver.pspg == 3) {
     pspg_global = FALSE;
     pspg_local = FALSE;
     pspg_shakib = TRUE;
@@ -9226,9 +9226,9 @@ void PSPG_consistency_bc(double *func,
     double Re = rho * U_norm * h_elem / (2.0 * mu_avg);
 
     if (Re <= 3.0) {
-      tau_pspg = PS_scaling * h_elem * h_elem / (12.0 * mu_avg);
+      tau_pspg = goma_ctx->solver.ps_scaling * h_elem * h_elem / (12.0 * mu_avg);
     } else if (Re > 3.0) {
-      tau_pspg = PS_scaling * h_elem / (2.0 * rho * U_norm);
+      tau_pspg = goma_ctx->solver.ps_scaling * h_elem / (2.0 * rho * U_norm);
     }
   } else if (pspg_local) {
     double hh_siz = 0.;
@@ -9253,7 +9253,7 @@ void PSPG_consistency_bc(double *func,
     if (pd->TimeIntegration != STEADY) {
       tau_pspg1 += 4.0 / (dt * dt);
     }
-    tau_pspg = PS_scaling / sqrt(tau_pspg1);
+    tau_pspg = goma_ctx->solver.ps_scaling / sqrt(tau_pspg1);
 
     // tau_pspg derivatives wrt v from vv_speed
     if (pd->v[pg->imtrx][VELOCITY1]) {
@@ -9332,7 +9332,7 @@ void PSPG_consistency_bc(double *func,
       }
     }
 
-    tau_pspg = PS_scaling / sqrt(tau_time + tau_adv + tau_diff);
+    tau_pspg = goma_ctx->solver.ps_scaling / sqrt(tau_time + tau_adv + tau_diff);
 
     // d/dx 1/sqrt(f(x)) => - f'(x) / (2 * f(x)^(3/2))
     if (pd->v[pg->imtrx][VELOCITY1]) {
@@ -9399,7 +9399,7 @@ void PSPG_consistency_bc(double *func,
   memset(d_div_tau_p_dv, 0, sizeof(double) * DIM * DIM * MDE);
   memset(d_div_tau_p_dmesh, 0, sizeof(double) * DIM * DIM * MDE);
   memset(d_div_tau_p_dp, 0, sizeof(double) * DIM * MDE);
-  if (cr->MassFluxModel == DM_SUSPENSION_BALANCE && PSPG) {
+  if (cr->MassFluxModel == DM_SUSPENSION_BALANCE && goma_ctx->solver.pspg) {
     /* This is the divergence of the particle stress  */
     divergence_particle_stress(div_tau_p, d_div_tau_p_dgd, d_div_tau_p_dy, d_div_tau_p_dv,
                                d_div_tau_p_dmesh, d_div_tau_p_dp, w);

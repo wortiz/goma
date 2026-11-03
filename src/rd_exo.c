@@ -152,7 +152,7 @@ int rd_exo(Exo_DB *x, /* def'd in exo_struct.h */
   x->node_map_exists = FALSE;
   x->elem_map_exists = FALSE;
 
-  if (Linear_Solver == FRONT) {
+  if (goma_ctx->solver.linear_solver == FRONT) {
     x->elem_order_map_exists = TRUE;
   } else
     x->elem_order_map_exists = FALSE;

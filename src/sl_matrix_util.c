@@ -439,9 +439,9 @@ gmax_double
  */
 
 void row_sum_scaling_scale(struct GomaLinearSolverData *ams, double b[], double scale[]) {
-  if (strcmp(Matrix_Format, "msr") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     row_sum_scale_MSR(ams->npu, ams->val, ams->bindx, b, scale);
-  } else if (strcmp(Matrix_Format, "vbr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     row_sum_scale_VBR(ams->npn, ams->val, ams->bpntr, ams->bindx, ams->indx, ams->rpntr, ams->cpntr,
                       b, scale);
   } else if (ams->GomaMatrixData != NULL) {
@@ -449,10 +449,10 @@ void row_sum_scaling_scale(struct GomaLinearSolverData *ams, double b[], double 
     matrix->row_sum_scaling(matrix, b, scale);
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
-  } else if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
     // Skip
 #else
-  } else if (strcmp(Matrix_Format, "petsc") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     petsc_scale_matrix(ams, b, scale);
 #endif
 #endif
@@ -686,14 +686,14 @@ void matrix_scaling(struct GomaLinearSolverData *ams, double *a, double factor, 
   int *rpntr = ams->rpntr;
   int *cpntr = ams->cpntr;
 
-  if (strcmp(Matrix_Format, "msr") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     for (i = 0; i < ams->npu; i++) {
       a[i] *= factor / scale[i];
       for (j = bindx[i]; j < bindx[i + 1]; j++) {
         a[j] *= factor / scale[i];
       }
     }
-  } else if (strcmp(Matrix_Format, "vbr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     for (I = 0; I < ams->npn; I++) {
       blk_rows = rpntr[I + 1] - rpntr[I];
       for (i = rpntr[I], ib = 0; i < rpntr[I + 1]; i++, ib++) {
@@ -819,16 +819,16 @@ void vector_scaling(const int N, double b[], double scale[]) {
  * @return 0 if compatible, -1 if not
  */
 int check_compatible_solver(void) {
-  if (strcmp(Matrix_Format, "tpetra") == 0) {
-    switch (Linear_Solver) {
+  if (strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) {
+    switch (goma_ctx->solver.linear_solver) {
     case STRATIMIKOS:
     case AMESOS2:
       return GOMA_SUCCESS;
     default:
       return GOMA_ERROR;
     }
-  } else if (strcmp(Matrix_Format, "epetra") == 0) {
-    switch (Linear_Solver) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
+    switch (goma_ctx->solver.linear_solver) {
     case AZTECOO:
     case AMESOS:
     case STRATIMIKOS:
@@ -839,16 +839,16 @@ int check_compatible_solver(void) {
   }
 
 #ifdef GOMA_ENABLE_PETSC
-  if (strcmp(Matrix_Format, "petsc") == 0) {
-    switch (Linear_Solver) {
+  if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
+    switch (goma_ctx->solver.linear_solver) {
     case PETSC_SOLVER:
       return GOMA_SUCCESS;
     default:
       return GOMA_ERROR;
     }
   }
-  if (strcmp(Matrix_Format, "petsc_complex") == 0) {
-    switch (Linear_Solver) {
+  if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
+    switch (goma_ctx->solver.linear_solver) {
     case PETSC_COMPLEX_SOLVER:
       return GOMA_SUCCESS;
     default:

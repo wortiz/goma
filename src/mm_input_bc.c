@@ -2362,12 +2362,13 @@ void rd_bc_specs(FILE *ifp, char *input) {
         } else
           SPF(endofstring(echo_string), " %.4g", BC_Types[ibc].BC_Data_Float[0]);
       }
-      if (!strcmp(BC_Types[ibc].desc->name1, "FLUID_SOLID") && Linear_Solver == FRONT)
+      if (!strcmp(BC_Types[ibc].desc->name1, "FLUID_SOLID") &&
+          goma_ctx->solver.linear_solver == FRONT)
         GOMA_EH(GOMA_ERROR,
                 "Mucho Problemo with FLUID_SOLID boundary condition and frontal solver. USE lu");
       if ((!strcmp(BC_Types[ibc].desc->name1, "SOLID_FLUID") ||
            !strcmp(BC_Types[ibc].desc->name1, "SOLID_FLUID_RS")) &&
-          Linear_Solver == FRONT) {
+          goma_ctx->solver.linear_solver == FRONT) {
         SPF(endofstring(echo_string), "\n  %s",
             "Warning: Poquito problemo con el SOLID_FLUID BC y frontal solver.");
         SPF(endofstring(echo_string), " %s",

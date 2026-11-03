@@ -724,7 +724,7 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
           var = R_MESH1 + b;
           pvar = upd->vp[pg->imtrx][var];
 
-          if (strcmp(Matrix_Format, "msr") == 0) {
+          if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
             /*
              * Find the global equation number
              */
@@ -756,7 +756,7 @@ void rotate_mesh_eqn(int id,           /* Elemental stiffness matrix row index *
                 }
               }
             }
-          } else if (strcmp(Matrix_Format, "vbr") == 0) {
+          } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
             rpntr = ams->rpntr;
             bpntr = ams->bpntr;
             bindx = ams->bindx;
@@ -1069,7 +1069,7 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
 
           /* direct insertion of rotation vector sensitivities into global sparse matrices */
 
-          if (strcmp(Matrix_Format, "msr") == 0) {
+          if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
             for (j = 0; j < rotation[I][eq][kdir]->d_vector_n; j++) {
               int ktype, ndof, index_eqn, index_var;
               J = rotation[I][eq][kdir]->d_vector_J[j];
@@ -1099,7 +1099,7 @@ void rotate_momentum_eqn(int id,           /* Elemental stiffness matrix row ind
                 }
               } /* end of Baby_Dolphin[pg->imtrx] */
             }
-          } else if (strcmp(Matrix_Format, "vbr") == 0) {
+          } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
             int *rpntr = ams->rpntr;
             int *bpntr = ams->bpntr;
             int *bindx = ams->bindx;

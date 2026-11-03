@@ -10407,7 +10407,7 @@ int assemble_momentum_path_dependence(dbl time, /* currentt time step */
   (void)momentum_source_term(f, NULL, time);
 
   // Call continuity stabilization if desired
-  if (Cont_GLS) {
+  if (goma_ctx->solver.cont_gls) {
     calc_cont_gls(&cont_gls, NULL, time, pg_data);
   }
 
@@ -10551,7 +10551,7 @@ int assemble_momentum_path_dependence(dbl time, /* currentt time step */
 
           // Continuity residual
           continuity_stabilization = 0.0;
-          if (Cont_GLS) {
+          if (goma_ctx->solver.cont_gls) {
             for (p = 0; p < VIM; p++) {
               continuity_stabilization += grad_phi_i_e_a[p][p];
             }
@@ -10717,7 +10717,7 @@ int assemble_continuity_path_dependence(dbl time_value,
     ompvf = 1.0;
   }
 
-  if (PSPG) {
+  if (goma_ctx->solver.pspg) {
     calc_pspg(pspg, NULL, time_value, tt, dt, pg_data);
   }
 
@@ -10962,7 +10962,7 @@ int assemble_continuity_path_dependence(dbl time_value,
 
       pressure_stabilization = 0.;
 
-      if (PSPG) {
+      if (goma_ctx->solver.pspg) {
         for (a = 0; a < WIM; a++) {
           meqn = R_MOMENTUM1 + a;
           if (pd->e[pg->imtrx][meqn]) {

@@ -562,14 +562,16 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   a = malloc(upd->Total_Num_Matrices * sizeof(double *));
   a_old = malloc(upd->Total_Num_Matrices * sizeof(double *));
 
-  if ((strcmp(Matrix_Format, "tpetra") == 0) || (strcmp(Matrix_Format, "epetra") == 0)) {
+  if ((strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) ||
+      (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0)) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for tpetra, tpetra supports stratimikos");
     check_parallel_error("Matrix format / Solver incompatibility");
 
     for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
       GomaSparseMatrix goma_matrix;
-      goma_error err = GomaSparseMatrix_CreateFromFormat(&goma_matrix, Matrix_Format);
+      goma_error err =
+          GomaSparseMatrix_CreateFromFormat(&goma_matrix, goma_ctx->solver.matrix_format);
       GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
       int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                         goma_ctx->mesh.num_external_nodes;
@@ -585,7 +587,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
 #ifdef GOMA_ENABLE_PETSC
 #if !(PETSC_USE_COMPLEX)
-  } else if (strcmp(Matrix_Format, "petsc") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -597,7 +599,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       GOMA_EH(err, "goma_setup_petsc_matrix");
     }
 #else
-  } else if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -610,7 +612,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
     }
 #endif
 #endif
-  } else if (strcmp(Matrix_Format, "msr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
 
     log_msg("alloc_MSR_sparse_arrays...");
     for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
@@ -657,7 +659,8 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
       ams[pg->imtrx]->nnz_plus = ija[pg->imtrx][num_universe_dofs[pg->imtrx]];
     }
   } else {
-    GOMA_EH(GOMA_ERROR, "Attempted to allocate unknown sparse matrix format: %s", Matrix_Format);
+    GOMA_EH(GOMA_ERROR, "Attempted to allocate unknown sparse matrix format: %s",
+            goma_ctx->solver.matrix_format);
   }
 #ifdef GOMA_ENABLE_PETSC
 #if !(PETSC_USE_COMPLEX)
@@ -692,7 +695,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
     init_vec(x[pg->imtrx], cx[pg->imtrx], exo, dpi, global_x_AC, nAC, &timeValueRead[pg->imtrx]);
 
-    if (upd->ep[pg->imtrx][POLYMER_STRESS11] >= 0 && Conformation_Flag == 1) {
+    if (upd->ep[pg->imtrx][POLYMER_STRESS11] >= 0 && goma_ctx->solver.conformation_flag == 1) {
       initial_guess_stress_to_log_conf(x[pg->imtrx], num_total_nodes);
     }
   }
@@ -1353,7 +1356,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
 
     /* Set the number of successful time steps, nt, to zero */
     nt = 0;
-    time_step_reform = Time_Jacobian_Reformation_stride;
+    time_step_reform = goma_ctx->solver.time_jacobian_reformation_stride;
     const_delta_ts = const_delta_t;
     last_renorm_nt = 0;
 
@@ -2516,35 +2519,35 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           if (inewton == -1) {
             DPRINTF(stdout, "\nHmm... trouble on first step \n  Let's try some "
                             "more relaxation  \n");
-            if ((damp_factor1 <= 1. && damp_factor1 >= 0.) &&
-                (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
-                (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
-              custom_tol1 *= 0.01;
-              custom_tol2 *= 0.01;
-              custom_tol3 *= 0.01;
-              DPRINTF(stdout, "  custom tolerances %g %g %g  \n", custom_tol1, custom_tol2,
-                      custom_tol3);
+            if ((goma_ctx->solver.damp_factor1 <= 1. && goma_ctx->solver.damp_factor1 >= 0.) &&
+                (goma_ctx->solver.damp_factor2 <= 1. && goma_ctx->solver.damp_factor2 >= 0.) &&
+                (goma_ctx->solver.damp_factor3 <= 1. && goma_ctx->solver.damp_factor3 >= 0.)) {
+              goma_ctx->solver.custom_tol1 *= 0.01;
+              goma_ctx->solver.custom_tol2 *= 0.01;
+              goma_ctx->solver.custom_tol3 *= 0.01;
+              DPRINTF(stdout, "  custom tolerances %g %g %g  \n", goma_ctx->solver.custom_tol1,
+                      goma_ctx->solver.custom_tol2, goma_ctx->solver.custom_tol3);
             } else {
-              damp_factor1 *= 0.5;
-              DPRINTF(stdout, "  damping factor %g  \n", damp_factor1);
+              goma_ctx->solver.damp_factor1 *= 0.5;
+              DPRINTF(stdout, "  damping factor %g  \n", goma_ctx->solver.damp_factor1);
             }
           } else {
             DPRINTF(stdout, "\nHmm... could not converge on first step\n Let's "
                             "try some more iterations\n");
             dcopy1(numProcUnknowns[pg->imtrx], x[pg->imtrx], x_old[pg->imtrx]);
 
-            if ((damp_factor1 <= 1. && damp_factor1 >= 0.) &&
-                (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
-                (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
-              custom_tol1 *= 100.;
-              custom_tol2 *= 100.;
-              custom_tol3 *= 100.;
-              DPRINTF(stdout, "  custom tolerances %g %g %g  \n", custom_tol1, custom_tol2,
-                      custom_tol3);
+            if ((goma_ctx->solver.damp_factor1 <= 1. && goma_ctx->solver.damp_factor1 >= 0.) &&
+                (goma_ctx->solver.damp_factor2 <= 1. && goma_ctx->solver.damp_factor2 >= 0.) &&
+                (goma_ctx->solver.damp_factor3 <= 1. && goma_ctx->solver.damp_factor3 >= 0.)) {
+              goma_ctx->solver.custom_tol1 *= 100.;
+              goma_ctx->solver.custom_tol2 *= 100.;
+              goma_ctx->solver.custom_tol3 *= 100.;
+              DPRINTF(stdout, "  custom tolerances %g %g %g  \n", goma_ctx->solver.custom_tol1,
+                      goma_ctx->solver.custom_tol2, goma_ctx->solver.custom_tol3);
             } else {
-              damp_factor1 *= 2.0;
-              damp_factor1 = MIN(damp_factor1, 1.0);
-              DPRINTF(stdout, "  damping factor %g  \n", damp_factor1);
+              goma_ctx->solver.damp_factor1 *= 2.0;
+              goma_ctx->solver.damp_factor1 = MIN(goma_ctx->solver.damp_factor1, 1.0);
+              DPRINTF(stdout, "  damping factor %g  \n", goma_ctx->solver.damp_factor1);
             }
           }
         } else if (delta_t < tran->resolved_delta_t_min / tran->time_step_decelerator) {

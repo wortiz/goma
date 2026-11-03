@@ -443,18 +443,20 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 #ifdef LIBRARY_MODE
   int last_step = FALSE; /* Indicates final time step on this call */
 #endif
-  double damp_factor_org[2] = {damp_factor1, damp_factor2};
+  double damp_factor_org[2] = {goma_ctx->solver.damp_factor1, goma_ctx->solver.damp_factor2};
 #ifdef RELAX_ON_TRANSIENT_PLEASE
   int relax_bit = TRUE; /* Enables relaxation after a transient convergence failure*/
-  double toler_org[3] = {custom_tol1, custom_tol2, custom_tol3};
+  double toler_org[3] = {goma_ctx->solver.custom_tol1, goma_ctx->solver.custom_tol2,
+                         goma_ctx->solver.custom_tol3};
 #else
   int relax_bit = FALSE;
 #endif
   int no_relax_retry = ceil(2. - log(damp_factor_org[0]) / log(2.));
   int nonconv_roll = 0;
   int use_custom_damp =
-      ((damp_factor1 <= 1. && damp_factor1 >= 0.) && (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
-       (damp_factor3 <= 1. && damp_factor3 >= 0.));
+      ((goma_ctx->solver.damp_factor1 <= 1. && goma_ctx->solver.damp_factor1 >= 0.) &&
+       (goma_ctx->solver.damp_factor2 <= 1. && goma_ctx->solver.damp_factor2 >= 0.) &&
+       (goma_ctx->solver.damp_factor3 <= 1. && goma_ctx->solver.damp_factor3 >= 0.));
 
   static const char yo[] = "solve_problem"; /* So my name is in a string.        */
 
@@ -730,12 +732,14 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
   /* Allocate sparse matrix */
 
   ams[JAC]->GomaMatrixData = NULL;
-  if ((strcmp(Matrix_Format, "tpetra") == 0) || (strcmp(Matrix_Format, "epetra") == 0)) {
+  if ((strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) ||
+      (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0)) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for tpetra, tpetra supports stratimikos");
     check_parallel_error("Matrix format / Solver incompatibility");
     GomaSparseMatrix goma_matrix;
-    goma_error err = GomaSparseMatrix_CreateFromFormat(&goma_matrix, Matrix_Format);
+    goma_error err =
+        GomaSparseMatrix_CreateFromFormat(&goma_matrix, goma_ctx->solver.matrix_format);
     GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
     int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                       goma_ctx->mesh.num_external_nodes;
@@ -747,7 +751,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     ams[JAC]->GomaMatrixData = goma_matrix;
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
-  } else if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -757,7 +761,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
         num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix_complex");
 #else
-  } else if (strcmp(Matrix_Format, "petsc") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -768,7 +772,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #endif
 #endif
-  } else if (strcmp(Matrix_Format, "msr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     log_msg("alloc_MSR_sparse_arrays...");
     alloc_MSR_sparse_arrays(&ija, &a, &a_old, 0, node_to_fill, exo, dpi);
     /*
@@ -807,17 +811,18 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
     ams[JAC]->nnz = ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] - 1;
     ams[JAC]->nnz_plus = ija[num_universe_dofs[pg->imtrx]];
 
-  } else if (strcmp(Matrix_Format, "vbr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     log_msg("alloc_VBR_sparse_arrays...");
     alloc_VBR_sparse_arrays(ams[JAC], exo, dpi);
     ija_attic = NULL;
     ams[JAC]->belfry = ija_attic;
 
     a = ams[JAC]->val;
-    if (!save_old_A)
+    if (!goma_ctx->solver.save_old_a)
       a_old = ams[JAC]->val_old = NULL;
   } else {
-    GOMA_EH(GOMA_ERROR, "Attempted to allocate unknown sparse matrix format: %s", Matrix_Format);
+    GOMA_EH(GOMA_ERROR, "Attempted to allocate unknown sparse matrix format: %s",
+            goma_ctx->solver.matrix_format);
   }
 #ifdef GOMA_ENABLE_PETSC
 #if !(PETSC_USE_COMPLEX)
@@ -889,7 +894,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 #endif
   }
 
-  if (Conformation_Flag == 1) // If mapping is needed for log-conformation tensor
+  if (goma_ctx->solver.conformation_flag == 1) // If mapping is needed for log-conformation tensor
   {
     initial_guess_stress_to_log_conf(x, num_total_nodes);
   }
@@ -927,7 +932,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
   dcopy1(nAC, x_AC, &(gv[5]));
 
-  if (Output_Variable_Stats) {
+  if (goma_ctx->solver.output_variable_stats) {
     err = variable_stats(x, timeValueRead, FALSE);
     GOMA_EH(err, "Problem with variable_stats!");
     if (goma_ctx->proc_id == 0)
@@ -1090,8 +1095,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                                  pp_volume[i]->volume_fname, pp_volume[i]->params,
                                  pp_volume[i]->num_params, NULL, x, xdot, delta_t, time1, 1);
       }
-      if (Output_Variable_Stats) {
-        err = variable_stats(x, time1, Output_Variable_Regression);
+      if (goma_ctx->solver.output_variable_stats) {
+        err = variable_stats(x, time1, goma_ctx->solver.output_variable_regression);
         GOMA_EH(err, "Problem with variable_stats!");
         if (goma_ctx->proc_id == 0)
           fflush(stdout);
@@ -1265,7 +1270,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 
     /* Set the number of successful time steps, nt, to zero */
     nt = 0;
-    time_step_reform = Time_Jacobian_Reformation_stride;
+    time_step_reform = goma_ctx->solver.time_jacobian_reformation_stride;
     const_delta_ts = const_delta_t;
     last_renorm_nt = 0;
 
@@ -1924,8 +1929,8 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
        *   successful time step
        */
       if (nt > 0 && converged) {
-        damp_factor2 = -1.;
-        damp_factor1 = 1.0;
+        goma_ctx->solver.damp_factor2 = -1.;
+        goma_ctx->solver.damp_factor1 = 1.0;
         no_relax_retry = 0;
       }
 #endif
@@ -1942,7 +1947,7 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       exchange_dof(cx[0], dpi, xdot, 0);
 
       if (!converged) {
-        if (inewton < Max_Newton_Steps) {
+        if (inewton < goma_ctx->solver.max_newton_steps) {
           DPRINTF(stderr, "copying x_save for time: %g %d\n", time1, nonconv_roll);
           dcopy1(numProcUnknowns, x_save, x);
           dcopy1(numProcUnknowns, xdot_save, xdot);
@@ -2036,8 +2041,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
       }
 
       if (converged && success_dt) {
-        if (Filter_Species) {
-          err = filter_conc(num_total_nodes, x, filter_species_material_number, c_min, c_max);
+        if (goma_ctx->solver.filter_species) {
+          err = filter_conc(num_total_nodes, x, goma_ctx->solver.filter_species_material_number,
+                            goma_ctx->solver.c_min, goma_ctx->solver.c_max);
         }
         nt += 1;
         time = time1;
@@ -2407,9 +2413,9 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
                                    x, xdot, x_sens_p, delta_t_old, time, 1);
         }
 
-        if (Output_Variable_Stats) {
+        if (goma_ctx->solver.output_variable_stats) {
           if (time >= time_max) {
-            err = variable_stats(x, time, Output_Variable_Regression);
+            err = variable_stats(x, time, goma_ctx->solver.output_variable_regression);
           } else {
             err = variable_stats(x, time, FALSE);
           }
@@ -2494,27 +2500,27 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
 #ifdef RESET_TRANSIENT_RELAXATION_PLEASE
           nonconv_roll++;
           if (nonconv_roll == 1 && nt != 0) {
-            damp_factor1 = damp_factor_org[0];
-            damp_factor2 = damp_factor_org[1];
-            custom_tol1 = toler_org[0];
-            custom_tol2 = toler_org[1];
-            custom_tol3 = toler_org[2];
+            goma_ctx->solver.damp_factor1 = damp_factor_org[0];
+            goma_ctx->solver.damp_factor2 = damp_factor_org[1];
+            goma_ctx->solver.custom_tol1 = toler_org[0];
+            goma_ctx->solver.custom_tol2 = toler_org[1];
+            goma_ctx->solver.custom_tol3 = toler_org[2];
           }
 #endif
           if (inewton == -1) {
             DPRINTF(stdout, "\nHmm... trouble on this step \n  Let's try some more relaxation %d\n",
                     no_relax_retry - nonconv_roll);
             if (use_custom_damp) {
-              custom_tol1 *= 0.01;
-              custom_tol2 *= 0.01;
-              custom_tol3 *= 0.01;
-              DPRINTF(stdout, "  custom tolerances %g %g %g  \n", custom_tol1, custom_tol2,
-                      custom_tol3);
+              goma_ctx->solver.custom_tol1 *= 0.01;
+              goma_ctx->solver.custom_tol2 *= 0.01;
+              goma_ctx->solver.custom_tol3 *= 0.01;
+              DPRINTF(stdout, "  custom tolerances %g %g %g  \n", goma_ctx->solver.custom_tol1,
+                      goma_ctx->solver.custom_tol2, goma_ctx->solver.custom_tol3);
             } else {
-              damp_factor1 *= 0.5;
-              DPRINTF(stdout, "  damping factor %g  \n", damp_factor1);
+              goma_ctx->solver.damp_factor1 *= 0.5;
+              DPRINTF(stdout, "  damping factor %g  \n", goma_ctx->solver.damp_factor1);
             }
-          } else if (!converged && (inewton == Max_Newton_Steps)) {
+          } else if (!converged && (inewton == goma_ctx->solver.max_newton_steps)) {
             DPRINTF(stdout,
                     "\nHmm... could not converge on this step\nLet's try some more iterations %d\n",
                     no_relax_retry - nonconv_roll);
@@ -2524,24 +2530,24 @@ void solve_problem(Exo_DB *exo, /* ptr to the finite element mesh database  */
             }
             if (use_custom_damp) {
               if (nonconv_roll > 1 || nt == 0) {
-                custom_tol1 *= 100.;
-                custom_tol2 *= 100.;
-                custom_tol3 *= 100.;
-                DPRINTF(stdout, "  custom tolerances %g %g %g  \n", custom_tol1, custom_tol2,
-                        custom_tol3);
+                goma_ctx->solver.custom_tol1 *= 100.;
+                goma_ctx->solver.custom_tol2 *= 100.;
+                goma_ctx->solver.custom_tol3 *= 100.;
+                DPRINTF(stdout, "  custom tolerances %g %g %g  \n", goma_ctx->solver.custom_tol1,
+                        goma_ctx->solver.custom_tol2, goma_ctx->solver.custom_tol3);
               }
             } else {
               if (nonconv_roll > 1 || nt == 0) {
-                damp_factor1 *= 2.0;
-                damp_factor1 = MIN(damp_factor1, 1.0);
+                goma_ctx->solver.damp_factor1 *= 2.0;
+                goma_ctx->solver.damp_factor1 = MIN(goma_ctx->solver.damp_factor1, 1.0);
               }
-              DPRINTF(stdout, "  damping factor %g  \n", damp_factor1);
+              DPRINTF(stdout, "  damping factor %g  \n", goma_ctx->solver.damp_factor1);
             }
           } else {
             DPRINTF(stderr, "\n\tlast time step failed, dt *= %g for next try!\n",
                     tran->time_step_decelerator);
 
-            damp_factor1 = MAX(damp_factor1, 1.0);
+            goma_ctx->solver.damp_factor1 = MAX(goma_ctx->solver.damp_factor1, 1.0);
             delta_t *= tran->time_step_decelerator;
             tran->delta_t = delta_t;
             tran->delta_t_avg = 0.25 * (delta_t + delta_t_old + delta_t_older + delta_t_oldest);
@@ -2720,7 +2726,7 @@ free_and_clear:
     GomaSparseMatrix goma_matrix = ams[JAC]->GomaMatrixData;
     GomaSparseMatrix_Destroy(&goma_matrix);
 #ifdef GOMA_ENABLE_PETSC
-    if (strcmp(Matrix_Format, "petsc") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
       err = goma_petsc_free_matrix(ams[JAC]);
       GOMA_EH(err, "free petsc matrix");
     }

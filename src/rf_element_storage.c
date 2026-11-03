@@ -234,12 +234,12 @@ void set_init_Element_Storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
   if (mp_glob[mn]->SaturationModel == TANH_HYST) {
     ip_total = eb_ptr->IP_total;
     Draining_curve = mp_glob[mn]->u_saturation[8];
-    if (Guess_Flag == 4 || Guess_Flag == 5) {
+    if (goma_ctx->solver.guess_flag == 4 || goma_ctx->solver.guess_flag == 5) {
       GOMA_EH(GOMA_ERROR, "Not a smooth restart for hysteretic saturation function. If you really "
                           "want to do this use read_exoII_file or call us");
     }
 
-    if (Guess_Flag == 5 || Guess_Flag == 6) {
+    if (goma_ctx->solver.guess_flag == 5 || goma_ctx->solver.guess_flag == 6) {
       GOMA_WH(-1, "Initializing Hysteretic Curve values at all Gauss points with read_exoII_file");
       goma_ctx->cpu_word_size = sizeof(double);
       goma_ctx->io_word_size = 0;
@@ -377,13 +377,13 @@ void set_init_Element_Storage(ELEM_BLK_STRUCT *eb_ptr, int mn)
 
   if (elc_glob[mn]->thermal_expansion_model == SHRINKAGE) {
     ip_total = eb_ptr->IP_total;
-    if (Guess_Flag == 4 || Guess_Flag == 5) {
+    if (goma_ctx->solver.guess_flag == 4 || goma_ctx->solver.guess_flag == 5) {
       GOMA_EH(
           GOMA_ERROR,
           "Not a smooth restart for solidification shrinkage model.Use read_exoII_file or call us");
     }
 
-    if (Guess_Flag == 5 || Guess_Flag == 6) {
+    if (goma_ctx->solver.guess_flag == 5 || goma_ctx->solver.guess_flag == 6) {
       GOMA_EH(
           GOMA_ERROR,
           "Initializing solidified shrinkage model from exoII file not available yet. Use zero");

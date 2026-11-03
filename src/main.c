@@ -868,7 +868,7 @@ int main(int argc, char **argv)
   /*
    * Remove front scratch file [/tmp/lu.'pid'.0]
    */
-  if (Linear_Solver == FRONT) {
+  if (goma_ctx->solver.linear_solver == FRONT) {
     unlerr = unlink(goma_ctx->front_scratch_directory);
     GOMA_WH(unlerr, "Unlink problem with front scratch file");
   }

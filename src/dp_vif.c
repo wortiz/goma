@@ -146,7 +146,7 @@ void noahs_raven(void) {
   ddd_add_member(n, &nn_average, 1, MPI_INT);
   ddd_add_member(n, &Chemkin_Needed, 1, MPI_INT);
   ddd_add_member(n, &efv->ev, 1, MPI_INT);
-  ddd_add_member(n, &LOCA_UMF_ID, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.loca_umf_id, 1, MPI_INT);
   ddd_add_member(n, &Use_Level_Set, 1, MPI_INT);
   ddd_add_member(n, &Use_Phase_Field, 1, MPI_INT);
   ddd_add_member(n, &Use_DG, 1, MPI_INT);
@@ -569,9 +569,9 @@ void noahs_ark(void) {
 #ifdef MATRIX_DUMP
   ddd_add_member(n, &Number_Jac_Dump, 1, MPI_INT);
 #endif
-  ddd_add_member(n, &Guess_Flag, 1, MPI_INT);
-  ddd_add_member(n, &Conformation_Flag, 1, MPI_INT);
-  ddd_add_member(n, &Print3DBCDup, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.guess_flag, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.conformation_flag, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.print3dbcdup, 1, MPI_INT);
 
   /*
    * The variable initialization structures are of fixed size, but only
@@ -666,64 +666,65 @@ void noahs_ark(void) {
    * Solver stuff
    */
 
-  ddd_add_member(n, Matrix_Solver, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Format, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Scaling, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Preconditioner, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Residual_Norm_Type, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Output_Type, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Factorization_Reuse, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Maximum_Iterations, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Polynomial_Order, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Factor_Overlap, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Krylov_Subspace, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Orthogonalization, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Auxiliary_Vector, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Convergence_Tolerance, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Drop_Tolerance, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_solver, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_format, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_scaling, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_preconditioner, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_residual_norm_type, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_output_type, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_factorization_reuse, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_maximum_iterations, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_polynomial_order, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_factor_overlap, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_krylov_subspace, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_orthogonalization, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_auxiliary_vector, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_convergence_tolerance, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_drop_tolerance, MAX_CHAR_IN_INPUT, MPI_CHAR);
 
   /*
    * New for Aztec 2.0...
    */
 
-  ddd_add_member(n, Matrix_Reorder, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Subdomain_Solver, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Graph_Fillin, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Overlap_Type, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Factorization_Save, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_ILUT_Fill_Factor, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_RILU_Relax_Factor, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_BILU_Threshold, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Relative_Threshold, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Matrix_Absolute_Threshold, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Amesos_Package, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Amesos2_Package, MAX_CHAR_IN_INPUT, MPI_CHAR);
-  ddd_add_member(n, Stratimikos_File, MAX_CHAR_IN_INPUT * MAX_NUM_MATRICES, MPI_CHAR);
-  ddd_add_member(n, Amesos2_File, MAX_CHAR_IN_INPUT * MAX_NUM_MATRICES, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_reorder, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_subdomain_solver, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_graph_fillin, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_overlap_type, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_factorization_save, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_ilut_fill_factor, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_rilu_relax_factor, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_bilu_threshold, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_relative_threshold, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.matrix_absolute_threshold, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.amesos_package, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.amesos2_package, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.stratimikos_file, MAX_CHAR_IN_INPUT * MAX_NUM_MATRICES,
+                 MPI_CHAR);
+  ddd_add_member(n, goma_ctx->solver.amesos2_file, MAX_CHAR_IN_INPUT * MAX_NUM_MATRICES, MPI_CHAR);
 
-  ddd_add_member(n, &Linear_Solver, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.linear_solver, 1, MPI_INT);
 
-  ddd_add_member(n, &Max_Newton_Steps, 1, MPI_INT);
-  ddd_add_member(n, &Guess_Flag, 1, MPI_INT);
-  ddd_add_member(n, &Conformation_Flag, 1, MPI_INT);
-  ddd_add_member(n, &damp_factor1, 1, MPI_DOUBLE);
-  ddd_add_member(n, &damp_factor2, 1, MPI_DOUBLE);
-  ddd_add_member(n, &damp_factor3, 1, MPI_DOUBLE);
-  ddd_add_member(n, &var_damp, MAX_VARIABLE_TYPES, MPI_DOUBLE);
-  ddd_add_member(n, &custom_tol1, 1, MPI_DOUBLE);
-  ddd_add_member(n, &custom_tol2, 1, MPI_DOUBLE);
-  ddd_add_member(n, &custom_tol3, 1, MPI_DOUBLE);
-  ddd_add_member(n, &Newt_Jacobian_Reformation_stride, 1, MPI_INT);
-  ddd_add_member(n, &Time_Jacobian_Reformation_stride, 1, MPI_INT);
-  ddd_add_member(n, &Newton_Line_Search_Type, 1, MPI_INT);
-  ddd_add_member(n, &Line_Search_Minimum_Damping, 1, MPI_DOUBLE);
-  ddd_add_member(n, &modified_newton, 1, MPI_INT);
-  ddd_add_member(n, &convergence_rate_tolerance, 1, MPI_DOUBLE);
-  ddd_add_member(n, &modified_newt_norm_tol, 1, MPI_DOUBLE);
-  ddd_add_member(n, Epsilon, MAX_NUM_MATRICES * 3, MPI_DOUBLE);
-  ddd_add_member(n, &Solver_Output_Format, 1, MPI_INT);
-  ddd_add_member(n, &Output_Variable_Stats, 1, MPI_INT);
-  ddd_add_member(n, &Output_Variable_Regression, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.max_newton_steps, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.guess_flag, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.conformation_flag, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.damp_factor1, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.damp_factor2, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.damp_factor3, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.var_damp, MAX_VARIABLE_TYPES, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.custom_tol1, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.custom_tol2, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.custom_tol3, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.newt_jacobian_reformation_stride, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.time_jacobian_reformation_stride, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.newton_line_search_type, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.line_search_minimum_damping, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.modified_newton, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.convergence_rate_tolerance, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.modified_newt_norm_tol, 1, MPI_DOUBLE);
+  ddd_add_member(n, goma_ctx->solver.epsilon, MAX_NUM_MATRICES * 3, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.solver_output_format, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.output_variable_stats, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.output_variable_regression, 1, MPI_INT);
 
   /*
    * Eigensolver inputs.
@@ -765,19 +766,19 @@ void noahs_ark(void) {
    * processors conception of NZeroes.
    */
 
-  ddd_add_member(n, &NZeros, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.nzeros, 1, MPI_INT);
 
-  ddd_add_member(n, &GNZeros, 1, MPI_INT);
-  ddd_add_member(n, &PSPG, 1, MPI_INT);
-  ddd_add_member(n, &PSPP, 1, MPI_INT);
-  ddd_add_member(n, &PS_scaling, 1, MPI_DOUBLE);
-  ddd_add_member(n, &Cont_GLS, 1, MPI_INT);
-  ddd_add_member(n, &Filter_Species, 1, MPI_INT);
-  ddd_add_member(n, &Include_Visc_Sens, 1, MPI_INT);
-  ddd_add_member(n, &Visc_Sens_Copy, 1, MPI_INT);
-  ddd_add_member(n, &Visc_Sens_Factor, 1, MPI_INT);
-  ddd_add_member(n, &c_min, 1, MPI_DOUBLE);
-  ddd_add_member(n, &c_max, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.gnzeros, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.pspg, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.pspp, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.ps_scaling, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.cont_gls, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.filter_species, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.include_visc_sens, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.visc_sens_copy, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.visc_sens_factor, 1, MPI_INT);
+  ddd_add_member(n, &goma_ctx->solver.c_min, 1, MPI_DOUBLE);
+  ddd_add_member(n, &goma_ctx->solver.c_max, 1, MPI_DOUBLE);
 
   /*
    * Particle data.

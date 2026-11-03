@@ -868,7 +868,7 @@ double power_law_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
 
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
 
@@ -886,7 +886,7 @@ double power_law_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -1019,7 +1019,7 @@ double herschel_bulkley_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
 
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
 
@@ -1040,7 +1040,7 @@ double herschel_bulkley_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -1164,7 +1164,7 @@ double carreau_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -1180,7 +1180,7 @@ double carreau_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -1346,7 +1346,7 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -1362,7 +1362,7 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -1372,7 +1372,7 @@ double carreau_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   }
   if (d_mu != NULL && pd->e[pg->imtrx][TEMPERATURE]) {
     for (i = 0; i < vdofs; i++) {
-      if (Include_Visc_Sens) {
+      if (goma_ctx->solver.include_visc_sens) {
         d_mu->T[i] = mu / hscale * d_hscale_dT * bf[TEMPERATURE]->phi[i];
       } else {
         d_mu->T[i] = 0.0;
@@ -1568,7 +1568,7 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -1584,7 +1584,7 @@ double bingham_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -1732,7 +1732,7 @@ double bingham_wlf_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -1748,7 +1748,7 @@ double bingham_wlf_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -1938,7 +1938,7 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -1954,7 +1954,7 @@ double carreau_wlf_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -2261,7 +2261,7 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -2277,7 +2277,7 @@ double carreau_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -2365,7 +2365,7 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
 
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
 
@@ -2383,7 +2383,7 @@ double power_law_arrhenius_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -2505,7 +2505,7 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -2521,7 +2521,7 @@ double powerlaw_suspension_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -3389,7 +3389,7 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -3405,7 +3405,7 @@ double bond_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;
@@ -3651,7 +3651,7 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->X[b][j] = d_mu->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -3667,7 +3667,7 @@ double carreau_wlf_conc_viscosity(struct Generalized_Newtonian *gn_local,
   if (d_mu != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_mu->v[a][i] = d_mu->gd * d_gd_dv[a][i];
         } else {
           d_mu->v[a][i] = 0.0;

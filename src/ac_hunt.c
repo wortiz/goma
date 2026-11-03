@@ -213,9 +213,9 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
    * 		BEGIN EXECUTION
    */
 
-  toler_org[0] = custom_tol1;
-  toler_org[1] = custom_tol2;
-  toler_org[2] = custom_tol3;
+  toler_org[0] = goma_ctx->solver.custom_tol1;
+  toler_org[1] = goma_ctx->solver.custom_tol2;
+  toler_org[2] = goma_ctx->solver.custom_tol3;
 
   is_steady_state = TRUE;
 
@@ -544,12 +544,14 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
   /* Allocate sparse matrix */
 
-  if ((strcmp(Matrix_Format, "tpetra") == 0) || (strcmp(Matrix_Format, "epetra") == 0)) {
+  if ((strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) ||
+      (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0)) {
     err = check_compatible_solver();
-    GOMA_EH(err, "Incompatible matrix solver for matrix format %s", Matrix_Format);
+    GOMA_EH(err, "Incompatible matrix solver for matrix format %s", goma_ctx->solver.matrix_format);
     check_parallel_error("Matrix format / Solver incompatibility");
     GomaSparseMatrix goma_matrix;
-    goma_error err = GomaSparseMatrix_CreateFromFormat(&goma_matrix, Matrix_Format);
+    goma_error err =
+        GomaSparseMatrix_CreateFromFormat(&goma_matrix, goma_ctx->solver.matrix_format);
     GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
 
     int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
@@ -566,7 +568,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
-  } else if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -576,7 +578,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
         num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #else
-  } else if (strcmp(Matrix_Format, "petsc") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -587,7 +589,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #endif
 #endif
-  } else if (strcmp(Matrix_Format, "msr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     log_msg("alloc_MSR_sparse_arrays...");
     alloc_MSR_sparse_arrays(&ija, &a, &a_old, 0, node_to_fill, exo, dpi);
     /*
@@ -627,16 +629,16 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
     ams[JAC]->nnz = ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] - 1;
     ams[JAC]->nnz_plus = ija[num_universe_dofs[pg->imtrx]];
 
-  } else if (strcmp(Matrix_Format, "vbr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     log_msg("alloc_VBR_sparse_arrays...");
     alloc_VBR_sparse_arrays(ams[JAC], exo, dpi);
     ija_attic = NULL;
     ams[JAC]->belfry = ija_attic;
 
     a = ams[JAC]->val;
-    if (!save_old_A)
+    if (!goma_ctx->solver.save_old_a)
       a_old = ams[JAC]->val_old;
-  } else if (strcmp(Matrix_Format, "front") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "front") == 0) {
     /* Don't allocate any sparse matrix space when using front */
     ams[JAC]->bindx = NULL;
     ams[JAC]->val = NULL;
@@ -703,8 +705,8 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
   DPRINTF(stdout, "\nINITIAL ELEMENT QUALITY CHECK---\n");
   good_mesh = element_quality(exo, x, ams[0]->proc_config);
 
-  if (Output_Variable_Stats) {
-    err = variable_stats(x, path1[0], Output_Variable_Regression);
+  if (goma_ctx->solver.output_variable_stats) {
+    err = variable_stats(x, path1[0], goma_ctx->solver.output_variable_regression);
     GOMA_EH(err, "Problem with variable_stats!");
     if (goma_ctx->proc_id == 0)
       fflush(stdout);
@@ -966,7 +968,7 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
 
       if (!converged) {
 
-        if (ni > Max_Newton_Steps / 2) {
+        if (ni > goma_ctx->solver.max_newton_steps / 2) {
           DPRINTF(stdout, "\n ************************************\n");
           DPRINTF(stdout, " W: Did not converge in Newton steps.\n");
           DPRINTF(stdout, "    Find better initial guess.       \n");
@@ -1072,17 +1074,17 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
           }
         } else if (inewton == -1) {
           DPRINTF(stdout, "\nHmm... trouble on first step \n  Let's try some more relaxation  \n");
-          if ((damp_factor1 <= 1. && damp_factor1 >= 0.) &&
-              (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
-              (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
-            custom_tol1 *= 0.01;
-            custom_tol2 *= 0.01;
-            custom_tol3 *= 0.01;
-            DPRINTF(stdout, "  custom tolerances %g %g %g  \n", custom_tol1, custom_tol2,
-                    custom_tol3);
+          if ((goma_ctx->solver.damp_factor1 <= 1. && goma_ctx->solver.damp_factor1 >= 0.) &&
+              (goma_ctx->solver.damp_factor2 <= 1. && goma_ctx->solver.damp_factor2 >= 0.) &&
+              (goma_ctx->solver.damp_factor3 <= 1. && goma_ctx->solver.damp_factor3 >= 0.)) {
+            goma_ctx->solver.custom_tol1 *= 0.01;
+            goma_ctx->solver.custom_tol2 *= 0.01;
+            goma_ctx->solver.custom_tol3 *= 0.01;
+            DPRINTF(stdout, "  custom tolerances %g %g %g  \n", goma_ctx->solver.custom_tol1,
+                    goma_ctx->solver.custom_tol2, goma_ctx->solver.custom_tol3);
           } else {
-            damp_factor1 *= 0.5;
-            DPRINTF(stdout, "  damping factor %g  \n", damp_factor1);
+            goma_ctx->solver.damp_factor1 *= 0.5;
+            DPRINTF(stdout, "  damping factor %g  \n", goma_ctx->solver.damp_factor1);
           }
 
           vcopy(numProcUnknowns, &x[0], 1.0, &x_old[0]);
@@ -1105,35 +1107,35 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
         } else {
           DPRINTF(stdout,
                   "\nHmm... could not converge on first step\n Let's try some more iterations\n");
-          if ((damp_factor1 <= 1. && damp_factor1 >= 0.) &&
-              (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
-              (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
+          if ((goma_ctx->solver.damp_factor1 <= 1. && goma_ctx->solver.damp_factor1 >= 0.) &&
+              (goma_ctx->solver.damp_factor2 <= 1. && goma_ctx->solver.damp_factor2 >= 0.) &&
+              (goma_ctx->solver.damp_factor3 <= 1. && goma_ctx->solver.damp_factor3 >= 0.)) {
             if (hunt[0].BCID == -1) {
               if (goma_ctx->write_intermediate_solutions == 0) {
                 write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot,
                                xdot_old, tev, tev_post, gv, rd, gvec, gvec_elem, &nprint,
-                               delta_s[0], theta, custom_tol1, NULL, exo, dpi);
+                               delta_s[0], theta, goma_ctx->solver.custom_tol1, NULL, exo, dpi);
                 nprint++;
               }
             }
-            custom_tol1 *= 100.;
-            custom_tol2 *= 100.;
-            custom_tol3 *= 100.;
-            DPRINTF(stdout, "  custom tolerances %g %g %g  \n", custom_tol1, custom_tol2,
-                    custom_tol3);
+            goma_ctx->solver.custom_tol1 *= 100.;
+            goma_ctx->solver.custom_tol2 *= 100.;
+            goma_ctx->solver.custom_tol3 *= 100.;
+            DPRINTF(stdout, "  custom tolerances %g %g %g  \n", goma_ctx->solver.custom_tol1,
+                    goma_ctx->solver.custom_tol2, goma_ctx->solver.custom_tol3);
           } else {
             if (hunt[0].BCID == -1) {
               if (goma_ctx->write_intermediate_solutions == 0) {
-                DPRINTF(stdout, "  writing solution %g  \n", damp_factor1);
+                DPRINTF(stdout, "  writing solution %g  \n", goma_ctx->solver.damp_factor1);
                 write_solution(goma_ctx->exo_file_out, resid_vector, x, x_sens_p, x_old, xdot,
                                xdot_old, tev, tev_post, gv, rd, gvec, gvec_elem, &nprint,
-                               delta_s[0], theta, damp_factor1, NULL, exo, dpi);
+                               delta_s[0], theta, goma_ctx->solver.damp_factor1, NULL, exo, dpi);
                 nprint++;
               }
             }
-            damp_factor1 *= 2.0;
-            damp_factor1 = MIN(damp_factor1, 1.0);
-            DPRINTF(stdout, "  damping factor %g  \n", damp_factor1);
+            goma_ctx->solver.damp_factor1 *= 2.0;
+            goma_ctx->solver.damp_factor1 = MIN(goma_ctx->solver.damp_factor1, 1.0);
+            DPRINTF(stdout, "  damping factor %g  \n", goma_ctx->solver.damp_factor1);
           }
         }
 
@@ -1145,10 +1147,10 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
      * CONVERGED
      */
     nt++;
-    custom_tol1 = toler_org[0];
-    custom_tol2 = toler_org[1];
-    custom_tol3 = toler_org[2];
-    damp_factor1 = 1.0;
+    goma_ctx->solver.custom_tol1 = toler_org[0];
+    goma_ctx->solver.custom_tol2 = toler_org[1];
+    goma_ctx->solver.custom_tol3 = toler_org[2];
+    goma_ctx->solver.damp_factor1 = 1.0;
     DPRINTF(stdout, "\n\tStep accepted, theta (proportion complete) = %10.6e\n", hunt_par);
     for (iHC = 0; iHC < nHC; iHC++) {
       switch (hunt[iHC].Type) {
@@ -1213,8 +1215,8 @@ void hunt_problem(Comm_Ex *cx, /* array of communications structures */
       }
     }
 
-    if (Output_Variable_Stats) {
-      err = variable_stats(x, path1[0], Output_Variable_Regression);
+    if (goma_ctx->solver.output_variable_stats) {
+      err = variable_stats(x, path1[0], goma_ctx->solver.output_variable_regression);
       GOMA_EH(err, "Problem with variable_stats!");
       if (goma_ctx->proc_id == 0)
         fflush(stdout);

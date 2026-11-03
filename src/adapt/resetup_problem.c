@@ -189,11 +189,12 @@ int resetup_problem(Exo_DB *exo, /* ptr to the finite element mesh database */
 }
 
 int resetup_matrix(struct GomaLinearSolverData **ams, Exo_DB *exo, Dpi *dpi) {
-  if ((strcmp(Matrix_Format, "tpetra") == 0) || (strcmp(Matrix_Format, "epetra") == 0)) {
+  if ((strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) ||
+      (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0)) {
     for (pg->imtrx = 0; pg->imtrx < upd->Total_Num_Matrices; pg->imtrx++) {
       GomaSparseMatrix goma_matrix = ams[pg->imtrx]->GomaMatrixData;
       GomaSparseMatrix_Destroy(&goma_matrix);
-      GomaSparseMatrix_CreateFromFormat(&goma_matrix, Matrix_Format);
+      GomaSparseMatrix_CreateFromFormat(&goma_matrix, goma_ctx->solver.matrix_format);
       ams[pg->imtrx]->GomaMatrixData = goma_matrix;
       int local_nodes = exo->num_nodes;
       GomaSparseMatrix_SetProblemGraph(

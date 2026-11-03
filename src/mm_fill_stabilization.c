@@ -971,15 +971,15 @@ int calc_pspg(dbl pspg[DIM],
   }
 
   /* This is the flag for the standard global PSPG */
-  if (PSPG == 1) {
+  if (goma_ctx->solver.pspg == 1) {
     pspg_global = TRUE;
     pspg_local = FALSE;
   }
   /* This is the flag for the standard local PSPG */
-  else if (PSPG == 2) {
+  else if (goma_ctx->solver.pspg == 2) {
     pspg_global = FALSE;
     pspg_local = TRUE;
-  } else if (PSPG == 3) { // Shakib
+  } else if (goma_ctx->solver.pspg == 3) { // Shakib
     pspg_global = FALSE;
     pspg_local = FALSE;
   } else {
@@ -1004,7 +1004,7 @@ int calc_pspg(dbl pspg[DIM],
   memset(d_tau_pspg_dv, 0, sizeof(dbl) * DIM * MDE);
   memset(d_tau_pspg_dX, 0, sizeof(dbl) * DIM * MDE);
 
-  if (cr->MassFluxModel == DM_SUSPENSION_BALANCE && PSPG) {
+  if (cr->MassFluxModel == DM_SUSPENSION_BALANCE && goma_ctx->solver.pspg) {
     w0 = gn->sus_species_no;
     /* This is the divergence of the particle stress  */
     /* divergence_particle_stress(div_tau_p, d_div_tau_p_dgd, d_div_tau_p_dy,
@@ -1038,9 +1038,9 @@ int calc_pspg(dbl pspg[DIM],
     Re = rho * U_norm * h_elem / (2.0 * mu_avg);
 
     if (Re <= 3.0) {
-      tau_pspg = PS_scaling * h_elem * h_elem / (12.0 * mu_avg);
+      tau_pspg = goma_ctx->solver.ps_scaling * h_elem * h_elem / (12.0 * mu_avg);
     } else if (Re > 3.0) {
-      tau_pspg = PS_scaling * h_elem / (2.0 * rho * U_norm);
+      tau_pspg = goma_ctx->solver.ps_scaling * h_elem / (2.0 * rho * U_norm);
     }
     pspg_tau.tau = tau_pspg;
   } else if (pspg_local) {
@@ -1062,7 +1062,7 @@ int calc_pspg(dbl pspg[DIM],
     if (pd->TimeIntegration != STEADY) {
       tau_pspg1 += 4.0 / (dt * dt);
     }
-    tau_pspg = PS_scaling / sqrt(tau_pspg1);
+    tau_pspg = goma_ctx->solver.ps_scaling / sqrt(tau_pspg1);
 
     pspg_tau.tau = tau_pspg;
 
@@ -1095,7 +1095,7 @@ int calc_pspg(dbl pspg[DIM],
         }
       }
     }
-  } else if (PSPG == 3) { // shakib
+  } else if (goma_ctx->solver.pspg == 3) { // shakib
     tau_momentum_shakib(&pspg_tau, pd->Num_Dim, dt, TRUE);
   }
 
@@ -1637,7 +1637,7 @@ int calc_cont_gls(dbl *cont_gls,
    * tau_cont = h_elem*u_norm*max{Re,1}/2;
    * The Reynolds number, Re, is defined as in calc_pspg
    */
-  if (Cont_GLS == 1) {
+  if (goma_ctx->solver.cont_gls == 1) {
     h_elem = h_elem_avg;
     U = U_norm;
   } else {
@@ -1666,7 +1666,7 @@ int calc_cont_gls(dbl *cont_gls,
       var = VELOCITY1 + b;
       if (pd->v[pg->imtrx][var]) {
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          if (Cont_GLS == 1 || U == 0) {
+          if (goma_ctx->solver.cont_gls == 1 || U == 0) {
             d_tau_dv[b][j] = 0.0;
           } else if (Re > 1.0) {
             d_tau_dv[b][j] =
@@ -1684,7 +1684,7 @@ int calc_cont_gls(dbl *cont_gls,
       var = MESH_DISPLACEMENT1 + b;
       if (pd->v[pg->imtrx][var]) {
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          if (Cont_GLS == 1 || h_elem == 0) {
+          if (goma_ctx->solver.cont_gls == 1 || h_elem == 0) {
             d_tau_dmesh[b][j] = 0.0;
           } else if (Re > 1.0) {
             d_tau_dmesh[b][j] = rho / (2.0 * mu_avg) * U * U * pg_data->hhv[b][b] *

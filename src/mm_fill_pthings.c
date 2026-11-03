@@ -1623,7 +1623,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
       return (err);
   }
 
-  if (PSPG && 0) {
+  if (goma_ctx->solver.pspg && 0) {
     /*      h_elem = 0.;
             for ( p=0; p<dim; p++)
             {
@@ -1645,9 +1645,9 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
     Re = rho * U_norm * h_elem / (2.0 * mu_avg);
 
     if (Re <= 3.0) {
-      tau_pspg = PS_scaling * h_elem * h_elem / (12.0 * mu_avg);
+      tau_pspg = goma_ctx->solver.ps_scaling * h_elem * h_elem / (12.0 * mu_avg);
     } else if (Re > 3.0) {
-      tau_pspg = PS_scaling * h_elem / (2.0 * rho * U_norm);
+      tau_pspg = goma_ctx->solver.ps_scaling * h_elem / (2.0 * rho * U_norm);
     }
 
     /* load up shearrate tensor based on velocity */
@@ -1669,10 +1669,11 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
             d_tau_pspg_dm[b][j] = 0.;
             for (w = 0; w < dim; w++) {
               if (Re <= 3.0) {
-                d_tau_pspg_dm[b][j] += PS_scaling * hh[w][b] * dh_dxnode[w][j] / (24.0 * mu_avg);
-              } else {
                 d_tau_pspg_dm[b][j] +=
-                    PS_scaling * hh[w][b] * dh_dxnode[w][j] * h_elem_inv / (8.0 * rho * U_norm);
+                    goma_ctx->solver.ps_scaling * hh[w][b] * dh_dxnode[w][j] / (24.0 * mu_avg);
+              } else {
+                d_tau_pspg_dm[b][j] += goma_ctx->solver.ps_scaling * hh[w][b] * dh_dxnode[w][j] *
+                                       h_elem_inv / (8.0 * rho * U_norm);
               }
             }
           }
@@ -1864,7 +1865,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
        * if desired.
        */
       pressure_stabilization = 0.;
-      if (PSPG && 0) {
+      if (goma_ctx->solver.pspg && 0) {
         for (a = 0; a < WIM; a++) {
           meqn = R_PMOMENTUM1 + a;
           if (pd->e[pg->imtrx][meqn]) {
@@ -1940,7 +1941,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
              * if desired.
              */
             pressure_stabilization = 0.;
-            if (PSPG && 0) {
+            if (goma_ctx->solver.pspg && 0) {
               for (a = 0; a < WIM; a++) {
                 meqn = R_PMOMENTUM1 + a;
 
@@ -2005,7 +2006,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
        * which comes from the Pressure-Stabilized Petrov-Galerkin term
        */
       var = TEMPERATURE;
-      if (PSPG && pd->v[pg->imtrx][var]) {
+      if (goma_ctx->solver.pspg && pd->v[pg->imtrx][var]) {
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           pvar = upd->vp[pg->imtrx][var];
 
@@ -2117,7 +2118,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
            * if desired.
            */
           pressure_stabilization = 0.;
-          if (PSPG) {
+          if (goma_ctx->solver.pspg) {
             for (a = 0; a < WIM; a++) {
               meqn = R_PMOMENTUM1 + a;
               if (pd->e[pg->imtrx][meqn] & T_DIFFUSION) {
@@ -2137,7 +2138,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
        * J_c_S this term is only present for PSPG
        */
       var = POLYMER_STRESS11;
-      if (PSPG && pd->v[pg->imtrx][var]) {
+      if (goma_ctx->solver.pspg && pd->v[pg->imtrx][var]) {
         pvar = upd->vp[pg->imtrx][var];
 
         for (p = 0; p < VIM; p++) {
@@ -2176,7 +2177,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
        * J_c_G this term is only present for PSPG
        */
       var = VELOCITY_GRADIENT11;
-      if (PSPG && pd->v[pg->imtrx][var]) {
+      if (goma_ctx->solver.pspg && pd->v[pg->imtrx][var]) {
         pvar = upd->vp[pg->imtrx][var];
 
         for (p = 0; p < VIM; p++) {
@@ -2307,7 +2308,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
              * if desired.
              */
             pressure_stabilization = 0.;
-            if (PSPG) {
+            if (goma_ctx->solver.pspg) {
               for (a = 0; a < WIM; a++) {
                 meqn = R_PMOMENTUM1 + a;
                 if (pd->e[pg->imtrx][meqn]) {
@@ -2438,7 +2439,7 @@ int MMH_assemble_continuity(double time_value,       /* current value of time */
             }
 
             pressure_stabilization = 0.;
-            if (PSPG) {
+            if (goma_ctx->solver.pspg) {
               mass = 0.;
               advection = 0.;
               porous = 0.;

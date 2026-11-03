@@ -6336,8 +6336,8 @@ int lub_viscosity_integrate(const double strs,
   double xint = 0., xint_a = 0., visc_a = 0., xintold = 0., temp, at = 1.;
   double xintdT = 0., wlf_denom = 0.;
 
-  res_tol = MIN(TOL_CEIL, Epsilon[pg->imtrx][0]);
-  soln_tol = MIN(TOL_CEIL, Epsilon[pg->imtrx][2]);
+  res_tol = MIN(TOL_CEIL, goma_ctx->solver.epsilon[pg->imtrx][0]);
+  soln_tol = MIN(TOL_CEIL, goma_ctx->solver.epsilon[pg->imtrx][2]);
 
   if (mp->LubIntegrationModel == LUB_VISCINT_ANALYTICAL) {
     a_visc_type = TRUE;
@@ -6829,7 +6829,7 @@ int lub_viscosity_integrate(const double strs,
   /**  Compute flow magnitude  **/
   *flow_mag = -0.25 * SQUARE(H) * shr * (1.0 - xint);
   if (dq_gradp != NULL) {
-    if (Include_Visc_Sens) {
+    if (goma_ctx->solver.include_visc_sens) {
       *dq_gradp = -0.25 * CUBE(H) * xint / vis_w;
     } else {
       *dq_gradp = -0.25 * CUBE(H) * xint / vis_w * (1. + visd / vis_w);
@@ -6954,8 +6954,8 @@ int lub2D_flow2D(const double gradp[DIM],
   double term2, term3, vterm[DIM];
   double dfv_dpg[DIM][DIM], dqfl_depg[DIM][DIM];
 
-  res_tol = MIN(TOL_CEIL, Epsilon[pg->imtrx][0]);
-  soln_tol = MIN(TOL_CEIL, Epsilon[pg->imtrx][2]);
+  res_tol = MIN(TOL_CEIL, goma_ctx->solver.epsilon[pg->imtrx][0]);
+  soln_tol = MIN(TOL_CEIL, goma_ctx->solver.epsilon[pg->imtrx][2]);
 
   /*        check if the flow is only drag flow  */
 
@@ -7113,7 +7113,7 @@ int lub2D_flow2D(const double gradp[DIM],
       /*      jacobian entries   */
 
       memset(xj, 0.0, sizeof(double) * DIM * DIM);
-      if (Include_Visc_Sens || iter > ((int)(0.5 / relax_rate))) {
+      if (goma_ctx->solver.include_visc_sens || iter > ((int)(0.5 / relax_rate))) {
         xj[0][0] = vis0 + SQUARE(rate0) * dvis0;
         xj[0][1] = -vis1 - SQUARE(rate1) * dvis1;
         xj[1][0] = rate0 * (vis0 + SQUARE(rate0) * dvis0);
@@ -7129,7 +7129,7 @@ int lub2D_flow2D(const double gradp[DIM],
         xj[1][2] = 0.;
       }
       if (!colinear) {
-        if (Include_Visc_Sens || iter > ((int)(0.5 / relax_rate))) {
+        if (goma_ctx->solver.include_visc_sens || iter > ((int)(0.5 / relax_rate))) {
           xj[2][0] = Kconst * (1. + SQUARE(rate0) * dvis0 / vis0);
           xj[2][1] = -Kconst * (1. + SQUARE(rate1) * dvis1 / vis1);
         } else {

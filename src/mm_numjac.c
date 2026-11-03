@@ -376,11 +376,11 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
   // assuming we are only computing coloring once, and that the matrix does not change
   Coloring *coloring = NULL;
 
-  if (strcmp(Matrix_Format, "msr"))
+  if (strcmp(goma_ctx->solver.matrix_format, "msr"))
     GOMA_EH(GOMA_ERROR, "Cannot compute numerical jacobian values for non-MSR formats.");
 
   /* calculates the total number of non-zero entries in the analytical jacobian, a[] */
-  nnonzero = NZeros + 1;
+  nnonzero = goma_ctx->solver.nzeros + 1;
 
   /* allocate arrays to hold jacobian and vector values */
   irow = (int *)array_alloc(1, nnonzero, sizeof(int));
@@ -399,7 +399,7 @@ int numerical_jacobian_compute_stress(struct GomaLinearSolverData *ams,
   memcpy(resid_vector_save, resid_vector, numProcUnknowns * (sizeof(double)));
 
   /* Cannot do this with Front */
-  if (Linear_Solver == FRONT)
+  if (goma_ctx->solver.linear_solver == FRONT)
     GOMA_EH(GOMA_ERROR, "Cannot use frontal solver with numjac. Use umf or lu");
 
   /* Initialization */
@@ -810,11 +810,11 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
 #endif
 
   DPRINTF(stderr, "\n Starting Numerical Jacobian Checker\n");
-  if (strcmp(Matrix_Format, "msr"))
+  if (strcmp(goma_ctx->solver.matrix_format, "msr"))
     GOMA_EH(GOMA_ERROR, "Cannot compute numerical jacobian values for non-MSR formats.");
 
   /* calculates the total number of non-zero entries in the analytical jacobian, a[] */
-  nnonzero = NZeros + 1;
+  nnonzero = goma_ctx->solver.nzeros + 1;
   nn = ija[NumUnknowns[pg->imtrx]] - ija[0]; /* total number of diagonal entries a[] */
 
   /* allocate arrays to hold jacobian and vector values */
@@ -840,7 +840,7 @@ void numerical_jacobian(struct GomaLinearSolverData *ams,
     GOMA_EH(GOMA_ERROR, "No room for storage for computing numerical jacobian");
 
   /* Cannot do this with Front */
-  if (Linear_Solver == FRONT)
+  if (goma_ctx->solver.linear_solver == FRONT)
     GOMA_EH(GOMA_ERROR, "Cannot use frontal solver with numjac. Use umf or lu");
 
   /* Initialization */

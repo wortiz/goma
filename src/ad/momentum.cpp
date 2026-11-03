@@ -762,15 +762,15 @@ int ad_calc_pspg(ADType pspg[DIM],
     pspg[a] = 0.;
 
   /* This is the flag for the standard global PSPG */
-  if (PSPG == 1) {
+  if (goma_ctx->solver.pspg == 1) {
     pspg_global = TRUE;
     pspg_local = FALSE;
   }
   /* This is the flag for the standard local PSPG */
-  else if (PSPG == 2) {
+  else if (goma_ctx->solver.pspg == 2) {
     pspg_global = FALSE;
     pspg_local = TRUE;
-  } else if (PSPG == 3) { // Shakib
+  } else if (goma_ctx->solver.pspg == 3) { // Shakib
     pspg_global = FALSE;
     pspg_local = FALSE;
   } else {
@@ -805,7 +805,7 @@ int ad_calc_pspg(ADType pspg[DIM],
     GOMA_EH(GOMA_ERROR, "PSPG Global not enabled for AD");
   } else if (pspg_local) {
     GOMA_EH(GOMA_ERROR, "PSPG Local not enabled for AD");
-  } else if (PSPG == 3) { // shakib
+  } else if (goma_ctx->solver.pspg == 3) { // shakib
     ad_only_tau_momentum_shakib(pspg_tau, pd->Num_Dim, dt, TRUE);
   }
 
@@ -1197,7 +1197,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
       return (err);
   }
 
-  if (PSPG) {
+  if (goma_ctx->solver.pspg) {
     ad_calc_pspg(pspg, time_value, tt, dt, pg_data);
   }
 
@@ -1270,7 +1270,7 @@ int ad_assemble_continuity(dbl time_value, /* current time */
       }
 
       ADType pressure_stabilization = 0.0;
-      if (PSPG) {
+      if (goma_ctx->solver.pspg) {
         for (a = 0; a < WIM; a++) {
           meqn = R_MOMENTUM1 + a;
           if (pd->gv[meqn]) {

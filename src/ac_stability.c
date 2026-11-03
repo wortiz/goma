@@ -202,10 +202,10 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
   LSA_current_wave_number = 0;
 
   /* Allocate mass matrix */
-  mass_matrix = calloc((NZeros + 5), sizeof(double));
+  mass_matrix = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
   if (LSA_COMPARE) {
-    mass_matrix_tmpA = calloc((NZeros + 5), sizeof(double));
-    mass_matrix_tmpB = calloc((NZeros + 5), sizeof(double));
+    mass_matrix_tmpA = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
+    mass_matrix_tmpB = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
   }
 
   num_total_nodes = dpi->num_universe_nodes;
@@ -213,7 +213,7 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
   /* Get jacobian matrix */
   printf("Assembling J...\n");
   jacobian_matrix = ams->val;
-  init_vec_value(&jacobian_matrix[0], 0.0, (NZeros + 1));
+  init_vec_value(&jacobian_matrix[0], 0.0, (goma_ctx->solver.nzeros + 1));
 
   af->Assemble_Residual = TRUE;
   af->Assemble_Jacobian = TRUE;
@@ -239,8 +239,8 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
   /* The other way: */
   if (LSA_COMPARE) /* For a comparison, this is the Subtraction method... */
   {
-    init_vec_value(&mass_matrix_tmpA[0], 0.0, (NZeros + 1));
-    init_vec_value(&mass_matrix_tmpB[0], 0.0, (NZeros + 1));
+    init_vec_value(&mass_matrix_tmpA[0], 0.0, (goma_ctx->solver.nzeros + 1));
+    init_vec_value(&mass_matrix_tmpB[0], 0.0, (goma_ctx->solver.nzeros + 1));
 
     TimeIntegration = TRANSIENT;
     for (mn = 0; mn < upd->Num_Mat; mn++) {
@@ -278,7 +278,7 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
                      &theta, First_Elem_Side_BC_Array[pg->imtrx], &time_value, exo, dpi,
                      &num_total_nodes, &zero[0], &zero[0], NULL);
 
-    for (i = 0; i < NZeros + 1; i++) {
+    for (i = 0; i < goma_ctx->solver.nzeros + 1; i++) {
       double_temp = mass_matrix_tmpB[i] - mass_matrix_tmpA[i];
       /*
         if(double_temp != 0.0)
@@ -309,7 +309,7 @@ int solve_full_stability_problem(struct GomaLinearSolverData *ams,
 
   /* Hopefully, with all of these settings, this should compute the
    * mass matrix in mass_matrix and ija */
-  init_vec_value(&mass_matrix[0], 0.0, (NZeros + 1));
+  init_vec_value(&mass_matrix[0], 0.0, (goma_ctx->solver.nzeros + 1));
 
   printf("Assembling B...\n");
   af->Assemble_Residual = TRUE;
@@ -346,7 +346,7 @@ for(i = 0; i < NZeros+1; i++)
   /* Print jacobian and mass matrices */
   if (Linear_Stability == LSA_SAVE || eigen->Eigen_Matrix_Output)
     output_stability_matrices(mass_matrix, jacobian_matrix, ija, num_total_nodes,
-                              NumUnknowns[pg->imtrx], NZeros);
+                              NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros);
 
   if (Linear_Stability != LSA_SAVE) {
     /* Call eggroll initiator */
@@ -354,7 +354,7 @@ for(i = 0; i < NZeros+1; i++)
       istuff[i] = -1;
       dstuff[i] = -1.0;
     }
-    eggroll_init(NumUnknowns[pg->imtrx], NZeros, &istuff[0], &dstuff[0]);
+    eggroll_init(NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros, &istuff[0], &dstuff[0]);
 
     /* Call eggroll solver */
     eggrollwrap(istuff, dstuff, ija, jacobian_matrix, mass_matrix, x, goma_ctx->exo_file_out,
@@ -444,22 +444,22 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     }
 
   /* Allocate mass matrices */
-  mass_matrix = calloc((NZeros + 5), sizeof(double));
-  mass_matrix_1 = calloc((NZeros + 5), sizeof(double));
-  mass_matrix_2 = calloc((NZeros + 5), sizeof(double));
+  mass_matrix = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
+  mass_matrix_1 = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
+  mass_matrix_2 = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
   if (LSA_COMPARE) {
-    mass_matrix_1_tmpA = calloc((NZeros + 5), sizeof(double));
-    mass_matrix_1_tmpB = calloc((NZeros + 5), sizeof(double));
-    mass_matrix_2_tmpA = calloc((NZeros + 5), sizeof(double));
-    mass_matrix_2_tmpB = calloc((NZeros + 5), sizeof(double));
+    mass_matrix_1_tmpA = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
+    mass_matrix_1_tmpB = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
+    mass_matrix_2_tmpA = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
+    mass_matrix_2_tmpB = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
   }
 
   /* Allocate jacobian matrices */
-  jacobian_matrix = calloc((NZeros + 5), sizeof(double));
+  jacobian_matrix = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
   /* jacobian_matrix_1 is going to use the ams->val space already
    * allocated... */
   jacobian_matrix_1 = ams->val;
-  jacobian_matrix_2 = calloc((NZeros + 5), sizeof(double));
+  jacobian_matrix_2 = calloc((goma_ctx->solver.nzeros + 5), sizeof(double));
 
   num_total_nodes = dpi->num_universe_nodes;
 
@@ -485,7 +485,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     printf("Assembling J (pass 1)...\n");
     LSA_3D_of_2D_pass = 1;
     ams->val = jacobian_matrix_1;
-    init_vec_value(&jacobian_matrix_1[0], 0.0, (NZeros + 1));
+    init_vec_value(&jacobian_matrix_1[0], 0.0, (goma_ctx->solver.nzeros + 1));
     af->Assemble_Residual = TRUE;
     af->Assemble_Jacobian = TRUE;
     af->Assemble_LSA_Jacobian_Matrix = TRUE;
@@ -499,7 +499,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     printf("Assembling J (pass 2)...\n");
     LSA_3D_of_2D_pass = 2;
     ams->val = jacobian_matrix_2;
-    init_vec_value(&jacobian_matrix_2[0], 0.0, (NZeros + 1));
+    init_vec_value(&jacobian_matrix_2[0], 0.0, (goma_ctx->solver.nzeros + 1));
     af->Assemble_Residual = TRUE;
     af->Assemble_Jacobian = TRUE;
     af->Assemble_LSA_Jacobian_Matrix = TRUE;
@@ -511,7 +511,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
     /* Add the two passes together to get the "real" Jacobian
      * matrix. */
-    for (i = 0; i < NZeros + 1; i++)
+    for (i = 0; i < goma_ctx->solver.nzeros + 1; i++)
       jacobian_matrix[i] = jacobian_matrix_1[i] + jacobian_matrix_2[i];
 
     /* This call will fill in scale[] with the proper row scales.  I
@@ -557,10 +557,10 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
     /* Subtractionism method for mass matrix, passes 1 and 2. */
     if (LSA_COMPARE) {
-      init_vec_value(&mass_matrix_1_tmpA[0], 0.0, (NZeros + 1));
-      init_vec_value(&mass_matrix_1_tmpB[0], 0.0, (NZeros + 1));
-      init_vec_value(&mass_matrix_2_tmpA[0], 0.0, (NZeros + 1));
-      init_vec_value(&mass_matrix_2_tmpB[0], 0.0, (NZeros + 1));
+      init_vec_value(&mass_matrix_1_tmpA[0], 0.0, (goma_ctx->solver.nzeros + 1));
+      init_vec_value(&mass_matrix_1_tmpB[0], 0.0, (goma_ctx->solver.nzeros + 1));
+      init_vec_value(&mass_matrix_2_tmpA[0], 0.0, (goma_ctx->solver.nzeros + 1));
+      init_vec_value(&mass_matrix_2_tmpB[0], 0.0, (goma_ctx->solver.nzeros + 1));
 
       /* They all have the same action flag settings... */
       af->Assemble_Residual = TRUE;
@@ -608,7 +608,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
       /* Now construct the actual Subtractionism versions of each
        * pass.  These are stored in mass_matrix_[1,2]_tmpA. */
-      for (i = 0; i < NZeros + 1; i++) {
+      for (i = 0; i < goma_ctx->solver.nzeros + 1; i++) {
         mass_matrix_1_tmpA[i] = mass_matrix_1_tmpB[i] - mass_matrix_1_tmpA[i];
         mass_matrix_2_tmpA[i] = mass_matrix_2_tmpB[i] - mass_matrix_2_tmpA[i];
       }
@@ -629,9 +629,9 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
         }
     }
 
-    init_vec_value(&mass_matrix[0], 0.0, (NZeros + 1));
-    init_vec_value(&mass_matrix_1[0], 0.0, (NZeros + 1));
-    init_vec_value(&mass_matrix_2[0], 0.0, (NZeros + 1));
+    init_vec_value(&mass_matrix[0], 0.0, (goma_ctx->solver.nzeros + 1));
+    init_vec_value(&mass_matrix_1[0], 0.0, (goma_ctx->solver.nzeros + 1));
+    init_vec_value(&mass_matrix_2[0], 0.0, (goma_ctx->solver.nzeros + 1));
 
     /* These action flags and delta_t are the same for both
      * passes. */
@@ -658,7 +658,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
     /* Get my mass matrix by adding the two passes together (don't
      * forget the -! */
-    for (i = 0; i < NZeros + 1; i++)
+    for (i = 0; i < goma_ctx->solver.nzeros + 1; i++)
       mass_matrix[i] = -(mass_matrix_1[i] + mass_matrix_2[i]);
 
     /* Scale all of the preliminary pieces for comparison, if we're
@@ -690,7 +690,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
 
       /* Get the sum of passes for Subtractionism method.  This
        * was already done above for my regular method. */
-      for (i = 0; i < NZeros + 1; i++)
+      for (i = 0; i < goma_ctx->solver.nzeros + 1; i++)
         mass_matrix_1_tmpA[i] = mass_matrix_1_tmpA[i] + mass_matrix_1_tmpB[i];
 
       /* Compare sum of passes results. */
@@ -707,7 +707,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
     /* Print Jacobian and mass matrices */
     if (Linear_Stability == LSA_3D_OF_2D_SAVE || eigen->Eigen_Matrix_Output)
       output_stability_matrices(mass_matrix, jacobian_matrix, ija, num_total_nodes,
-                                NumUnknowns[pg->imtrx], NZeros);
+                                NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros);
 
     if (Linear_Stability != LSA_3D_OF_2D_SAVE) {
       /* Call eggroll initiator */
@@ -717,7 +717,7 @@ int solve_3D_of_2D_stability_problem(struct GomaLinearSolverData *ams,
       }
       printf("Entering eggrollinit...\n");
       fflush(stdout);
-      eggroll_init(NumUnknowns[pg->imtrx], NZeros, &istuff[0], &dstuff[0]);
+      eggroll_init(NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros, &istuff[0], &dstuff[0]);
 
       /* Call eggroll solver */
       printf("Entering eggrollwrap...\n");

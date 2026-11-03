@@ -18,7 +18,8 @@
 #include <mpi.h>
 
 #include "ac_particles_types.h"
-#include "rf_io_const.h"
+#include "rf_fem_const.h" /* MAX_NUM_MATRICES, MAX_VARIABLE_TYPES */
+#include "rf_io_const.h"  /* MAX_CHAR_IN_INPUT */
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,6 +116,101 @@ typedef struct GomaParticles {
   int num_element_info;
 } GomaParticles;
 
+#ifndef String_line_is_defined
+#define String_line_is_defined
+typedef char String_line[MAX_CHAR_IN_INPUT];
+#endif
+
+/*
+ * Linear and nonlinear solver options, formerly the globals in rf_solver.h.
+ * The Matrix_* strings are read from the input deck and interpreted later;
+ * their meanings follow the Aztec manual (SAND 95-1559).
+ */
+typedef struct GomaSolver {
+  String_line matrix_solver;
+  String_line matrix_format;
+  String_line matrix_scaling;
+  String_line matrix_preconditioner;
+  String_line matrix_subdomain_solver; /* Aztec 2.x */
+  String_line matrix_residual_norm_type;
+  String_line matrix_output_type;
+  String_line matrix_factorization_reuse;
+  String_line matrix_graph_fillin; /* Aztec 2.x */
+  String_line matrix_maximum_iterations;
+  String_line matrix_polynomial_order;
+  String_line matrix_factor_overlap;
+  String_line matrix_overlap_type;
+  String_line matrix_krylov_subspace;
+  String_line matrix_orthogonalization;
+  String_line matrix_auxiliary_vector;
+  String_line matrix_convergence_tolerance;
+  String_line matrix_drop_tolerance;
+  String_line matrix_factorization_save; /* Aztec 2 */
+  String_line matrix_ilut_fill_factor;   /* Aztec 2 */
+  String_line matrix_rilu_relax_factor;  /* Aztec 2 */
+  String_line matrix_bilu_threshold;     /* Trilinos 1 */
+  String_line matrix_relative_threshold; /* Trilinos 2 */
+  String_line matrix_absolute_threshold; /* Trilinos 2 */
+  String_line matrix_reorder;            /* Aztec 2.0 */
+  String_line amesos_package;
+  String_line amesos2_package;
+  String_line aztecoo_solver;
+  String_line stratimikos_file[MAX_NUM_MATRICES];
+  String_line amesos2_file[MAX_NUM_MATRICES];
+
+  int linear_solver; /* Aztec, Sparse, MA28, UMFPACK */
+  int umfpack_idim;  /* UMFPACK storage constant */
+  int umfpack_xdim;  /* UMFPACK storage constant */
+  int loca_umf_id;   /* UMFPACK system id */
+
+  int max_newton_steps;  /* maximum number of Newton steps to take */
+  int guess_flag;        /* type of initial guess */
+  int conformation_flag; /* mapping from stress to log-conformation tensor */
+  int print3dbcdup;
+
+  double damp_factor;
+  double damp_factor1; /* Newton relaxation: 1.0 is full Newton, 0.0 does not update */
+  double damp_factor2; /* additional damping factors and NORM(0,0) tolerances */
+  double damp_factor3; /* for custom automatic control schemes */
+  double custom_tol1;
+  double custom_tol2;
+  double custom_tol3;
+  double var_damp[MAX_VARIABLE_TYPES]; /* variable specific damp factors */
+
+  int newt_jacobian_reformation_stride; /* jacobian reformation stride, modified Newton */
+  int time_jacobian_reformation_stride;
+  int newton_line_search_type;
+  double line_search_minimum_damping;
+  int modified_newton;               /* modified Newton flag */
+  int save_old_a;                    /* save old A matrix for Aztec resolves (see sl_util.c) */
+  double convergence_rate_tolerance; /* jacobian reformation tolerance on convergence rate */
+  double modified_newt_norm_tol;     /* jacobian reformation tolerance on residual norm */
+
+  double epsilon[MAX_NUM_MATRICES][3]; /* stopping criteria */
+  int solver_output_format;            /* bitmap for solver output columns */
+  int output_variable_stats;           /* toggle for variable statistics */
+  int output_variable_regression;      /* toggle for variable regression */
+
+  int nzeros;      /* nonzeros in this proc's matrix */
+  int gnzeros;     /* nonzeros in the global matrix */
+  int fill_zeros;  /* nonzeros in the fill matrix for this processor */
+  int gfill_zeros; /* nonzeros in the fill matrix for the global problem */
+
+  int pspg;          /* pressure stabilized Petrov-Galerkin */
+  int pspp;          /* pressure stabilized polynomial projection */
+  double ps_scaling; /* constant scaling for the PSPG or PSPP term */
+  int cont_gls;      /* continuity stabilization */
+
+  int filter_species;
+  int filter_species_material_number;
+  double c_min;
+  double c_max;
+
+  int include_visc_sens; /* include viscosity sensitivities in the jacobian */
+  int visc_sens_copy;
+  int visc_sens_factor;
+} GomaSolver;
+
 /*
  * GomaContext collects process-wide state that used to live in individual
  * global variables: MPI/parallel information and I/O / run configuration.
@@ -182,6 +278,7 @@ typedef struct GomaContext {
 
   GomaMesh mesh;           /* legacy mesh description */
   GomaParticles particles; /* particle tracking */
+  GomaSolver solver;       /* linear and nonlinear solver options */
 } GomaContext;
 
 /*

@@ -10722,7 +10722,7 @@ void check_xfem_contribution(
   int *ija = ams->bindx;
   double *a = ams->val;
 
-  if (strcmp(Matrix_Format, "msr") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     for (irow = 0; irow < N; irow++) {
       eqn = idv[pg->imtrx][irow][0];
       if (eqn == R_MASS || eqn == R_ENERGY)

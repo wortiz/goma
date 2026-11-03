@@ -115,10 +115,16 @@ TEST_CASE("goma context reset restores defaults", "[util][goma_context]") {
   ctx->debug_flag = 3;
   ctx->decompose_flag = 0;
   ctx->petsc_options = static_cast<char *>(std::calloc(8, 1));
+  ctx->solver.pspg = 1;
+  ctx->solver.damp_factor1 = 0.5;
+  std::strcpy(ctx->solver.matrix_solver, "lu");
   goma_context_reset(ctx);
   REQUIRE(ctx->debug_flag == 0);
   REQUIRE(ctx->decompose_flag == 1);
   REQUIRE(ctx->petsc_options == nullptr);
+  REQUIRE(ctx->solver.pspg == 0);
+  REQUIRE(ctx->solver.damp_factor1 == 0.0);
+  REQUIRE(ctx->solver.matrix_solver[0] == '\0');
   goma_context_destroy(ctx);
 }
 

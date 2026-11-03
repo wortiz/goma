@@ -139,7 +139,7 @@ double power_law_time_const(struct PolymerTimeConstants *lambda_st,
   if (d_lambda != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
 
           d_lambda->X[b][j] = d_lambda->gd * d_gd_dmesh[b][j];
 
@@ -157,7 +157,7 @@ double power_law_time_const(struct PolymerTimeConstants *lambda_st,
   if (d_lambda != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_lambda->v[a][i] = d_lambda->gd * d_gd_dv[a][i];
         } else {
           d_lambda->v[a][i] = 0.0;
@@ -234,7 +234,7 @@ double carreau_polymer_time_const(struct PolymerTimeConstants *lambda_st,
   if (d_lambda != NULL && pd->e[pg->imtrx][R_MESH1]) {
     for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_lambda->X[b][j] = d_lambda->gd * d_gd_dmesh[b][j];
         } else {
           /* printf("\ngammadot is zero in viscosity function");*/
@@ -250,7 +250,7 @@ double carreau_polymer_time_const(struct PolymerTimeConstants *lambda_st,
   if (d_lambda != NULL && pd->e[pg->imtrx][R_MOMENTUM1]) {
     for (a = 0; a < VIM; a++) {
       for (i = 0; i < vdofs; i++) {
-        if (DOUBLE_NONZERO(gammadot) && Include_Visc_Sens) {
+        if (DOUBLE_NONZERO(gammadot) && goma_ctx->solver.include_visc_sens) {
           d_lambda->v[a][i] = d_lambda->gd * d_gd_dv[a][i];
         } else {
           d_lambda->v[a][i] = 0.0;

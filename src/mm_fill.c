@@ -531,8 +531,9 @@ Revised:         Summer 1998, SY Tam (UNM)
    */
 
   if (exo->ns_node_len > 0 &&
-      ((zeroCA == 1) || ((Linear_Solver != FRONT && ielem == exo->eb_ptr[0]) ||
-                         (Linear_Solver == FRONT && ielem == exo->elem_order_map[0] - 1)))) {
+      ((zeroCA == 1) ||
+       ((goma_ctx->solver.linear_solver != FRONT && ielem == exo->eb_ptr[0]) ||
+        (goma_ctx->solver.linear_solver == FRONT && ielem == exo->elem_order_map[0] - 1)))) {
     int nsp, nspk, count = -1;
     memset(CA_fselem, -1, sizeof(int) * MAX_CA);
     memset(CA_sselem, -1, sizeof(int) * MAX_CA);
@@ -742,17 +743,18 @@ Revised:         Summer 1998, SY Tam (UNM)
    * load_basis_functions here. Is this big penalty necessary or
    * can be piggyback on top of one gauss point?
    */
-  if (PSPG) {
-    if (PSPG == 1) {
+  if (goma_ctx->solver.pspg) {
+    if (goma_ctx->solver.pspg == 1) {
       pspg_local = 0;
     }
     /* This is the flag for the standard local PSPG */
-    else if (PSPG == 2) {
+    else if (goma_ctx->solver.pspg == 2) {
       pspg_local = 1;
     }
   }
 
-  if ((PSPG == 1 || PSPG == 2) && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
+  if ((goma_ctx->solver.pspg == 1 || goma_ctx->solver.pspg == 2) && pde[R_PRESSURE] &&
+      pde[R_MOMENTUM1]) {
     xi[0] = 0.0;
     xi[1] = 0.0;
     xi[2] = 0.0;
@@ -787,7 +789,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
   }
 
-  if (Cont_GLS && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
+  if (goma_ctx->solver.cont_gls && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
     xi[0] = 0.0;
     xi[1] = 0.0;
     xi[2] = 0.0;
@@ -795,7 +797,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     pg_data.mu_avg = element_viscosity();
     pg_data.rho_avg = density(NULL, time_value);
 
-    if (Cont_GLS == 2) {
+    if (goma_ctx->solver.cont_gls == 2) {
       h_elem_siz(pg_data.hsquared, pg_data.hhv, pg_data.dhv_dxnode, pde[R_MESH1]);
       element_velocity(pg_data.v_avg, pg_data.dv_dnode, exo);
     }
@@ -974,7 +976,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   }
 
   if (pde[R_PRESSURE]) {
-    if (PSPP == 1) {
+    if (goma_ctx->solver.pspp == 1) {
       err = assemble_projection_stabilization(exo, time_value);
       GOMA_EH(err, "assemble_projection_stabilization");
 #ifdef CHECK_FINITE
@@ -984,7 +986,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
     }
 
-    if (PSPP == 2) {
+    if (goma_ctx->solver.pspp == 2) {
       err = assemble_PPPS_generalized(exo);
       GOMA_EH(err, "assemble_PPPS_generalized");
 #ifdef CHECK_FINITE
@@ -994,7 +996,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
     }
 
-    if (PSPP == 3) {
+    if (goma_ctx->solver.pspp == 3) {
       err = assemble_projection_time_stabilization(exo, time_value, theta, delta_t);
       GOMA_EH(err, "assemble_projection_stabilization");
 #ifdef CHECK_FINITE
@@ -3841,8 +3843,10 @@ Revised:         Summer 1998, SY Tam (UNM)
   }
 
   if (goma_ctx->mesh.proc_ns_list_length > 0 &&
-      ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
-       (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1))) {
+      ((goma_ctx->solver.linear_solver != FRONT &&
+        ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
+       (goma_ctx->solver.linear_solver == FRONT &&
+        ielem == exo->elem_order_map[exo->num_elem_blocks] - 1))) {
     if (zeroCA == 0) {
       int count = 0, Num_CAs_done = 0;
       for (j = 0; j < MAX_CA; j++) {
@@ -4016,8 +4020,9 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   /******************************************************************************/
 
   if (goma_ctx->mesh.proc_ns_list_length > 0 &&
-      ((zeroCA == 1) || ((Linear_Solver != FRONT && ielem == exo->eb_ptr[0]) ||
-                         (Linear_Solver == FRONT && ielem == exo->elem_order_map[0] - 1)))) {
+      ((zeroCA == 1) ||
+       ((goma_ctx->solver.linear_solver != FRONT && ielem == exo->eb_ptr[0]) ||
+        (goma_ctx->solver.linear_solver == FRONT && ielem == exo->elem_order_map[0] - 1)))) {
     int nsp, nspk, count = -1;
     memset(CA_fselem, -1, sizeof(int) * MAX_CA);
     memset(CA_sselem, -1, sizeof(int) * MAX_CA);
@@ -4120,17 +4125,17 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
   pg_data.mu_avg = 0.;
   pg_data.rho_avg = 0.;
 
-  if (PSPG) {
-    if (PSPG == 1) {
+  if (goma_ctx->solver.pspg) {
+    if (goma_ctx->solver.pspg == 1) {
       pspg_local = 0;
     }
     /* This is the flag for the standard local PSPG */
-    else if (PSPG == 2) {
+    else if (goma_ctx->solver.pspg == 2) {
       pspg_local = 1;
     }
   }
 
-  if (PSPG && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
+  if (goma_ctx->solver.pspg && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
     xi[0] = 0.0;
     xi[1] = 0.0;
     xi[2] = 0.0;
@@ -4144,7 +4149,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     }
   }
 
-  if (Cont_GLS && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
+  if (goma_ctx->solver.cont_gls && pde[R_PRESSURE] && pde[R_MOMENTUM1]) {
     xi[0] = 0.0;
     xi[1] = 0.0;
     xi[2] = 0.0;
@@ -4152,7 +4157,7 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     pg_data.mu_avg = element_viscosity();
     pg_data.rho_avg = density(NULL, time_value);
 
-    if (Cont_GLS == 2) {
+    if (goma_ctx->solver.cont_gls == 2) {
       h_elem_siz(pg_data.hsquared, pg_data.hhv, pg_data.dhv_dxnode, pde[R_MESH1]);
       element_velocity(pg_data.v_avg, pg_data.dv_dnode, exo);
     }
@@ -5229,8 +5234,9 @@ int matrix_fill_stress(struct GomaLinearSolverData *ams,
     P0PRINTF("%s: ends\n", yo);
     MMH_ip = -1;
   }
-  if ((Linear_Solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
-      (Linear_Solver == FRONT && ielem == exo->elem_order_map[exo->num_elem_blocks] - 1)) {
+  if ((goma_ctx->solver.linear_solver != FRONT && ielem == exo->eb_ptr[exo->num_elem_blocks] - 1) ||
+      (goma_ctx->solver.linear_solver == FRONT &&
+       ielem == exo->elem_order_map[exo->num_elem_blocks] - 1)) {
     if (zeroCA == 0) {
       int count = 0, Num_CAs_done = 0;
       for (j = 0; j < MAX_CA; j++) {
@@ -5309,18 +5315,18 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
   }
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
-  else if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
     petsc_load_lec_complex(ielem, ams, resid_vector);
   }
 #else
-  else if (strcmp(Matrix_Format, "petsc") == 0) {
+  else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     petsc_load_lec(ielem, ams, resid_vector);
   }
 #endif
 #endif
   else {
     /* load up matrix in MSR format */
-    if (strcmp(Matrix_Format, "msr") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
       double *a = ams->val;
       int *ija = ams->bindx;
 
@@ -5564,7 +5570,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
       }
     } /* Matrix_Format == "msr" */
     /* load up matrix in VBR format */
-    else if (strcmp(Matrix_Format, "vbr") == 0) {
+    else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
       double *a = ams->val;
       int *bindx = ams->bindx;
       int *bpntr = ams->bpntr;

@@ -481,7 +481,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   tran->delta_t = 0.0; /*for Newmark-Beta terms in Lagrangian Solid*/
 
   /* Call prefront (or mf_setup) if necessary */
-  if (Linear_Solver == FRONT) {
+  if (goma_ctx->solver.linear_solver == FRONT) {
 #ifdef PARALLEL
     if (goma_ctx->num_proc > 1)
       GOMA_EH(GOMA_ERROR, "Whoa.  No front allowed with nproc>1");
@@ -553,12 +553,14 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   pg->matrices[pg->imtrx].resid_vector = resid_vector;
 
   /* Allocate sparse matrix */
-  if ((strcmp(Matrix_Format, "tpetra") == 0) || (strcmp(Matrix_Format, "epetra") == 0)) {
+  if ((strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) ||
+      (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0)) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for tpetra, tpetra supports stratimikos");
     check_parallel_error("Matrix format / Solver incompatibility");
     GomaSparseMatrix goma_matrix;
-    goma_error err = GomaSparseMatrix_CreateFromFormat(&goma_matrix, Matrix_Format);
+    goma_error err =
+        GomaSparseMatrix_CreateFromFormat(&goma_matrix, goma_ctx->solver.matrix_format);
     GOMA_EH(err, "GomaSparseMatrix_CreateFromFormat");
     int local_nodes = goma_ctx->mesh.num_internal_nodes + goma_ctx->mesh.num_border_nodes +
                       goma_ctx->mesh.num_external_nodes;
@@ -568,7 +570,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         dpi, cx, pg->imtrx, goma_ctx->debug_flag, ams[JAC]);
     GOMA_EH(err, "GomaSparseMatrix_SetProblemGraph");
     ams[JAC]->GomaMatrixData = goma_matrix;
-  } else if (strcmp(Matrix_Format, "msr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     log_msg("alloc_MSR_sparse_arrays...");
     alloc_MSR_sparse_arrays(&ija, &a, &a_old, 0, node_to_fill, exo, dpi);
     /*
@@ -604,18 +606,18 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
 
     ams[JAC]->nnz = ija[num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx]] - 1;
     ams[JAC]->nnz_plus = ija[num_universe_dofs[pg->imtrx]];
-  } else if (strcmp(Matrix_Format, "vbr") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
     log_msg("alloc_VBR_sparse_arrays...");
     alloc_VBR_sparse_arrays(ams[JAC], exo, dpi);
     ija_attic = NULL;
     ams[JAC]->belfry = ija_attic;
 
     a = ams[JAC]->val;
-    if (!save_old_A)
+    if (!goma_ctx->solver.save_old_a)
       a_old = ams[JAC]->val_old = NULL;
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
-  } else if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc_complex, solver must be petsc_complex");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -625,7 +627,7 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         num_boundary_dofs[pg->imtrx], num_external_dofs[pg->imtrx], pg->imtrx);
     GOMA_EH(err, "goma_setup_petsc_matrix");
 #else
-  } else if (strcmp(Matrix_Format, "petsc") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
     err = check_compatible_solver();
     GOMA_EH(err, "Incompatible matrix solver for petsc, solver must be petsc");
     check_parallel_error("Matrix format / Solver incompatibility");
@@ -700,8 +702,8 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
   DPRINTF(stdout, "\nINITIAL ELEMENT QUALITY CHECK---\n");
   good_mesh = element_quality(exo, x, ams[0]->proc_config);
 
-  if (Output_Variable_Stats) {
-    err = variable_stats(x, path1, Output_Variable_Regression);
+  if (goma_ctx->solver.output_variable_stats) {
+    err = variable_stats(x, path1, goma_ctx->solver.output_variable_regression);
     GOMA_EH(err, "Problem with variable_stats!");
     if (goma_ctx->proc_id == 0)
       fflush(stdout);
@@ -1130,8 +1132,8 @@ void continue_problem(Comm_Ex *cx, /* array of communications structures */
         GOMA_EH(err, "anneal_mesh() bad return.");
       }
     }
-    if (Output_Variable_Stats) {
-      err = variable_stats(x, path1, Output_Variable_Regression);
+    if (goma_ctx->solver.output_variable_stats) {
+      err = variable_stats(x, path1, goma_ctx->solver.output_variable_regression);
       GOMA_EH(err, "Problem with variable_stats!");
       if (goma_ctx->proc_id == 0)
         fflush(stdout);

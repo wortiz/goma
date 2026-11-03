@@ -548,7 +548,8 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
               }
               if (jflag != -1) {
                 /* check for split element condition with frontal solver */
-                if (Linear_Solver == FRONT && (CA_fselem[jflag] != CA_sselem[jflag])) {
+                if (goma_ctx->solver.linear_solver == FRONT &&
+                    (CA_fselem[jflag] != CA_sselem[jflag])) {
                   GOMA_EH(GOMA_ERROR,
                           "Whoa!  frontal solver not equipped for split element CA conditions");
                 }
@@ -1134,8 +1135,9 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                        * is not the same as current element, reload some element info
                        */
                       if (jflag != -1 && CA_fselem[jflag] != -1 && CA_fselem[jflag] != ielem &&
-                          Linear_Solver != FRONT && CA_id[jflag] == j_bc_id && j_bc_id != -1) {
-                        if (strcmp(Matrix_Format, "msr") != 0) {
+                          goma_ctx->solver.linear_solver != FRONT && CA_id[jflag] == j_bc_id &&
+                          j_bc_id != -1) {
+                        if (strcmp(goma_ctx->solver.matrix_format, "msr") != 0) {
                           GOMA_EH(GOMA_ERROR,
                                   "Unexpected matrix format in apply_bc_special, use msr");
                         }
@@ -1168,9 +1170,10 @@ int apply_special_bc(struct GomaLinearSolverData *ams,
                        *  is not the same as current element, reload some element info
                        */
                       if (jflag != -1 && CA_sselem[jflag] != -1 &&
-                          CA_sselem[jflag] != ei[pg->imtrx]->ielem && Linear_Solver != FRONT &&
-                          CA_id[jflag] == j_bc_id && j_bc_id != -1) {
-                        if (strcmp(Matrix_Format, "msr") != 0) {
+                          CA_sselem[jflag] != ei[pg->imtrx]->ielem &&
+                          goma_ctx->solver.linear_solver != FRONT && CA_id[jflag] == j_bc_id &&
+                          j_bc_id != -1) {
+                        if (strcmp(goma_ctx->solver.matrix_format, "msr") != 0) {
                           GOMA_EH(GOMA_ERROR,
                                   "Unexpected matrix format in apply_bc_special, use msr");
                         }

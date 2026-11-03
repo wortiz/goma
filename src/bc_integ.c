@@ -1654,7 +1654,7 @@ int apply_integrated_bc(double x[],            /* Solution vector for the curren
 
         case PSPG_BC:
           /* MMH: LSA LSA LSA Stopped here.  ALMOST done with bc_integ.c LSA LSA LSA */
-          if (!PSPG) {
+          if (!goma_ctx->solver.pspg) {
             GOMA_EH(
                 GOMA_ERROR,
                 "You don't have PSPG turned on and you trying to apply a PSPG boundary condition");

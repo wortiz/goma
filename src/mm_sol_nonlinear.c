@@ -386,7 +386,7 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
   }
   dbl damp = 1.0;
   dbl reduction_factor = 0.5;
-  dbl min_damp = Line_Search_Minimum_Damping;
+  dbl min_damp = goma_ctx->solver.line_search_minimum_damping;
   dbl *w = alloc_dbl_1(numProcUnknowns, 0.0);
   dbl *R = alloc_dbl_1(numProcUnknowns, 0.0);
   dbl *x_save = alloc_dbl_1(numProcUnknowns, 0.0);
@@ -440,11 +440,11 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
   dbl best_norm = g_check;
   r_check = 0.5 * (r_check * r_check);
   dbl slope = 0;
-  if (strcmp(Matrix_Format, "msr") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     AZ_MATRIX *Amat = AZ_matrix_create(ams->data_org[AZ_N_internal] + ams->data_org[AZ_N_border]);
     AZ_set_MSR(Amat, ams->bindx, ams->val, ams->data_org, 0, NULL, AZ_LOCAL);
     AZ_MSR_matvec_mult(delta_x, w, Amat, ams->proc_config);
-  } else if (strcmp(Matrix_Format, "tpetra") == 0) {
+  } else if (strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) {
     GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
     matrix->matrix_vector_mult(matrix, delta_x, w);
   } else {
@@ -461,7 +461,7 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
   }
   int skip = FALSE;
   // Skip if converged
-  if (best_norm < Epsilon[pg->imtrx][0]) {
+  if (best_norm < goma_ctx->solver.epsilon[pg->imtrx][0]) {
     skip = TRUE;
   }
   double last = bt_st;
@@ -537,7 +537,7 @@ static int perform_backtrack_line_search(struct GomaLinearSolverData *ams,
       best_mesh_damp = mesh_damp;
       best_norm = g_check;
     }
-    if (best_norm < Epsilon[pg->imtrx][0]) {
+    if (best_norm < goma_ctx->solver.epsilon[pg->imtrx][0]) {
       break;
     }
     g_check = 0.5 * (g_check * g_check);
@@ -867,9 +867,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   memset(Norm_r, 0, 3 * 2 * sizeof(double));
 
   if (goma_ctx->debug_flag) {
-    DPRINTF(stderr, "%s: max Newton itns = %d\n", yo, Max_Newton_Steps);
-    DPRINTF(stderr, "%s: convergence tol = %.1e %.1e \n", yo, Epsilon[pg->imtrx][0],
-            Epsilon[pg->imtrx][2]);
+    DPRINTF(stderr, "%s: max Newton itns = %d\n", yo, goma_ctx->solver.max_newton_steps);
+    DPRINTF(stderr, "%s: convergence tol = %.1e %.1e \n", yo,
+            goma_ctx->solver.epsilon[pg->imtrx][0], goma_ctx->solver.epsilon[pg->imtrx][2]);
   }
 
   /*
@@ -880,7 +880,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    * smaller one for Aztec (after processing via hide_external()).
    */
   numProcUnknowns = NumUnknowns[pg->imtrx] + NumExtUnknowns[pg->imtrx];
-  if (strcmp(Matrix_Format, "msr") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     local_order = ams->npn;
     local_order_plus = ams->npn_plus;
     local_nnz_plus = ams->nnz_plus;
@@ -892,15 +892,15 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * Setup some legacy variables.
      */
 
-    NZeros = local_nnz;
-    GNZeros = global_nnz;
+    goma_ctx->solver.nzeros = local_nnz;
+    goma_ctx->solver.gnzeros = global_nnz;
     GNumUnknowns = global_order;
 
     if (goma_ctx->debug_flag) {
       DPRINTF(stderr, "%s: At matrix %d, NumUnknowns  = %d\n", yo, (pg->imtrx + 1),
               NumUnknowns[pg->imtrx]);
-      DPRINTF(stderr, "%s: NZeros       = %d\n", yo, NZeros);
-      DPRINTF(stderr, "%s: GNZeros      = %d\n", yo, GNZeros);
+      DPRINTF(stderr, "%s: NZeros       = %d\n", yo, goma_ctx->solver.nzeros);
+      DPRINTF(stderr, "%s: GNZeros      = %d\n", yo, goma_ctx->solver.gnzeros);
       DPRINTF(stderr, "%s: GNumUnknowns = %d\n", yo, GNumUnknowns);
     }
 
@@ -949,7 +949,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    */
   *converged = FALSE;
   inewton = 0;
-  if (Max_Newton_Steps <= 0)
+  if (goma_ctx->solver.max_newton_steps <= 0)
     *converged = TRUE;
 
   /*
@@ -958,9 +958,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    */
 
   if (con_ptr != NULL)
-    UMF_system_id = LOCA_UMF_ID;
+    UMF_system_id = goma_ctx->solver.loca_umf_id;
 
-  if (Time_Jacobian_Reformation_stride > 1) {
+  if (goma_ctx->solver.time_jacobian_reformation_stride > 1) {
     if (nt == *time_step_reform || nt == 0) {
       /* here we are simply fooling the tolerance checker to
          reform based on iteration number or time step number */
@@ -969,7 +969,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       init_vec_value(scale, 1.0, numProcUnknowns);
 
       if (nt != 0) {
-        *time_step_reform += Time_Jacobian_Reformation_stride;
+        *time_step_reform += goma_ctx->solver.time_jacobian_reformation_stride;
       }
     } else {
       Norm_below_tolerance = TRUE;
@@ -984,7 +984,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   Soln_Norm_stack[2] = Soln_Norm_stack[1] = Soln_Norm_stack[0] = 0.1;
   AC_Resid_Norm_stack[2] = AC_Resid_Norm_stack[1] = AC_Resid_Norm_stack[0] = 0.1;
   AC_Soln_Norm_stack[2] = AC_Soln_Norm_stack[1] = AC_Soln_Norm_stack[0] = 0.1;
-  step_reform = Newt_Jacobian_Reformation_stride;
+  step_reform = goma_ctx->solver.newt_jacobian_reformation_stride;
 
   /*
    * Make sure every processor is "finished commenting" about the preliminary
@@ -1002,17 +1002,20 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   if (TimeIntegration == STEADY) {
 
     DPRINTF(stdout, "\n\n");
-    if (Solver_Output_Format & 1)
+    if (goma_ctx->solver.solver_output_format & 1)
       DPRINTF(stdout, "         ");
-    if (Solver_Output_Format & 2)
+    if (goma_ctx->solver.solver_output_format & 2)
       DPRINTF(stdout, "    ");
-    if ((Solver_Output_Format & 4) && (Solver_Output_Format & 8) && (Solver_Output_Format & 16)) {
+    if ((goma_ctx->solver.solver_output_format & 4) &&
+        (goma_ctx->solver.solver_output_format & 8) &&
+        (goma_ctx->solver.solver_output_format & 16)) {
       DPRINTF(stdout, "  R e s i d u a l        ");
     } else {
       DPRINTF(stdout, "  Residual       ");
     }
-    if ((Solver_Output_Format & 32) && (Solver_Output_Format & 64) &&
-        (Solver_Output_Format & 128)) {
+    if ((goma_ctx->solver.solver_output_format & 32) &&
+        (goma_ctx->solver.solver_output_format & 64) &&
+        (goma_ctx->solver.solver_output_format & 128)) {
       DPRINTF(stdout, " C o r r e c t i o n\n");
     } else {
       DPRINTF(stdout, " Correction\n");
@@ -1024,54 +1027,54 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   }
 
   DPRINTF(stdout, "\n");
-  if (Solver_Output_Format & 1)
+  if (goma_ctx->solver.solver_output_format & 1)
     DPRINTF(stdout, "   ToD   ");
-  if (Solver_Output_Format & 2)
+  if (goma_ctx->solver.solver_output_format & 2)
     DPRINTF(stdout, "itn ");
-  if (Solver_Output_Format & 4)
+  if (goma_ctx->solver.solver_output_format & 4)
     DPRINTF(stdout, "  L_oo  ");
-  if (Solver_Output_Format & 8)
+  if (goma_ctx->solver.solver_output_format & 8)
     DPRINTF(stdout, "  L_1   ");
-  if (Solver_Output_Format & 16)
+  if (goma_ctx->solver.solver_output_format & 16)
     DPRINTF(stdout, "  L_2   ");
-  if (Solver_Output_Format & 32)
+  if (goma_ctx->solver.solver_output_format & 32)
     DPRINTF(stdout, "  L_oo  ");
-  if (Solver_Output_Format & 64)
+  if (goma_ctx->solver.solver_output_format & 64)
     DPRINTF(stdout, "  L_1   ");
-  if (Solver_Output_Format & 128)
+  if (goma_ctx->solver.solver_output_format & 128)
     DPRINTF(stdout, "  L_2   ");
-  if (Solver_Output_Format & 256)
+  if (goma_ctx->solver.solver_output_format & 256)
     DPRINTF(stdout, "lis ");
-  if (Solver_Output_Format & 512)
+  if (goma_ctx->solver.solver_output_format & 512)
     DPRINTF(stdout, " asm/slv (sec)  ");
-  if (Solver_Output_Format & 1024)
+  if (goma_ctx->solver.solver_output_format & 1024)
     DPRINTF(stdout, "ROrd/Rt ");
-  if (Solver_Output_Format & 2048)
+  if (goma_ctx->solver.solver_output_format & 2048)
     DPRINTF(stdout, "UOrd/Rt ");
   DPRINTF(stdout, "\n");
-  if (Solver_Output_Format & 1)
+  if (goma_ctx->solver.solver_output_format & 1)
     DPRINTF(stdout, "-------- ");
-  if (Solver_Output_Format & 2)
+  if (goma_ctx->solver.solver_output_format & 2)
     DPRINTF(stdout, "--- ");
-  if (Solver_Output_Format & 4)
+  if (goma_ctx->solver.solver_output_format & 4)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 8)
+  if (goma_ctx->solver.solver_output_format & 8)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 16)
+  if (goma_ctx->solver.solver_output_format & 16)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 32)
+  if (goma_ctx->solver.solver_output_format & 32)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 64)
+  if (goma_ctx->solver.solver_output_format & 64)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 128)
+  if (goma_ctx->solver.solver_output_format & 128)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 256)
+  if (goma_ctx->solver.solver_output_format & 256)
     DPRINTF(stdout, "--- ");
-  if (Solver_Output_Format & 512)
+  if (goma_ctx->solver.solver_output_format & 512)
     DPRINTF(stdout, "--------------- ");
-  if (Solver_Output_Format & 1024)
+  if (goma_ctx->solver.solver_output_format & 1024)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 2048)
+  if (goma_ctx->solver.solver_output_format & 2048)
     DPRINTF(stdout, "-------");
   DPRINTF(stdout, "\n");
 
@@ -1106,7 +1109,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    *                         Top of the Newton Iteration Loop
    *
    *********************************************************************************/
-  while ((!(*converged)) && (inewton < Max_Newton_Steps)) {
+  while ((!(*converged)) && (inewton < goma_ctx->solver.max_newton_steps)) {
     init_vec_value(resid_vector, 0.0, numProcUnknowns);
     init_vec_value(delta_x, 0.0, numProcUnknowns);
     /* Zero matrix values */
@@ -1114,7 +1117,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
       matrix->put_scalar(matrix, 0.0);
 #ifdef GOMA_ENABLE_PETSC
-    } else if (strcmp(Matrix_Format, "petsc") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
       petsc_zero_mat(ams);
 #endif
     } else {
@@ -1129,16 +1132,16 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     log_msg("%s: Newton iteration %d", yo, inewton);
 
 #ifndef ALE_DCA_INFO_PLEASE
-    if (Solver_Output_Format & 1)
+    if (goma_ctx->solver.solver_output_format & 1)
       DPRINTF(stdout, "%s ", ctod);
     if (inewton < 10) {
-      if (Solver_Output_Format & 2)
+      if (goma_ctx->solver.solver_output_format & 2)
         DPRINTF(stdout, "[%d] ", inewton);
     } else if (inewton < 100) {
-      if (Solver_Output_Format & 2)
+      if (goma_ctx->solver.solver_output_format & 2)
         DPRINTF(stdout, "%d] ", inewton);
     } else {
-      if (Solver_Output_Format & 2)
+      if (goma_ctx->solver.solver_output_format & 2)
         DPRINTF(stdout, "%d ", inewton);
     }
 #endif
@@ -1146,7 +1149,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     /*
      * If doing continuation in parallel, restore external matrix rows here.
      */
-    if (goma_ctx->num_proc > 1 && strcmp(Matrix_Format, "msr") == 0 && dofs_hidden) {
+    if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0 &&
+        dofs_hidden) {
       show_external(num_universe_dofs[pg->imtrx],
                     (num_universe_dofs[pg->imtrx] - num_external_dofs[pg->imtrx]), ija, ija_save,
                     a);
@@ -1183,8 +1187,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
     /* get global element size and velocity norm if needed for PSPG or Cont_GLS */
     if (upd->matrix_index[VELOCITY1] == pg->imtrx &&
-        ((PSPG && Num_Var_In_Type[pg->imtrx][PRESSURE]) ||
-         (Cont_GLS && Num_Var_In_Type[pg->imtrx][VELOCITY1]))) {
+        ((goma_ctx->solver.pspg && Num_Var_In_Type[pg->imtrx][PRESSURE]) ||
+         (goma_ctx->solver.cont_gls && Num_Var_In_Type[pg->imtrx][VELOCITY1]))) {
       h_elem_avg = global_h_elem_siz(x, x_old, xdot, resid_vector, exo, dpi);
       U_norm = global_velocity_norm(x, exo, dpi);
     } else {
@@ -1193,7 +1197,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     }
 
     if (goma_ctx->debug_flag < 0 && goma_ctx->debug_flag != -4 &&
-        (goma_ctx->debug_flag != -5 || inewton >= Max_Newton_Steps - 1)) {
+        (goma_ctx->debug_flag != -5 || inewton >= goma_ctx->solver.max_newton_steps - 1)) {
       /* Former block 0 in mm_fill.c. Here is some initialization */
       num_total_nodes = dpi->num_universe_nodes;
 
@@ -1219,7 +1223,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
       if (!Norm_below_tolerance || !Rate_above_tolerance) {
         init_vec_value(resid_vector, 0.0, numProcUnknowns);
-        init_vec_value(a, 0.0, (NZeros + 1));
+        init_vec_value(a, 0.0, (goma_ctx->solver.nzeros + 1));
         af->Assemble_Residual = TRUE;
         af->Assemble_Jacobian = TRUE;
         af->Assemble_LSA_Jacobian_Matrix = FALSE;
@@ -1457,33 +1461,34 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     log_msg("%-38s = %23.16e", "residual norm (L_1)", Norm[0][1]);
     log_msg("%-38s = %23.16e", "residual norm (L_2)", Norm[0][2]);
 #ifdef ALE_DCA_INFO_PLEASE
-    if (Solver_Output_Format & 1)
+    if (goma_ctx->solver.solver_output_format & 1)
       DPRINTF(stdout, "%s ", ctod);
     if (inewton < 10) {
-      if (Solver_Output_Format & 2)
+      if (goma_ctx->solver.solver_output_format & 2)
         DPRINTF(stdout, "[%d] ", inewton);
     } else if (inewton < 100) {
-      if (Solver_Output_Format & 2)
+      if (goma_ctx->solver.solver_output_format & 2)
         DPRINTF(stdout, "%d] ", inewton);
     } else {
-      if (Solver_Output_Format & 2)
+      if (goma_ctx->solver.solver_output_format & 2)
         DPRINTF(stdout, "%d ", inewton);
     }
 #endif
 
-    if (Solver_Output_Format & 4)
+    if (goma_ctx->solver.solver_output_format & 4)
       DPRINTF(stdout, "%7.1e ", Norm[0][0]);
-    if (Solver_Output_Format & 8)
+    if (goma_ctx->solver.solver_output_format & 8)
       DPRINTF(stdout, "%7.1e ", Norm[0][1]);
-    if (Solver_Output_Format & 16)
+    if (goma_ctx->solver.solver_output_format & 16)
       DPRINTF(stdout, "%7.1e ", Norm[0][2]);
 
     fflush(stdout);
 
-    if ((inewton > 0) && (Norm[0][2] < Epsilon[pg->imtrx][0]) &&
-        (Norm[0][0] < Epsilon[pg->imtrx][0]) && (Norm[2][2] < Epsilon[pg->imtrx][0]) &&
-        (Norm[2][0] < Epsilon[pg->imtrx][0])) {
-      *converged = (Epsilon[pg->imtrx][2] > 1.0) ? TRUE : FALSE;
+    if ((inewton > 0) && (Norm[0][2] < goma_ctx->solver.epsilon[pg->imtrx][0]) &&
+        (Norm[0][0] < goma_ctx->solver.epsilon[pg->imtrx][0]) &&
+        (Norm[2][2] < goma_ctx->solver.epsilon[pg->imtrx][0]) &&
+        (Norm[2][0] < goma_ctx->solver.epsilon[pg->imtrx][0])) {
+      *converged = (goma_ctx->solver.epsilon[pg->imtrx][2] > 1.0) ? TRUE : FALSE;
     }
     if (!isfinite(Norm[0][0]) || !isfinite(Norm[0][1]) || !isfinite(Norm[0][2])) {
       DPRINTF(stderr, "\nNaN found in residual norms\n");
@@ -1508,14 +1513,14 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * values so we can reincorporate them back in before the next assembly
      * step.
      */
-    if (goma_ctx->num_proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
+    if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
       hide_external(num_universe_dofs[pg->imtrx], NumUnknowns[pg->imtrx], ija, ija_save, a);
       dofs_hidden = TRUE;
     }
 
 #ifdef DEBUG_JACOBIAN
     if (inewton < 2) {
-      if (strcmp(Matrix_Format, "msr") == 0) {
+      if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
         print_msr_matrix(num_internal_dofs[pg->imtrx] + num_boundary_dofs[pg->imtrx], ija, a, x);
         print_array(ija, ija[ija[0] - 1], "ija", type_int, goma_ctx->proc_id);
       } else {
@@ -1527,11 +1532,11 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         *       DUMP THE MATRIX if requested to do so
         */
 #ifdef MATRIX_DUMP
-    if (strcmp(Matrix_Format, "msr") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
       matrix_dump_msr(ams, exo, dpi, x);
-    } else if (strcmp(Matrix_Format, "vbr") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_format, "vbr") == 0) {
       matrix_dump_vbr(ams, exo, dpi, x);
-    } else if (strcmp(Matrix_Format, "front") == 0) {
+    } else if (strcmp(goma_ctx->solver.matrix_format, "front") == 0) {
       if (ams->Number_Jac_Dump != 0) {
         WH(-1, "Matrix dump requested, but not supported for frontal solver");
       }
@@ -1606,7 +1611,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (glob_var_vals != NULL) {
         glob_var_vals[0] = (double)*converged;
         glob_var_vals[1] = (double)inewton;
-        glob_var_vals[2] = (double)Max_Newton_Steps;
+        glob_var_vals[2] = (double)goma_ctx->solver.max_newton_steps;
         glob_var_vals[3] = Conv_order;
         glob_var_vals[4] = Conv_rate;
         total_mesh_volume = 0;
@@ -1622,10 +1627,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       goto skip_solve;
     }
 
-    switch (Linear_Solver) {
+    switch (goma_ctx->solver.linear_solver) {
     case UMFPACK2:
     case UMFPACK2F:
-      if (strcmp(Matrix_Format, "msr"))
+      if (strcmp(goma_ctx->solver.matrix_format, "msr"))
         GOMA_EH(GOMA_ERROR, "ERROR: umfpack solver needs msr matrix format");
 
       if (!Norm_below_tolerance || !Rate_above_tolerance)
@@ -1639,14 +1644,14 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 
       /* Force refactorization if UMFPACK2F */
-      if (Linear_Solver == UMFPACK2F) {
+      if (goma_ctx->solver.linear_solver == UMFPACK2F) {
         Factor_Flag = 0;
       }
       matr_form = 1;
 
       UMF_system_id = SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                             &NumUnknowns[pg->imtrx], &NZeros, &ija[0], &ija[0], &a[0],
-                             &resid_vector[0], &delta_x[0]);
+                             &NumUnknowns[pg->imtrx], &goma_ctx->solver.nzeros, &ija[0], &ija[0],
+                             &a[0], &resid_vector[0], &delta_x[0]);
 
       first_linear_solver_call = FALSE;
 
@@ -1655,21 +1660,22 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       else
         Factor_Flag = 3;
 
-      LOCA_UMF_ID = UMF_system_id;
+      goma_ctx->solver.loca_umf_id = UMF_system_id;
       strcpy(stringer, " 1 ");
       break;
 
     case SPARSE13a:
-      if (strcmp(Matrix_Format, "msr")) {
+      if (strcmp(goma_ctx->solver.matrix_format, "msr")) {
         GOMA_EH(GOMA_ERROR, "ERROR: lu solver needs msr matrix format");
       }
       dcopy1(NumUnknowns[pg->imtrx], resid_vector, delta_x);
       if (!Norm_below_tolerance || !Rate_above_tolerance) {
-        lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], NZeros, a, ija, delta_x,
-           (first_linear_solver_call ? 1 : 2));
+        lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija,
+           delta_x, (first_linear_solver_call ? 1 : 2));
         first_linear_solver_call = FALSE;
       } else {
-        lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], NZeros, a, ija, delta_x, 3);
+        lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija,
+           delta_x, 3);
         first_linear_solver_call = FALSE;
       }
       /*
@@ -1689,7 +1695,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       if (first_linear_solver_call) {
         ams->options[AZ_pre_calc] = AZ_calc;
       } else {
-        if (strcmp(Matrix_Factorization_Reuse, "calc") == 0) {
+        if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "calc") == 0) {
           /*
            * Gonna start from scratch even though I've cooked a
            * preconditioner in the kitchen all day? Well, then
@@ -1701,9 +1707,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
           ams->options[AZ_pre_calc] = AZ_calc;
 
-        } else if (strcmp(Matrix_Factorization_Reuse, "recalc") == 0) {
+        } else if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "recalc") == 0) {
           ams->options[AZ_pre_calc] = AZ_recalc;
-        } else if (strcmp(Matrix_Factorization_Reuse, "reuse") == 0) {
+        } else if (strcmp(goma_ctx->solver.matrix_factorization_reuse, "reuse") == 0) {
           ams->options[AZ_pre_calc] = AZ_reuse;
         } else {
           GOMA_EH(GOMA_ERROR, "Unknown factorization reuse specification.");
@@ -1726,12 +1732,12 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
          */
         if (!Norm_below_tolerance || !Rate_above_tolerance) {
           /* Save old A before Aztec rescales it */
-          if (save_old_A)
-            dcopy1(NZeros, ams->val, ams->val_old);
+          if (goma_ctx->solver.save_old_a)
+            dcopy1(goma_ctx->solver.nzeros, ams->val, ams->val_old);
         } else {
           /*Recover last A*/
-          if (save_old_A)
-            dcopy1(NZeros, ams->val_old, ams->val);
+          if (goma_ctx->solver.save_old_a)
+            dcopy1(goma_ctx->solver.nzeros, ams->val_old, ams->val);
         }
 
         AZ_solve(delta_x, resid_vector, ams->options, ams->params, ams->indx, ams->bindx,
@@ -1765,19 +1771,20 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 #ifdef GOMA_ENABLE_AMESOS
     case AMESOS:
 
-      if ((strcmp(Matrix_Format, "msr") != 0) && (strcmp(Matrix_Format, "epetra") != 0)) {
+      if ((strcmp(goma_ctx->solver.matrix_format, "msr") != 0) &&
+          (strcmp(goma_ctx->solver.matrix_format, "epetra") != 0)) {
         GOMA_EH(GOMA_ERROR,
                 " Sorry, only MSR and Epetra matrix formats are currently supported with "
                 "the Amesos solver suite\n");
       }
-      amesos_solve(Amesos_Package, ams, delta_x, resid_vector, 1, pg->imtrx);
+      amesos_solve(goma_ctx->solver.amesos_package, ams, delta_x, resid_vector, 1, pg->imtrx);
       strcpy(stringer, " 1 ");
       break;
 #endif
 
     case MUMPS:
 
-      if ((strcmp(Matrix_Format, "msr") != 0)) {
+      if ((strcmp(goma_ctx->solver.matrix_format, "msr") != 0)) {
         GOMA_EH(GOMA_ERROR, " Sorry, only MSR matrix format is currently supported with "
                             "the MUMPS solver\n");
       }
@@ -1798,13 +1805,14 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                               "the Amesos2 solver suite\n");
         }
       }
-      amesos2_solve(ams, delta_x, resid_vector, Amesos2_Package, Amesos2_File[pg->imtrx]);
+      amesos2_solve(ams, delta_x, resid_vector, goma_ctx->solver.amesos2_package,
+                    goma_ctx->solver.amesos2_file[pg->imtrx]);
       strcpy(stringer, " 1 ");
       break;
 
 #ifdef GOMA_ENABLE_AZTEC
     case AZTECOO:
-      if (strcmp(Matrix_Format, "epetra") == 0) {
+      if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
         aztecoo_solve_epetra(ams, delta_x, resid_vector);
         why = (int)ams->status[AZ_why];
         aztec_stringer(why, ams->status[AZ_its], &stringer[0]);
@@ -1820,7 +1828,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
     case PETSC_COMPLEX_SOLVER:
-      if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+      if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
         int its;
         petsc_solve_complex(ams, delta_x, resid_vector, &its);
         exchange_dof(cx, dpi, delta_x, pg->imtrx);
@@ -1836,7 +1844,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       break;
 #else
     case PETSC_SOLVER:
-      if (strcmp(Matrix_Format, "petsc") == 0) {
+      if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
         int its;
         petsc_solve(ams, delta_x, resid_vector, &its);
         exchange_dof(cx, dpi, delta_x, pg->imtrx);
@@ -1855,10 +1863,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     case STRATIMIKOS: {
       int solver_found = 0;
 #ifdef GOMA_ENABLE_EPETRA
-      if (strcmp(Matrix_Format, "epetra") == 0) {
+      if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
         int iterations;
-        int err =
-            stratimikos_solve(ams, delta_x, resid_vector, &iterations, Stratimikos_File, pg->imtrx);
+        int err = stratimikos_solve(ams, delta_x, resid_vector, &iterations,
+                                    goma_ctx->solver.stratimikos_file, pg->imtrx);
         if (err) {
           GOMA_EH(err, "Error in stratimikos solve");
           check_parallel_error("Error in solve - stratimikos");
@@ -1868,10 +1876,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
 #endif
 #ifdef GOMA_ENABLE_TPETRA
-      if (strcmp(Matrix_Format, "tpetra") == 0) {
+      if (strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) {
         int iterations;
         int err = stratimikos_solve_tpetra(ams, delta_x, resid_vector, &iterations,
-                                           Stratimikos_File, pg->imtrx);
+                                           goma_ctx->solver.stratimikos_file, pg->imtrx);
         if (err) {
           GOMA_EH(err, "Error in stratimikos solve");
           check_parallel_error("Error in solve - stratimikos");
@@ -1909,7 +1917,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
        */
       for (iAC = 0; iAC < nAC; iAC++) {
 
-        switch (Linear_Solver) {
+        switch (goma_ctx->solver.linear_solver) {
         case UMFPACK2:
         case UMFPACK2F:
           matr_form = 1;
@@ -1920,7 +1928,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
            * although this isn't, in fact, what you want to happen, it
            * is what was previously done before I consolidated
            * UMFPACK2 and UMFPACK2F. */
-          if (Linear_Solver == UMFPACK2F)
+          if (goma_ctx->solver.linear_solver == UMFPACK2F)
             Factor_Flag = 0;
           else
             Factor_Flag = 3;
@@ -1933,8 +1941,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           fflush(stdout);
 #endif /* DEBUG_SL_UMF */
           UMF_system_id = SL_UMF(UMF_system_id, &first_linear_solver_call, &Factor_Flag, &matr_form,
-                                 &NumUnknowns[pg->imtrx], &NZeros, &ija[0], &ija[0], &a[0],
-                                 &bAC[iAC][0], &wAC[iAC][0]);
+                                 &NumUnknowns[pg->imtrx], &goma_ctx->solver.nzeros, &ija[0],
+                                 &ija[0], &a[0], &bAC[iAC][0], &wAC[iAC][0]);
 #ifdef DEBUG_SL_UMF
           printf("%s: returning from SL_UMF\n", yo);
           fflush(stdout);
@@ -1942,30 +1950,33 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
           /*  */
           strcpy(stringer_AC, " 1 ");
-          LOCA_UMF_ID = UMF_system_id;
+          goma_ctx->solver.loca_umf_id = UMF_system_id;
           break;
 
         case SPARSE13a:
           dcopy1(NumUnknowns[pg->imtrx], &bAC[iAC][0], &tAC[0]);
-          lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], NZeros, a, ija, &tAC[0], 3);
+          lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija,
+             &tAC[0], 3);
           dcopy1(NumUnknowns[pg->imtrx], &tAC[0], &wAC[iAC][0]);
           strcpy(stringer_AC, " 1 ");
           break;
 
 #ifdef GOMA_ENABLE_AMESOS
         case AMESOS:
-          if ((strcmp(Matrix_Format, "msr") != 0) && (strcmp(Matrix_Format, "epetra") != 0)) {
+          if ((strcmp(goma_ctx->solver.matrix_format, "msr") != 0) &&
+              (strcmp(goma_ctx->solver.matrix_format, "epetra") != 0)) {
             GOMA_EH(GOMA_ERROR,
                     " Sorry, only MSR and Epetra matrix formats are currently supported with "
                     "the Amesos solver suite\n");
           }
-          amesos_solve(Amesos_Package, ams, &wAC[iAC][0], &bAC[iAC][0], 0, pg->imtrx);
+          amesos_solve(goma_ctx->solver.amesos_package, ams, &wAC[iAC][0], &bAC[iAC][0], 0,
+                       pg->imtrx);
           strcpy(stringer_AC, " 1 ");
           break;
 #endif
 
         case MUMPS:
-          if ((strcmp(Matrix_Format, "msr") != 0)) {
+          if ((strcmp(goma_ctx->solver.matrix_format, "msr") != 0)) {
             GOMA_EH(GOMA_ERROR, " Sorry, only MSR matrix format is currently supported with "
                                 "the MUMPS solver\n");
           }
@@ -2026,7 +2037,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 
           break;
         case AZTECOO:
-          if (strcmp(Matrix_Format, "epetra") == 0) {
+          if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
             aztecoo_solve_epetra(ams, &wAC[iAC][0], &bAC[iAC][0]);
             why = (int)ams->status[AZ_why];
             aztec_stringer(why, ams->status[AZ_its], &stringer_AC[0]);
@@ -2041,7 +2052,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
         case PETSC_COMPLEX_SOLVER:
-          if (strcmp(Matrix_Format, "petsc_complex") == 0) {
+          if (strcmp(goma_ctx->solver.matrix_format, "petsc_complex") == 0) {
             int its;
             petsc_solve_complex(ams, delta_x, resid_vector, &its);
             exchange_dof(cx, dpi, delta_x, pg->imtrx);
@@ -2057,7 +2068,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           break;
 #else
         case PETSC_SOLVER:
-          if (strcmp(Matrix_Format, "petsc") == 0) {
+          if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
             int its;
             petsc_solve(ams, &wAC[iAC][0], &bAC[iAC][0], &its);
             exchange_dof(cx, dpi, &wAC[iAC][0], pg->imtrx);
@@ -2076,10 +2087,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         case STRATIMIKOS: {
           int solver_found = 0;
 #ifdef GOMA_ENABLE_EPETRA
-          if (strcmp(Matrix_Format, "epetra") == 0) {
+          if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
             int iterations;
             int err = stratimikos_solve(ams, &wAC[iAC][0], &bAC[iAC][0], &iterations,
-                                        Stratimikos_File, pg->imtrx);
+                                        goma_ctx->solver.stratimikos_file, pg->imtrx);
             GOMA_EH(err, "Error in stratimikos solve");
             if (iterations == -1) {
               strcpy(stringer, "err");
@@ -2090,10 +2101,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
           }
 #endif
 #ifdef GOMA_ENABLE_TPETRA
-          if (strcmp(Matrix_Format, "tpetra") == 0) {
+          if (strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) {
             int iterations;
             int err = stratimikos_solve_tpetra(ams, &wAC[iAC][0], &bAC[iAC][0], &iterations,
-                                               Stratimikos_File, pg->imtrx);
+                                               goma_ctx->solver.stratimikos_file, pg->imtrx);
             if (err) {
               GOMA_EH(err, "Error in stratimikos solve");
               check_parallel_error("Error in solve - stratimikos");
@@ -2380,26 +2391,27 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       goto free_and_clear;
     }
 
-    if (modified_newton && modified_newt_norm_tol != 0. && convergence_rate_tolerance != 0.) {
+    if (goma_ctx->solver.modified_newton && goma_ctx->solver.modified_newt_norm_tol != 0. &&
+        goma_ctx->solver.convergence_rate_tolerance != 0.) {
 
       /* Compute convergence level and compare with tolerance */
-      Norm_below_tolerance = (Resid_Norm_stack[2] < modified_newt_norm_tol);
+      Norm_below_tolerance = (Resid_Norm_stack[2] < goma_ctx->solver.modified_newt_norm_tol);
 
-      Rate_above_tolerance = (Conv_rate > convergence_rate_tolerance);
+      Rate_above_tolerance = (Conv_rate > goma_ctx->solver.convergence_rate_tolerance);
     }
 
-    if (Newt_Jacobian_Reformation_stride > 1) {
+    if (goma_ctx->solver.newt_jacobian_reformation_stride > 1) {
       if (inewton == step_reform - 1) {
         /* here we are simply fooling the tolerance checker to
            reform based on iteration number or time step number */
         Norm_below_tolerance = FALSE;
         Rate_above_tolerance = FALSE;
-        step_reform += Newt_Jacobian_Reformation_stride;
+        step_reform += goma_ctx->solver.newt_jacobian_reformation_stride;
       } else {
         Norm_below_tolerance = TRUE;
         Rate_above_tolerance = TRUE;
       }
-    } else if (Time_Jacobian_Reformation_stride != 1) {
+    } else if (goma_ctx->solver.time_jacobian_reformation_stride != 1) {
       /* do nothing different*/
     }
 
@@ -2434,33 +2446,34 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       GOMA_EH(error, "problem from wr_soln_vec");
     }
 
-    if ((damp_factor1 <= 1. && damp_factor1 >= 0.) && (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
-        (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
+    if ((goma_ctx->solver.damp_factor1 <= 1. && goma_ctx->solver.damp_factor1 >= 0.) &&
+        (goma_ctx->solver.damp_factor2 <= 1. && goma_ctx->solver.damp_factor2 >= 0.) &&
+        (goma_ctx->solver.damp_factor3 <= 1. && goma_ctx->solver.damp_factor3 >= 0.)) {
       print_damp_factor = TRUE;
-      if (!Visc_Sens_Copy)
-        Include_Visc_Sens = FALSE;
-      if (Norm[0][0] > custom_tol3) {
-        damp_factor = damp_factor3;
+      if (!goma_ctx->solver.visc_sens_copy)
+        goma_ctx->solver.include_visc_sens = FALSE;
+      if (Norm[0][0] > goma_ctx->solver.custom_tol3) {
+        goma_ctx->solver.damp_factor = goma_ctx->solver.damp_factor3;
         /*
                         DPRINTF(stderr, "\n Invoking Damping factor %f\n", damp_factor3);
         */
-      } else if (Norm[0][0] > custom_tol2) {
-        damp_factor = damp_factor2;
+      } else if (Norm[0][0] > goma_ctx->solver.custom_tol2) {
+        goma_ctx->solver.damp_factor = goma_ctx->solver.damp_factor2;
         /*
                         DPRINTF(stderr, "\n Invoking Damping factor %f\n", damp_factor2);
         */
-      } else if (Norm[0][0] > custom_tol1) {
-        damp_factor = damp_factor1;
+      } else if (Norm[0][0] > goma_ctx->solver.custom_tol1) {
+        goma_ctx->solver.damp_factor = goma_ctx->solver.damp_factor1;
         /*
                         DPRINTF(stderr, "\n Invoking Damping factor %f\n", damp_factor1);
         */
       } else {
-        damp_factor = 1.00;
+        goma_ctx->solver.damp_factor = 1.00;
         /*
                         DPRINTF(stderr, " \n Invoking Damping factor %f", damp_factor);
         */
-        if (!Visc_Sens_Copy) {
-          Include_Visc_Sens = TRUE;
+        if (!goma_ctx->solver.visc_sens_copy) {
+          goma_ctx->solver.include_visc_sens = TRUE;
           print_visc_sens = TRUE;
           /*
                                    DPRINTF(stderr, " Invoking Viscosity Sensitivities");
@@ -2472,13 +2485,13 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
     } else {
       /*default damping factor case */
-      if (damp_factor2 == -1.)
-        damp_factor = damp_factor1;
-      if (!Visc_Sens_Copy) {
-        if (Visc_Sens_Factor * inewton < Max_Newton_Steps) {
-          Include_Visc_Sens = FALSE;
+      if (goma_ctx->solver.damp_factor2 == -1.)
+        goma_ctx->solver.damp_factor = goma_ctx->solver.damp_factor1;
+      if (!goma_ctx->solver.visc_sens_copy) {
+        if (goma_ctx->solver.visc_sens_factor * inewton < goma_ctx->solver.max_newton_steps) {
+          goma_ctx->solver.include_visc_sens = FALSE;
         } else {
-          Include_Visc_Sens = TRUE;
+          goma_ctx->solver.include_visc_sens = TRUE;
           print_visc_sens = TRUE;
           /*
                                    DPRINTF(stderr, " Invoking Viscosity Sensitivities\n");
@@ -2487,8 +2500,8 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
       }
     }
 
-    if (damp_factor <= 1.0e-06) {
-      damp_factor = damp_factor1;
+    if (goma_ctx->solver.damp_factor <= 1.0e-06) {
+      goma_ctx->solver.damp_factor = goma_ctx->solver.damp_factor1;
     }
     dcopy1(numProcUnknowns, delta_x, x_update);
 
@@ -2507,33 +2520,33 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         continuation_converged = continuation_hook(x, delta_x, con_ptr, Reltol, Abstol);
     }
 
-    if (Epsilon[pg->imtrx][2] > 1) {
-      if (Solver_Output_Format & 32)
+    if (goma_ctx->solver.epsilon[pg->imtrx][2] > 1) {
+      if (goma_ctx->solver.solver_output_format & 32)
         DPRINTF(stdout, "%7.1e ", Norm[1][0]);
-      if (Solver_Output_Format & 64)
+      if (goma_ctx->solver.solver_output_format & 64)
         DPRINTF(stdout, "%7.1e ", Norm[1][1]);
-      if (Solver_Output_Format & 128)
+      if (goma_ctx->solver.solver_output_format & 128)
         DPRINTF(stdout, "%7.1e ", Norm[1][2]);
-      if (Solver_Output_Format & 256)
+      if (goma_ctx->solver.solver_output_format & 256)
         DPRINTF(stdout, "%s ", stringer);
     } else {
-      if (Solver_Output_Format & 32)
+      if (goma_ctx->solver.solver_output_format & 32)
         DPRINTF(stdout, "%7.1e ", Norm_r[0][0]);
-      if (Solver_Output_Format & 64)
+      if (goma_ctx->solver.solver_output_format & 64)
         DPRINTF(stdout, "%7.1e ", Norm_r[0][1]);
-      if (Solver_Output_Format & 128)
+      if (goma_ctx->solver.solver_output_format & 128)
         DPRINTF(stdout, "%7.1e ", Norm_r[0][2]);
-      if (Solver_Output_Format & 256)
+      if (goma_ctx->solver.solver_output_format & 256)
         DPRINTF(stdout, "%s ", stringer);
     }
 
     asmslv_time = (a_end - a_start);
     slv_time = (s_end - s_start);
-    if (Solver_Output_Format & 512)
+    if (goma_ctx->solver.solver_output_format & 512)
       DPRINTF(stdout, "%7.1e/%7.1e ", asmslv_time, slv_time);
-    if (Solver_Output_Format & 1024)
+    if (goma_ctx->solver.solver_output_format & 1024)
       DPRINTF(stdout, "%.1f/%.1f ", Conv_order, Conv_rate);
-    if (Solver_Output_Format & 2048)
+    if (goma_ctx->solver.solver_output_format & 2048)
       DPRINTF(stdout, "%.1f/%.1f ", Soln_order, Soln_rate);
     DPRINTF(stdout, "\n");
 
@@ -2542,24 +2555,29 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      *   UPDATE GOMA UNKNOWNS
      *
      *******************************************************************/
-    dbl damp_factor_mesh = damp_factor;
-    if (Newton_Line_Search_Type == NLS_BACKTRACK || Newton_Line_Search_Type == NLS_BACKTRACK_MESH) {
-      err = perform_backtrack_line_search(
-          ams, x, xdot, delta_x, x_old, x_older, xdot_old, x_update, &delta_t, &theta, resid_vector,
-          scale, exo, dpi, cx, &time_value, &num_total_nodes, &h_elem_avg, &U_norm, numProcUnknowns,
-          Newton_Line_Search_Type, &damp_factor, &damp_factor_mesh);
-      if (DOUBLE_NONZERO(fabs(damp_factor_mesh - 1)) || DOUBLE_NONZERO(fabs(damp_factor - 1))) {
+    dbl damp_factor_mesh = goma_ctx->solver.damp_factor;
+    if (goma_ctx->solver.newton_line_search_type == NLS_BACKTRACK ||
+        goma_ctx->solver.newton_line_search_type == NLS_BACKTRACK_MESH) {
+      err = perform_backtrack_line_search(ams, x, xdot, delta_x, x_old, x_older, xdot_old, x_update,
+                                          &delta_t, &theta, resid_vector, scale, exo, dpi, cx,
+                                          &time_value, &num_total_nodes, &h_elem_avg, &U_norm,
+                                          numProcUnknowns, goma_ctx->solver.newton_line_search_type,
+                                          &goma_ctx->solver.damp_factor, &damp_factor_mesh);
+      if (DOUBLE_NONZERO(fabs(damp_factor_mesh - 1)) ||
+          DOUBLE_NONZERO(fabs(goma_ctx->solver.damp_factor - 1))) {
         print_damp_factor = TRUE;
       }
-    } else if (Newton_Line_Search_Type == NLS_FULL_STEP) {
+    } else if (goma_ctx->solver.newton_line_search_type == NLS_FULL_STEP) {
       for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
-        x[i] -= damp_factor * var_damp[idv[pg->imtrx][i][0]] * delta_x[i];
+        x[i] -= goma_ctx->solver.damp_factor * goma_ctx->solver.var_damp[idv[pg->imtrx][i][0]] *
+                delta_x[i];
       }
       exchange_dof(cx, dpi, x, pg->imtrx);
       if (pd->TimeIntegration != STEADY) {
         for (i = 0; i < NumUnknowns[pg->imtrx]; i++) {
-          xdot[i] -= damp_factor * var_damp[idv[pg->imtrx][i][0]] * delta_x[i] * (1.0 + 2 * theta) /
-                     delta_t;
+          xdot[i] -= goma_ctx->solver.damp_factor *
+                     goma_ctx->solver.var_damp[idv[pg->imtrx][i][0]] * delta_x[i] *
+                     (1.0 + 2 * theta) / delta_t;
         }
         exchange_dof(cx, dpi, xdot, pg->imtrx);
       }
@@ -2647,9 +2665,9 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         DPRINTF(stdout, "Number of extra unknowns: %4d\n\n", nAC);
       }
       for (iAC = 0; iAC < nAC; iAC++) {
-        x_AC[iAC] -= damp_factor * yAC[iAC];
+        x_AC[iAC] -= goma_ctx->solver.damp_factor * yAC[iAC];
         if (pd->TimeIntegration != STEADY) {
-          x_AC_dot[iAC] -= damp_factor * yAC[iAC] * (1.0 + 2 * theta) / delta_t;
+          x_AC_dot[iAC] -= goma_ctx->solver.damp_factor * yAC[iAC] * (1.0 + 2 * theta) / delta_t;
           augc[iAC].tmp2 = x_AC_dot[iAC];
         }
         update_parameterAC(iAC, x, xdot, x_AC, cx, exo, dpi);
@@ -2662,30 +2680,30 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
         if (goma_ctx->debug_flag > 0) {
           if (augc[iAC].Type == AC_USERBC) {
             DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e Update=% 10.6e\n", augc[iAC].BCID,
-                    augc[iAC].DFID, x_AC[iAC], damp_factor * yAC[iAC]);
+                    augc[iAC].DFID, x_AC[iAC], goma_ctx->solver.damp_factor * yAC[iAC]);
           } else if (augc[iAC].Type == AC_USERMAT || augc[iAC].Type == AC_FLUX_MAT) {
             DPRINTF(stdout, "\tMT[%4d] MP[%4d]=% 10.6e Update=% 10.6e\n", augc[iAC].MTID,
-                    augc[iAC].MPID, x_AC[iAC], damp_factor * yAC[iAC]);
+                    augc[iAC].MPID, x_AC[iAC], goma_ctx->solver.damp_factor * yAC[iAC]);
           } else if (augc[iAC].Type == AC_VOLUME) {
             DPRINTF(stdout, "\tMT[%4d] VC[%4d]=%10.6e Param=%10.6e\n", augc[iAC].MTID,
                     augc[iAC].VOLID, augc[iAC].evol, x_AC[iAC]);
           } else if (augc[iAC].Type == AC_FLUX) {
             DPRINTF(stdout, "\tBC[%4d] DF[%4d]=% 10.6e Update=% 10.6e\n", augc[iAC].BCID,
-                    augc[iAC].DFID, x_AC[iAC], damp_factor * yAC[iAC]);
+                    augc[iAC].DFID, x_AC[iAC], goma_ctx->solver.damp_factor * yAC[iAC]);
           } else if (augc[iAC].Type == AC_LGRM) {
             DPRINTF(stdout, "\tAC[%d], Lagrange Multiplier=%10.6e Update=%10.6e\n", iAC, x_AC[iAC],
-                    damp_factor * yAC[iAC]);
+                    goma_ctx->solver.damp_factor * yAC[iAC]);
           } else if (augc[iAC].Type == AC_ARC_LENGTH) {
             DPRINTF(stdout, "\tAC[%d], Arc Length Parameter=%10.6e Update=%10.6e\n", iAC, x_AC[iAC],
-                    damp_factor * yAC[iAC]);
+                    goma_ctx->solver.damp_factor * yAC[iAC]);
           } else if (augc[iAC].Type == AC_OVERLAP) {
             DPRINTF(stdout, "\tAC[%d], Elem %d Side %d  Dim %d:  LM=%10.6e  Update=%10.6e\n", iAC,
                     augc[iAC].lm_elem, augc[iAC].lm_side, augc[iAC].lm_dim, x_AC[iAC],
-                    damp_factor * yAC[iAC]);
+                    goma_ctx->solver.damp_factor * yAC[iAC]);
           } else if (augc[iAC].Type == AC_PERIODIC) {
             DPRINTF(stdout, "\tAC[%d], Elem %d Side %d  Var %s:  LM=%10.6e  Update=%10.6e\n", iAC,
                     augc[iAC].lm_elem, augc[iAC].lm_side, Var_Name[augc[iAC].VAR].name1, x_AC[iAC],
-                    damp_factor * yAC[iAC]);
+                    goma_ctx->solver.damp_factor * yAC[iAC]);
           } else if (augc[iAC].Type == AC_POSITION) {
             DPRINTF(stdout, "\tMT[%4d] XY[%4d]=%10.6e Param=%13.9e\n", augc[iAC].MTID,
                     augc[iAC].VOLID, augc[iAC].evol, x_AC[iAC]);
@@ -2703,11 +2721,14 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      ********************************************************************/
 
     *converged =
-        ((Norm[0][2] < Epsilon[pg->imtrx][0]) && (Norm[2][2] < Epsilon[pg->imtrx][0]) &&
-         (Norm[0][0] < Epsilon[pg->imtrx][0]) && (Norm[0][2] < Epsilon[pg->imtrx][0]) &&
-         (Norm_r[0][2] < Epsilon[pg->imtrx][2]) && (Norm_r[1][2] < Epsilon[pg->imtrx][2]) &&
-         (Norm_r[0][0] < Epsilon[pg->imtrx][2]) && (Norm_r[1][0] < Epsilon[pg->imtrx][2]) &&
-         (continuation_converged));
+        ((Norm[0][2] < goma_ctx->solver.epsilon[pg->imtrx][0]) &&
+         (Norm[2][2] < goma_ctx->solver.epsilon[pg->imtrx][0]) &&
+         (Norm[0][0] < goma_ctx->solver.epsilon[pg->imtrx][0]) &&
+         (Norm[0][2] < goma_ctx->solver.epsilon[pg->imtrx][0]) &&
+         (Norm_r[0][2] < goma_ctx->solver.epsilon[pg->imtrx][2]) &&
+         (Norm_r[1][2] < goma_ctx->solver.epsilon[pg->imtrx][2]) &&
+         (Norm_r[0][0] < goma_ctx->solver.epsilon[pg->imtrx][2]) &&
+         (Norm_r[1][0] < goma_ctx->solver.epsilon[pg->imtrx][2]) && (continuation_converged));
 
     /*******************************************************************
      *
@@ -2719,7 +2740,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     if (glob_var_vals != NULL) {
       glob_var_vals[0] = (double)*converged;
       glob_var_vals[1] = (double)inewton;
-      glob_var_vals[2] = (double)Max_Newton_Steps;
+      glob_var_vals[2] = (double)goma_ctx->solver.max_newton_steps;
       glob_var_vals[3] = Conv_order;
       glob_var_vals[4] = Conv_rate;
       total_mesh_volume = 0;
@@ -2825,7 +2846,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
      * If we are doing continuation then after convergence one must
      * defer this event until after performing the sensitivity calculation
      */
-    if (goma_ctx->num_proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
+    if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
       if ((!*converged) &&
           ((Continuation != ALC_NONE) || (nn_post_fluxes_sens > 0) || (nn_post_data_sens > 0))) {
         show_external(num_universe_dofs[pg->imtrx],
@@ -2836,21 +2857,21 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     }
 
     if (solve_skipped) {
-      if (Solver_Output_Format & 32)
+      if (goma_ctx->solver.solver_output_format & 32)
         DPRINTF(stdout, "        ");
-      if (Solver_Output_Format & 64)
+      if (goma_ctx->solver.solver_output_format & 64)
         DPRINTF(stdout, "        ");
-      if (Solver_Output_Format & 128)
+      if (goma_ctx->solver.solver_output_format & 128)
         DPRINTF(stdout, "        ");
-      if (Solver_Output_Format & 256)
+      if (goma_ctx->solver.solver_output_format & 256)
         DPRINTF(stdout, "skp ");
       asmslv_time = (a_end - a_start);
       slv_time = (s_end - s_start);
-      if (Solver_Output_Format & 512)
+      if (goma_ctx->solver.solver_output_format & 512)
         DPRINTF(stdout, "%7.1e/%7.1e ", asmslv_time, slv_time);
-      if (Solver_Output_Format & 1024)
+      if (goma_ctx->solver.solver_output_format & 1024)
         DPRINTF(stdout, "%.1f/%.1f ", Conv_order, Conv_rate);
-      if (Solver_Output_Format & 2048)
+      if (goma_ctx->solver.solver_output_format & 2048)
         DPRINTF(stdout, "%.1f/%.1f ", Soln_order, Soln_rate);
       DPRINTF(stdout, "\n");
     }
@@ -2865,50 +2886,50 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     }
 
     /* print damping factor and/or viscosity sens message here */
-    if (print_damp_factor && Newton_Line_Search_Type == NLS_BACKTRACK_MESH) {
-      DPRINTF(stdout, " Invoking damping factor %f mesh damping %f\n", damp_factor,
+    if (print_damp_factor && goma_ctx->solver.newton_line_search_type == NLS_BACKTRACK_MESH) {
+      DPRINTF(stdout, " Invoking damping factor %f mesh damping %f\n", goma_ctx->solver.damp_factor,
               damp_factor_mesh);
     } else if (print_damp_factor) {
-      DPRINTF(stdout, " Invoking damping factor %f\n", damp_factor);
+      DPRINTF(stdout, " Invoking damping factor %f\n", goma_ctx->solver.damp_factor);
     }
     if (print_visc_sens)
       DPRINTF(stdout, " Invoking Viscosity Sensitivities\n");
 
     if (nAC > 0) {
-      if (Solver_Output_Format & 1)
+      if (goma_ctx->solver.solver_output_format & 1)
         DPRINTF(stdout, "         ");
-      if (Solver_Output_Format & 2)
+      if (goma_ctx->solver.solver_output_format & 2)
         DPRINTF(stdout, " AC ");
-      if (Solver_Output_Format & 4)
+      if (goma_ctx->solver.solver_output_format & 4)
         DPRINTF(stdout, "%7.1e ", Norm[2][0]);
-      if (Solver_Output_Format & 8)
+      if (goma_ctx->solver.solver_output_format & 8)
         DPRINTF(stdout, "%7.1e ", Norm[2][1]);
-      if (Solver_Output_Format & 16)
+      if (goma_ctx->solver.solver_output_format & 16)
         DPRINTF(stdout, "%7.1e ", Norm[2][2]);
-      if (Epsilon[pg->imtrx][2] > 1) {
-        if (Solver_Output_Format & 32)
+      if (goma_ctx->solver.epsilon[pg->imtrx][2] > 1) {
+        if (goma_ctx->solver.solver_output_format & 32)
           DPRINTF(stdout, "%7.1e ", Norm[3][0]);
-        if (Solver_Output_Format & 64)
+        if (goma_ctx->solver.solver_output_format & 64)
           DPRINTF(stdout, "%7.1e ", Norm[3][1]);
-        if (Solver_Output_Format & 128)
+        if (goma_ctx->solver.solver_output_format & 128)
           DPRINTF(stdout, "%7.1e ", Norm[3][2]);
       } else {
-        if (Solver_Output_Format & 32)
+        if (goma_ctx->solver.solver_output_format & 32)
           DPRINTF(stdout, "%7.1e ", Norm_r[1][0]);
-        if (Solver_Output_Format & 64)
+        if (goma_ctx->solver.solver_output_format & 64)
           DPRINTF(stdout, "%7.1e ", Norm_r[1][1]);
-        if (Solver_Output_Format & 128)
+        if (goma_ctx->solver.solver_output_format & 128)
           DPRINTF(stdout, "%7.1e ", Norm_r[1][2]);
       }
-      if (Solver_Output_Format & 256)
+      if (goma_ctx->solver.solver_output_format & 256)
         DPRINTF(stdout, "%s ", stringer_AC);
       asmslv_time = (ac_end - ac_start);
       slv_time = (sc_end - sc_start);
-      if (Solver_Output_Format & 512)
+      if (goma_ctx->solver.solver_output_format & 512)
         DPRINTF(stdout, "%7.1e/%7.1e ", asmslv_time, slv_time);
-      if (Solver_Output_Format & 1024)
+      if (goma_ctx->solver.solver_output_format & 1024)
         DPRINTF(stdout, "%.1f/%.1f ", AConv_order, AConv_rate);
-      if (Solver_Output_Format & 2048)
+      if (goma_ctx->solver.solver_output_format & 2048)
         DPRINTF(stdout, "%.1f/%.1f ", ASoln_order, ASoln_rate);
       DPRINTF(stdout, "\n");
     }
@@ -2954,29 +2975,29 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
   Norm[4][1] = L1_norm(x, NumUnknowns[pg->imtrx]) / ((double)NumUnknowns[pg->imtrx]);
   Norm[4][2] = L2_norm(x, NumUnknowns[pg->imtrx]) / sqrt((double)NumUnknowns[pg->imtrx]);
 
-  if (Solver_Output_Format & 1)
+  if (goma_ctx->solver.solver_output_format & 1)
     DPRINTF(stdout, "-------- ");
-  if (Solver_Output_Format & 2)
+  if (goma_ctx->solver.solver_output_format & 2)
     DPRINTF(stdout, "--- ");
-  if (Solver_Output_Format & 4)
+  if (goma_ctx->solver.solver_output_format & 4)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 8)
+  if (goma_ctx->solver.solver_output_format & 8)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 16)
+  if (goma_ctx->solver.solver_output_format & 16)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 32)
+  if (goma_ctx->solver.solver_output_format & 32)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 64)
+  if (goma_ctx->solver.solver_output_format & 64)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 128)
+  if (goma_ctx->solver.solver_output_format & 128)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 256)
+  if (goma_ctx->solver.solver_output_format & 256)
     DPRINTF(stdout, "--- ");
-  if (Solver_Output_Format & 512)
+  if (goma_ctx->solver.solver_output_format & 512)
     DPRINTF(stdout, "--------------- ");
-  if (Solver_Output_Format & 1024)
+  if (goma_ctx->solver.solver_output_format & 1024)
     DPRINTF(stdout, "------- ");
-  if (Solver_Output_Format & 2048)
+  if (goma_ctx->solver.solver_output_format & 2048)
     DPRINTF(stdout, "-------");
   DPRINTF(stdout, "\n");
   DPRINTF(stdout, "scaled solution norms  %10.3e %10.3e %10.3e \n", Norm[4][0], Norm[4][1],
@@ -3140,17 +3161,17 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     }
 
 #ifdef GOMA_ENABLE_AZTEC
-    if (Linear_Solver == AZTEC)
+    if (goma_ctx->solver.linear_solver == AZTEC)
       total_ls_its += err;
 #endif
 
   } /* if (Continuation > 0) */
 
 #ifdef GOMA_ENABLE_AZTEC
-  if (Linear_Solver == AZTEC)
+  if (goma_ctx->solver.linear_solver == AZTEC)
     ams->status[AZ_its] = total_ls_its;
 #endif
-  LOCA_UMF_ID = UMF_system_id;
+  goma_ctx->solver.loca_umf_id = UMF_system_id;
 
   /*
    * If using LOCA, there may be another resolve after exiting the
@@ -3159,7 +3180,7 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
    */
 
 free_and_clear:
-  if (goma_ctx->num_proc > 1 && strcmp(Matrix_Format, "msr") == 0) {
+  if (goma_ctx->num_proc > 1 && strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     if (Continuation != LOCA && dofs_hidden) {
       show_external(num_universe_dofs[pg->imtrx],
                     (num_universe_dofs[pg->imtrx] - num_external_dofs[pg->imtrx]), ija, ija_save,
@@ -3867,7 +3888,7 @@ static int soln_sens(double lambda,  /*  parameter */
    *
    */
 #ifdef MATRIX_DUMP_SENS
-  if (strcmp(Matrix_Format, "msr") == 0) {
+  if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
     matrix_dump_msr(ams, exo, dpi, x);
   } else {
     matrix_dump_vbr(ams, exo, dpi, x);
@@ -3876,7 +3897,7 @@ static int soln_sens(double lambda,  /*  parameter */
 
   vector_scaling(NumUnknowns[pg->imtrx], resid_vector_sens, scale);
 
-  switch (Linear_Solver) {
+  switch (goma_ctx->solver.linear_solver) {
   case UMFPACK2:
   case UMFPACK2F:
     /*  */
@@ -3891,7 +3912,7 @@ static int soln_sens(double lambda,  /*  parameter */
      * isn't, in fact, what you want to happen, it is what was
      * previously done before I consolidated UMFPACK2 and
      * UMFPACK2F. */
-    if (Linear_Solver == UMFPACK2F)
+    if (goma_ctx->solver.linear_solver == UMFPACK2F)
       Factor_Flag = 0;
 
     if (first_linear_solver_call)
@@ -3906,13 +3927,13 @@ static int soln_sens(double lambda,  /*  parameter */
     printf("%s: entering SL_UMF for soln_sens solve\n", y0);
     fflush(stdout);
 #endif
-    UMF_system_id =
-        SL_UMF(UMF_system_id,
-               /*
-               &first_soln_sens_linear_solver_call,
-               */
-               &first_linear_solver_call, &Factor_Flag, &matr_form, &NumUnknowns[pg->imtrx],
-               &NZeros, &ija[0], &ija[0], &a[0], &resid_vector_sens[0], &x_sens[0]);
+    UMF_system_id = SL_UMF(UMF_system_id,
+                           /*
+                           &first_soln_sens_linear_solver_call,
+                           */
+                           &first_linear_solver_call, &Factor_Flag, &matr_form,
+                           &NumUnknowns[pg->imtrx], &goma_ctx->solver.nzeros, &ija[0], &ija[0],
+                           &a[0], &resid_vector_sens[0], &x_sens[0]);
 #ifdef DEBUG_SL_UMF
     printf("%s: returning from SL_UMF\n", y0);
     fflush(stdout);
@@ -3926,7 +3947,8 @@ static int soln_sens(double lambda,  /*  parameter */
 
   case SPARSE13a:
     dcopy1(NumUnknowns[pg->imtrx], resid_vector_sens, x_sens);
-    lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], NZeros, a, ija, x_sens, 3);
+    lu(NumUnknowns[pg->imtrx], NumExtUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, x_sens,
+       3);
     first_linear_solver_call = FALSE;
     /*
      * Note that sl_lu has static variables to keep track of
@@ -3937,17 +3959,18 @@ static int soln_sens(double lambda,  /*  parameter */
 
 #ifdef GOMA_ENABLE_AMESOS
   case AMESOS:
-    if ((strcmp(Matrix_Format, "msr") != 0) && (strcmp(Matrix_Format, "epetra") != 0)) {
+    if ((strcmp(goma_ctx->solver.matrix_format, "msr") != 0) &&
+        (strcmp(goma_ctx->solver.matrix_format, "epetra") != 0)) {
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR and Epetra matrix formats are currently supported with "
                           "the Amesos solver suite\n");
     }
-    amesos_solve(Amesos_Package, ams, x_sens, resid_vector_sens, 0, pg->imtrx);
+    amesos_solve(goma_ctx->solver.amesos_package, ams, x_sens, resid_vector_sens, 0, pg->imtrx);
     strcpy(stringer, " 1 ");
     break;
 #endif
   case MUMPS:
 
-    if ((strcmp(Matrix_Format, "msr") != 0)) {
+    if ((strcmp(goma_ctx->solver.matrix_format, "msr") != 0)) {
       GOMA_EH(GOMA_ERROR, " Sorry, only MSR matrix format is currently supported with "
                           "the MUMPS solver\n");
     }
@@ -3966,7 +3989,8 @@ static int soln_sens(double lambda,  /*  parameter */
                             "the Amesos2 solver suite\n");
       }
     }
-    amesos2_solve(ams, x_sens, resid_vector_sens, Amesos2_Package, Amesos2_File[pg->imtrx]);
+    amesos2_solve(ams, x_sens, resid_vector_sens, goma_ctx->solver.amesos2_package,
+                  goma_ctx->solver.amesos2_file[pg->imtrx]);
     strcpy(stringer, " 1 ");
     break;
 
@@ -4009,7 +4033,7 @@ static int soln_sens(double lambda,  /*  parameter */
 
     break;
   case AZTECOO:
-    if (strcmp(Matrix_Format, "epetra") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
       aztecoo_solve_epetra(ams, x_sens, resid_vector_sens);
       aztec_stringer((int)ams->status[AZ_why], ams->status[AZ_its], &stringer[0]);
       matrix_solved = (ams->status[AZ_why] == AZ_normal);
@@ -4024,10 +4048,10 @@ static int soln_sens(double lambda,  /*  parameter */
   case STRATIMIKOS: {
     int solver_found = 0;
 #ifdef GOMA_ENABLE_EPETRA
-    if (strcmp(Matrix_Format, "epetra") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "epetra") == 0) {
       int iterations;
-      int err = stratimikos_solve(ams, x_sens, resid_vector_sens, &iterations, Stratimikos_File,
-                                  pg->imtrx);
+      int err = stratimikos_solve(ams, x_sens, resid_vector_sens, &iterations,
+                                  goma_ctx->solver.stratimikos_file, pg->imtrx);
       GOMA_EH(err, "Error in stratimikos solve");
       if (iterations == -1) {
         strcpy(stringer, "err");
@@ -4038,10 +4062,10 @@ static int soln_sens(double lambda,  /*  parameter */
     }
 #endif
 #ifdef GOMA_ENABLE_TPETRA
-    if (strcmp(Matrix_Format, "tpetra") == 0) {
+    if (strcmp(goma_ctx->solver.matrix_format, "tpetra") == 0) {
       int iterations;
       int err = stratimikos_solve_tpetra(ams, x_sens, resid_vector_sens, &iterations,
-                                         Stratimikos_File, pg->imtrx);
+                                         goma_ctx->solver.stratimikos_file, pg->imtrx);
       if (err) {
         GOMA_EH(err, "Error in stratimikos solve");
         check_parallel_error("Error in solve - stratimikos");
@@ -4063,7 +4087,8 @@ static int soln_sens(double lambda,  /*  parameter */
      * it is the first call or not.
      */
 #ifdef HARWELL
-    err = cmsr_ma28(NumUnknowns[pg->imtrx], NZeros, a, ija, x_sens, resid_vector_sens);
+    err = cmsr_ma28(NumUnknowns[pg->imtrx], goma_ctx->solver.nzeros, a, ija, x_sens,
+                    resid_vector_sens);
 #endif
 #ifndef HARWELL
     GOMA_EH(GOMA_ERROR, "That linear solver package is not implemented.");

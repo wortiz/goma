@@ -2285,7 +2285,8 @@ void gnn_distance(const int I,
   if (Fold != NULL)
     *Fold = xold[ie];
   if (Fprev != NULL)
-    *Fprev = x[ie] + damp_factor * var_damp[idv[pg->imtrx][ie][0]] * delta_x[ie];
+    *Fprev = x[ie] + goma_ctx->solver.damp_factor *
+                         goma_ctx->solver.var_damp[idv[pg->imtrx][ie][0]] * delta_x[ie];
 }
 
 int find_2d_side_id(double x0, double x1)

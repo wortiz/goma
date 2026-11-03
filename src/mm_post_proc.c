@@ -4733,18 +4733,18 @@ void post_process_nodal(double x[],            /* Solution vector for the curren
        * can be piggyback on top of one gauss point?
        */
       int pspg_local = 0;
-      if (PSPG) {
-        if (PSPG == 1) {
+      if (goma_ctx->solver.pspg) {
+        if (goma_ctx->solver.pspg == 1) {
           pspg_local = 0;
         }
         /* This is the flag for the standard local PSPG */
-        else if (PSPG == 2) {
+        else if (goma_ctx->solver.pspg == 2) {
           pspg_local = 1;
         }
       }
 
-      if ((PSPG || (mp->Mwt_funcModel == SUPG)) && pd_glob[mn]->e[pg->imtrx][R_PRESSURE] &&
-          pd_glob[mn]->e[pg->imtrx][R_MOMENTUM1]) {
+      if ((goma_ctx->solver.pspg || (mp->Mwt_funcModel == SUPG)) &&
+          pd_glob[mn]->e[pg->imtrx][R_PRESSURE] && pd_glob[mn]->e[pg->imtrx][R_MOMENTUM1]) {
         xi[0] = 0.0;
         xi[1] = 0.0;
         xi[2] = 0.0;
