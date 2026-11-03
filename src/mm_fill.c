@@ -355,6 +355,15 @@ Revised:         Summer 1998, SY Tam (UNM)
 ******************************************************************************/
 
 {
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Action_Flags *const af = goma_ctx->fem.af;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Element_Stiffness_Pointers *const esp = goma_ctx->fem.esp;
+  struct Local_Element_Contributions *const lec = goma_ctx->fem.lec;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Transient_Information *const tran = goma_ctx->fem.tran;
   double delta_t, theta, time_value, h_elem_avg; /*see arg list */
   int ielem, num_total_nodes;
 
@@ -590,8 +599,8 @@ Revised:         Summer 1998, SY Tam (UNM)
   GOMA_EH(err, "load_elem_dofptr");
 
   err = bf_mp_init(goma_ctx->fem.pd);
-  mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
-  pde = (int *)goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx];
+  mn = ei[pg->imtrx]->mn;
+  pde = (int *)goma_ctx->fem.pd->e[pg->imtrx];
 
   for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
     goma_ctx->fem.ve[mode] = goma_ctx->fem.ve_glob[mn][mode];
@@ -605,25 +614,25 @@ Revised:         Summer 1998, SY Tam (UNM)
 
   discontinuous_mass = 0;
 
-  if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][MASS_FRACTION] == I_P1) {
+  if (goma_ctx->fem.pd->i[pg->imtrx][MASS_FRACTION] == I_P1) {
     if (goma_ctx->fem.pd->Num_Dim == 2)
       ielem_type_mass = P1_QUAD;
     if (goma_ctx->fem.pd->Num_Dim == 3)
       ielem_type_mass = P1_HEX;
     discontinuous_mass = 1;
-  } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][MASS_FRACTION] == I_P0) {
+  } else if (goma_ctx->fem.pd->i[pg->imtrx][MASS_FRACTION] == I_P0) {
     if (goma_ctx->fem.pd->Num_Dim == 2)
       ielem_type_mass = P0_QUAD;
     if (goma_ctx->fem.pd->Num_Dim == 3)
       ielem_type_mass = P0_HEX;
     discontinuous_mass = 1;
-  } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][MASS_FRACTION] == I_PQ1) {
+  } else if (goma_ctx->fem.pd->i[pg->imtrx][MASS_FRACTION] == I_PQ1) {
     if (goma_ctx->fem.pd->Num_Dim == 2)
       ielem_type_mass = BILINEAR_QUAD;
     if (goma_ctx->fem.pd->Num_Dim == 3)
       GOMA_EH(GOMA_ERROR, "Sorry PQ1 interpolation has not been implemented in 3D yet.");
     discontinuous_mass = 1;
-  } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][MASS_FRACTION] == I_PQ2) {
+  } else if (goma_ctx->fem.pd->i[pg->imtrx][MASS_FRACTION] == I_PQ2) {
     if (goma_ctx->fem.pd->Num_Dim == 2)
       ielem_type_mass = BIQUAD_QUAD;
     if (goma_ctx->fem.pd->Num_Dim == 3)
@@ -635,30 +644,28 @@ Revised:         Summer 1998, SY Tam (UNM)
 
   discontinuous_stress = 0;
 
-  if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] == I_P1) {
+  if (goma_ctx->fem.pd->i[pg->imtrx][POLYMER_STRESS11] == I_P1) {
     discontinuous_stress = 1;
-  } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] == I_P0) {
+  } else if (goma_ctx->fem.pd->i[pg->imtrx][POLYMER_STRESS11] == I_P0) {
     discontinuous_stress = 1;
-  } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] == I_PQ1) {
+  } else if (goma_ctx->fem.pd->i[pg->imtrx][POLYMER_STRESS11] == I_PQ1) {
     if (goma_ctx->fem.pd->Num_Dim == 3)
       GOMA_EH(GOMA_ERROR, "Sorry PQ1 interpolation has not been implemented in 3D yet.");
     discontinuous_stress = 1;
-  } else if (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] == I_PQ2) {
+  } else if (goma_ctx->fem.pd->i[pg->imtrx][POLYMER_STRESS11] == I_PQ2) {
     if (goma_ctx->fem.pd->Num_Dim == 3)
       GOMA_EH(GOMA_ERROR, "Sorry PQ2 interpolation has not been implemented in 3D yet.");
     discontinuous_stress = 1;
   }
 
-  ielem_type = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_type; /* element type */
+  ielem_type = ei[pg->imtrx]->ielem_type; /* element type */
 
-  num_local_nodes = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                        ->num_local_nodes; /* number of local  basis functions */
+  num_local_nodes = ei[pg->imtrx]->num_local_nodes; /* number of local  basis functions */
 
-  ielem_dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                  ->ielem_dim; /* physical dimension  of this element */
+  ielem_dim = ei[pg->imtrx]->ielem_dim; /* physical dimension  of this element */
 
   iconnect_ptr =
-      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
+      ei[pg->imtrx]
           ->iconnect_ptr; /* find pointer to beginning  of this element's connectivity list */
 
   /* subgrid or subelement integration setup */
@@ -833,8 +840,8 @@ Revised:         Summer 1998, SY Tam (UNM)
       (goma_ctx->fem.mp->Ewt_funcModel == SUPG && pde[R_ENERGY] &&
        (goma_ctx->fem.pd->gv[R_MOMENTUM1] || goma_ctx->fem.pd->gv[R_MESH1])) ||
       (goma_ctx->fem.mp->Ewt_funcModel == SUPG && pde[R_SHELL_ENERGY] && (pde[R_LUBP])) ||
-      ((pde[R_FILL]) && ((goma_ctx->fem.tran->Fill_Weight_Fcn == FILL_WEIGHT_SUPG) ||
-                         (goma_ctx->fem.tran->Fill_Weight_Fcn == FILL_WEIGHT_EXPLICIT)))) {
+      ((pde[R_FILL]) && ((tran->Fill_Weight_Fcn == FILL_WEIGHT_SUPG) ||
+                         (tran->Fill_Weight_Fcn == FILL_WEIGHT_EXPLICIT)))) {
     h_elem_siz(pg_data.hsquared, pg_data.hhv, pg_data.dhv_dxnode, goma_ctx->fem.pd->gv[R_MESH1]);
     element_velocity(pg_data.v_avg, pg_data.dv_dnode, exo);
   }
@@ -879,17 +886,17 @@ Revised:         Summer 1998, SY Tam (UNM)
       goma_ctx->fem.ls = goma_ctx->fem.pfd->ls[0]; /* this is a major hack */
     if (pde[R_LAGR_MULT1] && !goma_ctx->fem.ls->elem_overlap_state) {
       for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
-        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_LAGR_MULT1 + b]; i++) {
-          if (goma_ctx->fem.af->Assemble_Residual) {
-            lm_dof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[R_LAGR_MULT1 + b][i];
-            eqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_LAGR_MULT1 + b];
-            var = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LAGR_MULT1 + b];
-            goma_ctx->fem.lec->R[LEC_R_INDEX(eqn, i)] = x[lm_dof];
+        for (i = 0; i < ei[pg->imtrx]->dof[R_LAGR_MULT1 + b]; i++) {
+          if (af->Assemble_Residual) {
+            lm_dof = ei[pg->imtrx]->gun_list[R_LAGR_MULT1 + b][i];
+            eqn = upd->ep[pg->imtrx][R_LAGR_MULT1 + b];
+            var = upd->vp[pg->imtrx][LAGR_MULT1 + b];
+            lec->R[LEC_R_INDEX(eqn, i)] = x[lm_dof];
           }
 
-          if (goma_ctx->fem.af->Assemble_Jacobian) {
-            zero_lec_row(goma_ctx->fem.lec->J, eqn, i);
-            goma_ctx->fem.lec->J[LEC_J_INDEX(eqn, var, i, i)] = 1.0;
+          if (af->Assemble_Jacobian) {
+            zero_lec_row(lec->J, eqn, i);
+            lec->J[LEC_J_INDEX(eqn, var, i, i)] = 1.0;
           }
         }
       }
@@ -897,16 +904,16 @@ Revised:         Summer 1998, SY Tam (UNM)
   } else {
     if (pde[R_LAGR_MULT1]) {
       for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
-        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_LAGR_MULT1 + b]; i++) {
-          if (goma_ctx->fem.af->Assemble_Residual) {
-            eqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_LAGR_MULT1 + b];
-            var = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LAGR_MULT1 + b];
-            goma_ctx->fem.lec->R[LEC_R_INDEX(eqn, i)] = 0.;
+        for (i = 0; i < ei[pg->imtrx]->dof[R_LAGR_MULT1 + b]; i++) {
+          if (af->Assemble_Residual) {
+            eqn = upd->ep[pg->imtrx][R_LAGR_MULT1 + b];
+            var = upd->vp[pg->imtrx][LAGR_MULT1 + b];
+            lec->R[LEC_R_INDEX(eqn, i)] = 0.;
           }
 
-          if (goma_ctx->fem.af->Assemble_Jacobian) {
-            zero_lec_row(goma_ctx->fem.lec->J, eqn, i);
-            goma_ctx->fem.lec->J[LEC_J_INDEX(eqn, var, i, i)] = 1.e-15;
+          if (af->Assemble_Jacobian) {
+            zero_lec_row(lec->J, eqn, i);
+            lec->J[LEC_J_INDEX(eqn, var, i, i)] = 1.e-15;
           }
         }
       }
@@ -928,21 +935,20 @@ Revised:         Summer 1998, SY Tam (UNM)
   assemble_rs = TRUE;
 
   if (pde[R_SOLID1]) {
-    if (goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][R_SOLID1][(LOG2_MASS)])
+    if (goma_ctx->fem.pd->etm[pg->imtrx][R_SOLID1][(LOG2_MASS)])
       GOMA_EH(GOMA_ERROR, "Cannot do real inertia for TALE yet. Remove this line if trying to "
                           "perform EULERIAN solid mechanics");
     eqn = R_SOLID1;
     if (goma_ctx->fem.pd->TimeIntegration != STEADY &&
-        goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][R_SOLID1][(LOG2_MASS)] &&
-        !goma_ctx->fem.ls->elem_overlap_state && *goma_ctx->fem.esp->F[0] >= 0.0) {
-      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+        goma_ctx->fem.pd->etm[pg->imtrx][R_SOLID1][(LOG2_MASS)] &&
+        !goma_ctx->fem.ls->elem_overlap_state && *esp->F[0] >= 0.0) {
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
         make_trivial = TRUE;
-        if ((goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q1) ||
-            (goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn] == I_Q2)) {
+        if ((goma_ctx->fem.pd->i[pg->imtrx][eqn] == I_Q1) ||
+            (goma_ctx->fem.pd->i[pg->imtrx][eqn] == I_Q2)) {
           /* check all neighboring elements to see if any
              span the interface */
-          I = goma_ctx->mesh
-                  .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+          I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
           for (j = exo->node_elem_pntr[I]; j < exo->node_elem_pntr[I + 1]; j++) {
             e = exo->node_elem_list[j];
             if (elem_overlaps_interface(e, x, exo, goma_ctx->fem.ls->Length_Scale)) {
@@ -955,16 +961,16 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (make_trivial) {
         assemble_rs = FALSE;
         for (b = 0; b < goma_ctx->fem.pd->Num_Dim; b++) {
-          for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[R_SOLID1 + b]; i++) {
-            if (goma_ctx->fem.af->Assemble_Residual) {
-              eqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_SOLID1 + b];
-              var = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][R_SOLID1 + b];
-              goma_ctx->fem.lec->R[LEC_R_INDEX(eqn, i)] = 0.;
+          for (i = 0; i < ei[pg->imtrx]->dof[R_SOLID1 + b]; i++) {
+            if (af->Assemble_Residual) {
+              eqn = upd->ep[pg->imtrx][R_SOLID1 + b];
+              var = upd->vp[pg->imtrx][R_SOLID1 + b];
+              lec->R[LEC_R_INDEX(eqn, i)] = 0.;
             }
 
-            if (goma_ctx->fem.af->Assemble_Jacobian) {
-              zero_lec_row(goma_ctx->fem.lec->J, eqn, i);
-              goma_ctx->fem.lec->J[LEC_J_INDEX(eqn, var, i, i)] = 1.e-15;
+            if (af->Assemble_Jacobian) {
+              zero_lec_row(lec->J, eqn, i);
+              lec->J[LEC_J_INDEX(eqn, var, i, i)] = 1.e-15;
             }
           }
         }
@@ -1076,7 +1082,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       xi[1] = t;
       xi[2] = u;
 
-      goma_ctx->fem.fv->wt = wt;
+      fv->wt = wt;
 
       /*
        *	    PASS wt to assembly routines!!!!! ...
@@ -1151,7 +1157,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       err = load_fv_grads();
       GOMA_EH(err, "load_fv_grads");
 
-      if (goma_ctx->fem.upd->AutoDiff) {
+      if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
         fill_ad_field_variables();
 #else
@@ -1178,7 +1184,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif /* CHECK_FINITE */
-      } else if (goma_ctx->fem.tran->Fill_Equation == FILL_EQN_EXT_V && pde[R_EXT_VELOCITY]) {
+      } else if (tran->Fill_Equation == FILL_EQN_EXT_V && pde[R_EXT_VELOCITY]) {
         ls_old = goma_ctx->fem.ls;
         if (goma_ctx->fem.pfd != NULL)
           goma_ctx->fem.ls = goma_ctx->fem.pfd->ls[0];
@@ -1190,7 +1196,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (err)
           return -1;
 #endif /* CHECK_FINITE */
-      } else if (goma_ctx->fem.tran->Fill_Equation == FILL_EQN_ADVECT) {
+      } else if (tran->Fill_Equation == FILL_EQN_ADVECT) {
         err = assemble_fill(theta, delta_t, &pg_data, R_FILL, xi, exo, time_value,
                             &mass_lumped_penalty);
         GOMA_EH(err, "assemble_fill");
@@ -1252,13 +1258,13 @@ Revised:         Summer 1998, SY Tam (UNM)
     ip_total = elem_info(NQUAD, ielem_type);
 
     if (xfem != NULL) {
-      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
-        ls_F[i] = *goma_ctx->fem.esp->F[i];
+      for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
+        ls_F[i] = *esp->F[i];
       }
       i = adaptive_weight(ad_wtpos, ip_total, ielem_dim, ls_F, goma_ctx->fem.ls->Length_Scale, 2,
                           ielem_type);
       GOMA_WH(i, "problem with adaptive weight routine");
-      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+      for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
         ls_F[i] = -ls_F[i];
       }
       i = adaptive_weight(ad_wtneg, ip_total, ielem_dim, ls_F, goma_ctx->fem.ls->Length_Scale, 2,
@@ -1351,7 +1357,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     xi[1] = t;
     xi[2] = u;
 
-    goma_ctx->fem.fv->wt = wt;
+    fv->wt = wt;
 
     /*
      *	    PASS wt to assembly routines!!!!! ...
@@ -1427,7 +1433,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     err = load_fv_grads();
     GOMA_EH(err, "load_fv_grads");
 
-    if (goma_ctx->fem.upd->AutoDiff) {
+    if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
       fill_ad_field_variables();
 #else
@@ -1446,13 +1452,13 @@ Revised:         Summer 1998, SY Tam (UNM)
       load_lsi(goma_ctx->fem.ls->Length_Scale);
       if (goma_ctx->fem.ls->Elem_Sign == -1) {
         wt *= 1. - goma_ctx->fem.lsi->H;
-        goma_ctx->fem.fv->wt *= 1. - goma_ctx->fem.lsi->H;
-        if (goma_ctx->fem.fv->wt == 0.)
+        fv->wt *= 1. - goma_ctx->fem.lsi->H;
+        if (fv->wt == 0.)
           continue;
       } else {
         wt *= goma_ctx->fem.lsi->H;
-        goma_ctx->fem.fv->wt *= goma_ctx->fem.lsi->H;
-        if (goma_ctx->fem.fv->wt == 0.)
+        fv->wt *= goma_ctx->fem.lsi->H;
+        if (fv->wt == 0.)
           continue;
       }
     }
@@ -1461,18 +1467,14 @@ Revised:         Summer 1998, SY Tam (UNM)
     if (goma_ctx->fem.ls != NULL) {
       load_lsi(goma_ctx->fem.ls->Length_Scale);
       if (goma_ctx->fem.ls->Elem_Sign == -1) {
-        goma_ctx->fem.ls->Neg_Vol += goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3 *
-                                     goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->detJ;
+        goma_ctx->fem.ls->Neg_Vol += fv->wt * fv->h3 * bf[goma_ctx->fem.pd->ShapeVar]->detJ;
       } else if (goma_ctx->fem.ls->Elem_Sign == 1) {
-        goma_ctx->fem.ls->Pos_Vol += goma_ctx->fem.fv->wt * goma_ctx->fem.fv->h3 *
-                                     goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->detJ;
+        goma_ctx->fem.ls->Pos_Vol += fv->wt * fv->h3 * bf[goma_ctx->fem.pd->ShapeVar]->detJ;
       } else {
-        goma_ctx->fem.ls->Neg_Vol += goma_ctx->fem.fv->wt * (1. - goma_ctx->fem.lsi->H) *
-                                     goma_ctx->fem.fv->h3 *
-                                     goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->detJ;
-        goma_ctx->fem.ls->Pos_Vol += goma_ctx->fem.fv->wt * goma_ctx->fem.lsi->H *
-                                     goma_ctx->fem.fv->h3 *
-                                     goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->detJ;
+        goma_ctx->fem.ls->Neg_Vol +=
+            fv->wt * (1. - goma_ctx->fem.lsi->H) * fv->h3 * bf[goma_ctx->fem.pd->ShapeVar]->detJ;
+        goma_ctx->fem.ls->Pos_Vol +=
+            fv->wt * goma_ctx->fem.lsi->H * fv->h3 * bf[goma_ctx->fem.pd->ShapeVar]->detJ;
       }
     }
 #endif
@@ -1506,7 +1508,7 @@ Revised:         Summer 1998, SY Tam (UNM)
                 "Film height equation on but evss model not set to NOPOLYMER or EVSS_FILM_HEIGHT");
       } else if (goma_ctx->fem.vn->evssModel == EVSS_FILM_HEIGHT) {
 #ifdef GOMA_ENABLE_SACADO
-        if (goma_ctx->fem.upd->AutoDiff) {
+        if (upd->AutoDiff) {
           err = ad_assemble_film_height_stress(theta, delta_t, &pg_data);
         } else {
           GOMA_EH(GOMA_ERROR, "EVSS_FILM_HEIGHT requires autodiff assembly");
@@ -1522,7 +1524,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
       } else if (goma_ctx->fem.vn->evssModel == EVSS_FILM_HEIGHT_SQRT_CONF) {
 #ifdef GOMA_ENABLE_SACADO
-        if (goma_ctx->fem.upd->AutoDiff) {
+        if (upd->AutoDiff) {
           err = ad_assemble_film_height_sqrt_conf_stress(theta, delta_t, &pg_data);
         } else {
           GOMA_EH(GOMA_ERROR, "EVSS_FILM_HEIGHT_SQRT_CONF requires autodiff assembly");
@@ -1674,7 +1676,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         err = assemble_rate_of_strain(theta, delta_t);
       } else if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
 #ifdef GOMA_ENABLE_SACADO
-        if (goma_ctx->fem.upd->AutoDiff) {
+        if (upd->AutoDiff) {
           err = ad_assemble_film_height_grad_v();
         } else {
           GOMA_EH(GOMA_ERROR, "FILM_HEIGHT GRADIENT equations requires autodiff assembly");
@@ -1731,7 +1733,7 @@ Revised:         Summer 1998, SY Tam (UNM)
            goma_ctx->fem.mp->PorousMediaType == POROUS_SHELL_UNSATURATED ||
            goma_ctx->fem.mp->PorousMediaType == POROUS_TWO_PHASE) &&
           (goma_ctx->fem.mp->SaturationModel == TANH_HYST)) {
-        if (goma_ctx->fem.af->Sat_hyst_reevaluate) {
+        if (af->Sat_hyst_reevaluate) {
           /* gotta evaluate the various terms of the equation first */
           err = get_porous_part_sat_terms(&pm_terms, theta, delta_t);
           GOMA_EH(err, "problem in getting the partially-saturated porous  terms");
@@ -1877,7 +1879,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
     if (((pde[R_EM_E1_REAL] && !pde[R_EM_H1_REAL]) || (pde[R_EM_E2_REAL] && !pde[R_EM_H2_REAL]) ||
          (pde[R_EM_E3_REAL] && !pde[R_EM_H3_REAL])) &&
-        goma_ctx->fem.bf[EM_E1_REAL]->interpolation != I_N1) {
+        bf[EM_E1_REAL]->interpolation != I_N1) {
       err = assemble_ewave_curlcurl(time_value, theta, delta_t, R_EM_E1_REAL, EM_E1_REAL);
       GOMA_EH(err, "assemble_ewave");
 #ifdef CHECK_FINITE
@@ -1885,7 +1887,7 @@ Revised:         Summer 1998, SY Tam (UNM)
       if (err)
         return -1;
 #endif
-    } else if (pde[R_EM_E1_REAL] && goma_ctx->fem.bf[EM_E1_REAL]->interpolation == I_N1) {
+    } else if (pde[R_EM_E1_REAL] && bf[EM_E1_REAL]->interpolation == I_N1) {
       err = assemble_ewave_nedelec(time_value);
       GOMA_EH(err, "assemble_ewave_nedelec");
 #ifdef CHECK_FINITE
@@ -2232,7 +2234,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_FILM_HEIGHT]) {
-      if (goma_ctx->fem.upd->AutoDiff) {
+      if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
         err = ad_assemble_film_height(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "ad_assemble_film_height");
@@ -2248,7 +2250,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     /* Both SHELL_FILMP and SHELL_FILMH have to be activated to solve film profile equation */
 
     if (pde[R_SHELL_FILMP] && pde[R_SHELL_FILMH]) {
-      if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim == 1) {
+      if (ei[pg->imtrx]->ielem_dim == 1) {
         err = assemble_film_1D(time_value, theta, delta_t, xi, exo);
         GOMA_EH(err, "assemble_film_1D");
 #ifdef CHECK_FINITE
@@ -2345,7 +2347,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if ((pde[R_SHELL_SAT_1]) || (pde[R_SHELL_SAT_2]) || (pde[R_SHELL_SAT_3])) {
-      if (goma_ctx->fem.upd->AutoDiff) {
+      if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
         err = ad_assemble_porous_shell_saturation(theta, delta_t, xi, exo);
 #else
@@ -2537,7 +2539,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 
     if (pde[R_MOMENTUM1]) {
       if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
-        if (goma_ctx->fem.upd->AutoDiff) {
+        if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
           err = ad_assemble_momentum_film_cast(time_value, theta, delta_t, h_elem_avg, &pg_data, xi,
                                                exo);
@@ -2550,14 +2552,14 @@ Revised:         Summer 1998, SY Tam (UNM)
                                             exo);
           GOMA_EH(err, "ad_assemble_momentum_film_cast");
         }
-      } else if (goma_ctx->fem.upd->SegregatedSolve) {
+      } else if (upd->SegregatedSolve) {
         err = assemble_momentum_segregated(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_momentum");
 #ifdef CHECK_FINITE
         CHECKFINITE("assemble_momentum");
 #endif
       } else {
-        if (goma_ctx->fem.upd->AutoDiff) {
+        if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
           err = ad_assemble_momentum(time_value, theta, delta_t, h_elem_avg, &pg_data, xi, exo);
 #else
@@ -2707,7 +2709,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_FILL]) {
-      if (goma_ctx->fem.tran->Fill_Equation == FILL_EQN_EIKONAL) {
+      if (tran->Fill_Equation == FILL_EQN_EIKONAL) {
         err = assemble_fill_gradf(theta, delta_t, pg_data.hsquared, pg_data.hh, pg_data.dh_dxnode);
         GOMA_EH(err, "assemble_fill_gradf");
 #ifdef CHECK_FINITE
@@ -2751,7 +2753,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_PRESSURE]) {
-      if (goma_ctx->fem.upd->SegregatedSolve) {
+      if (upd->SegregatedSolve) {
         err = assemble_continuity_segregated(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_continuity");
 #ifdef CHECK_FINITE
@@ -2760,7 +2762,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         if (neg_elem_volume)
           return -1;
       } else {
-        if (goma_ctx->fem.upd->AutoDiff) {
+        if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
           err = ad_assemble_continuity(time_value, theta, delta_t, &pg_data);
 #else
@@ -2780,7 +2782,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_PSTAR]) {
-      if (goma_ctx->fem.upd->SegregatedSolve) {
+      if (upd->SegregatedSolve) {
         err = assemble_pstar(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_pstar");
 #ifdef CHECK_FINITE
@@ -2794,7 +2796,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     }
 
     if (pde[R_USTAR]) {
-      if (goma_ctx->fem.upd->SegregatedSolve) {
+      if (upd->SegregatedSolve) {
         err = assemble_ustar(time_value, theta, delta_t, &pg_data);
         GOMA_EH(err, "assemble_ustar");
 #ifdef CHECK_FINITE
@@ -2996,7 +2998,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     int neighbor;
     int index, face;
 
-    for (face = 0; face < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_sides; face++) {
+    for (face = 0; face < ei[pg->imtrx]->num_sides; face++) {
 
       index = exo->elem_elem_pntr[ielem] + face;
       neighbor = exo->elem_elem_list[index];
@@ -3022,15 +3024,15 @@ Revised:         Summer 1998, SY Tam (UNM)
     int neighbor;
     int index, face;
 
-    var = 4 * goma_ctx->fem.lec->max_dof * (MAX_PROB_VAR + MAX_CONC) * goma_ctx->fem.lec->max_dof;
-    memset(goma_ctx->fem.lec->J_stress_neighbor, 0, sizeof(double) * var);
+    var = 4 * lec->max_dof * (MAX_PROB_VAR + MAX_CONC) * lec->max_dof;
+    memset(lec->J_stress_neighbor, 0, sizeof(double) * var);
 
     if (goma_ctx->num_proc > 1) {
       GOMA_EH(GOMA_ERROR, "Discontinuous Galerkin for stress not implemented in parallel");
       return -1;
     }
 
-    for (face = 0; face < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_sides; face++) {
+    for (face = 0; face < ei[pg->imtrx]->num_sides; face++) {
 
       index = exo->elem_elem_pntr[ielem] + face;
       neighbor = exo->elem_elem_list[index];
@@ -3157,8 +3159,8 @@ Revised:         Summer 1998, SY Tam (UNM)
    * be added back in (i.e. if transport equations is integrated by parts twice)
    * Do this before rotating mesh or momentum equations
    **************************************************************************/
-  if (First_Elem_Edge_BC_Array[goma_ctx->fem.pg->imtrx][ielem] != NULL) {
-    elem_edge_bc = First_Elem_Edge_BC_Array[goma_ctx->fem.pg->imtrx][ielem];
+  if (First_Elem_Edge_BC_Array[pg->imtrx][ielem] != NULL) {
+    elem_edge_bc = First_Elem_Edge_BC_Array[pg->imtrx][ielem];
 
     /******************************************************************************/
     do { /* begining of do while construct
@@ -3270,11 +3272,9 @@ Revised:         Summer 1998, SY Tam (UNM)
          */
         I = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
         if (I < (dpi->num_internal_nodes + dpi->num_boundary_nodes)) {
-          if (in_list(I, 0, num_mom_rotate[goma_ctx->fem.pg->imtrx],
-                      mom_rotate_node[goma_ctx->fem.pg->imtrx]) != -1)
+          if (in_list(I, 0, num_mom_rotate[pg->imtrx], mom_rotate_node[pg->imtrx]) != -1)
             call_rotate = 1;
-          if (in_list(I, 0, num_mesh_rotate[goma_ctx->fem.pg->imtrx],
-                      mesh_rotate_node[goma_ctx->fem.pg->imtrx]) != -1)
+          if (in_list(I, 0, num_mesh_rotate[pg->imtrx], mesh_rotate_node[pg->imtrx]) != -1)
             call_rotate = 1;
         }
       }
@@ -3306,8 +3306,8 @@ Revised:         Summer 1998, SY Tam (UNM)
 
     /* determine if rotation is needed */
     for (i = 0; i < num_local_nodes; i++) {
-      id_mesh = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[MESH_DISPLACEMENT1][i];
-      id_mom = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[VELOCITY1][i];
+      id_mesh = ei[pg->imtrx]->ln_to_dof[MESH_DISPLACEMENT1][i];
+      id_mom = ei[pg->imtrx]->ln_to_dof[VELOCITY1][i];
       /*
        *  To address a particular residual equation, map the local
        *   elemental node number i into a global index I
@@ -3355,7 +3355,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   if (pde[R_MOMENTUM1] && goma_automatic_rotations.automatic_rotations) {
     /* determine if rotation is needed */
     for (i = 0; i < num_local_nodes; i++) {
-      int id_mom = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[VELOCITY1][i];
+      int id_mom = ei[pg->imtrx]->ln_to_dof[VELOCITY1][i];
       /*
        *  To address a particular residual equation, map the local
        *   elemental node number i into a global index I
@@ -3381,7 +3381,7 @@ Revised:         Summer 1998, SY Tam (UNM)
   if (pde[R_MESH1] && goma_automatic_rotations.automatic_rotations) {
     /* determine if rotation is needed */
     for (i = 0; i < num_local_nodes; i++) {
-      int id_mesh = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[R_MESH1][i];
+      int id_mesh = ei[pg->imtrx]->ln_to_dof[R_MESH1][i];
       /*
        *  To address a particular residual equation, map the local
        *   elemental node number i into a global index I
@@ -3432,7 +3432,7 @@ Revised:         Summer 1998, SY Tam (UNM)
     // to zero the previous contributions so we can apply the strong BC's
     // We do this in a loop before because some BC's like GD conditions
     // take multiple BC's to affect the residual
-    if (goma_ctx->fem.upd->strong_bc_replace) {
+    if (upd->strong_bc_replace) {
       elem_side_bc = first_elem_side_BC_array[ielem];
       do { /* begining of do while construct */
         /* which loops over the sides of this element that have boundary
@@ -3456,7 +3456,7 @@ Revised:         Summer 1998, SY Tam (UNM)
         }
 
         if (call_int || call_col || call_nedelec) {
-          err = zero_strong_resid_side(goma_ctx->fem.lec, elem_side_bc);
+          err = zero_strong_resid_side(lec, elem_side_bc);
         }
       } while ((elem_side_bc = elem_side_bc->next_side_bc) != NULL);
     }
@@ -3628,9 +3628,9 @@ Revised:         Summer 1998, SY Tam (UNM)
   /******************************************************************************/
 
   /******************************************************************************/
-  if (First_Elem_Edge_BC_Array[goma_ctx->fem.pg->imtrx][ielem] != NULL) {
+  if (First_Elem_Edge_BC_Array[pg->imtrx][ielem] != NULL) {
     /******************************************************************************/
-    elem_edge_bc = First_Elem_Edge_BC_Array[goma_ctx->fem.pg->imtrx][ielem];
+    elem_edge_bc = First_Elem_Edge_BC_Array[pg->imtrx][ielem];
 
     /****************************************************************************/
     do { /* begining of do while construct */
@@ -3720,32 +3720,29 @@ Revised:         Summer 1998, SY Tam (UNM)
       /*Now apply condition */
       if (node->DBSH_SLOPE_X == 1) {
         eqn = R_MESH1;
-        goma_ctx->fem.lec->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn], i)] =
-            1.0 * BIG_PENALTY;
+        lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][eqn], i)] = 1.0 * BIG_PENALTY;
       }
       if (node->DBSH_SLOPE_Y == 1) {
         eqn = R_MESH2;
-        goma_ctx->fem.lec->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn], i)] =
-            0.0 * BIG_PENALTY;
+        lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][eqn], i)] = 0.0 * BIG_PENALTY;
       }
     }
   }
 
   if ((Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) &&
-      !(goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix) &&
-      !(goma_ctx->fem.af->Assemble_LSA_Mass_Matrix))
+      !(af->Assemble_LSA_Jacobian_Matrix) && !(af->Assemble_LSA_Mass_Matrix))
     /* Cheap, but effective!  Zero out the equation rows for
      * R_MOMENTUM3, and the columns for sensitivities to VELOCITY3,
      * then stick in a Dirichlet condition.  The end effect should be
      * that our original 2D steady-state problem has an appended
      * system equivalent to the identity problem, "I x = 0". */
-    for (i = 0; i < goma_ctx->fem.lec->max_dof; i++) {
-      eqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MOMENTUM3];
-      var = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VELOCITY3];
-      zero_lec_row(goma_ctx->fem.lec->J, eqn, i);
-      zero_lec_column(goma_ctx->fem.lec->J, var, i);
-      goma_ctx->fem.lec->J[LEC_J_INDEX(eqn, var, i, i)] = 1.0;
-      goma_ctx->fem.lec->R[LEC_R_INDEX(eqn, i)] = 0.0;
+    for (i = 0; i < lec->max_dof; i++) {
+      eqn = upd->ep[pg->imtrx][R_MOMENTUM3];
+      var = upd->vp[pg->imtrx][VELOCITY3];
+      zero_lec_row(lec->J, eqn, i);
+      zero_lec_column(lec->J, var, i);
+      lec->J[LEC_J_INDEX(eqn, var, i, i)] = 1.0;
+      lec->R[LEC_R_INDEX(eqn, i)] = 0.0;
     }
   /* If we're doing normal mode LSA, and we're on wavenumber 0, then
    * the jacobian contributions to the w-momentum equation are
@@ -3755,21 +3752,20 @@ Revised:         Summer 1998, SY Tam (UNM)
    * for the same reason(s) as above.  We don't want this to be
    * subtracted out, so we only apply it on one pass. */
   if ((Linear_Stability == LSA_3D_OF_2D || Linear_Stability == LSA_3D_OF_2D_SAVE) &&
-      goma_ctx->fem.af->Assemble_LSA_Jacobian_Matrix && LSA_3D_of_2D_wave_number == 0 &&
-      LSA_3D_of_2D_pass == 1)
-    for (i = 0; i < goma_ctx->fem.lec->max_dof; i++)
-      goma_ctx->fem.lec->J[LEC_J_INDEX(R_MOMENTUM3, VELOCITY3, i, i)] = 1.0;
+      af->Assemble_LSA_Jacobian_Matrix && LSA_3D_of_2D_wave_number == 0 && LSA_3D_of_2D_pass == 1)
+    for (i = 0; i < lec->max_dof; i++)
+      lec->J[LEC_J_INDEX(R_MOMENTUM3, VELOCITY3, i, i)] = 1.0;
 
   if (goma_ctx->fem.ls != NULL && goma_ctx->fem.ls->Ignore_F_deps) {
     int peqn, pvar;
     for (eqn = V_FIRST; eqn < V_LAST; eqn++) {
-      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      peqn = upd->ep[pg->imtrx][eqn];
       if (peqn != -1 && eqn != R_FILL) {
         var = FILL;
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] = 0.;
+        pvar = upd->vp[pg->imtrx][var];
+        for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] = 0.;
             /*
               if ( lec->J[LEC_J_INDEX(peqn,pvar,i,j)] != 0. )
               DPRINTF(stderr,"lec->J[eqn=%d][var=FILL][%d][%d] =
@@ -3783,13 +3779,13 @@ Revised:         Summer 1998, SY Tam (UNM)
   if (goma_ctx->fem.pfd != NULL && goma_ctx->fem.pfd->ls[0]->Evolution == LS_EVOLVE_SLAVE) {
     int peqn, pvar;
     for (eqn = V_FIRST; eqn < V_LAST; eqn++) {
-      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+      peqn = upd->ep[pg->imtrx][eqn];
       if (peqn != -1 && eqn != R_PHASE1) {
         var = PHASE1;
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-        for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] = 0.;
+        pvar = upd->vp[pg->imtrx][var];
+        for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] = 0.;
           }
         }
       }
@@ -3813,7 +3809,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 	  {
 	    if(BC_Types[bc_input_id].desc->method == STRONG_INT_SURF ) {
 				
-	      printf("\nElement: %d, ID_side: %d\n", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,  elem_side_bc->id_side);
+	      printf("\nElement: %d, ID_side: %d\n", ei[pg->imtrx]->ielem,  elem_side_bc->id_side);
 				
 	      for( i=0; i < (int) elem_side_bc->num_nodes_on_side; i++)
 		{	
@@ -3822,17 +3818,17 @@ Revised:         Summer 1998, SY Tam (UNM)
 					
 		  for(eqn=0; eqn < 2; eqn++)
 		    {
-		      if( id != goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id] ) { printf("Error found elem: %d, I:%d, eqn %d\n",  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem, I, eqn); }
+		      if( id != ei[pg->imtrx]->ln_to_first_dof[eqn][id] ) { printf("Error found elem: %d, I:%d, eqn %d\n",  ei[pg->imtrx]->ielem, I, eqn); }
 		      printf("%d \t", I );
 		      for( var=0; var< 2; var++) 
 			{
 			  for( j=0; j < (int) elem_side_bc->num_nodes_on_side; j++)
 			    {	
 			      jd = (int) elem_side_bc->local_elem_node_id[j];		
-			      printf("J[%d][%d][%d][%d]: %9.3g ", eqn, var, id, jd, goma_ctx->fem.lec->J[eqn][var][id][jd] );
+			      printf("J[%d][%d][%d][%d]: %9.3g ", eqn, var, id, jd, lec->J[eqn][var][id][jd] );
 			    }
 			}
-                      printf("\tR[%d][%d]: %7.4g\n", eqn, id, goma_ctx->fem.lec->R[LEC_R_INDEX(eqn,id)] );
+                      printf("\tR[%d][%d]: %7.4g\n", eqn, id, lec->R[LEC_R_INDEX(eqn,id)] );
 		    }
 					
 		}
@@ -5333,6 +5329,11 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
  * Revised:
  *************************************************************************/
 {
+  struct Local_Element_Contributions *const lec = goma_ctx->fem.lec;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Action_Flags *const af = goma_ctx->fem.af;
   int e, v, i, j, pe, pv;
   int dofs;
   int I, J, K;
@@ -5352,24 +5353,20 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
   llll = fopen(lec_name, "a");
   rrrr = fopen(ler_name, "a");
   fprintf(rrrr, "------------------------------------------------------\n");
-  fprintf(rrrr, "local element = %d, Proc = %d\n", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
-          goma_ctx->proc_id);
+  fprintf(rrrr, "local element = %d, Proc = %d\n", ei[pg->imtrx]->ielem, goma_ctx->proc_id);
   fprintf(rrrr, "lec_it = %d\n", lec_it);
-  fprintf(rrrr, "global element = %d\n",
-          DPI_ptr->elem_index_global[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem]);
+  fprintf(rrrr, "global element = %d\n", DPI_ptr->elem_index_global[ei[pg->imtrx]->ielem]);
   fprintf(rrrr, "\nGlobal_NN Proc_NN  Equation    idof    Proc_SolnNum     ResidValue\n");
   fprintf(llll, "------------------------------------------------------\n");
-  fprintf(llll, "local element = %d, Proc = %d\n", goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
-          goma_ctx->proc_id);
+  fprintf(llll, "local element = %d, Proc = %d\n", ei[pg->imtrx]->ielem, goma_ctx->proc_id);
   fprintf(llll, "lec_it = %d\n", lec_it);
-  fprintf(llll, "global element = %d\n",
-          DPI_ptr->elem_index_global[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem]);
+  fprintf(llll, "global element = %d\n", DPI_ptr->elem_index_global[ei[pg->imtrx]->ielem]);
   fprintf(llll, "\nGlobal_NN Proc_NN  Equation    idof    Proc_SolnNum     ResidValue\n");
 #endif
 
   if (ams->GomaMatrixData != NULL) {
     GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
-    GomaSparseMatrix_LoadLec(matrix, ielem, goma_ctx->fem.lec, resid_vector);
+    GomaSparseMatrix_LoadLec(matrix, ielem, lec, resid_vector);
   }
 #ifdef GOMA_ENABLE_PETSC
 #if PETSC_USE_COMPLEX
@@ -5389,12 +5386,12 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
       int *ija = ams->bindx;
 
       for (e = V_FIRST; e < V_LAST; e++) {
-        pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
+        pe = upd->ep[pg->imtrx][e];
         if (pe != -1) {
           if (e == R_MASS) {
-            for (ke = 0; ke < goma_ctx->fem.upd->Max_Num_Species_Eqn; ke++) {
+            for (ke = 0; ke < upd->Max_Num_Species_Eqn; ke++) {
               pe = MAX_PROB_VAR + ke;
-              dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[e];
+              dofs = ei[pg->imtrx]->dof[e];
               for (i = 0; i < dofs; i++) {
                 /*
                  * Check to see whether this dof is on a
@@ -5402,38 +5399,34 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                  * there is no need to fill in the processor
                  * residual and Jacobian row for this variable.
                  */
-                ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[e][i];
-                if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]) {
-                  gnn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[e][i];
-                  nvdof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->Baby_Dolphin[e][i];
-                  je_new = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ieqn_ledof[ledof] + ke;
-                  ie = Index_Solution(gnn, e, ke, nvdof,
-                                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->matID_ledof[ledof],
-                                      goma_ctx->fem.pg->imtrx);
+                ledof = ei[pg->imtrx]->lvdof_to_ledof[e][i];
+                if (ei[pg->imtrx]->owned_ledof[ledof]) {
+                  gnn = ei[pg->imtrx]->gnn_list[e][i];
+                  nvdof = ei[pg->imtrx]->Baby_Dolphin[e][i];
+                  je_new = ei[pg->imtrx]->ieqn_ledof[ledof] + ke;
+                  ie = Index_Solution(gnn, e, ke, nvdof, ei[pg->imtrx]->matID_ledof[ledof],
+                                      pg->imtrx);
 
-                  resid_vector[ie] += goma_ctx->fem.lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)];
+                  resid_vector[ie] += lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)];
 #ifdef DEBUG_LEC
                   {
-                    if (fabs(goma_ctx->fem.lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)]) > DBL_SMALL ||
+                    if (fabs(lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)]) > DBL_SMALL ||
                         Print_Zeroes) {
                       fprintf(rrrr, "%7d %7d MF%-3d %9d -  %12d - %.10f\n",
                               DPI_ptr->node_index_global[gnn], gnn, ke, i, ie,
-                              goma_ctx->fem.lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)]);
+                              lec->R[LEC_R_INDEX(MAX_PROB_VAR + ke, i)]);
                     }
                   }
 #endif
 
-                  if (goma_ctx->fem.af->Assemble_Jacobian) {
+                  if (af->Assemble_Jacobian) {
                     for (v = V_FIRST; v < V_LAST; v++) {
-                      pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                      if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
-                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
-                        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
-                            ielem) {
-                          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                  ->owningElementForColVar[v] != -1) {
-                            ei_ptr =
-                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
+                      pv = upd->vp[pg->imtrx][v];
+                      if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
+                        ei_ptr = ei[pg->imtrx];
+                        if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
+                          if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
+                            ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
                             if (ei_ptr == 0) {
                               printf("ei_ptr == 0\n");
                               exit(-1);
@@ -5441,14 +5434,14 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                           }
                         }
                         if (v == MASS_FRACTION) {
-                          for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
+                          for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
                             pv = MAX_PROB_VAR + kv;
                             for (j = 0; j < ei_ptr->dof[v]; j++) {
                               ledof = ei_ptr->lvdof_to_ledof[v][j];
                               je_new = ei_ptr->ieqn_ledof[ledof] + kv;
-                              je = Index_Solution(
-                                  ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
-                                  ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
+                              je = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
+                                                  ei_ptr->Baby_Dolphin[v][j],
+                                                  ei_ptr->matID_ledof[ledof], pg->imtrx);
                               if (je != je_new) {
                                 /*
                                  * HKM -> another special case. Until we delineate
@@ -5462,29 +5455,28 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                               GOMA_EH(je, "Bad var index.");
                               ja = (ie == je) ? ie : in_list(je, ija[ie], ija[ie + 1], ija);
                               GOMA_EH(ja, "Could not find vbl in sparse matrix.");
-                              a[ja] += goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)];
+                              a[ja] += lec->J[LEC_J_INDEX(pe, pv, i, j)];
 
 #ifdef DEBUG_LEC
                               {
-                                if (fabs(goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)]) >
-                                        DBL_SMALL ||
+                                if (fabs(lec->J[LEC_J_INDEX(pe, pv, i, j)]) > DBL_SMALL ||
                                     Print_Zeroes) {
                                   fprintf(llll, "%9d %9d %9d %9d -  %12d - %.10f\n", pe, pv, i, j,
-                                          ja, goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)]);
+                                          ja, lec->J[LEC_J_INDEX(pe, pv, i, j)]);
                                 }
                               }
 #endif
                             }
                           }
                         } else {
-                          pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
+                          pv = upd->vp[pg->imtrx][v];
                           kv = 0;
                           for (j = 0; j < ei_ptr->dof[v]; j++) {
                             ledof = ei_ptr->lvdof_to_ledof[v][j];
                             je_new = ei_ptr->ieqn_ledof[ledof];
-                            je = Index_Solution(
-                                ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
-                                ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
+                            je = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
+                                                ei_ptr->Baby_Dolphin[v][j],
+                                                ei_ptr->matID_ledof[ledof], pg->imtrx);
                             if (je != je_new) {
                               fprintf(stderr, "Oh fiddlesticks: je = %d, je_new = %d\n", je,
                                       je_new);
@@ -5493,14 +5485,13 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                             GOMA_EH(je, "Bad var index.");
                             ja = (ie == je) ? ie : in_list(je, ija[ie], ija[ie + 1], ija);
                             GOMA_EH(ja, "Could not find vbl in sparse matrix.");
-                            a[ja] += goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)];
+                            a[ja] += lec->J[LEC_J_INDEX(pe, pv, i, j)];
 #ifdef DEBUG_LEC
                             {
-                              if (fabs(goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)]) >
-                                      DBL_SMALL ||
+                              if (fabs(lec->J[LEC_J_INDEX(pe, pv, i, j)]) > DBL_SMALL ||
                                   Print_Zeroes) {
                                 fprintf(llll, "%9d %9d %9d %9d -  %12d - %.10f\n", pe, pv, i, j, ja,
-                                        goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)]);
+                                        lec->J[LEC_J_INDEX(pe, pv, i, j)]);
                               }
                             }
 #endif
@@ -5513,8 +5504,8 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
               }
             }
           } else {
-            pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
-            dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[e];
+            pe = upd->ep[pg->imtrx][e];
+            dofs = ei[pg->imtrx]->dof[e];
             for (i = 0; i < dofs; i++) {
               /*
                * Check to see whether this dof is on a
@@ -5522,47 +5513,44 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                * there is no need to fill in the processor
                * residual and Jacobian row for this variable.
                */
-              ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[e][i];
-              if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owned_ledof[ledof]) {
-                ie = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gun_list[e][i];
-                resid_vector[ie] += goma_ctx->fem.lec->R[LEC_R_INDEX(pe, i)];
+              ledof = ei[pg->imtrx]->lvdof_to_ledof[e][i];
+              if (ei[pg->imtrx]->owned_ledof[ledof]) {
+                ie = ei[pg->imtrx]->gun_list[e][i];
+                resid_vector[ie] += lec->R[LEC_R_INDEX(pe, i)];
 #ifdef DEBUG_LEC
                 {
-                  if (fabs(goma_ctx->fem.lec->R[LEC_R_INDEX(pe, i)]) > DBL_SMALL || Print_Zeroes) {
+                  if (fabs(lec->R[LEC_R_INDEX(pe, i)]) > DBL_SMALL || Print_Zeroes) {
 
                     fprintf(rrrr, "%9d %9d -  %12d - %.10f\n", pe, i, ie,
-                            goma_ctx->fem.lec->R[LEC_R_INDEX(pe, i)]);
+                            lec->R[LEC_R_INDEX(pe, i)]);
                   }
                 }
 #endif
 
-                if (goma_ctx->fem.af->Assemble_Jacobian) {
+                if (af->Assemble_Jacobian) {
                   for (v = V_FIRST; v < V_LAST; v++) {
-                    pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                    if (pv != -1 && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                    pv = upd->vp[pg->imtrx][v];
+                    if (pv != -1 && (Inter_Mask[pg->imtrx][e][v])) {
                       if (v == MASS_FRACTION) {
 
-                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
-                        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
-                            ielem) {
-                          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                  ->owningElementForColVar[v] != -1) {
-                            ei_ptr =
-                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
+                        ei_ptr = ei[pg->imtrx];
+                        if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
+                          if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
+                            ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
                             if (ei_ptr == 0) {
                               GOMA_EH(GOMA_ERROR, "ei_ptr == 0\n");
                               exit(-1);
                             }
                           }
                         }
-                        for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
+                        for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
                           pv = MAX_PROB_VAR + kv;
                           for (j = 0; j < ei_ptr->dof[v]; j++) {
                             ledof = ei_ptr->lvdof_to_ledof[v][j];
                             je_new = ei_ptr->ieqn_ledof[ledof] + kv;
-                            je = Index_Solution(
-                                ei_ptr->gnn_list[v][j], v, kv, ei_ptr->Baby_Dolphin[v][j],
-                                ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
+                            je = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
+                                                ei_ptr->Baby_Dolphin[v][j],
+                                                ei_ptr->matID_ledof[ledof], pg->imtrx);
                             if (je != je_new) {
                               /*
                                * HKM -> another special case. Until we delineate
@@ -5570,22 +5558,20 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                                *        dofs, je_new will be wrong here. je
                                *        is correct.
                                */
-                              if (Nodes[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[v][j]]
-                                      ->Mat_List.Length < 2) {
+                              if (Nodes[ei[pg->imtrx]->gnn_list[v][j]]->Mat_List.Length < 2) {
                               }
                             }
                             GOMA_EH(je, "Bad var index.");
                             ja = (ie == je) ? ie : in_list(je, ija[ie], ija[ie + 1], ija);
                             GOMA_EH(ja, "Could not find vbl in sparse matrix.");
-                            a[ja] += goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)];
+                            a[ja] += lec->J[LEC_J_INDEX(pe, pv, i, j)];
 
 #ifdef DEBUG_LEC
                             {
-                              if (fabs(goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)]) >
-                                      DBL_SMALL ||
+                              if (fabs(lec->J[LEC_J_INDEX(pe, pv, i, j)]) > DBL_SMALL ||
                                   Print_Zeroes) {
                                 fprintf(llll, "%9d %9d %9d %9d -  %12d - %.10f\n", pe, pv, i, j, ja,
-                                        goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)]);
+                                        lec->J[LEC_J_INDEX(pe, pv, i, j)]);
                               }
                             }
 #endif
@@ -5594,13 +5580,10 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                       } else {
                         kv = 0;
                         // NEW IMPLEMENTATION
-                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
-                        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
-                            ielem) {
-                          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                  ->owningElementForColVar[v] != -1) {
-                            ei_ptr =
-                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
+                        ei_ptr = ei[pg->imtrx];
+                        if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
+                          if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
+                            ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
                             if (ei_ptr == 0) {
                               GOMA_EH(GOMA_ERROR, "ei slave pointer is null");
                               exit(-1);
@@ -5612,7 +5595,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                           je_new = ei_ptr->ieqn_ledof[ledof];
                           je = Index_Solution(ei_ptr->gnn_list[v][j], v, kv,
                                               ei_ptr->Baby_Dolphin[v][j],
-                                              ei_ptr->matID_ledof[ledof], goma_ctx->fem.pg->imtrx);
+                                              ei_ptr->matID_ledof[ledof], pg->imtrx);
                           if (je != je_new) {
                             fprintf(stderr, "Oh fiddlesticks: je = %d, je_new = %d\n", je, je_new);
                             GOMA_EH(GOMA_ERROR, "LEC Indexing error");
@@ -5620,13 +5603,13 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                           GOMA_EH(je, "Bad var index.");
                           ja = (ie == je) ? ie : in_list(je, ija[ie], ija[ie + 1], ija);
                           GOMA_EH(ja, "Could not find vbl in sparse matrix.");
-                          a[ja] += goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)];
+                          a[ja] += lec->J[LEC_J_INDEX(pe, pv, i, j)];
 #ifdef DEBUG_LEC
                           {
-                            if (fabs(goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)]) > DBL_SMALL ||
+                            if (fabs(lec->J[LEC_J_INDEX(pe, pv, i, j)]) > DBL_SMALL ||
                                 Print_Zeroes) {
                               fprintf(llll, "%9d %9d %9d %9d -  %12d - %.10f\n", pe, pv, i, j, ja,
-                                      goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, i, j)]);
+                                      lec->J[LEC_J_INDEX(pe, pv, i, j)]);
                             }
                           }
 #endif
@@ -5655,39 +5638,34 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
       int lec_row, lec_col;
       double *a_ptr;
 
-      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+      for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
         /* I is the global row block index, also global node number */
-        I = goma_ctx->mesh
-                .proc_elem_connect[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr + i];
+        I = goma_ctx->mesh.proc_elem_connect[ei[pg->imtrx]->iconnect_ptr + i];
         /* if I is an external node to this processor, skip all this stuff */
         if (I < ams->npn) {
           row_dofs = rpntr[I + 1] - rpntr[I];
           for (e = V_FIRST; e < V_LAST; e++) {
-            pe = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][e];
+            pe = upd->ep[pg->imtrx][e];
             if (pe != -1) {
               if (e == R_MASS) {
-                for (ke = 0; ke < goma_ctx->fem.upd->Max_Num_Species_Eqn; ke++) {
+                for (ke = 0; ke < upd->Max_Num_Species_Eqn; ke++) {
                   pe = MAX_PROB_VAR + ke;
-                  blk_row = goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][I][e] +
-                            ke * goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][e];
-                  lec_row = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[e][i];
-                  for (idofs = 0; idofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][e];
-                       idofs++) {
+                  blk_row = goma_ctx->problem.local_offset[pg->imtrx][I][e] +
+                            ke * goma_ctx->problem.dolphin[pg->imtrx][I][e];
+                  lec_row = ei[pg->imtrx]->ln_to_first_dof[e][i];
+                  for (idofs = 0; idofs < goma_ctx->problem.dolphin[pg->imtrx][I][e]; idofs++) {
                     *(resid_vector + rpntr[I] + blk_row + idofs) +=
-                        goma_ctx->fem.lec->R[LEC_R_INDEX(pe, lec_row + idofs)];
+                        lec->R[LEC_R_INDEX(pe, lec_row + idofs)];
 
-                    if (goma_ctx->fem.af->Assemble_Jacobian) {
+                    if (af->Assemble_Jacobian) {
                       for (v = V_FIRST; v < V_LAST; v++) {
-                        pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                        if ((pv != -1) && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                        pv = upd->vp[pg->imtrx][v];
+                        if ((pv != -1) && (Inter_Mask[pg->imtrx][e][v])) {
                           // NEW
-                          ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
-                          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                  ->owningElementForColVar[v] != ielem) {
-                            if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                    ->owningElementForColVar[v] != -1) {
-                              ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                           ->owningElement_ei_ptr[v];
+                          ei_ptr = ei[pg->imtrx];
+                          if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
+                            if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
+                              ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
                               if (ei_ptr == 0) {
                                 GOMA_EH(GOMA_ERROR, "ei_ptr == 0\n");
                                 exit(-1);
@@ -5705,31 +5683,24 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                                 a + indx[K]; /* a_ptr points to first entry in val of Kth block */
 
                             if (v == MASS_FRACTION) {
-                              for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
+                              for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
                                 pv = MAX_PROB_VAR + kv;
-                                blk_col =
-                                    goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][J][v] +
-                                    kv * goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                                blk_col = goma_ctx->problem.local_offset[pg->imtrx][J][v] +
+                                          kv * goma_ctx->problem.dolphin[pg->imtrx][J][v];
                                 lec_col = ei_ptr->ln_to_first_dof[v][j];
-                                for (jdofs = 0;
-                                     jdofs <
-                                     goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                                for (jdofs = 0; jdofs < goma_ctx->problem.dolphin[pg->imtrx][J][v];
                                      jdofs++) {
                                   *(a_ptr + row_dofs * (blk_col + jdofs) + blk_row + idofs) +=
-                                      goma_ctx->fem.lec->J[LEC_J_INDEX(pe, pv, lec_row + idofs,
-                                                                       lec_col + jdofs)];
+                                      lec->J[LEC_J_INDEX(pe, pv, lec_row + idofs, lec_col + jdofs)];
                                 }
                               }
                             } else {
-                              blk_col =
-                                  goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][J][v];
+                              blk_col = goma_ctx->problem.local_offset[pg->imtrx][J][v];
                               lec_col = ei_ptr->ln_to_first_dof[v][j];
-                              for (jdofs = 0;
-                                   jdofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                              for (jdofs = 0; jdofs < goma_ctx->problem.dolphin[pg->imtrx][J][v];
                                    jdofs++) {
                                 *(a_ptr + row_dofs * (blk_col + jdofs) + blk_row + idofs) +=
-                                    goma_ctx->fem.lec
-                                        ->J[LEC_J_INDEX(pe, pv, lec_row + idofs, lec_col + jdofs)];
+                                    lec->J[LEC_J_INDEX(pe, pv, lec_row + idofs, lec_col + jdofs)];
                               }
                             }
                           }
@@ -5739,24 +5710,20 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                   }
                 }
               } else {
-                blk_row = goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][I][e];
-                lec_row = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[e][i];
-                for (idofs = 0; idofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][e];
-                     idofs++) {
+                blk_row = goma_ctx->problem.local_offset[pg->imtrx][I][e];
+                lec_row = ei[pg->imtrx]->ln_to_first_dof[e][i];
+                for (idofs = 0; idofs < goma_ctx->problem.dolphin[pg->imtrx][I][e]; idofs++) {
                   *(resid_vector + rpntr[I] + blk_row + idofs) +=
-                      goma_ctx->fem.lec->R[LEC_R_INDEX(pe, lec_row + idofs)];
-                  if (goma_ctx->fem.af->Assemble_Jacobian) {
+                      lec->R[LEC_R_INDEX(pe, lec_row + idofs)];
+                  if (af->Assemble_Jacobian) {
                     for (v = V_FIRST; v < V_LAST; v++) {
-                      pv = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v];
-                      if ((pv != -1) && (Inter_Mask[goma_ctx->fem.pg->imtrx][e][v])) {
+                      pv = upd->vp[pg->imtrx][v];
+                      if ((pv != -1) && (Inter_Mask[pg->imtrx][e][v])) {
                         // NEW
-                        ei_ptr = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx];
-                        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElementForColVar[v] !=
-                            ielem) {
-                          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                  ->owningElementForColVar[v] != -1) {
-                            ei_ptr =
-                                goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->owningElement_ei_ptr[v];
+                        ei_ptr = ei[pg->imtrx];
+                        if (ei[pg->imtrx]->owningElementForColVar[v] != ielem) {
+                          if (ei[pg->imtrx]->owningElementForColVar[v] != -1) {
+                            ei_ptr = ei[pg->imtrx]->owningElement_ei_ptr[v];
                             if (ei_ptr == 0) {
                               printf("ei_ptr == 0\n");
                               exit(-1);
@@ -5772,18 +5739,15 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                           a_ptr = a + indx[K]; /* a_ptr points to first entry in val of Kth block */
 
                           if (v == MASS_FRACTION) {
-                            for (kv = 0; kv < goma_ctx->fem.upd->Max_Num_Species_Eqn; kv++) {
+                            for (kv = 0; kv < upd->Max_Num_Species_Eqn; kv++) {
                               pv = MAX_PROB_VAR + kv;
-                              blk_col =
-                                  goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][J][v] +
-                                  kv * goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                              blk_col = goma_ctx->problem.local_offset[pg->imtrx][J][v] +
+                                        kv * goma_ctx->problem.dolphin[pg->imtrx][J][v];
                               lec_col = ei_ptr->ln_to_first_dof[v][j];
-                              for (jdofs = 0;
-                                   jdofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                              for (jdofs = 0; jdofs < goma_ctx->problem.dolphin[pg->imtrx][J][v];
                                    jdofs++) {
                                 *(a_ptr + row_dofs * (blk_col + jdofs) + blk_row + idofs) +=
-                                    goma_ctx->fem.lec
-                                        ->J[LEC_J_INDEX(pe, pv, lec_row + idofs, lec_col + jdofs)];
+                                    lec->J[LEC_J_INDEX(pe, pv, lec_row + idofs, lec_col + jdofs)];
                               }
                             }
                           } else {
@@ -5791,7 +5755,7 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                              *  contiguous within the solution vector.
                              *  Find the local offset first
                              */
-                            blk_col = goma_ctx->problem.local_offset[goma_ctx->fem.pg->imtrx][J][v];
+                            blk_col = goma_ctx->problem.local_offset[pg->imtrx][J][v];
                             /*  For the current node, j, find the index for the
                              *  first dof of type v in the LESM.
                              */
@@ -5799,12 +5763,10 @@ static void load_lec(Exo_DB *exo, /* ptr to EXODUS II finite element mesh db */
                             /*  Dolphin contains the number of dofs of type v at the
                              *  global node J
                              */
-                            for (jdofs = 0;
-                                 jdofs < goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][J][v];
+                            for (jdofs = 0; jdofs < goma_ctx->problem.dolphin[pg->imtrx][J][v];
                                  jdofs++) {
                               *(a_ptr + row_dofs * (blk_col + jdofs) + blk_row + idofs) +=
-                                  goma_ctx->fem.lec
-                                      ->J[LEC_J_INDEX(pe, pv, lec_row + idofs, lec_col + jdofs)];
+                                  lec->J[LEC_J_INDEX(pe, pv, lec_row + idofs, lec_col + jdofs)];
                             }
                           }
                         }

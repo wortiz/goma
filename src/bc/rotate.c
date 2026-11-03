@@ -348,6 +348,12 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
  */
 
 {
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  struct Local_Element_Contributions *const lec = goma_ctx->fem.lec;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Action_Flags *const af = goma_ctx->fem.af;
   int var, peq, pvar;
   int id, j, n, Id, ldof, ShapeVar;
   unsigned int siz;
@@ -369,17 +375,17 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
   /* second (and third) surface vector(s) is(are) the tangent(s)
    *    - i.e. second and third mesh equations are the tangential components */
 
-  ShapeVar = goma_ctx->fem.pd->ShapeVar;
+  ShapeVar = pd->ShapeVar;
 
   switch (ielem_surf_dim + 1) {
 
   case 1:
     svector[0][0] = snormal[0];
-    for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
+    for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
       Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-      ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-      if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-          goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+      ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
+      if (goma_ctx->problem.dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+          goma_ctx->problem.dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
         dsvector_dx[0][0][0][ldof] = dsnormal_dx[0][0][ldof];
       }
     }
@@ -390,11 +396,11 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
       svector[0][kdir] = snormal[kdir];
       svector[1][kdir] = sign * stangent[0][kdir];
       for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-        for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
+        for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
           Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-          ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-              goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+          ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
+          if (goma_ctx->problem.dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+              goma_ctx->problem.dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
             dsvector_dx[0][kdir][ldir][ldof] = dsnormal_dx[kdir][ldir][ldof];
             dsvector_dx[1][kdir][ldir][ldof] = sign * dstangent_dx[0][kdir][ldir][ldof];
           }
@@ -409,11 +415,11 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
       svector[1][kdir] = sign * stangent[0][kdir];
       svector[2][kdir] = sign * stangent[1][kdir];
       for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-        for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
+        for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
           Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-          ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-              goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+          ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
+          if (goma_ctx->problem.dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+              goma_ctx->problem.dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
 
             dsvector_dx[0][kdir][ldir][ldof] = dsnormal_dx[kdir][ldir][ldof];
             dsvector_dx[1][kdir][ldir][ldof] = sign * dstangent_dx[0][kdir][ldir][ldof];
@@ -440,15 +446,13 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
     rotated_resid[kdir] = 0.;
     for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
       rotated_resid[kdir] +=
-          svector[kdir][ldir] *
-          goma_ctx->fem.lec->R[LEC_R_INDEX(
-              goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir], irow_index)];
+          svector[kdir][ldir] * lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][R_MESH1 + ldir], irow_index)];
     }
   }
 
   /*   Now correct Jacobian                                               */
 
-  if (goma_ctx->fem.af->Assemble_Jacobian) {
+  if (af->Assemble_Jacobian) {
     /* First, we have no global Jacobian,
      * so zero it, but use it for a place holder to
      * rotate the local jacobians
@@ -463,30 +467,27 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
       for (j = 0; j < ielem_surf_dim + 1; j++) {
 
         var = R_MESH1 + j;
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        pvar = upd->vp[pg->imtrx][var];
 
-        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; n++) {
+        for (n = 0; n < ei[pg->imtrx]->dof[var]; n++) {
 
           for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
             rotated_jacobian_vector[kdir][j][n] +=
                 svector[kdir][ldir] *
-                goma_ctx->fem.lec
-                    ->J[LEC_J_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir],
-                                    pvar, irow_index, n)];
+                lec->J[LEC_J_INDEX(upd->ep[pg->imtrx][R_MESH1 + ldir], pvar, irow_index, n)];
           }
         }
 
-        for (id = 0; id < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[ShapeVar]; id++) {
+        for (id = 0; id < ei[pg->imtrx]->dof[ShapeVar]; id++) {
           Id = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-          ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
-              goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
+          ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
+          if (goma_ctx->problem.dolphin[pg->imtrx][I][MESH_DISPLACEMENT1] > 0 &&
+              goma_ctx->problem.dolphin[pg->imtrx][Id][MESH_DISPLACEMENT1] > 0) {
 
             for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
               rotated_jacobian_vector[kdir][j][ldof] +=
                   dsvector_dx[kdir][ldir][j][ldof] *
-                  goma_ctx->fem.lec->R[LEC_R_INDEX(
-                      goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir], irow_index)];
+                  lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][R_MESH1 + ldir], irow_index)];
             }
           } /* end of Baby_Dolphin[pg->imtrx] */
         }
@@ -498,66 +499,63 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
       for (j = 0; j < ielem_surf_dim + 1; j++) {
 
         var = R_MESH1 + j;
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        pvar = upd->vp[pg->imtrx][var];
 
-        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; n++) {
+        for (n = 0; n < ei[pg->imtrx]->dof[var]; n++) {
 
-          goma_ctx->fem.lec
-              ->J[LEC_J_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + kdir], pvar,
-                              irow_index, n)] = rotated_jacobian_vector[kdir][j][n];
+          lec->J[LEC_J_INDEX(upd->ep[pg->imtrx][R_MESH1 + kdir], pvar, irow_index, n)] =
+              rotated_jacobian_vector[kdir][j][n];
         }
       }
     }
 
     /* mesh wrt. pressure */
     var = PRESSURE;
-    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-      for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; n++) {
+    if (pd->v[pg->imtrx][var]) {
+      pvar = upd->vp[pg->imtrx][var];
+      for (n = 0; n < ei[pg->imtrx]->dof[var]; n++) {
 
         for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
           rotated_jacobian_scalar[kdir][n] = 0.;
         }
 
         for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-          peq = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir];
+          peq = upd->ep[pg->imtrx][R_MESH1 + ldir];
           for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
             rotated_jacobian_scalar[kdir][n] +=
-                svector[kdir][ldir] * goma_ctx->fem.lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)];
+                svector[kdir][ldir] * lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)];
           }
         }
 
         /*reinject back into lec-J for global assembly */
         for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-          peq = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir];
-          goma_ctx->fem.lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)] =
-              rotated_jacobian_scalar[ldir][n];
+          peq = upd->ep[pg->imtrx][R_MESH1 + ldir];
+          lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)] = rotated_jacobian_scalar[ldir][n];
         }
       } /* end of loop over nodes */
     } /* end of if variable */
 
     /* mesh wrt. temperature */
     var = TEMPERATURE;
-    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-      for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; n++) {
+    if (pd->v[pg->imtrx][var]) {
+      pvar = upd->vp[pg->imtrx][var];
+      for (n = 0; n < ei[pg->imtrx]->dof[var]; n++) {
         for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
           rotated_jacobian_scalar[kdir][n] = 0.;
         }
 
         for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-          peq = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir];
+          peq = upd->ep[pg->imtrx][R_MESH1 + ldir];
           for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
             rotated_jacobian_scalar[kdir][n] +=
-                svector[kdir][ldir] * goma_ctx->fem.lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)];
+                svector[kdir][ldir] * lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)];
           }
         }
 
         /*reinject back into lec-J for global assembly */
         for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-          peq = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir];
-          goma_ctx->fem.lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)] =
-              rotated_jacobian_scalar[ldir][n];
+          peq = upd->ep[pg->imtrx][R_MESH1 + ldir];
+          lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)] = rotated_jacobian_scalar[ldir][n];
         }
       } /* end of loop over nodes */
     } /* end of if variable */
@@ -565,26 +563,25 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
     /* mesh wrt. velocity */
     for (jvar = 0; jvar < ielem_surf_dim + 1; jvar++) {
       var = VELOCITY1 + jvar;
-      if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; n++) {
+      if (pd->v[pg->imtrx][var]) {
+        pvar = upd->vp[pg->imtrx][var];
+        for (n = 0; n < ei[pg->imtrx]->dof[var]; n++) {
 
           for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
             rotated_jacobian_vector[kdir][jvar][n] = 0.;
           }
 
           for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-            peq = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir];
+            peq = upd->ep[pg->imtrx][R_MESH1 + ldir];
             for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
               rotated_jacobian_vector[kdir][jvar][n] +=
-                  svector[kdir][ldir] * goma_ctx->fem.lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)];
+                  svector[kdir][ldir] * lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)];
             }
           }
           /*reinject back into lec-J for global assembly */
           for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-            peq = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir];
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)] =
-                rotated_jacobian_vector[ldir][jvar][n];
+            peq = upd->ep[pg->imtrx][R_MESH1 + ldir];
+            lec->J[LEC_J_INDEX(peq, pvar, irow_index, n)] = rotated_jacobian_vector[ldir][jvar][n];
           }
         } /* end of loop over nodes */
       } /* end of if variable */
@@ -593,28 +590,27 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
 
     /* mesh wrt. species concentration */
     var = MASS_FRACTION;
-    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; n++) {
+    if (pd->v[pg->imtrx][var]) {
+      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+        for (n = 0; n < ei[pg->imtrx]->dof[var]; n++) {
 
           for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
             rotated_jacobian_conc[kdir][w][n] = 0.;
           }
 
           for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-            peq = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir];
+            peq = upd->ep[pg->imtrx][R_MESH1 + ldir];
             for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
 
               rotated_jacobian_conc[kdir][w][n] +=
-                  svector[kdir][ldir] *
-                  goma_ctx->fem.lec->J[LEC_J_INDEX(peq, MAX_PROB_VAR + w, irow_index, n)];
+                  svector[kdir][ldir] * lec->J[LEC_J_INDEX(peq, MAX_PROB_VAR + w, irow_index, n)];
             }
           }
 
           /*reinject back into lec-J for global assembly */
           for (ldir = 0; ldir < ielem_surf_dim + 1; ldir++) {
-            peq = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + ldir];
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peq, MAX_PROB_VAR + w, irow_index, n)] =
+            peq = upd->ep[pg->imtrx][R_MESH1 + ldir];
+            lec->J[LEC_J_INDEX(peq, MAX_PROB_VAR + w, irow_index, n)] =
                 rotated_jacobian_conc[ldir][w][n];
           }
         } /* end of loop over nodes */
@@ -625,8 +621,7 @@ void rotate_res_jac_mesh(int irow_index,           /* Elemental stiffness matrix
 
   /* Put rotated residual back into lec for scattering into global matrix */
   for (kdir = 0; kdir < ielem_surf_dim + 1; kdir++) {
-    goma_ctx->fem.lec->R[LEC_R_INDEX(goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][R_MESH1 + kdir],
-                                     irow_index)] = rotated_resid[kdir];
+    lec->R[LEC_R_INDEX(upd->ep[pg->imtrx][R_MESH1 + kdir], irow_index)] = rotated_resid[kdir];
   }
 
 } /* END of rotate_res_jac_mesh */

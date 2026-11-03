@@ -101,6 +101,13 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
   Date:            12 December 1994
 ******************************************************************************/
 {
+  struct Diet_Field_Variables *const fv_dot = goma_ctx->fem.fv_dot;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Local_Element_Contributions *const lec = goma_ctx->fem.lec;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Action_Flags *const af = goma_ctx->fem.af;
   int w, i, I, ibc, j, id, err, var, eqn, ldof_eqn, ldof_var, icount;
   int ieqn, pvar;
   int ivar, jvar;
@@ -125,7 +132,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
   double d_kfunc[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE];
   double time_intermediate = time_value - theta * delta_t;
   /* time at which bc's are evaluated */
-  const double penalty = goma_ctx->fem.upd->strong_penalty;
+  const double penalty = upd->strong_penalty;
   VARIABLE_DESCRIPTION_STRUCT *vd;
   int doFullJac = 0;
   double nwall[3];
@@ -183,7 +190,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
       err = load_bf_mesh_derivs();
       GOMA_EH(err, "load_bf_mesh_derivs");
 
-      if (goma_ctx->fem.upd->AutoDiff) {
+      if (upd->AutoDiff) {
 #ifdef GOMA_ENABLE_SACADO
         fill_ad_field_variables();
 #else
@@ -224,7 +231,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
 
       if (goma_ctx->problem.time_integration != STEADY) {
         for (icount = 0; icount < ielem_dim; icount++) {
-          x_dot[icount] = goma_ctx->fem.fv_dot->x[icount];
+          x_dot[icount] = fv_dot->x[icount];
         }
       } else {
         for (icount = 0; icount < ielem_dim; icount++) {
@@ -256,8 +263,8 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
            * (i.e. no other overriding Dirichlet conditions,
            * And find the global unknown number for applying this condition
            */
-          index_eq = bc_eqn_index(id, I, bc_input_id, goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn,
-                                  0, &eqn, &matID_apply, &vd);
+          index_eq =
+              bc_eqn_index(id, I, bc_input_id, ei[pg->imtrx]->mn, 0, &eqn, &matID_apply, &vd);
           if (index_eq >= 0) {
 
             /* initialize the general function to zero */
@@ -448,7 +455,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               func += (BC_Types[bc_input_id].BC_Data_Float[4] * t +
                        BC_Types[bc_input_id].BC_Data_Float[5] * t * t +
                        BC_Types[bc_input_id].BC_Data_Float[6] * t * t * t);
-              if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
+              if (af->Assemble_LSA_Mass_Matrix)
                 GOMA_EH(GOMA_ERROR, "LSA is not currently compatible with MOVING_PLANE_BC");
             } break;
 
@@ -527,9 +534,8 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case U_VES23_7_PARABOLA_BC:
             case U_VES33_7_PARABOLA_BC:
               var_flag = BC_Types[bc_input_id].desc->equation;
-              f_vestress_parabola(var_flag, ielem_dim, U_PARABOLA_BC,
-                                  goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn, &func, d_func,
-                                  BC_Types[bc_input_id].u_BC, time_intermediate,
+              f_vestress_parabola(var_flag, ielem_dim, U_PARABOLA_BC, ei[pg->imtrx]->mn, &func,
+                                  d_func, BC_Types[bc_input_id].u_BC, time_intermediate,
                                   BC_Types[bc_input_id].len_u_BC);
               break;
 
@@ -549,7 +555,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             case GD_TIME_BC:
               err = evaluate_time_func(time_intermediate, &f_time, bc_input_id);
               GOMA_EH(err, "Problems in evaluating time function");
-              if (goma_ctx->fem.af->Assemble_LSA_Mass_Matrix)
+              if (af->Assemble_LSA_Mass_Matrix)
                 GOMA_EH(GOMA_ERROR, "LSA is not currently compatible with GD_TIME_BC");
               break;
 
@@ -603,21 +609,15 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               int dof_map_curv[MDE] = {-1};
               int dof_map_tens[MDE] = {-1};
               /* Populate dof_map arrays */
-              for (ivar = 0; ivar < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1];
-                   ivar++) {
-                inode = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[VELOCITY1][ivar];
-                for (jvar = 0;
-                     jvar < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_CURVATURE];
-                     jvar++) {
-                  if (inode ==
-                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_CURVATURE][jvar]) {
+              for (ivar = 0; ivar < ei[pg->imtrx]->dof[VELOCITY1]; ivar++) {
+                inode = ei[pg->imtrx]->gnn_list[VELOCITY1][ivar];
+                for (jvar = 0; jvar < ei[pg->imtrx]->dof[SHELL_CURVATURE]; jvar++) {
+                  if (inode == ei[pg->imtrx]->gnn_list[SHELL_CURVATURE][jvar]) {
                     dof_map_curv[ivar] = jvar;
                   }
                 }
-                for (jvar = 0; jvar < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SHELL_TENSION];
-                     jvar++) {
-                  if (inode ==
-                      goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->gnn_list[SHELL_TENSION][jvar]) {
+                for (jvar = 0; jvar < ei[pg->imtrx]->dof[SHELL_TENSION]; jvar++) {
+                  if (inode == ei[pg->imtrx]->gnn_list[SHELL_TENSION][jvar]) {
                     dof_map_tens[ivar] = jvar;
                   }
                 }
@@ -712,7 +712,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               fgamma1_deriv_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0]);
               func = kfunc[0];
               doFullJac = 1;
-              el1 = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
+              el1 = ei[pg->imtrx]->ielem;
               nf = num_elem_friends[el1];
               if (nf == 0) {
                 GOMA_EH(GOMA_ERROR, "no friends");
@@ -728,7 +728,7 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
               fgamma2_deriv_bc(kfunc, d_kfunc, BC_Types[bc_input_id].BC_Data_Float[0]);
               func = kfunc[0];
               doFullJac = 1;
-              el1 = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem;
+              el1 = ei[pg->imtrx]->ielem;
               nf = num_elem_friends[el1];
               if (nf == 0) {
                 GOMA_EH(GOMA_ERROR, "no friends");
@@ -763,12 +763,12 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
              * Collocated boundary conditions are always applied on the first
              * dof at a node. They are not discontinuous variables friendly
              */
-            ldof_eqn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[eqn][id];
+            ldof_eqn = ei[pg->imtrx]->ln_to_first_dof[eqn][id];
 
             if (eqn == R_MASS) {
               ieqn = MAX_PROB_EQN + BC_Types[bc_input_id].species_eq;
             } else {
-              ieqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+              ieqn = upd->ep[pg->imtrx][eqn];
               if (goma_automatic_rotations.automatic_rotations &&
                   (BC_Types[bc_input_id].desc->rotate != NO_ROT)) {
                 int offset = offset_from_rotated_equation(BC_Types[bc_input_id].desc->equation);
@@ -781,8 +781,8 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
             }
 
             if (ldof_eqn != -1) {
-              goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += penalty * func;
-              goma_ctx->fem.lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] *= f_time;
+              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] += penalty * func;
+              lec->R[LEC_R_INDEX(ieqn, ldof_eqn)] *= f_time;
 
               /*
                * add sensitivities into matrix
@@ -791,10 +791,10 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                *      loop over all dofs in element)
                *  - add into matrix
                */
-              if (goma_ctx->fem.af->Assemble_Jacobian) {
+              if (af->Assemble_Jacobian) {
 
                 for (var = 0; var < MAX_VARIABLE_TYPES; var++) {
-                  pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                  pvar = upd->vp[pg->imtrx][var];
                   if (pvar != -1 && (BC_Types[bc_input_id].desc->sens[var] || 1)) {
                     /*
                      * Warning!!!!!!!!!!!!!!!!!!!!!!!
@@ -809,34 +809,30 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                        * pointer to this entry *
                        * if it exists, add sens into matrix
                        */
-                      if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][var] > 0) {
+                      if (goma_ctx->problem.dolphin[pg->imtrx][I][var] > 0) {
                         if (!doFullJac) {
-                          ldof_var =
-                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[var][id];
+                          ldof_var = ei[pg->imtrx]->ln_to_first_dof[var][id];
                           if (ldof_var != -1) {
-                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] +=
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] +=
                                 penalty * d_func[var];
-                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] *=
-                                f_time;
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] *= f_time;
                           }
                         } else {
 
                           if (doMeshMapping &&
                               (var == MESH_DISPLACEMENT1 || var == MESH_DISPLACEMENT2 ||
                                var == MESH_DISPLACEMENT3)) {
-                            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
-                                 j++) {
+                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                               jk = dof_map[j];
-                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, jk)] +=
+                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, jk)] +=
                                   penalty * d_kfunc[0][var][j];
-                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, jk)] *= f_time;
+                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, jk)] *= f_time;
                             }
                           } else {
-                            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
-                                 j++) {
-                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
                                   penalty * d_kfunc[0][var][j];
-                              goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
+                              lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
                             }
                           }
                         }
@@ -845,39 +841,36 @@ int apply_point_colloc_bc(double resid_vector[], /* Residual vector for the curr
                          *   if variable is not defined at this node, loop
                          *   over all dof for this variable in this element
                          */
-                        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                           // I'm not sure this phi_j is ever going to be non-zero with the Dolphin
                           // check above check if we have a bf available before trying to use it
-                          if (goma_ctx->fem.bf[var]) {
-                            phi_j = goma_ctx->fem.bf[var]->phi[j];
-                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                          if (bf[var]) {
+                            phi_j = bf[var]->phi[j];
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
                                 penalty * d_func[var] * phi_j;
-                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
                           }
                         }
                       }
                     } else {
                       for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                         pvar = MAX_PROB_VAR + w;
-                        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][I][var] > 0) {
-                          ldof_var =
-                              goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_first_dof[var][id];
+                        if (goma_ctx->problem.dolphin[pg->imtrx][I][var] > 0) {
+                          ldof_var = ei[pg->imtrx]->ln_to_first_dof[var][id];
                           if (ldof_var != -1) {
-                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] +=
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] +=
                                 penalty * d_func[MAX_VARIABLE_TYPES + w];
-                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] *=
-                                f_time;
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, ldof_var)] *= f_time;
                           }
                         }
                         /* if variable is not defined at this node,
                          * loop over all dof in this element */
                         else {
-                          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var];
-                               j++) {
-                            phi_j = goma_ctx->fem.bf[var]->phi[j];
-                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
+                          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                            phi_j = bf[var]->phi[j];
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] +=
                                 penalty * d_func[MAX_VARIABLE_TYPES + w] * phi_j;
-                            goma_ctx->fem.lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
+                            lec->J[LEC_J_INDEX(ieqn, pvar, ldof_eqn, j)] *= f_time;
                           }
                         }
                       } /* end of loop over species */

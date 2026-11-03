@@ -172,6 +172,23 @@ int load_fv(void)
  * Modified:
  ***************************************************************************/
 {
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  struct Material_Properties *const mp = goma_ctx->fem.mp;
+  const int VIM = goma_ctx->problem.vim;
+  const int WIM = goma_ctx->problem.wim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Diet_Field_Variables *const fv_old = goma_ctx->fem.fv_old;
+  struct Diet_Field_Variables *const fv_dot = goma_ctx->fem.fv_dot;
+  struct Diet_Field_Variables *const fv_dot_old = goma_ctx->fem.fv_dot_old;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Element_Stiffness_Pointers *const esp = goma_ctx->fem.esp;
+  struct Element_Variable_Pointers *const esp_old = goma_ctx->fem.esp_old;
+  struct Element_Variable_Pointers *const esp_dot = goma_ctx->fem.esp_dot;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Transient_Information *const tran = goma_ctx->fem.tran;
+  struct External_Field_Variables *const efv = goma_ctx->fem.efv;
   int v;    /* variable type indicator */
   int i;    /* index */
   int p, q; /* dimension indeces */
@@ -183,10 +200,10 @@ int load_fv(void)
   int mode;
   int status = 0;
   int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
-  double rho, *stateVector = goma_ctx->fem.mp->StateVector;
+  double rho, *stateVector = mp->StateVector;
   BASIS_FUNCTIONS_STRUCT *bfv;
-  int transient_run = goma_ctx->fem.pd->TimeIntegration != STEADY;
-  int *pdgv = goma_ctx->fem.pd->gv;
+  int transient_run = pd->TimeIntegration != STEADY;
+  int *pdgv = pd->gv;
 
   status = 0;
 
@@ -211,7 +228,7 @@ int load_fv(void)
    * Since it is possible to have a 1D element in a 2D problem,
    * (i.e. shell elements), use the problem dimension instead.
    */
-  dim = goma_ctx->fem.pd->Num_Dim;
+  dim = pd->Num_Dim;
 
   /*
    * Temperature...
@@ -224,11 +241,9 @@ int load_fv(void)
 
   if (pdgv[TEMPERATURE]) {
     v = TEMPERATURE;
-    scalar_fv_fill(goma_ctx->fem.esp->T, goma_ctx->fem.esp_dot->T, goma_ctx->fem.esp_old->T,
-                   goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->T), &(goma_ctx->fem.fv_dot->T), &(goma_ctx->fem.fv_old->T));
-    stateVector[TEMPERATURE] = goma_ctx->fem.fv->T;
+    scalar_fv_fill(esp->T, esp_dot->T, esp_old->T, bf[v]->phi, ei[upd->matrix_index[v]]->dof[v],
+                   &(fv->T), &(fv_dot->T), &(fv_old->T));
+    stateVector[TEMPERATURE] = fv->T;
   } /*else if (upd->vp[pg->imtrx][v] == -1) {
       fv->T     = mp->reference[TEMPERATURE];
       fv_old->T = 0.;
@@ -241,21 +256,17 @@ int load_fv(void)
 
   if (pdgv[FILL]) {
     v = FILL;
-    scalar_fv_fill(goma_ctx->fem.esp->F, goma_ctx->fem.esp_dot->F, goma_ctx->fem.esp_old->F,
-                   goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->F), &(goma_ctx->fem.fv_dot->F), &(goma_ctx->fem.fv_old->F));
-    stateVector[v] = goma_ctx->fem.fv->F;
-    goma_ctx->fem.fv_dot_old->F = 0;
-    for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v]; i++) {
-      if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
+    scalar_fv_fill(esp->F, esp_dot->F, esp_old->F, bf[v]->phi, ei[upd->matrix_index[v]]->dof[v],
+                   &(fv->F), &(fv_dot->F), &(fv_old->F));
+    stateVector[v] = fv->F;
+    fv_dot_old->F = 0;
+    for (int i = 0; i < ei[upd->matrix_index[v]]->dof[v]; i++) {
+      if (upd->Total_Num_Matrices > 1) {
         //        fv_dot_old->F += *(pg->matrices[upd->matrix_index[v]].xdot_old -
         //        pg->matrices[upd->matrix_index[v]].xdot +
         //                                  esp_dot->F[i]) * bf[v]->phi[i];
       } else {
-        goma_ctx->fem.fv_dot_old->F +=
-            *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->F[i]) *
-            goma_ctx->fem.bf[v]->phi[i];
+        fv_dot_old->F += *(xdot_old_static - xdot_static + esp_dot->F[i]) * bf[v]->phi[i];
       }
     }
   } /*else if (upd->vp[pg->imtrx][v] == -1) {
@@ -268,11 +279,9 @@ int load_fv(void)
 
   if (pdgv[BOND_EVOLUTION]) {
     v = BOND_EVOLUTION;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->nn, goma_ctx->fem.esp_dot->nn, goma_ctx->fem.esp_old->nn,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->nn), &(goma_ctx->fem.fv_dot->nn), &(goma_ctx->fem.fv_old->nn));
-    stateVector[v] = goma_ctx->fem.fv->nn;
+    scalar_fv_fill(esp->nn, esp_dot->nn, esp_old->nn, bf[v]->phi, ei[upd->matrix_index[v]]->dof[v],
+                   &(fv->nn), &(fv_dot->nn), &(fv_old->nn));
+    stateVector[v] = fv->nn;
   } /*else if (upd->vp[pg->imtrx][v] == -1)  {
       fv->nn = fv_old->nn = fv_dot->nn = 0.;
       } */
@@ -283,11 +292,9 @@ int load_fv(void)
 
   if (pdgv[VOLTAGE]) {
     v = VOLTAGE;
-    scalar_fv_fill(goma_ctx->fem.esp->V, goma_ctx->fem.esp_dot->V, goma_ctx->fem.esp_old->V,
-                   goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->V), &(goma_ctx->fem.fv_dot->V), &(goma_ctx->fem.fv_old->V));
-    stateVector[VOLTAGE] = goma_ctx->fem.fv->V;
+    scalar_fv_fill(esp->V, esp_dot->V, esp_old->V, bf[v]->phi, ei[upd->matrix_index[v]]->dof[v],
+                   &(fv->V), &(fv_dot->V), &(fv_old->V));
+    stateVector[VOLTAGE] = fv->V;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->V = fv_old->V = fv_dot->V = 0.;
       }*/
@@ -298,11 +305,9 @@ int load_fv(void)
 
   if (pdgv[SURF_CHARGE]) {
     v = SURF_CHARGE;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->qs, goma_ctx->fem.esp_dot->qs, goma_ctx->fem.esp_old->qs,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->qs), &(goma_ctx->fem.fv_dot->qs), &(goma_ctx->fem.fv_old->qs));
-    stateVector[SURF_CHARGE] = goma_ctx->fem.fv->qs;
+    scalar_fv_fill(esp->qs, esp_dot->qs, esp_old->qs, bf[v]->phi, ei[upd->matrix_index[v]]->dof[v],
+                   &(fv->qs), &(fv_dot->qs), &(fv_old->qs));
+    stateVector[SURF_CHARGE] = fv->qs;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->qs = fv_old->qs = fv_dot->qs = 0.;
       } */
@@ -313,22 +318,19 @@ int load_fv(void)
 
   if (pdgv[SHELL_CURVATURE]) {
     v = SHELL_CURVATURE;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_K, goma_ctx->fem.esp_dot->sh_K, goma_ctx->fem.esp_old->sh_K,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_K), &(goma_ctx->fem.fv_dot->sh_K), &(goma_ctx->fem.fv_old->sh_K));
-    stateVector[SHELL_CURVATURE] = goma_ctx->fem.fv->sh_K;
+    scalar_fv_fill(esp->sh_K, esp_dot->sh_K, esp_old->sh_K, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_K), &(fv_dot->sh_K), &(fv_old->sh_K));
+    stateVector[SHELL_CURVATURE] = fv->sh_K;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->sh_K = fv_old->sh_K = fv_dot->sh_K = 0.;
       } */
 
   if (pdgv[SHELL_CURVATURE2]) {
     v = SHELL_CURVATURE2;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_K2, goma_ctx->fem.esp_dot->sh_K2, goma_ctx->fem.esp_old->sh_K2,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_K2), &(goma_ctx->fem.fv_dot->sh_K2), &(goma_ctx->fem.fv_old->sh_K2));
-    stateVector[SHELL_CURVATURE2] = goma_ctx->fem.fv->sh_K2;
+    scalar_fv_fill(esp->sh_K2, esp_dot->sh_K2, esp_old->sh_K2, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_K2), &(fv_dot->sh_K2),
+                   &(fv_old->sh_K2));
+    stateVector[SHELL_CURVATURE2] = fv->sh_K2;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->sh_K2 = fv_old->sh_K2 = fv_dot->sh_K2 = 0.;
       } */
@@ -339,12 +341,10 @@ int load_fv(void)
 
   if (pdgv[SHELL_TENSION]) {
     v = SHELL_TENSION;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_tens, goma_ctx->fem.esp_dot->sh_tens,
-                   goma_ctx->fem.esp_old->sh_tens, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_tens), &(goma_ctx->fem.fv_dot->sh_tens),
-                   &(goma_ctx->fem.fv_old->sh_tens));
-    stateVector[SHELL_TENSION] = goma_ctx->fem.fv->sh_tens;
+    scalar_fv_fill(esp->sh_tens, esp_dot->sh_tens, esp_old->sh_tens, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_tens), &(fv_dot->sh_tens),
+                   &(fv_old->sh_tens));
+    stateVector[SHELL_TENSION] = fv->sh_tens;
   } /*else if ( updgvp[v] == -1 ) {
       fv->sh_tens = fv_old->sh_tens = fv_dot->sh_tens = 0.;
       }*/
@@ -354,11 +354,9 @@ int load_fv(void)
 
   if (pdgv[SHELL_X]) {
     v = SHELL_X;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_x, goma_ctx->fem.esp_dot->sh_x, goma_ctx->fem.esp_old->sh_x,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_x), &(goma_ctx->fem.fv_dot->sh_x), &(goma_ctx->fem.fv_old->sh_x));
-    stateVector[SHELL_X] = goma_ctx->fem.fv->sh_x;
+    scalar_fv_fill(esp->sh_x, esp_dot->sh_x, esp_old->sh_x, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_x), &(fv_dot->sh_x), &(fv_old->sh_x));
+    stateVector[SHELL_X] = fv->sh_x;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->sh_x = fv_old->sh_x = fv_dot->sh_x    = 0.;
       } */
@@ -369,11 +367,9 @@ int load_fv(void)
 
   if (pdgv[SHELL_Y]) {
     v = SHELL_Y;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_y, goma_ctx->fem.esp_dot->sh_y, goma_ctx->fem.esp_old->sh_y,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_y), &(goma_ctx->fem.fv_dot->sh_y), &(goma_ctx->fem.fv_old->sh_y));
-    stateVector[SHELL_Y] = goma_ctx->fem.fv->sh_y;
+    scalar_fv_fill(esp->sh_y, esp_dot->sh_y, esp_old->sh_y, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_y), &(fv_dot->sh_y), &(fv_old->sh_y));
+    stateVector[SHELL_Y] = fv->sh_y;
   } /* else if ( upd->vp[pg->imtrx][v] == -1 ) {
        fv->sh_y = fv_old->sh_y = fv_dot->sh_y    = 0.;
        } */
@@ -384,11 +380,9 @@ int load_fv(void)
 
   if (pdgv[SHELL_USER]) {
     v = SHELL_USER;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_u, goma_ctx->fem.esp_dot->sh_u, goma_ctx->fem.esp_old->sh_u,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_u), &(goma_ctx->fem.fv_dot->sh_u), &(goma_ctx->fem.fv_old->sh_u));
-    stateVector[SHELL_USER] = goma_ctx->fem.fv->sh_u;
+    scalar_fv_fill(esp->sh_u, esp_dot->sh_u, esp_old->sh_u, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_u), &(fv_dot->sh_u), &(fv_old->sh_u));
+    stateVector[SHELL_USER] = fv->sh_u;
   } /* else if ( upd->vp[pg->imtrx][v] == -1 ) {
        fv->sh_u = fv_old->sh_u = fv_dot->sh_u    = 0.;
        } */
@@ -399,10 +393,10 @@ int load_fv(void)
 
   if (pdgv[SHEAR_RATE]) {
     v = SHEAR_RATE;
-    goma_ctx->fem.fv->SH = 0.0;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    fv->SH = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.fv->SH += *goma_ctx->fem.esp->SH[i] * goma_ctx->fem.bf[v]->phi[i];
+      fv->SH += *esp->SH[i] * bf[v]->phi[i];
     }
   }
   /*  else if ( upd->vp[pg->imtrx][v] == -1)
@@ -414,12 +408,12 @@ int load_fv(void)
 
   if (pdgv[ENORM]) {
     v = ENORM;
-    goma_ctx->fem.fv->Enorm = 0.0;
-    goma_ctx->fem.fv_old->Enorm = 0.0;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    fv->Enorm = 0.0;
+    fv_old->Enorm = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.fv->Enorm += *goma_ctx->fem.esp->Enorm[i] * goma_ctx->fem.bf[v]->phi[i];
-      goma_ctx->fem.fv_old->Enorm += *goma_ctx->fem.esp_old->Enorm[i] * goma_ctx->fem.bf[v]->phi[i];
+      fv->Enorm += *esp->Enorm[i] * bf[v]->phi[i];
+      fv_old->Enorm += *esp_old->Enorm[i] * bf[v]->phi[i];
     }
   } /*  else if ( upd->vp[pg->imtrx][v] == -1) {
         fv->Enorm = 0.0;
@@ -432,10 +426,8 @@ int load_fv(void)
 
   if (pdgv[CURVATURE]) {
     v = CURVATURE;
-    scalar_fv_fill(goma_ctx->fem.esp->H, goma_ctx->fem.esp_dot->H, goma_ctx->fem.esp_old->H,
-                   goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->H), &(goma_ctx->fem.fv_dot->H), &(goma_ctx->fem.fv_old->H));
+    scalar_fv_fill(esp->H, esp_dot->H, esp_old->H, bf[v]->phi, ei[upd->matrix_index[v]]->dof[v],
+                   &(fv->H), &(fv_dot->H), &(fv_old->H));
   }
   /*  else if ( upd->vp[pg->imtrx][v] == -1)
       {
@@ -449,10 +441,8 @@ int load_fv(void)
 
   if (pdgv[NORMAL1]) {
     v = NORMAL1;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->n[0], goma_ctx->fem.esp_dot->n[0], goma_ctx->fem.esp_old->n[0],
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->n[0]), &(goma_ctx->fem.fv_dot->n[0]), &(goma_ctx->fem.fv_old->n[0]));
+    scalar_fv_fill(esp->n[0], esp_dot->n[0], esp_old->n[0], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->n[0]), &(fv_dot->n[0]), &(fv_old->n[0]));
   }
   /*  else if ( upd->vp[pg->imtrx][v] == -1)
       {
@@ -461,10 +451,8 @@ int load_fv(void)
 
   if (pdgv[NORMAL2]) {
     v = NORMAL2;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->n[1], goma_ctx->fem.esp_dot->n[1], goma_ctx->fem.esp_old->n[1],
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->n[1]), &(goma_ctx->fem.fv_dot->n[1]), &(goma_ctx->fem.fv_old->n[1]));
+    scalar_fv_fill(esp->n[1], esp_dot->n[1], esp_old->n[1], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->n[1]), &(fv_dot->n[1]), &(fv_old->n[1]));
   }
   /* else if ( upd->vp[pg->imtrx][v] == -1)
      {
@@ -473,10 +461,8 @@ int load_fv(void)
 
   if (pdgv[NORMAL3]) {
     v = NORMAL3;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->n[2], goma_ctx->fem.esp_dot->n[2], goma_ctx->fem.esp_old->n[2],
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->n[2]), &(goma_ctx->fem.fv_dot->n[2]), &(goma_ctx->fem.fv_old->n[2]));
+    scalar_fv_fill(esp->n[2], esp_dot->n[2], esp_old->n[2], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->n[2]), &(fv_dot->n[2]), &(fv_old->n[2]));
   }
   /*  else if ( upd->vp[pg->imtrx][v] == -1)
       {
@@ -489,20 +475,17 @@ int load_fv(void)
 
   if (pdgv[SHELL_ANGLE1]) {
     v = SHELL_ANGLE1;
-    goma_ctx->fem.fv->sh_ang[0] = 0.;
-    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v]; i++) {
-      if ((*goma_ctx->fem.esp->sh_ang[0][i] - *goma_ctx->fem.esp->sh_ang[0][0]) > M_PIE)
-        goma_ctx->fem.fv->sh_ang[0] +=
-            goma_ctx->fem.bf[v]->phi[i] * (*goma_ctx->fem.esp->sh_ang[0][i] - 2. * M_PIE);
-      else if ((*goma_ctx->fem.esp->sh_ang[0][i] - *goma_ctx->fem.esp->sh_ang[0][0]) < -M_PIE)
-        goma_ctx->fem.fv->sh_ang[0] +=
-            goma_ctx->fem.bf[v]->phi[i] * (*goma_ctx->fem.esp->sh_ang[0][i] + 2. * M_PIE);
+    fv->sh_ang[0] = 0.;
+    for (i = 0; i < ei[upd->matrix_index[v]]->dof[v]; i++) {
+      if ((*esp->sh_ang[0][i] - *esp->sh_ang[0][0]) > M_PIE)
+        fv->sh_ang[0] += bf[v]->phi[i] * (*esp->sh_ang[0][i] - 2. * M_PIE);
+      else if ((*esp->sh_ang[0][i] - *esp->sh_ang[0][0]) < -M_PIE)
+        fv->sh_ang[0] += bf[v]->phi[i] * (*esp->sh_ang[0][i] + 2. * M_PIE);
       else
-        goma_ctx->fem.fv->sh_ang[0] +=
-            goma_ctx->fem.bf[v]->phi[i] * *goma_ctx->fem.esp->sh_ang[0][i];
+        fv->sh_ang[0] += bf[v]->phi[i] * *esp->sh_ang[0][i];
     }
     /* surely no one will be using these */
-    goma_ctx->fem.fv_dot->sh_ang[0] = goma_ctx->fem.fv_old->sh_ang[0] = 0.0;
+    fv_dot->sh_ang[0] = fv_old->sh_ang[0] = 0.0;
   } /*
       else if ( upd->vp[pg->imtrx][v] == -1)
       {
@@ -511,20 +494,17 @@ int load_fv(void)
 
   if (pdgv[SHELL_ANGLE2]) {
     v = SHELL_ANGLE2;
-    goma_ctx->fem.fv->sh_ang[1] = 0.;
-    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v]; i++) {
-      if ((*goma_ctx->fem.esp->sh_ang[1][i] - *goma_ctx->fem.esp->sh_ang[1][0]) > M_PIE)
-        goma_ctx->fem.fv->sh_ang[1] +=
-            goma_ctx->fem.bf[v]->phi[i] * (*goma_ctx->fem.esp->sh_ang[1][i] - 2. * M_PIE);
-      else if ((*goma_ctx->fem.esp->sh_ang[1][i] - *goma_ctx->fem.esp->sh_ang[1][0]) < -M_PIE)
-        goma_ctx->fem.fv->sh_ang[1] +=
-            goma_ctx->fem.bf[v]->phi[i] * (*goma_ctx->fem.esp->sh_ang[1][i] + 2. * M_PIE);
+    fv->sh_ang[1] = 0.;
+    for (i = 0; i < ei[upd->matrix_index[v]]->dof[v]; i++) {
+      if ((*esp->sh_ang[1][i] - *esp->sh_ang[1][0]) > M_PIE)
+        fv->sh_ang[1] += bf[v]->phi[i] * (*esp->sh_ang[1][i] - 2. * M_PIE);
+      else if ((*esp->sh_ang[1][i] - *esp->sh_ang[1][0]) < -M_PIE)
+        fv->sh_ang[1] += bf[v]->phi[i] * (*esp->sh_ang[1][i] + 2. * M_PIE);
       else
-        goma_ctx->fem.fv->sh_ang[1] +=
-            goma_ctx->fem.bf[v]->phi[i] * *goma_ctx->fem.esp->sh_ang[1][i];
+        fv->sh_ang[1] += bf[v]->phi[i] * *esp->sh_ang[1][i];
     }
     /* surely no one will be using these */
-    goma_ctx->fem.fv_dot->sh_ang[1] = goma_ctx->fem.fv_old->sh_ang[1] = 0.0;
+    fv_dot->sh_ang[1] = fv_old->sh_ang[1] = 0.0;
   }
   /*  else if ( upd->vp[pg->imtrx][v] == -1)
       {
@@ -537,59 +517,49 @@ int load_fv(void)
 
   if (pdgv[SHELL_SURF_DIV_V]) {
     v = SHELL_SURF_DIV_V;
-    scalar_fv_fill(goma_ctx->fem.esp->div_s_v, goma_ctx->fem.esp_dot->div_s_v,
-                   goma_ctx->fem.esp_old->div_s_v, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->div_s_v), &(goma_ctx->fem.fv_dot->div_s_v),
-                   &(goma_ctx->fem.fv_old->div_s_v));
-    stateVector[SHELL_SURF_DIV_V] = goma_ctx->fem.fv->div_s_v;
+    scalar_fv_fill(esp->div_s_v, esp_dot->div_s_v, esp_old->div_s_v, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->div_s_v), &(fv_dot->div_s_v),
+                   &(fv_old->div_s_v));
+    stateVector[SHELL_SURF_DIV_V] = fv->div_s_v;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->div_s_v = fv_old->div_s_v = fv_dot->div_s_v    = 0.;
       }*/
 
   if (pdgv[SHELL_SURF_CURV]) {
     v = SHELL_SURF_CURV;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->curv, goma_ctx->fem.esp_dot->curv, goma_ctx->fem.esp_old->curv,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->curv), &(goma_ctx->fem.fv_dot->curv), &(goma_ctx->fem.fv_old->curv));
-    stateVector[SHELL_SURF_CURV] = goma_ctx->fem.fv->curv;
+    scalar_fv_fill(esp->curv, esp_dot->curv, esp_old->curv, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->curv), &(fv_dot->curv), &(fv_old->curv));
+    stateVector[SHELL_SURF_CURV] = fv->curv;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->curv = fv_old->curv = fv_dot->curv    = 0.;
       }*/
 
   if (pdgv[N_DOT_CURL_V]) {
     v = N_DOT_CURL_V;
-    scalar_fv_fill(goma_ctx->fem.esp->n_dot_curl_s_v, goma_ctx->fem.esp_dot->n_dot_curl_s_v,
-                   goma_ctx->fem.esp_old->n_dot_curl_s_v, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->n_dot_curl_s_v), &(goma_ctx->fem.fv_dot->n_dot_curl_s_v),
-                   &(goma_ctx->fem.fv_old->n_dot_curl_s_v));
-    stateVector[N_DOT_CURL_V] = goma_ctx->fem.fv->n_dot_curl_s_v;
+    scalar_fv_fill(esp->n_dot_curl_s_v, esp_dot->n_dot_curl_s_v, esp_old->n_dot_curl_s_v,
+                   bf[v]->phi, ei[upd->matrix_index[v]]->dof[v], &(fv->n_dot_curl_s_v),
+                   &(fv_dot->n_dot_curl_s_v), &(fv_old->n_dot_curl_s_v));
+    stateVector[N_DOT_CURL_V] = fv->n_dot_curl_s_v;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->n_dot_curl_s_v = fv_old->n_dot_curl_s_v = fv_dot->n_dot_curl_s_v    = 0.;
       }*/
 
   if (pdgv[GRAD_S_V_DOT_N1]) {
     v = GRAD_S_V_DOT_N1;
-    scalar_fv_fill(goma_ctx->fem.esp->grad_v_dot_n[0], goma_ctx->fem.esp_dot->grad_v_dot_n[0],
-                   goma_ctx->fem.esp_old->grad_v_dot_n[0], goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->grad_v_dot_n[0]), &(goma_ctx->fem.fv_dot->grad_v_dot_n[0]),
-                   &(goma_ctx->fem.fv_old->grad_v_dot_n[0]));
-    stateVector[GRAD_S_V_DOT_N1] = goma_ctx->fem.fv->grad_v_dot_n[0];
+    scalar_fv_fill(esp->grad_v_dot_n[0], esp_dot->grad_v_dot_n[0], esp_old->grad_v_dot_n[0],
+                   bf[v]->phi, ei[upd->matrix_index[v]]->dof[v], &(fv->grad_v_dot_n[0]),
+                   &(fv_dot->grad_v_dot_n[0]), &(fv_old->grad_v_dot_n[0]));
+    stateVector[GRAD_S_V_DOT_N1] = fv->grad_v_dot_n[0];
   } /* else if ( upd->vp[pg->imtrx][v] == -1 ) {
        fv->grad_v_dot_n[0] = fv_old->grad_v_dot_n[0] = fv_dot->grad_v_dot_n[0]    = 0.;
        }*/
 
   if (pdgv[GRAD_S_V_DOT_N2]) {
     v = GRAD_S_V_DOT_N2;
-    scalar_fv_fill(goma_ctx->fem.esp->grad_v_dot_n[1], goma_ctx->fem.esp_dot->grad_v_dot_n[1],
-                   goma_ctx->fem.esp_old->grad_v_dot_n[1], goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->grad_v_dot_n[1]), &(goma_ctx->fem.fv_dot->grad_v_dot_n[1]),
-                   &(goma_ctx->fem.fv_old->grad_v_dot_n[1]));
-    stateVector[GRAD_S_V_DOT_N2] = goma_ctx->fem.fv->grad_v_dot_n[1];
+    scalar_fv_fill(esp->grad_v_dot_n[1], esp_dot->grad_v_dot_n[1], esp_old->grad_v_dot_n[1],
+                   bf[v]->phi, ei[upd->matrix_index[v]]->dof[v], &(fv->grad_v_dot_n[1]),
+                   &(fv_dot->grad_v_dot_n[1]), &(fv_old->grad_v_dot_n[1]));
+    stateVector[GRAD_S_V_DOT_N2] = fv->grad_v_dot_n[1];
   } /* else if ( upd->vp[pg->imtrx][v] == -1 ) {
        fv->grad_v_dot_n[1] = fv_old->grad_v_dot_n[1] = fv_dot->grad_v_dot_n[1]    = 0.;
 
@@ -598,87 +568,70 @@ int load_fv(void)
 
   if (pdgv[GRAD_S_V_DOT_N3]) {
     v = GRAD_S_V_DOT_N3;
-    scalar_fv_fill(goma_ctx->fem.esp->grad_v_dot_n[2], goma_ctx->fem.esp_dot->grad_v_dot_n[2],
-                   goma_ctx->fem.esp_old->grad_v_dot_n[2], goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->grad_v_dot_n[2]), &(goma_ctx->fem.fv_dot->grad_v_dot_n[2]),
-                   &(goma_ctx->fem.fv_old->grad_v_dot_n[2]));
-    stateVector[GRAD_S_V_DOT_N3] = goma_ctx->fem.fv->grad_v_dot_n[2];
+    scalar_fv_fill(esp->grad_v_dot_n[2], esp_dot->grad_v_dot_n[2], esp_old->grad_v_dot_n[2],
+                   bf[v]->phi, ei[upd->matrix_index[v]]->dof[v], &(fv->grad_v_dot_n[2]),
+                   &(fv_dot->grad_v_dot_n[2]), &(fv_old->grad_v_dot_n[2]));
+    stateVector[GRAD_S_V_DOT_N3] = fv->grad_v_dot_n[2];
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->grad_v_dot_n[2] = fv_old->grad_v_dot_n[2] = fv_dot->grad_v_dot_n[2]    = 0.;
       }*/
 
   if (pdgv[SHELL_DIFF_FLUX]) {
     v = SHELL_DIFF_FLUX;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_J, goma_ctx->fem.esp_dot->sh_J, goma_ctx->fem.esp_old->sh_J,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_J), &(goma_ctx->fem.fv_dot->sh_J), &(goma_ctx->fem.fv_old->sh_J));
-    stateVector[SHELL_DIFF_FLUX] = goma_ctx->fem.fv->sh_J;
+    scalar_fv_fill(esp->sh_J, esp_dot->sh_J, esp_old->sh_J, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_J), &(fv_dot->sh_J), &(fv_old->sh_J));
+    stateVector[SHELL_DIFF_FLUX] = fv->sh_J;
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->sh_J = fv_old->sh_J = fv_dot->sh_J = 0.;
       }*/
 
   if (pdgv[SHELL_DIFF_CURVATURE]) {
     v = SHELL_DIFF_CURVATURE;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_Kd, goma_ctx->fem.esp_dot->sh_Kd, goma_ctx->fem.esp_old->sh_Kd,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_Kd), &(goma_ctx->fem.fv_dot->sh_Kd), &(goma_ctx->fem.fv_old->sh_Kd));
-    stateVector[SHELL_DIFF_CURVATURE] = goma_ctx->fem.fv->sh_Kd;
+    scalar_fv_fill(esp->sh_Kd, esp_dot->sh_Kd, esp_old->sh_Kd, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_Kd), &(fv_dot->sh_Kd),
+                   &(fv_old->sh_Kd));
+    stateVector[SHELL_DIFF_CURVATURE] = fv->sh_Kd;
   } /* else if ( upd->vp[pg->imtrx][v] == -1 ) {
        fv->sh_Kd = fv_old->sh_Kd = fv_dot->sh_Kd = 0.;
        }*/
 
   if (pdgv[SHELL_NORMAL1]) {
     v = SHELL_NORMAL1;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->n[0], goma_ctx->fem.esp_dot->n[0], goma_ctx->fem.esp_old->n[0],
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->n[0]), &(goma_ctx->fem.fv_dot->n[0]), &(goma_ctx->fem.fv_old->n[0]));
-    stateVector[SHELL_NORMAL1] = goma_ctx->fem.fv->n[0];
+    scalar_fv_fill(esp->n[0], esp_dot->n[0], esp_old->n[0], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->n[0]), &(fv_dot->n[0]), &(fv_old->n[0]));
+    stateVector[SHELL_NORMAL1] = fv->n[0];
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->n[0] = fv_old->n[0] = fv_dot->n[0] = 0.;
       }*/
 
   if (pdgv[SHELL_NORMAL2]) {
     v = SHELL_NORMAL2;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->n[1], goma_ctx->fem.esp_dot->n[1], goma_ctx->fem.esp_old->n[1],
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->n[1]), &(goma_ctx->fem.fv_dot->n[1]), &(goma_ctx->fem.fv_old->n[1]));
-    stateVector[SHELL_NORMAL2] = goma_ctx->fem.fv->n[1];
+    scalar_fv_fill(esp->n[1], esp_dot->n[1], esp_old->n[1], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->n[1]), &(fv_dot->n[1]), &(fv_old->n[1]));
+    stateVector[SHELL_NORMAL2] = fv->n[1];
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->n[1] = fv_old->n[1] = fv_dot->n[1] = 0.;
       }*/
 
   if (pdgv[SHELL_NORMAL3]) {
     v = SHELL_NORMAL3;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->n[2], goma_ctx->fem.esp_dot->n[2], goma_ctx->fem.esp_old->n[2],
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->n[2]), &(goma_ctx->fem.fv_dot->n[2]), &(goma_ctx->fem.fv_old->n[2]));
-    stateVector[SHELL_NORMAL3] = goma_ctx->fem.fv->n[2];
+    scalar_fv_fill(esp->n[2], esp_dot->n[2], esp_old->n[2], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->n[2]), &(fv_dot->n[2]), &(fv_old->n[2]));
+    stateVector[SHELL_NORMAL3] = fv->n[2];
   } /*else if ( upd->vp[pg->imtrx][v] == -1 ) {
       fv->n[2] = fv_old->n[2] = fv_dot->n[2] = 0.;
       }*/
 
   if (pdgv[SHELL_NORMAL1] && pdgv[SHELL_NORMAL2] && pdgv[SHELL_NORMAL3]) {
-    memset(goma_ctx->fem.fv->d_n_dxi, 0.0, sizeof(double) * DIM * DIM);
-    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[SHELL_NORMAL1]; i++) {
-      goma_ctx->fem.fv->d_n_dxi[0][0] +=
-          *goma_ctx->fem.esp->n[0][i] * goma_ctx->fem.bf[SHELL_NORMAL1]->dphidxi[i][0];
-      goma_ctx->fem.fv->d_n_dxi[1][0] +=
-          *goma_ctx->fem.esp->n[1][i] * goma_ctx->fem.bf[SHELL_NORMAL2]->dphidxi[i][0];
-      goma_ctx->fem.fv->d_n_dxi[2][0] +=
-          *goma_ctx->fem.esp->n[2][i] * goma_ctx->fem.bf[SHELL_NORMAL3]->dphidxi[i][0];
+    memset(fv->d_n_dxi, 0.0, sizeof(double) * DIM * DIM);
+    for (i = 0; i < ei[upd->matrix_index[v]]->dof[SHELL_NORMAL1]; i++) {
+      fv->d_n_dxi[0][0] += *esp->n[0][i] * bf[SHELL_NORMAL1]->dphidxi[i][0];
+      fv->d_n_dxi[1][0] += *esp->n[1][i] * bf[SHELL_NORMAL2]->dphidxi[i][0];
+      fv->d_n_dxi[2][0] += *esp->n[2][i] * bf[SHELL_NORMAL3]->dphidxi[i][0];
 
-      goma_ctx->fem.fv->d_n_dxi[0][1] +=
-          *goma_ctx->fem.esp->n[0][i] * goma_ctx->fem.bf[SHELL_NORMAL1]->dphidxi[i][1];
-      goma_ctx->fem.fv->d_n_dxi[1][1] +=
-          *goma_ctx->fem.esp->n[1][i] * goma_ctx->fem.bf[SHELL_NORMAL2]->dphidxi[i][1];
-      goma_ctx->fem.fv->d_n_dxi[2][1] +=
-          *goma_ctx->fem.esp->n[2][i] * goma_ctx->fem.bf[SHELL_NORMAL3]->dphidxi[i][1];
+      fv->d_n_dxi[0][1] += *esp->n[0][i] * bf[SHELL_NORMAL1]->dphidxi[i][1];
+      fv->d_n_dxi[1][1] += *esp->n[1][i] * bf[SHELL_NORMAL2]->dphidxi[i][1];
+      fv->d_n_dxi[2][1] += *esp->n[2][i] * bf[SHELL_NORMAL3]->dphidxi[i][1];
     }
   }
 
@@ -688,336 +641,272 @@ int load_fv(void)
 
   if (pdgv[ACOUS_PREAL]) {
     v = ACOUS_PREAL;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->apr, goma_ctx->fem.esp_dot->apr, goma_ctx->fem.esp_old->apr,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->apr), &(goma_ctx->fem.fv_dot->apr), &(goma_ctx->fem.fv_old->apr));
-    stateVector[ACOUS_PREAL] = goma_ctx->fem.fv->apr;
+    scalar_fv_fill(esp->apr, esp_dot->apr, esp_old->apr, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->apr), &(fv_dot->apr), &(fv_old->apr));
+    stateVector[ACOUS_PREAL] = fv->apr;
   } /*else if (upd->vp[pg->imtrx][v] == -1) {
       fv->apr = fv_old->apr = fv_dot->apr = 0.;
       }*/
 
   if (pdgv[ACOUS_PIMAG]) {
     v = ACOUS_PIMAG;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->api, goma_ctx->fem.esp_dot->api, goma_ctx->fem.esp_old->api,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->api), &(goma_ctx->fem.fv_dot->api), &(goma_ctx->fem.fv_old->api));
-    stateVector[ACOUS_PIMAG] = goma_ctx->fem.fv->api;
+    scalar_fv_fill(esp->api, esp_dot->api, esp_old->api, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->api), &(fv_dot->api), &(fv_old->api));
+    stateVector[ACOUS_PIMAG] = fv->api;
   } /*else if (upd->vp[pg->imtrx][v] == -1) {
       fv->api = fv_old->api = fv_dot->api = 0.;
       }*/
 
   if (pdgv[ACOUS_REYN_STRESS]) {
     v = ACOUS_REYN_STRESS;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->ars, goma_ctx->fem.esp_dot->ars, goma_ctx->fem.esp_old->ars,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->ars), &(goma_ctx->fem.fv_dot->ars), &(goma_ctx->fem.fv_old->ars));
-    stateVector[ACOUS_REYN_STRESS] = goma_ctx->fem.fv->ars;
+    scalar_fv_fill(esp->ars, esp_dot->ars, esp_old->ars, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->ars), &(fv_dot->ars), &(fv_old->ars));
+    stateVector[ACOUS_REYN_STRESS] = fv->ars;
   } /*else if (upd->vp[pg->imtrx][v] == -1) {
       fv->ars = fv_old->ars = fv_dot->ars = 0.;
       }*/
 
   if (pdgv[SHELL_BDYVELO]) {
     v = SHELL_BDYVELO;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_bv, goma_ctx->fem.esp_dot->sh_bv, goma_ctx->fem.esp_old->sh_bv,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_bv), &(goma_ctx->fem.fv_dot->sh_bv), &(goma_ctx->fem.fv_old->sh_bv));
-    stateVector[SHELL_BDYVELO] = goma_ctx->fem.fv->sh_bv;
+    scalar_fv_fill(esp->sh_bv, esp_dot->sh_bv, esp_old->sh_bv, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_bv), &(fv_dot->sh_bv),
+                   &(fv_old->sh_bv));
+    stateVector[SHELL_BDYVELO] = fv->sh_bv;
   }
 
   if (pdgv[SHELL_LUBP]) {
     v = SHELL_LUBP;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_p, goma_ctx->fem.esp_dot->sh_p, goma_ctx->fem.esp_old->sh_p,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_p), &(goma_ctx->fem.fv_dot->sh_p), &(goma_ctx->fem.fv_old->sh_p));
-    stateVector[SHELL_LUBP] = goma_ctx->fem.fv->sh_p;
+    scalar_fv_fill(esp->sh_p, esp_dot->sh_p, esp_old->sh_p, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_p), &(fv_dot->sh_p), &(fv_old->sh_p));
+    stateVector[SHELL_LUBP] = fv->sh_p;
   }
 
   if (pdgv[LUBP]) {
     v = LUBP;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->lubp, goma_ctx->fem.esp_dot->lubp, goma_ctx->fem.esp_old->lubp,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->lubp), &(goma_ctx->fem.fv_dot->lubp), &(goma_ctx->fem.fv_old->lubp));
-    stateVector[LUBP] = goma_ctx->fem.fv->lubp;
+    scalar_fv_fill(esp->lubp, esp_dot->lubp, esp_old->lubp, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->lubp), &(fv_dot->lubp), &(fv_old->lubp));
+    stateVector[LUBP] = fv->lubp;
   }
 
   if (pdgv[LUBP_2]) {
     v = LUBP_2;
-    scalar_fv_fill(goma_ctx->fem.esp->lubp_2, goma_ctx->fem.esp_dot->lubp_2,
-                   goma_ctx->fem.esp_old->lubp_2, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->lubp_2), &(goma_ctx->fem.fv_dot->lubp_2),
-                   &(goma_ctx->fem.fv_old->lubp_2));
-    stateVector[LUBP_2] = goma_ctx->fem.fv->lubp_2;
+    scalar_fv_fill(esp->lubp_2, esp_dot->lubp_2, esp_old->lubp_2, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->lubp_2), &(fv_dot->lubp_2),
+                   &(fv_old->lubp_2));
+    stateVector[LUBP_2] = fv->lubp_2;
   }
 
   if (pdgv[SHELL_FILMP]) {
     v = SHELL_FILMP;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_fp, goma_ctx->fem.esp_dot->sh_fp, goma_ctx->fem.esp_old->sh_fp,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_fp), &(goma_ctx->fem.fv_dot->sh_fp), &(goma_ctx->fem.fv_old->sh_fp));
-    stateVector[SHELL_FILMP] = goma_ctx->fem.fv->sh_fp;
+    scalar_fv_fill(esp->sh_fp, esp_dot->sh_fp, esp_old->sh_fp, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_fp), &(fv_dot->sh_fp),
+                   &(fv_old->sh_fp));
+    stateVector[SHELL_FILMP] = fv->sh_fp;
   }
 
   if (pdgv[SHELL_FILMH]) {
     v = SHELL_FILMH;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_fh, goma_ctx->fem.esp_dot->sh_fh, goma_ctx->fem.esp_old->sh_fh,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_fh), &(goma_ctx->fem.fv_dot->sh_fh), &(goma_ctx->fem.fv_old->sh_fh));
-    stateVector[SHELL_FILMH] = goma_ctx->fem.fv->sh_fh;
+    scalar_fv_fill(esp->sh_fh, esp_dot->sh_fh, esp_old->sh_fh, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_fh), &(fv_dot->sh_fh),
+                   &(fv_old->sh_fh));
+    stateVector[SHELL_FILMH] = fv->sh_fh;
   }
 
   if (pdgv[SHELL_PARTC]) {
     v = SHELL_PARTC;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_pc, goma_ctx->fem.esp_dot->sh_pc, goma_ctx->fem.esp_old->sh_pc,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_pc), &(goma_ctx->fem.fv_dot->sh_pc), &(goma_ctx->fem.fv_old->sh_pc));
-    stateVector[SHELL_PARTC] = goma_ctx->fem.fv->sh_pc;
+    scalar_fv_fill(esp->sh_pc, esp_dot->sh_pc, esp_old->sh_pc, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_pc), &(fv_dot->sh_pc),
+                   &(fv_old->sh_pc));
+    stateVector[SHELL_PARTC] = fv->sh_pc;
   }
 
   if (pdgv[SHELL_SAT_CLOSED]) {
     v = SHELL_SAT_CLOSED;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_sat_closed, goma_ctx->fem.esp_dot->sh_sat_closed,
-                   goma_ctx->fem.esp_old->sh_sat_closed, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_sat_closed), &(goma_ctx->fem.fv_dot->sh_sat_closed),
-                   &(goma_ctx->fem.fv_old->sh_sat_closed));
-    stateVector[SHELL_SAT_CLOSED] = goma_ctx->fem.fv->sh_sat_closed;
+    scalar_fv_fill(esp->sh_sat_closed, esp_dot->sh_sat_closed, esp_old->sh_sat_closed, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_sat_closed), &(fv_dot->sh_sat_closed),
+                   &(fv_old->sh_sat_closed));
+    stateVector[SHELL_SAT_CLOSED] = fv->sh_sat_closed;
   }
   if (pdgv[SHELL_PRESS_OPEN]) {
     v = SHELL_PRESS_OPEN;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_p_open, goma_ctx->fem.esp_dot->sh_p_open,
-                   goma_ctx->fem.esp_old->sh_p_open, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_p_open), &(goma_ctx->fem.fv_dot->sh_p_open),
-                   &(goma_ctx->fem.fv_old->sh_p_open));
-    stateVector[SHELL_PRESS_OPEN] = goma_ctx->fem.fv->sh_p_open;
+    scalar_fv_fill(esp->sh_p_open, esp_dot->sh_p_open, esp_old->sh_p_open, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_p_open), &(fv_dot->sh_p_open),
+                   &(fv_old->sh_p_open));
+    stateVector[SHELL_PRESS_OPEN] = fv->sh_p_open;
   }
   if (pdgv[SHELL_PRESS_OPEN_2]) {
     v = SHELL_PRESS_OPEN_2;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_p_open_2, goma_ctx->fem.esp_dot->sh_p_open_2,
-                   goma_ctx->fem.esp_old->sh_p_open_2, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_p_open_2), &(goma_ctx->fem.fv_dot->sh_p_open_2),
-                   &(goma_ctx->fem.fv_old->sh_p_open_2));
-    stateVector[SHELL_PRESS_OPEN_2] = goma_ctx->fem.fv->sh_p_open_2;
+    scalar_fv_fill(esp->sh_p_open_2, esp_dot->sh_p_open_2, esp_old->sh_p_open_2, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_p_open_2), &(fv_dot->sh_p_open_2),
+                   &(fv_old->sh_p_open_2));
+    stateVector[SHELL_PRESS_OPEN_2] = fv->sh_p_open_2;
   }
   if (pdgv[SHELL_SAT_1]) {
     v = SHELL_SAT_1;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_sat_1, goma_ctx->fem.esp_dot->sh_sat_1,
-                   goma_ctx->fem.esp_old->sh_sat_1, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v], &(goma_ctx->fem.fv->sh_sat_1),
-                   &(goma_ctx->fem.fv_dot->sh_sat_1), &(goma_ctx->fem.fv_old->sh_sat_1));
-    stateVector[SHELL_SAT_1] = goma_ctx->fem.fv->sh_sat_1;
+    scalar_fv_fill(esp->sh_sat_1, esp_dot->sh_sat_1, esp_old->sh_sat_1, bf[v]->phi,
+                   ei[pg->imtrx]->dof[v], &(fv->sh_sat_1), &(fv_dot->sh_sat_1),
+                   &(fv_old->sh_sat_1));
+    stateVector[SHELL_SAT_1] = fv->sh_sat_1;
   }
   if (pdgv[SHELL_SAT_2]) {
     v = SHELL_SAT_2;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_sat_2, goma_ctx->fem.esp_dot->sh_sat_2,
-                   goma_ctx->fem.esp_old->sh_sat_2, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v], &(goma_ctx->fem.fv->sh_sat_2),
-                   &(goma_ctx->fem.fv_dot->sh_sat_2), &(goma_ctx->fem.fv_old->sh_sat_2));
-    stateVector[SHELL_SAT_2] = goma_ctx->fem.fv->sh_sat_2;
+    scalar_fv_fill(esp->sh_sat_2, esp_dot->sh_sat_2, esp_old->sh_sat_2, bf[v]->phi,
+                   ei[pg->imtrx]->dof[v], &(fv->sh_sat_2), &(fv_dot->sh_sat_2),
+                   &(fv_old->sh_sat_2));
+    stateVector[SHELL_SAT_2] = fv->sh_sat_2;
   }
   if (pdgv[SHELL_SAT_3]) {
     v = SHELL_SAT_3;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_sat_3, goma_ctx->fem.esp_dot->sh_sat_3,
-                   goma_ctx->fem.esp_old->sh_sat_3, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v], &(goma_ctx->fem.fv->sh_sat_3),
-                   &(goma_ctx->fem.fv_dot->sh_sat_3), &(goma_ctx->fem.fv_old->sh_sat_3));
-    stateVector[SHELL_SAT_3] = goma_ctx->fem.fv->sh_sat_3;
+    scalar_fv_fill(esp->sh_sat_3, esp_dot->sh_sat_3, esp_old->sh_sat_3, bf[v]->phi,
+                   ei[pg->imtrx]->dof[v], &(fv->sh_sat_3), &(fv_dot->sh_sat_3),
+                   &(fv_old->sh_sat_3));
+    stateVector[SHELL_SAT_3] = fv->sh_sat_3;
   }
   if (pdgv[SHELL_TEMPERATURE]) {
     v = SHELL_TEMPERATURE;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_t, goma_ctx->fem.esp_dot->sh_t, goma_ctx->fem.esp_old->sh_t,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_t), &(goma_ctx->fem.fv_dot->sh_t), &(goma_ctx->fem.fv_old->sh_t));
-    stateVector[SHELL_TEMPERATURE] = goma_ctx->fem.fv->sh_t;
+    scalar_fv_fill(esp->sh_t, esp_dot->sh_t, esp_old->sh_t, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_t), &(fv_dot->sh_t), &(fv_old->sh_t));
+    stateVector[SHELL_TEMPERATURE] = fv->sh_t;
   }
   if (pdgv[SHELL_DELTAH]) {
     v = SHELL_DELTAH;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->sh_dh, goma_ctx->fem.esp_dot->sh_dh, goma_ctx->fem.esp_old->sh_dh,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->sh_dh), &(goma_ctx->fem.fv_dot->sh_dh), &(goma_ctx->fem.fv_old->sh_dh));
-    stateVector[SHELL_DELTAH] = goma_ctx->fem.fv->sh_dh;
+    scalar_fv_fill(esp->sh_dh, esp_dot->sh_dh, esp_old->sh_dh, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_dh), &(fv_dot->sh_dh),
+                   &(fv_old->sh_dh));
+    stateVector[SHELL_DELTAH] = fv->sh_dh;
   }
   if (pdgv[SHELL_LUB_CURV]) {
     v = SHELL_LUB_CURV;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_l_curv, goma_ctx->fem.esp_dot->sh_l_curv,
-                   goma_ctx->fem.esp_old->sh_l_curv, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_l_curv), &(goma_ctx->fem.fv_dot->sh_l_curv),
-                   &(goma_ctx->fem.fv_old->sh_l_curv));
-    stateVector[SHELL_LUB_CURV] = goma_ctx->fem.fv->sh_l_curv;
+    scalar_fv_fill(esp->sh_l_curv, esp_dot->sh_l_curv, esp_old->sh_l_curv, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_l_curv), &(fv_dot->sh_l_curv),
+                   &(fv_old->sh_l_curv));
+    stateVector[SHELL_LUB_CURV] = fv->sh_l_curv;
   }
   if (pdgv[SHELL_LUB_CURV_2]) {
     v = SHELL_LUB_CURV_2;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_l_curv_2, goma_ctx->fem.esp_dot->sh_l_curv_2,
-                   goma_ctx->fem.esp_old->sh_l_curv_2, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_l_curv_2), &(goma_ctx->fem.fv_dot->sh_l_curv_2),
-                   &(goma_ctx->fem.fv_old->sh_l_curv_2));
-    stateVector[SHELL_LUB_CURV] = goma_ctx->fem.fv->sh_l_curv;
+    scalar_fv_fill(esp->sh_l_curv_2, esp_dot->sh_l_curv_2, esp_old->sh_l_curv_2, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_l_curv_2), &(fv_dot->sh_l_curv_2),
+                   &(fv_old->sh_l_curv_2));
+    stateVector[SHELL_LUB_CURV] = fv->sh_l_curv;
   }
   if (pdgv[SHELL_SAT_GASN]) {
     v = SHELL_SAT_GASN;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_sat_gasn, goma_ctx->fem.esp_dot->sh_sat_gasn,
-                   goma_ctx->fem.esp_old->sh_sat_gasn, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_sat_gasn), &(goma_ctx->fem.fv_dot->sh_sat_gasn),
-                   &(goma_ctx->fem.fv_old->sh_sat_gasn));
-    stateVector[SHELL_SAT_GASN] = goma_ctx->fem.fv->sh_sat_gasn;
+    scalar_fv_fill(esp->sh_sat_gasn, esp_dot->sh_sat_gasn, esp_old->sh_sat_gasn, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_sat_gasn), &(fv_dot->sh_sat_gasn),
+                   &(fv_old->sh_sat_gasn));
+    stateVector[SHELL_SAT_GASN] = fv->sh_sat_gasn;
   }
   if (pdgv[SHELL_SHEAR_TOP]) {
     v = SHELL_SHEAR_TOP;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_shear_top, goma_ctx->fem.esp_dot->sh_shear_top,
-                   goma_ctx->fem.esp_old->sh_shear_top, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_shear_top), &(goma_ctx->fem.fv_dot->sh_shear_top),
-                   &(goma_ctx->fem.fv_old->sh_shear_top));
-    stateVector[SHELL_SHEAR_TOP] = goma_ctx->fem.fv->sh_shear_top;
+    scalar_fv_fill(esp->sh_shear_top, esp_dot->sh_shear_top, esp_old->sh_shear_top, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_shear_top), &(fv_dot->sh_shear_top),
+                   &(fv_old->sh_shear_top));
+    stateVector[SHELL_SHEAR_TOP] = fv->sh_shear_top;
   }
   if (pdgv[SHELL_SHEAR_BOT]) {
     v = SHELL_SHEAR_BOT;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_shear_bot, goma_ctx->fem.esp_dot->sh_shear_bot,
-                   goma_ctx->fem.esp_old->sh_shear_bot, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_shear_bot), &(goma_ctx->fem.fv_dot->sh_shear_bot),
-                   &(goma_ctx->fem.fv_old->sh_shear_bot));
-    stateVector[SHELL_SHEAR_BOT] = goma_ctx->fem.fv->sh_shear_bot;
+    scalar_fv_fill(esp->sh_shear_bot, esp_dot->sh_shear_bot, esp_old->sh_shear_bot, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sh_shear_bot), &(fv_dot->sh_shear_bot),
+                   &(fv_old->sh_shear_bot));
+    stateVector[SHELL_SHEAR_BOT] = fv->sh_shear_bot;
   }
   if (pdgv[SHELL_CROSS_SHEAR]) {
     v = SHELL_CROSS_SHEAR;
-    scalar_fv_fill(goma_ctx->fem.esp->sh_cross_shear, goma_ctx->fem.esp_dot->sh_cross_shear,
-                   goma_ctx->fem.esp_old->sh_cross_shear, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sh_cross_shear), &(goma_ctx->fem.fv_dot->sh_cross_shear),
-                   &(goma_ctx->fem.fv_old->sh_cross_shear));
-    stateVector[SHELL_CROSS_SHEAR] = goma_ctx->fem.fv->sh_cross_shear;
+    scalar_fv_fill(esp->sh_cross_shear, esp_dot->sh_cross_shear, esp_old->sh_cross_shear,
+                   bf[v]->phi, ei[upd->matrix_index[v]]->dof[v], &(fv->sh_cross_shear),
+                   &(fv_dot->sh_cross_shear), &(fv_old->sh_cross_shear));
+    stateVector[SHELL_CROSS_SHEAR] = fv->sh_cross_shear;
   }
   if (pdgv[MAX_STRAIN]) {
     v = MAX_STRAIN;
-    scalar_fv_fill(goma_ctx->fem.esp->max_strain, goma_ctx->fem.esp_dot->max_strain,
-                   goma_ctx->fem.esp_old->max_strain, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->max_strain), &(goma_ctx->fem.fv_dot->max_strain),
-                   &(goma_ctx->fem.fv_old->max_strain));
-    stateVector[MAX_STRAIN] = goma_ctx->fem.fv->max_strain;
+    scalar_fv_fill(esp->max_strain, esp_dot->max_strain, esp_old->max_strain, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->max_strain), &(fv_dot->max_strain),
+                   &(fv_old->max_strain));
+    stateVector[MAX_STRAIN] = fv->max_strain;
   }
   if (pdgv[CUR_STRAIN]) {
     v = CUR_STRAIN;
-    scalar_fv_fill(goma_ctx->fem.esp->cur_strain, goma_ctx->fem.esp_dot->cur_strain,
-                   goma_ctx->fem.esp_old->cur_strain, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->cur_strain), &(goma_ctx->fem.fv_dot->cur_strain),
-                   &(goma_ctx->fem.fv_old->cur_strain));
-    stateVector[CUR_STRAIN] = goma_ctx->fem.fv->cur_strain;
+    scalar_fv_fill(esp->cur_strain, esp_dot->cur_strain, esp_old->cur_strain, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->cur_strain), &(fv_dot->cur_strain),
+                   &(fv_old->cur_strain));
+    stateVector[CUR_STRAIN] = fv->cur_strain;
   }
 
   if (pdgv[EDDY_NU]) {
     v = EDDY_NU;
-    scalar_fv_fill(goma_ctx->fem.esp->eddy_nu, goma_ctx->fem.esp_dot->eddy_nu,
-                   goma_ctx->fem.esp_old->eddy_nu, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->eddy_nu), &(goma_ctx->fem.fv_dot->eddy_nu),
-                   &(goma_ctx->fem.fv_old->eddy_nu));
-    stateVector[EDDY_NU] = goma_ctx->fem.fv->eddy_nu;
+    scalar_fv_fill(esp->eddy_nu, esp_dot->eddy_nu, esp_old->eddy_nu, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->eddy_nu), &(fv_dot->eddy_nu),
+                   &(fv_old->eddy_nu));
+    stateVector[EDDY_NU] = fv->eddy_nu;
   }
 
   if (pdgv[TURB_K]) {
     v = TURB_K;
-    scalar_fv_fill(goma_ctx->fem.esp->turb_k, goma_ctx->fem.esp_dot->turb_k,
-                   goma_ctx->fem.esp_old->turb_k, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->turb_k), &(goma_ctx->fem.fv_dot->turb_k),
-                   &(goma_ctx->fem.fv_old->turb_k));
-    stateVector[TURB_K] = goma_ctx->fem.fv->turb_k;
+    scalar_fv_fill(esp->turb_k, esp_dot->turb_k, esp_old->turb_k, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_k), &(fv_dot->turb_k),
+                   &(fv_old->turb_k));
+    stateVector[TURB_K] = fv->turb_k;
   }
 
   if (pdgv[TURB_OMEGA]) {
     v = TURB_OMEGA;
-    scalar_fv_fill(goma_ctx->fem.esp->turb_omega, goma_ctx->fem.esp_dot->turb_omega,
-                   goma_ctx->fem.esp_old->turb_omega, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->turb_omega), &(goma_ctx->fem.fv_dot->turb_omega),
-                   &(goma_ctx->fem.fv_old->turb_omega));
-    stateVector[TURB_OMEGA] = goma_ctx->fem.fv->turb_omega;
+    scalar_fv_fill(esp->turb_omega, esp_dot->turb_omega, esp_old->turb_omega, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_omega), &(fv_dot->turb_omega),
+                   &(fv_old->turb_omega));
+    stateVector[TURB_OMEGA] = fv->turb_omega;
   }
 
   if (pdgv[FILM_HEIGHT]) {
     v = FILM_HEIGHT;
-    scalar_fv_fill(goma_ctx->fem.esp->film_height, goma_ctx->fem.esp_dot->film_height,
-                   goma_ctx->fem.esp_old->film_height, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->film_height), &(goma_ctx->fem.fv_dot->film_height),
-                   &(goma_ctx->fem.fv_old->film_height));
-    stateVector[FILM_HEIGHT] = goma_ctx->fem.fv->film_height;
+    scalar_fv_fill(esp->film_height, esp_dot->film_height, esp_old->film_height, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->film_height), &(fv_dot->film_height),
+                   &(fv_old->film_height));
+    stateVector[FILM_HEIGHT] = fv->film_height;
   }
 
   if (pdgv[TURB_K]) {
     v = TURB_K;
-    scalar_fv_fill(goma_ctx->fem.esp->turb_k, goma_ctx->fem.esp_dot->turb_k,
-                   goma_ctx->fem.esp_old->turb_k, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->turb_k), &(goma_ctx->fem.fv_dot->turb_k),
-                   &(goma_ctx->fem.fv_old->turb_k));
-    stateVector[TURB_K] = goma_ctx->fem.fv->turb_k;
+    scalar_fv_fill(esp->turb_k, esp_dot->turb_k, esp_old->turb_k, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_k), &(fv_dot->turb_k),
+                   &(fv_old->turb_k));
+    stateVector[TURB_K] = fv->turb_k;
   }
 
   if (pdgv[TURB_OMEGA]) {
     v = TURB_OMEGA;
-    scalar_fv_fill(goma_ctx->fem.esp->turb_omega, goma_ctx->fem.esp_dot->turb_omega,
-                   goma_ctx->fem.esp_old->turb_omega, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->turb_omega), &(goma_ctx->fem.fv_dot->turb_omega),
-                   &(goma_ctx->fem.fv_old->turb_omega));
-    stateVector[TURB_OMEGA] = goma_ctx->fem.fv->turb_omega;
+    scalar_fv_fill(esp->turb_omega, esp_dot->turb_omega, esp_old->turb_omega, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->turb_omega), &(fv_dot->turb_omega),
+                   &(fv_old->turb_omega));
+    stateVector[TURB_OMEGA] = fv->turb_omega;
   }
 
   if (pdgv[LIGHT_INTP]) {
     v = LIGHT_INTP;
-    scalar_fv_fill(goma_ctx->fem.esp->poynt[0], goma_ctx->fem.esp_dot->poynt[0],
-                   goma_ctx->fem.esp_old->poynt[0], goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->poynt[0]), &(goma_ctx->fem.fv_dot->poynt[0]),
-                   &(goma_ctx->fem.fv_old->poynt[0]));
-    stateVector[LIGHT_INTP] = goma_ctx->fem.fv->poynt[0];
+    scalar_fv_fill(esp->poynt[0], esp_dot->poynt[0], esp_old->poynt[0], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->poynt[0]), &(fv_dot->poynt[0]),
+                   &(fv_old->poynt[0]));
+    stateVector[LIGHT_INTP] = fv->poynt[0];
   }
   if (pdgv[LIGHT_INTM]) {
     v = LIGHT_INTM;
-    scalar_fv_fill(goma_ctx->fem.esp->poynt[1], goma_ctx->fem.esp_dot->poynt[1],
-                   goma_ctx->fem.esp_old->poynt[1], goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->poynt[1]), &(goma_ctx->fem.fv_dot->poynt[1]),
-                   &(goma_ctx->fem.fv_old->poynt[1]));
-    stateVector[LIGHT_INTM] = goma_ctx->fem.fv->poynt[1];
+    scalar_fv_fill(esp->poynt[1], esp_dot->poynt[1], esp_old->poynt[1], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->poynt[1]), &(fv_dot->poynt[1]),
+                   &(fv_old->poynt[1]));
+    stateVector[LIGHT_INTM] = fv->poynt[1];
   }
   if (pdgv[LIGHT_INTD]) {
     v = LIGHT_INTD;
-    scalar_fv_fill(goma_ctx->fem.esp->poynt[2], goma_ctx->fem.esp_dot->poynt[2],
-                   goma_ctx->fem.esp_old->poynt[2], goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->poynt[2]), &(goma_ctx->fem.fv_dot->poynt[2]),
-                   &(goma_ctx->fem.fv_old->poynt[2]));
-    stateVector[LIGHT_INTD] = goma_ctx->fem.fv->poynt[2];
+    scalar_fv_fill(esp->poynt[2], esp_dot->poynt[2], esp_old->poynt[2], bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->poynt[2]), &(fv_dot->poynt[2]),
+                   &(fv_old->poynt[2]));
+    stateVector[LIGHT_INTD] = fv->poynt[2];
   }
   if (pdgv[RESTIME]) {
     v = RESTIME;
-    scalar_fv_fill(goma_ctx->fem.esp->restime, goma_ctx->fem.esp_dot->restime,
-                   goma_ctx->fem.esp_old->restime, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->restime), &(goma_ctx->fem.fv_dot->restime),
-                   &(goma_ctx->fem.fv_old->restime));
-    stateVector[RESTIME] = goma_ctx->fem.fv->restime;
+    scalar_fv_fill(esp->restime, esp_dot->restime, esp_old->restime, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->restime), &(fv_dot->restime),
+                   &(fv_old->restime));
+    stateVector[RESTIME] = fv->restime;
   }
   /*
    *	Porous sink mass
@@ -1025,12 +914,10 @@ int load_fv(void)
 
   if (pdgv[POR_SINK_MASS]) {
     v = POR_SINK_MASS;
-    scalar_fv_fill(goma_ctx->fem.esp->sink_mass, goma_ctx->fem.esp_dot->sink_mass,
-                   goma_ctx->fem.esp_old->sink_mass, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->sink_mass), &(goma_ctx->fem.fv_dot->sink_mass),
-                   &(goma_ctx->fem.fv_old->sink_mass));
-    stateVector[POR_SINK_MASS] = goma_ctx->fem.fv->sink_mass;
+    scalar_fv_fill(esp->sink_mass, esp_dot->sink_mass, esp_old->sink_mass, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->sink_mass), &(fv_dot->sink_mass),
+                   &(fv_old->sink_mass));
+    stateVector[POR_SINK_MASS] = fv->sink_mass;
   } /*else if (upd->vp[pg->imtrx][v] == -1) {
       fv->sink_mass = fv_old->sink_mass = fv_dot->sink_mass = 0.;
       }*/
@@ -1041,38 +928,30 @@ int load_fv(void)
 
   if (pdgv[PRESSURE]) {
     v = PRESSURE;
-    scalar_fv_fill(goma_ctx->fem.esp->P, goma_ctx->fem.esp_dot->P, goma_ctx->fem.esp_old->P,
-                   goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->P), &(goma_ctx->fem.fv_dot->P), &(goma_ctx->fem.fv_old->P));
-    stateVector[v] = goma_ctx->fem.fv->P + goma_ctx->fem.upd->Pressure_Datum;
+    scalar_fv_fill(esp->P, esp_dot->P, esp_old->P, bf[v]->phi, ei[upd->matrix_index[v]]->dof[v],
+                   &(fv->P), &(fv_dot->P), &(fv_old->P));
+    stateVector[v] = fv->P + upd->Pressure_Datum;
   }
 
   if (pdgv[PSTAR]) {
     v = PSTAR;
-    scalar_fv_fill(goma_ctx->fem.esp->P_star, goma_ctx->fem.esp_dot->P_star,
-                   goma_ctx->fem.esp_old->P_star, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                   &(goma_ctx->fem.fv->P_star), &(goma_ctx->fem.fv_dot->P_star),
-                   &(goma_ctx->fem.fv_old->P_star));
-    stateVector[v] = goma_ctx->fem.fv->P_star + goma_ctx->fem.upd->Pressure_Datum;
+    scalar_fv_fill(esp->P_star, esp_dot->P_star, esp_old->P_star, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->P_star), &(fv_dot->P_star),
+                   &(fv_old->P_star));
+    stateVector[v] = fv->P_star + upd->Pressure_Datum;
   }
 
   if (pdgv[EM_CONT_REAL]) {
     v = EM_CONT_REAL;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->epr, goma_ctx->fem.esp_dot->epr, goma_ctx->fem.esp_old->epr,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->epr), &(goma_ctx->fem.fv_dot->epr), &(goma_ctx->fem.fv_old->epr));
-    stateVector[v] = goma_ctx->fem.fv->epr;
+    scalar_fv_fill(esp->epr, esp_dot->epr, esp_old->epr, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->epr), &(fv_dot->epr), &(fv_old->epr));
+    stateVector[v] = fv->epr;
   }
   if (pdgv[EM_CONT_IMAG]) {
     v = EM_CONT_IMAG;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->epi, goma_ctx->fem.esp_dot->epi, goma_ctx->fem.esp_old->epi,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->epi), &(goma_ctx->fem.fv_dot->epi), &(goma_ctx->fem.fv_old->epi));
-    stateVector[v] = goma_ctx->fem.fv->epi;
+    scalar_fv_fill(esp->epi, esp_dot->epi, esp_old->epi, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->epi), &(fv_dot->epi), &(fv_old->epi));
+    stateVector[v] = fv->epi;
   }
   /*
    *  Set the state vector pressure datum to include an additional
@@ -1090,18 +969,18 @@ int load_fv(void)
    */
 
   for (p = 0; p < dim; p++) {
-    goma_ctx->fem.fv->x0[p] = 0.0;
-    goma_ctx->fem.fv->x[p] = 0.0;
-    goma_ctx->fem.fv_old->x[p] = 0.0;
-    goma_ctx->fem.fv_dot->x[p] = 0.0;
-    goma_ctx->fem.fv_dot_old->x[p] = 0.0;
+    fv->x0[p] = 0.0;
+    fv->x[p] = 0.0;
+    fv_old->x[p] = 0.0;
+    fv_dot->x[p] = 0.0;
+    fv_dot_old->x[p] = 0.0;
 
-    goma_ctx->fem.fv->d[p] = 0.0;
-    goma_ctx->fem.fv_old->d[p] = 0.0;
-    goma_ctx->fem.fv_dot->d[p] = 0.0;
-    goma_ctx->fem.fv_dot_old->d[p] = 0.0;
+    fv->d[p] = 0.0;
+    fv_old->d[p] = 0.0;
+    fv_dot->d[p] = 0.0;
+    fv_dot_old->d[p] = 0.0;
 
-    if (goma_ctx->fem.tran->solid_inertia) {
+    if (tran->solid_inertia) {
       goma_ctx->fem.fv_dot_dot->x[p] = 0;
       goma_ctx->fem.fv_dot_dot->d[p] = 0;
     }
@@ -1113,25 +992,22 @@ int load_fv(void)
      * and ei[upd->matrix_index[v]]->deforming_mesh will be TRUE, so that the true
      * displaced coordinates can be loaded here.
      */
-    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->deforming_mesh) {
+    if (ei[pg->imtrx]->deforming_mesh) {
       /*
        * ShapeVar will always be mesh displacement where it is defined.
        * Otherwise (e.g. for shell elements), it will be set correctly.
        */
-      bfv = goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar];
-      v = goma_ctx->fem.pd->ShapeVar;
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+      bfv = bf[pd->ShapeVar];
+      v = pd->ShapeVar;
+      dofs = ei[upd->matrix_index[v]]->dof[v];
 
       for (i = 0; i < dofs; i++) {
-        node = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof_list[R_MESH1][i];
+        node = ei[upd->matrix_index[v]]->dof_list[R_MESH1][i];
         index = goma_ctx->mesh.proc_elem_connect
-                    [goma_ctx->mesh.proc_connect_ptr
-                         [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->ielem] +
-                     node];
-        goma_ctx->fem.fv->d[p] += *goma_ctx->fem.esp->d[p][i] * bfv->phi[i];
-        goma_ctx->fem.fv->x[p] +=
-            (goma_ctx->mesh.coor[p][index] + *goma_ctx->fem.esp->d[p][i]) * bfv->phi[i];
-        goma_ctx->fem.fv->x0[p] += goma_ctx->mesh.coor[p][index] * bfv->phi[i];
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[v]]->ielem] + node];
+        fv->d[p] += *esp->d[p][i] * bfv->phi[i];
+        fv->x[p] += (goma_ctx->mesh.coor[p][index] + *esp->d[p][i]) * bfv->phi[i];
+        fv->x0[p] += goma_ctx->mesh.coor[p][index] * bfv->phi[i];
 
         /*
          * HKM -> We calculate the old xdot's by doing a little pointer
@@ -1139,77 +1015,66 @@ int load_fv(void)
          *        the base and then correct for the base address.
          */
         if (transient_run) {
-          goma_ctx->fem.fv_old->d[p] += *goma_ctx->fem.esp_old->d[p][i] * bfv->phi[i];
-          goma_ctx->fem.fv_old->x[p] +=
-              (goma_ctx->mesh.coor[p][index] + *goma_ctx->fem.esp_old->d[p][i]) *
-              goma_ctx->fem.bf[v]->phi[i];
-          goma_ctx->fem.fv_dot->d[p] += *goma_ctx->fem.esp_dot->d[p][i] * bfv->phi[i];
-          goma_ctx->fem.fv_dot->x[p] += *goma_ctx->fem.esp_dot->d[p][i] * bfv->phi[i];
-          if (goma_ctx->fem.tran->solid_inertia) {
+          fv_old->d[p] += *esp_old->d[p][i] * bfv->phi[i];
+          fv_old->x[p] += (goma_ctx->mesh.coor[p][index] + *esp_old->d[p][i]) * bf[v]->phi[i];
+          fv_dot->d[p] += *esp_dot->d[p][i] * bfv->phi[i];
+          fv_dot->x[p] += *esp_dot->d[p][i] * bfv->phi[i];
+          if (tran->solid_inertia) {
             goma_ctx->fem.fv_dot_dot->d[p] += *goma_ctx->fem.esp_dbl_dot->d[p][i] * bfv->phi[i];
             goma_ctx->fem.fv_dot_dot->x[p] += *goma_ctx->fem.esp_dbl_dot->d[p][i] * bfv->phi[i];
           }
 
-          if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
-            goma_ctx->fem.fv_dot_old->x[p] +=
-                *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                  goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                  goma_ctx->fem.esp_dot->d[p][i]) *
-                bfv->phi[i];
-            goma_ctx->fem.fv_dot_old->d[p] +=
-                *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                  goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                  goma_ctx->fem.esp_dot->d[p][i]) *
-                bfv->phi[i];
+          if (upd->Total_Num_Matrices > 1) {
+            fv_dot_old->x[p] += *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                                  pg->matrices[upd->matrix_index[v]].xdot + esp_dot->d[p][i]) *
+                                bfv->phi[i];
+            fv_dot_old->d[p] += *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                                  pg->matrices[upd->matrix_index[v]].xdot + esp_dot->d[p][i]) *
+                                bfv->phi[i];
           } else {
-            goma_ctx->fem.fv_dot_old->x[p] +=
-                *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->d[p][i]) * bfv->phi[i];
-            goma_ctx->fem.fv_dot_old->d[p] +=
-                *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->d[p][i]) * bfv->phi[i];
+            fv_dot_old->x[p] += *(xdot_old_static - xdot_static + esp_dot->d[p][i]) * bfv->phi[i];
+            fv_dot_old->d[p] += *(xdot_old_static - xdot_static + esp_dot->d[p][i]) * bfv->phi[i];
           }
-          if (goma_ctx->fem.tran->solid_inertia) {
+          if (tran->solid_inertia) {
             goma_ctx->fem.fv_dot_dot_old->d[p] +=
                 *(x_dbl_dot_old_static - x_dbl_dot_static + goma_ctx->fem.esp_dbl_dot->d[p][i]) *
                 bfv->phi[i];
           }
         } else {
-          goma_ctx->fem.fv_old->d[p] = goma_ctx->fem.fv->d[p];
-          goma_ctx->fem.fv_old->x[p] =
-              goma_ctx->fem.fv->x[p]; /* Fixed grid stays fixed thru time. */
+          fv_old->d[p] = fv->d[p];
+          fv_old->x[p] = fv->x[p]; /* Fixed grid stays fixed thru time. */
         }
       }
     }
 
     else /* Zero these only if not using mesh displacements: */
     {
-      v = goma_ctx->fem.pd->ShapeVar;
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+      v = pd->ShapeVar;
+      dofs = ei[upd->matrix_index[v]]->dof[v];
 
-      if (goma_ctx->fem.bf[v]->interpolation == I_N1) {
-        dofs = goma_ctx->fem.bf[v]->shape_dof;
+      if (bf[v]->interpolation == I_N1) {
+        dofs = bf[v]->shape_dof;
       }
 
-      goma_ctx->fem.fv->d[p] = 0.0;
-      goma_ctx->fem.fv_old->d[p] = 0.0;
-      goma_ctx->fem.fv_dot->d[p] = 0.0;
+      fv->d[p] = 0.0;
+      fv_old->d[p] = 0.0;
+      fv_dot->d[p] = 0.0;
       goma_ctx->fem.fv_dot_dot->d[p] = 0.0;
 
-      goma_ctx->fem.fv->x[p] = 0.;
+      fv->x[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        if (goma_ctx->fem.bf[v]->interpolation == I_N1) {
+        if (bf[v]->interpolation == I_N1) {
           node = i;
         } else {
-          node = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof_list[v][i];
+          node = ei[upd->matrix_index[v]]->dof_list[v][i];
         }
         index = goma_ctx->mesh.proc_elem_connect
-                    [goma_ctx->mesh.proc_connect_ptr
-                         [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->ielem] +
-                     node];
-        goma_ctx->fem.fv->x[p] += (goma_ctx->mesh.coor[p][index]) * goma_ctx->fem.bf[v]->phi[i];
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[v]]->ielem] + node];
+        fv->x[p] += (goma_ctx->mesh.coor[p][index]) * bf[v]->phi[i];
       }
-      goma_ctx->fem.fv_old->x[p] = goma_ctx->fem.fv->x[p]; /* Fixed grid stays fixed thru time. */
-      goma_ctx->fem.fv->x0[p] = goma_ctx->fem.fv->x[p];
-      goma_ctx->fem.fv_dot->x[p] = 0.0;
+      fv_old->x[p] = fv->x[p]; /* Fixed grid stays fixed thru time. */
+      fv->x0[p] = fv->x[p];
+      fv_dot->x[p] = 0.0;
       goma_ctx->fem.fv_dot_dot->x[p] = 0.0;
     }
   }
@@ -1220,59 +1085,53 @@ int load_fv(void)
    */
   for (p = 0; pdgv[SOLID_DISPLACEMENT1] && p < dim; p++) {
     v = SOLID_DISPLACEMENT1 + p;
-    goma_ctx->fem.fv->d_rs[p] = 0.;
-    goma_ctx->fem.fv_old->d_rs[p] = 0.;
-    goma_ctx->fem.fv_dot->d_rs[p] = 0.;
+    fv->d_rs[p] = 0.;
+    fv_old->d_rs[p] = 0.;
+    fv_dot->d_rs[p] = 0.;
     goma_ctx->fem.fv_dot_dot->d_rs[p] = 0.;
-    goma_ctx->fem.fv_dot_old->d_rs[p] = 0.;
+    fv_dot_old->d_rs[p] = 0.;
     goma_ctx->fem.fv_dot_dot_old->d_rs[p] = 0.;
 
     if (pdgv[v]) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+      dofs = ei[upd->matrix_index[v]]->dof[v];
 
       for (i = 0; i < dofs; i++) {
-        node = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof_list[R_SOLID1][i];
+        node = ei[upd->matrix_index[v]]->dof_list[R_SOLID1][i];
         index = goma_ctx->mesh.proc_elem_connect
-                    [goma_ctx->mesh.proc_connect_ptr
-                         [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->ielem] +
-                     node];
-        goma_ctx->fem.fv->d_rs[p] += *goma_ctx->fem.esp->d_rs[p][i] * goma_ctx->fem.bf[v]->phi[i];
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[v]]->ielem] + node];
+        fv->d_rs[p] += *esp->d_rs[p][i] * bf[v]->phi[i];
 
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-          goma_ctx->fem.fv_old->d_rs[p] +=
-              *goma_ctx->fem.esp_old->d_rs[p][i] * goma_ctx->fem.bf[v]->phi[i];
-          goma_ctx->fem.fv_dot->d_rs[p] +=
-              *goma_ctx->fem.esp_dot->d_rs[p][i] * goma_ctx->fem.bf[v]->phi[i];
-          if (goma_ctx->fem.tran->solid_inertia) {
+        if (pd->TimeIntegration != STEADY) {
+          fv_old->d_rs[p] += *esp_old->d_rs[p][i] * bf[v]->phi[i];
+          fv_dot->d_rs[p] += *esp_dot->d_rs[p][i] * bf[v]->phi[i];
+          if (tran->solid_inertia) {
             goma_ctx->fem.fv_dot_dot->d_rs[p] +=
-                *goma_ctx->fem.esp_dbl_dot->d_rs[p][i] * goma_ctx->fem.bf[v]->phi[i];
+                *goma_ctx->fem.esp_dbl_dot->d_rs[p][i] * bf[v]->phi[i];
           }
 
-          if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
-            goma_ctx->fem.fv_dot_old->d_rs[p] +=
-                *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                  goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                  goma_ctx->fem.esp_dot->d_rs[p][i]) *
-                goma_ctx->fem.bf[v]->phi[i];
+          if (upd->Total_Num_Matrices > 1) {
+            fv_dot_old->d_rs[p] +=
+                *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                  pg->matrices[upd->matrix_index[v]].xdot + esp_dot->d_rs[p][i]) *
+                bf[v]->phi[i];
           } else {
-            goma_ctx->fem.fv_dot_old->d_rs[p] +=
-                *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->d_rs[p][i]) *
-                goma_ctx->fem.bf[v]->phi[i];
+            fv_dot_old->d_rs[p] +=
+                *(xdot_old_static - xdot_static + esp_dot->d_rs[p][i]) * bf[v]->phi[i];
           }
 
-          if (goma_ctx->fem.tran->solid_inertia) {
+          if (tran->solid_inertia) {
             goma_ctx->fem.fv_dot_dot_old->d_rs[p] +=
                 *(x_dbl_dot_old_static - x_dbl_dot_static + goma_ctx->fem.esp_dbl_dot->d_rs[p][i]) *
-                goma_ctx->fem.bf[v]->phi[i];
+                bf[v]->phi[i];
           }
         } else {
-          goma_ctx->fem.fv_old->d_rs[p] = goma_ctx->fem.fv->d_rs[p];
+          fv_old->d_rs[p] = fv->d_rs[p];
         }
       }
     }
   }
 
-  status = load_coordinate_scales(goma_ctx->fem.pd->CoordinateSystem, goma_ctx->fem.fv);
+  status = load_coordinate_scales(pd->CoordinateSystem, fv);
   GOMA_EH(status, "load_coordinate_scales(fv)");
 
   /*
@@ -1282,45 +1141,40 @@ int load_fv(void)
   /*
    * Default: all velocities are zero...
    */
-  for (p = 0; p < goma_ctx->problem.wim; p++) {
+  for (p = 0; p < WIM; p++) {
     v = VELOCITY1 + p;
     if (pdgv[v]) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-      goma_ctx->fem.fv->v[p] = 0.;
-      goma_ctx->fem.fv_old->v[p] = 0.;
-      goma_ctx->fem.fv_dot->v[p] = 0.;
+      dofs = ei[upd->matrix_index[v]]->dof[v];
+      fv->v[p] = 0.;
+      fv_old->v[p] = 0.;
+      fv_dot->v[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->v[p] += *goma_ctx->fem.esp->v[p][i] * goma_ctx->fem.bf[v]->phi[i];
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-          goma_ctx->fem.fv_old->v[p] +=
-              *goma_ctx->fem.esp_old->v[p][i] * goma_ctx->fem.bf[v]->phi[i];
-          goma_ctx->fem.fv_dot->v[p] +=
-              *goma_ctx->fem.esp_dot->v[p][i] * goma_ctx->fem.bf[v]->phi[i];
+        fv->v[p] += *esp->v[p][i] * bf[v]->phi[i];
+        if (pd->TimeIntegration != STEADY) {
+          fv_old->v[p] += *esp_old->v[p][i] * bf[v]->phi[i];
+          fv_dot->v[p] += *esp_dot->v[p][i] * bf[v]->phi[i];
         }
       }
     }
-    stateVector[VELOCITY1 + p] = goma_ctx->fem.fv->v[p];
+    stateVector[VELOCITY1 + p] = fv->v[p];
   }
 
-  for (p = 0; p < goma_ctx->problem.wim; p++) {
+  for (p = 0; p < WIM; p++) {
     v = USTAR + p;
     if (pdgv[v]) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-      goma_ctx->fem.fv->v_star[p] = 0.;
-      goma_ctx->fem.fv_old->v_star[p] = 0.;
-      goma_ctx->fem.fv_dot->v_star[p] = 0.;
+      dofs = ei[upd->matrix_index[v]]->dof[v];
+      fv->v_star[p] = 0.;
+      fv_old->v_star[p] = 0.;
+      fv_dot->v_star[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->v_star[p] +=
-            *goma_ctx->fem.esp->v_star[p][i] * goma_ctx->fem.bf[v]->phi[i];
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-          goma_ctx->fem.fv_old->v_star[p] +=
-              *goma_ctx->fem.esp_old->v_star[p][i] * goma_ctx->fem.bf[v]->phi[i];
-          goma_ctx->fem.fv_dot->v_star[p] +=
-              *goma_ctx->fem.esp_dot->v_star[p][i] * goma_ctx->fem.bf[v]->phi[i];
+        fv->v_star[p] += *esp->v_star[p][i] * bf[v]->phi[i];
+        if (pd->TimeIntegration != STEADY) {
+          fv_old->v_star[p] += *esp_old->v_star[p][i] * bf[v]->phi[i];
+          fv_dot->v_star[p] += *esp_dot->v_star[p][i] * bf[v]->phi[i];
         }
       }
     }
-    stateVector[VELOCITY1 + p] = goma_ctx->fem.fv->v_star[p];
+    stateVector[VELOCITY1 + p] = fv->v_star[p];
   }
 
   /*
@@ -1341,22 +1195,20 @@ int load_fv(void)
       }
       } */
 
-  for (p = 0; pdgv[PVELOCITY1] && p < goma_ctx->problem.wim; p++) {
+  for (p = 0; pdgv[PVELOCITY1] && p < WIM; p++) {
     v = PVELOCITY1 + p;
     if (pdgv[v]) {
-      goma_ctx->fem.fv->pv[p] = 0.0;
-      goma_ctx->fem.fv_old->pv[p] = 0.0;
-      goma_ctx->fem.fv_dot->pv[p] = 0.0;
+      fv->pv[p] = 0.0;
+      fv_old->pv[p] = 0.0;
+      fv_dot->pv[p] = 0.0;
 
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+      dofs = ei[upd->matrix_index[v]]->dof[v];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->pv[p] += *goma_ctx->fem.esp->pv[p][i] * goma_ctx->fem.bf[v]->phi[i];
+        fv->pv[p] += *esp->pv[p][i] * bf[v]->phi[i];
 
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-          goma_ctx->fem.fv_old->pv[p] +=
-              *goma_ctx->fem.esp_old->pv[p][i] * goma_ctx->fem.bf[v]->phi[i];
-          goma_ctx->fem.fv_dot->pv[p] +=
-              *goma_ctx->fem.esp_dot->pv[p][i] * goma_ctx->fem.bf[v]->phi[i];
+        if (pd->TimeIntegration != STEADY) {
+          fv_old->pv[p] += *esp_old->pv[p][i] * bf[v]->phi[i];
+          fv_dot->pv[p] += *esp_dot->pv[p][i] * bf[v]->phi[i];
         }
       }
     }
@@ -1366,11 +1218,10 @@ int load_fv(void)
 
   v = EXT_VELOCITY;
   if (pdgv[EXT_VELOCITY]) {
-    scalar_fv_fill(
-        goma_ctx->fem.esp->ext_v, goma_ctx->fem.esp_dot->ext_v, goma_ctx->fem.esp_old->ext_v,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->ext_v), &(goma_ctx->fem.fv_dot->ext_v), &(goma_ctx->fem.fv_old->ext_v));
-    stateVector[EXT_VELOCITY] = goma_ctx->fem.fv->ext_v;
+    scalar_fv_fill(esp->ext_v, esp_dot->ext_v, esp_old->ext_v, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->ext_v), &(fv_dot->ext_v),
+                   &(fv_old->ext_v));
+    stateVector[EXT_VELOCITY] = fv->ext_v;
   }
 
   /* Electric Field */
@@ -1378,16 +1229,15 @@ int load_fv(void)
   /*
    * Default: all velocities are zero...
    */
-  for (p = 0; pdgv[EFIELD1] && p < goma_ctx->problem.wim; p++) {
+  for (p = 0; pdgv[EFIELD1] && p < WIM; p++) {
     v = EFIELD1 + p;
 
     if (pdgv[v]) {
-      goma_ctx->fem.fv->E_field[p] = 0.;
+      fv->E_field[p] = 0.;
 
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+      dofs = ei[upd->matrix_index[v]]->dof[v];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->E_field[p] +=
-            *goma_ctx->fem.esp->E_field[p][i] * goma_ctx->fem.bf[v]->phi[i];
+        fv->E_field[p] += *esp->E_field[p][i] * bf[v]->phi[i];
       }
     }
   }
@@ -1397,11 +1247,9 @@ int load_fv(void)
   for (p = 0; pdgv[PHASE1] && p < goma_ctx->fem.pfd->num_phase_funcs; p++) {
     v = PHASE1 + p;
     if (pdgv[v]) {
-      scalar_fv_fill(goma_ctx->fem.esp->pF[p], goma_ctx->fem.esp_dot->pF[p],
-                     goma_ctx->fem.esp_old->pF[p], goma_ctx->fem.bf[v]->phi,
-                     goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                     &(goma_ctx->fem.fv->pF[p]), &(goma_ctx->fem.fv_dot->pF[p]),
-                     &(goma_ctx->fem.fv_old->pF[p]));
+      scalar_fv_fill(esp->pF[p], esp_dot->pF[p], esp_old->pF[p], bf[v]->phi,
+                     ei[upd->matrix_index[v]]->dof[v], &(fv->pF[p]), &(fv_dot->pF[p]),
+                     &(fv_old->pF[p]));
     }
   }
 
@@ -1410,41 +1258,38 @@ int load_fv(void)
    */
 
   for (mode = 0; pdgv[POLYMER_STRESS11] && mode < goma_ctx->fem.vn->modes; mode++) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         v = v_s[mode][p][q];
-        if (pdgv[v] || (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v] == -1)) {
+        if (pdgv[v] || (upd->vp[pg->imtrx][v] == -1)) {
           /* good default behavior */
-          goma_ctx->fem.fv->S[mode][p][q] = 0.;
-          goma_ctx->fem.fv_old->S[mode][p][q] = 0.;
-          goma_ctx->fem.fv_dot->S[mode][p][q] = 0.;
+          fv->S[mode][p][q] = 0.;
+          fv_old->S[mode][p][q] = 0.;
+          fv_dot->S[mode][p][q] = 0.;
         }
       }
     }
   }
 
   for (mode = 0; pdgv[POLYMER_STRESS11] && mode < goma_ctx->fem.vn->modes; mode++) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         if (p <= q) {
           v = v_s[mode][p][q];
           if (pdgv[v]) {
-            dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+            dofs = ei[upd->matrix_index[v]]->dof[v];
             for (i = 0; i < dofs; i++) {
-              goma_ctx->fem.fv->S[mode][p][q] +=
-                  *goma_ctx->fem.esp->S[mode][p][q][i] * goma_ctx->fem.bf[v]->phi[i];
-              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-                goma_ctx->fem.fv_old->S[mode][p][q] +=
-                    *goma_ctx->fem.esp_old->S[mode][p][q][i] * goma_ctx->fem.bf[v]->phi[i];
-                goma_ctx->fem.fv_dot->S[mode][p][q] +=
-                    *goma_ctx->fem.esp_dot->S[mode][p][q][i] * goma_ctx->fem.bf[v]->phi[i];
+              fv->S[mode][p][q] += *esp->S[mode][p][q][i] * bf[v]->phi[i];
+              if (pd->TimeIntegration != STEADY) {
+                fv_old->S[mode][p][q] += *esp_old->S[mode][p][q][i] * bf[v]->phi[i];
+                fv_dot->S[mode][p][q] += *esp_dot->S[mode][p][q][i] * bf[v]->phi[i];
               }
             }
           }
           /* form the entire symmetric stress matrix for the momentum equation */
-          goma_ctx->fem.fv->S[mode][q][p] = goma_ctx->fem.fv->S[mode][p][q];
-          goma_ctx->fem.fv_old->S[mode][q][p] = goma_ctx->fem.fv_old->S[mode][p][q];
-          goma_ctx->fem.fv_dot->S[mode][q][p] = goma_ctx->fem.fv_dot->S[mode][p][q];
+          fv->S[mode][q][p] = fv->S[mode][p][q];
+          fv_old->S[mode][q][p] = fv_old->S[mode][p][q];
+          fv_dot->S[mode][q][p] = fv_dot->S[mode][p][q];
         }
       }
     }
@@ -1454,32 +1299,26 @@ int load_fv(void)
    * Velocity Gradient (tensor)...
    */
 
-  for (p = 0; pdgv[VELOCITY_GRADIENT11] && p < goma_ctx->problem.vim; p++) {
+  for (p = 0; pdgv[VELOCITY_GRADIENT11] && p < VIM; p++) {
     if (goma_ctx->fem.gn->ConstitutiveEquation == BINGHAM_MIXED) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+      for (q = 0; q < VIM; q++) {
         if (q >= p) {
           v = v_g[p][q];
           if (pdgv[v]) {
-            goma_ctx->fem.fv->G[p][q] = goma_ctx->fem.fv_old->G[p][q] =
-                goma_ctx->fem.fv_dot->G[p][q] = 0.0;
+            fv->G[p][q] = fv_old->G[p][q] = fv_dot->G[p][q] = 0.0;
             if (q > p) {
-              goma_ctx->fem.fv->G[q][p] = goma_ctx->fem.fv_old->G[q][p] =
-                  goma_ctx->fem.fv_dot->G[q][p] = 0.0;
+              fv->G[q][p] = fv_old->G[q][p] = fv_dot->G[q][p] = 0.0;
             }
-            dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+            dofs = ei[upd->matrix_index[v]]->dof[v];
             for (i = 0; i < dofs; i++) {
-              goma_ctx->fem.fv->G[p][q] +=
-                  *goma_ctx->fem.esp->G[p][q][i] * goma_ctx->fem.bf[v]->phi[i];
+              fv->G[p][q] += *esp->G[p][q][i] * bf[v]->phi[i];
               if (q > p) {
-                goma_ctx->fem.fv->G[q][p] +=
-                    *goma_ctx->fem.esp->G[p][q][i] * goma_ctx->fem.bf[v]->phi[i];
+                fv->G[q][p] += *esp->G[p][q][i] * bf[v]->phi[i];
               }
-              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-                goma_ctx->fem.fv_old->G[p][q] +=
-                    *goma_ctx->fem.esp_old->G[p][q][i] * goma_ctx->fem.bf[v]->phi[i];
+              if (pd->TimeIntegration != STEADY) {
+                fv_old->G[p][q] += *esp_old->G[p][q][i] * bf[v]->phi[i];
                 if (q > p) {
-                  goma_ctx->fem.fv_dot->G[q][p] +=
-                      *goma_ctx->fem.esp_dot->G[p][q][i] * goma_ctx->fem.bf[v]->phi[i];
+                  fv_dot->G[q][p] += *esp_dot->G[p][q][i] * bf[v]->phi[i];
                 }
               }
             }
@@ -1487,20 +1326,16 @@ int load_fv(void)
         }
       }
     } else {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+      for (q = 0; q < VIM; q++) {
         v = v_g[p][q];
         if (pdgv[v]) {
-          goma_ctx->fem.fv->G[p][q] = goma_ctx->fem.fv_old->G[p][q] =
-              goma_ctx->fem.fv_dot->G[p][q] = 0.0;
-          dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+          fv->G[p][q] = fv_old->G[p][q] = fv_dot->G[p][q] = 0.0;
+          dofs = ei[upd->matrix_index[v]]->dof[v];
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->G[p][q] +=
-                *goma_ctx->fem.esp->G[p][q][i] * goma_ctx->fem.bf[v]->phi[i];
-            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-              goma_ctx->fem.fv_old->G[p][q] +=
-                  *goma_ctx->fem.esp_old->G[p][q][i] * goma_ctx->fem.bf[v]->phi[i];
-              goma_ctx->fem.fv_dot->G[p][q] +=
-                  *goma_ctx->fem.esp_dot->G[p][q][i] * goma_ctx->fem.bf[v]->phi[i];
+            fv->G[p][q] += *esp->G[p][q][i] * bf[v]->phi[i];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->G[p][q] += *esp_old->G[p][q][i] * bf[v]->phi[i];
+              fv_dot->G[p][q] += *esp_dot->G[p][q][i] * bf[v]->phi[i];
             }
           }
         }
@@ -1520,28 +1355,26 @@ int load_fv(void)
 
   if (pdgv[MASS_FRACTION]) {
     v = MASS_FRACTION;
-    if (goma_ctx->fem.pd->Num_Species_Eqn != goma_ctx->fem.pd->Num_Species) {
-      N = goma_ctx->fem.pd->Num_Species - 1;
+    if (pd->Num_Species_Eqn != pd->Num_Species) {
+      N = pd->Num_Species - 1;
 
-      goma_ctx->fem.fv->c[N] = goma_ctx->fem.fv_old->c[N] = goma_ctx->fem.fv_dot->c[N] = 0.;
-      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-        scalar_fv_fill(goma_ctx->fem.esp->c[w], goma_ctx->fem.esp_dot->c[w],
-                       goma_ctx->fem.esp_old->c[w], goma_ctx->fem.bf[v]->phi,
-                       goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                       &(goma_ctx->fem.fv->c[w]), &(goma_ctx->fem.fv_dot->c[w]),
-                       &(goma_ctx->fem.fv_old->c[w]));
-        goma_ctx->fem.fv->c[N] -= goma_ctx->fem.fv->c[w];
-        goma_ctx->fem.fv_old->c[N] -= goma_ctx->fem.fv_old->c[w];
-        goma_ctx->fem.fv_dot->c[N] -= goma_ctx->fem.fv_dot->c[w];
-        stateVector[SPECIES_UNK_0 + w] = goma_ctx->fem.fv->c[w];
+      fv->c[N] = fv_old->c[N] = fv_dot->c[N] = 0.;
+      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+        scalar_fv_fill(esp->c[w], esp_dot->c[w], esp_old->c[w], bf[v]->phi,
+                       ei[upd->matrix_index[v]]->dof[v], &(fv->c[w]), &(fv_dot->c[w]),
+                       &(fv_old->c[w]));
+        fv->c[N] -= fv->c[w];
+        fv_old->c[N] -= fv_old->c[w];
+        fv_dot->c[N] -= fv_dot->c[w];
+        stateVector[SPECIES_UNK_0 + w] = fv->c[w];
       }
-      switch (goma_ctx->fem.mp->Species_Var_Type) {
+      switch (mp->Species_Var_Type) {
       case SPECIES_UNDEFINED_FORM:
       case SPECIES_MOLE_FRACTION:
       case SPECIES_MASS_FRACTION:
       case SPECIES_VOL_FRACTION:
-        goma_ctx->fem.fv->c[N] += 1.0;
-        stateVector[SPECIES_UNK_0 + N] = goma_ctx->fem.fv->c[N];
+        fv->c[N] += 1.0;
+        stateVector[SPECIES_UNK_0 + N] = fv->c[N];
         break;
       case SPECIES_CONCENTRATION:
         /*
@@ -1576,44 +1409,40 @@ int load_fv(void)
          * -> The same is true for the SPECIES_DENSITY
          *    loop.
          */
-        switch (goma_ctx->fem.mp->DensityModel) {
+        switch (mp->DensityModel) {
         case DENSITY_CONSTANT_LAST_CONC:
-          goma_ctx->fem.fv->c[N] = goma_ctx->fem.mp->u_density[0];
+          fv->c[N] = mp->u_density[0];
           break;
         default:
-          rho = calc_concentration(goma_ctx->fem.mp, FALSE, NULL);
-          goma_ctx->fem.fv->c[N] += rho;
+          rho = calc_concentration(mp, FALSE, NULL);
+          fv->c[N] += rho;
         }
-        stateVector[SPECIES_UNK_0 + N] = goma_ctx->fem.fv->c[N];
+        stateVector[SPECIES_UNK_0 + N] = fv->c[N];
         break;
       case SPECIES_DENSITY:
         /* note, this won't work for time dependent density models, but I got tired ... RRR*/
-        rho = calc_density(goma_ctx->fem.mp, FALSE, NULL, 0.);
-        goma_ctx->fem.fv->c[N] += rho;
-        stateVector[SPECIES_UNK_0 + N] = goma_ctx->fem.fv->c[N];
+        rho = calc_density(mp, FALSE, NULL, 0.);
+        fv->c[N] += rho;
+        stateVector[SPECIES_UNK_0 + N] = fv->c[N];
         break;
       case SPECIES_CAP_PRESSURE:
         break;
       default:
         break;
       }
-      goma_ctx->fem.mp->StateVector_speciesVT = goma_ctx->fem.upd->Species_Var_Type;
+      mp->StateVector_speciesVT = upd->Species_Var_Type;
     } else {
-      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-        scalar_fv_fill(goma_ctx->fem.esp->c[w], goma_ctx->fem.esp_dot->c[w],
-                       goma_ctx->fem.esp_old->c[w], goma_ctx->fem.bf[v]->phi,
-                       goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                       &(goma_ctx->fem.fv->c[w]), &(goma_ctx->fem.fv_dot->c[w]),
-                       &(goma_ctx->fem.fv_old->c[w]));
-        goma_ctx->fem.fv_dot_old->c[w] = 0;
-        for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v]; i++) {
-          goma_ctx->fem.fv_dot_old->c[w] +=
-              *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                goma_ctx->fem.esp_dot->c[w][i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+        scalar_fv_fill(esp->c[w], esp_dot->c[w], esp_old->c[w], bf[v]->phi,
+                       ei[upd->matrix_index[v]]->dof[v], &(fv->c[w]), &(fv_dot->c[w]),
+                       &(fv_old->c[w]));
+        fv_dot_old->c[w] = 0;
+        for (int i = 0; i < ei[upd->matrix_index[v]]->dof[v]; i++) {
+          fv_dot_old->c[w] += *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                                pg->matrices[upd->matrix_index[v]].xdot + esp_dot->c[w][i]) *
+                              bf[v]->phi[i];
         }
-        stateVector[SPECIES_UNK_0 + w] = goma_ctx->fem.fv->c[w];
+        stateVector[SPECIES_UNK_0 + w] = fv->c[w];
       }
     }
   } /* HKM->
@@ -1645,29 +1474,23 @@ int load_fv(void)
 
   if (pdgv[POR_LIQ_PRES]) {
     v = POR_LIQ_PRES;
-    goma_ctx->fem.fv->p_liq = 0.;
-    goma_ctx->fem.fv_old->p_liq = 0.;
-    goma_ctx->fem.fv_dot->p_liq = 0.;
-    goma_ctx->fem.fv_dot_old->p_liq = 0.0;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    fv->p_liq = 0.;
+    fv_old->p_liq = 0.;
+    fv_dot->p_liq = 0.;
+    fv_dot_old->p_liq = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.fv->p_liq += *goma_ctx->fem.esp->p_liq[i] * goma_ctx->fem.bf[v]->phi[i];
-      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        goma_ctx->fem.fv_old->p_liq +=
-            *goma_ctx->fem.esp_old->p_liq[i] * goma_ctx->fem.bf[v]->phi[i];
-        goma_ctx->fem.fv_dot->p_liq +=
-            *goma_ctx->fem.esp_dot->p_liq[i] * goma_ctx->fem.bf[v]->phi[i];
+      fv->p_liq += *esp->p_liq[i] * bf[v]->phi[i];
+      if (pd->TimeIntegration != STEADY) {
+        fv_old->p_liq += *esp_old->p_liq[i] * bf[v]->phi[i];
+        fv_dot->p_liq += *esp_dot->p_liq[i] * bf[v]->phi[i];
 
-        if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
-          goma_ctx->fem.fv_dot_old->p_liq +=
-              *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                goma_ctx->fem.esp_dot->p_liq[i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+        if (upd->Total_Num_Matrices > 1) {
+          fv_dot_old->p_liq += *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                                 pg->matrices[upd->matrix_index[v]].xdot + esp_dot->p_liq[i]) *
+                               bf[v]->phi[i];
         } else {
-          goma_ctx->fem.fv_dot_old->p_liq +=
-              *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->p_liq[i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+          fv_dot_old->p_liq += *(xdot_old_static - xdot_static + esp_dot->p_liq[i]) * bf[v]->phi[i];
         }
       }
     }
@@ -1683,28 +1506,22 @@ int load_fv(void)
   */
   if (pdgv[POR_GAS_PRES]) {
     v = POR_GAS_PRES;
-    goma_ctx->fem.fv->p_gas = 0.;
-    goma_ctx->fem.fv_old->p_gas = 0.;
-    goma_ctx->fem.fv_dot->p_gas = 0.;
-    goma_ctx->fem.fv_dot_old->p_gas = 0.0;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    fv->p_gas = 0.;
+    fv_old->p_gas = 0.;
+    fv_dot->p_gas = 0.;
+    fv_dot_old->p_gas = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.fv->p_gas += *goma_ctx->fem.esp->p_gas[i] * goma_ctx->fem.bf[v]->phi[i];
-      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        goma_ctx->fem.fv_old->p_gas +=
-            *goma_ctx->fem.esp_old->p_gas[i] * goma_ctx->fem.bf[v]->phi[i];
-        goma_ctx->fem.fv_dot->p_gas +=
-            *goma_ctx->fem.esp_dot->p_gas[i] * goma_ctx->fem.bf[v]->phi[i];
-        if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
-          goma_ctx->fem.fv_dot_old->p_gas +=
-              *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                goma_ctx->fem.esp_dot->p_gas[i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+      fv->p_gas += *esp->p_gas[i] * bf[v]->phi[i];
+      if (pd->TimeIntegration != STEADY) {
+        fv_old->p_gas += *esp_old->p_gas[i] * bf[v]->phi[i];
+        fv_dot->p_gas += *esp_dot->p_gas[i] * bf[v]->phi[i];
+        if (upd->Total_Num_Matrices > 1) {
+          fv_dot_old->p_gas += *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                                 pg->matrices[upd->matrix_index[v]].xdot + esp_dot->p_gas[i]) *
+                               bf[v]->phi[i];
         } else {
-          goma_ctx->fem.fv_dot_old->p_gas +=
-              *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->p_gas[i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+          fv_dot_old->p_gas += *(xdot_old_static - xdot_static + esp_dot->p_gas[i]) * bf[v]->phi[i];
         }
       }
     }
@@ -1720,29 +1537,25 @@ int load_fv(void)
   */
   if (pdgv[POR_POROSITY]) {
     v = POR_POROSITY;
-    goma_ctx->fem.fv->porosity = 0.;
-    goma_ctx->fem.fv_old->porosity = 0.;
-    goma_ctx->fem.fv_dot->porosity = 0.;
-    goma_ctx->fem.fv_dot_old->porosity = 0.0;
+    fv->porosity = 0.;
+    fv_old->porosity = 0.;
+    fv_dot->porosity = 0.;
+    fv_dot_old->porosity = 0.0;
 
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.fv->porosity += *goma_ctx->fem.esp->porosity[i] * goma_ctx->fem.bf[v]->phi[i];
-      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        goma_ctx->fem.fv_old->porosity +=
-            *goma_ctx->fem.esp_old->porosity[i] * goma_ctx->fem.bf[v]->phi[i];
-        goma_ctx->fem.fv_dot->porosity +=
-            *goma_ctx->fem.esp_dot->porosity[i] * goma_ctx->fem.bf[v]->phi[i];
-        if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
-          goma_ctx->fem.fv_dot_old->porosity +=
-              *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                goma_ctx->fem.esp_dot->porosity[i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+      fv->porosity += *esp->porosity[i] * bf[v]->phi[i];
+      if (pd->TimeIntegration != STEADY) {
+        fv_old->porosity += *esp_old->porosity[i] * bf[v]->phi[i];
+        fv_dot->porosity += *esp_dot->porosity[i] * bf[v]->phi[i];
+        if (upd->Total_Num_Matrices > 1) {
+          fv_dot_old->porosity +=
+              *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                pg->matrices[upd->matrix_index[v]].xdot + esp_dot->porosity[i]) *
+              bf[v]->phi[i];
         } else {
-          goma_ctx->fem.fv_dot_old->porosity +=
-              *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->porosity[i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+          fv_dot_old->porosity +=
+              *(xdot_old_static - xdot_static + esp_dot->porosity[i]) * bf[v]->phi[i];
         }
       }
     }
@@ -1750,28 +1563,24 @@ int load_fv(void)
 
   if (pdgv[POR_TEMP]) {
     v = POR_TEMP;
-    goma_ctx->fem.fv->T = 0.;
-    goma_ctx->fem.fv_old->T = 0.;
-    goma_ctx->fem.fv_dot->T = 0.;
-    goma_ctx->fem.fv_dot_old->T = 0.0;
+    fv->T = 0.;
+    fv_old->T = 0.;
+    fv_dot->T = 0.;
+    fv_dot_old->T = 0.0;
 
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     for (i = 0; i < dofs; i++) {
-      goma_ctx->fem.fv->T += *goma_ctx->fem.esp->T[i] * goma_ctx->fem.bf[v]->phi[i];
-      if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-        goma_ctx->fem.fv_old->T += *goma_ctx->fem.esp_old->T[i] * goma_ctx->fem.bf[v]->phi[i];
-        goma_ctx->fem.fv_dot->T += *goma_ctx->fem.esp_dot->T[i] * goma_ctx->fem.bf[v]->phi[i];
+      fv->T += *esp->T[i] * bf[v]->phi[i];
+      if (pd->TimeIntegration != STEADY) {
+        fv_old->T += *esp_old->T[i] * bf[v]->phi[i];
+        fv_dot->T += *esp_dot->T[i] * bf[v]->phi[i];
 
-        if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
-          goma_ctx->fem.fv_dot_old->T +=
-              *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                goma_ctx->fem.esp_dot->T[i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+        if (upd->Total_Num_Matrices > 1) {
+          fv_dot_old->T += *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                             pg->matrices[upd->matrix_index[v]].xdot + esp_dot->T[i]) *
+                           bf[v]->phi[i];
         } else {
-          goma_ctx->fem.fv_dot_old->T +=
-              *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->T[i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+          fv_dot_old->T += *(xdot_old_static - xdot_static + esp_dot->T[i]) * bf[v]->phi[i];
         }
       }
     }
@@ -1785,10 +1594,10 @@ int load_fv(void)
     /*if (pd->v[pg->imtrx][v] || upd->vp[pg->imtrx][v] == -1) fv->vd[p] = 0.0; */
 
     if (pdgv[v]) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-      goma_ctx->fem.fv->vd[p] = 0.0;
+      dofs = ei[upd->matrix_index[v]]->dof[v];
+      fv->vd[p] = 0.0;
       for (i = 0; i < dofs; i++)
-        goma_ctx->fem.fv->vd[p] += *goma_ctx->fem.esp->vd[p][i] * goma_ctx->fem.bf[v]->phi[i];
+        fv->vd[p] += *esp->vd[p][i] * bf[v]->phi[i];
     }
   }
 
@@ -1804,15 +1613,14 @@ int load_fv(void)
             }
     */
     if (pdgv[v]) {
-      goma_ctx->fem.fv->lm[p] = 0.0;
-      goma_ctx->fem.fv_old->lm[p] = 0.0;
+      fv->lm[p] = 0.0;
+      fv_old->lm[p] = 0.0;
 
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+      dofs = ei[upd->matrix_index[v]]->dof[v];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->lm[p] += *goma_ctx->fem.esp->lm[p][i] * goma_ctx->fem.bf[v]->phi[i];
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-          goma_ctx->fem.fv_old->lm[p] +=
-              *goma_ctx->fem.esp_old->lm[p][i] * goma_ctx->fem.bf[v]->phi[i];
+        fv->lm[p] += *esp->lm[p][i] * bf[v]->phi[i];
+        if (pd->TimeIntegration != STEADY) {
+          fv_old->lm[p] += *esp_old->lm[p][i] * bf[v]->phi[i];
         }
       }
     }
@@ -1826,33 +1634,29 @@ int load_fv(void)
 
   if (pdgv[VORT_LAMBDA]) {
     v = VORT_LAMBDA;
-    goma_ctx->fem.fv->vlambda = 0.0;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    fv->vlambda = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     for (i = 0; i < dofs; i++)
-      goma_ctx->fem.fv->vlambda += *goma_ctx->fem.esp->vlambda[i] * goma_ctx->fem.bf[v]->phi[i];
+      fv->vlambda += *esp->vlambda[i] * bf[v]->phi[i];
   }
 
   for (p = 0; pdgv[MOMENT0] && p < MAX_MOMENTS; p++) {
     v = MOMENT0 + p;
     if (pdgv[v]) {
-      scalar_fv_fill(goma_ctx->fem.esp->moment[p], goma_ctx->fem.esp_dot->moment[p],
-                     goma_ctx->fem.esp_old->moment[p], goma_ctx->fem.bf[v]->phi,
-                     goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-                     &(goma_ctx->fem.fv->moment[p]), &(goma_ctx->fem.fv_dot->moment[p]),
-                     &(goma_ctx->fem.fv_old->moment[p]));
+      scalar_fv_fill(esp->moment[p], esp_dot->moment[p], esp_old->moment[p], bf[v]->phi,
+                     ei[upd->matrix_index[v]]->dof[v], &(fv->moment[p]), &(fv_dot->moment[p]),
+                     &(fv_old->moment[p]));
 
-      goma_ctx->fem.fv_dot_old->moment[p] = 0;
-      for (int i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v]; i++) {
-        if (goma_ctx->fem.upd->Total_Num_Matrices > 1) {
-          goma_ctx->fem.fv_dot_old->moment[p] +=
-              *(goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot_old -
-                goma_ctx->fem.pg->matrices[goma_ctx->fem.upd->matrix_index[v]].xdot +
-                goma_ctx->fem.esp_dot->moment[p][i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+      fv_dot_old->moment[p] = 0;
+      for (int i = 0; i < ei[upd->matrix_index[v]]->dof[v]; i++) {
+        if (upd->Total_Num_Matrices > 1) {
+          fv_dot_old->moment[p] +=
+              *(pg->matrices[upd->matrix_index[v]].xdot_old -
+                pg->matrices[upd->matrix_index[v]].xdot + esp_dot->moment[p][i]) *
+              bf[v]->phi[i];
         } else {
-          goma_ctx->fem.fv_dot_old->moment[p] +=
-              *(xdot_old_static - xdot_static + goma_ctx->fem.esp_dot->moment[p][i]) *
-              goma_ctx->fem.bf[v]->phi[i];
+          fv_dot_old->moment[p] +=
+              *(xdot_old_static - xdot_static + esp_dot->moment[p][i]) * bf[v]->phi[i];
         }
       }
     }
@@ -1860,30 +1664,25 @@ int load_fv(void)
 
   if (pdgv[DENSITY_EQN]) {
     v = DENSITY_EQN;
-    scalar_fv_fill(
-        goma_ctx->fem.esp->rho, goma_ctx->fem.esp_dot->rho, goma_ctx->fem.esp_old->rho,
-        goma_ctx->fem.bf[v]->phi, goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v],
-        &(goma_ctx->fem.fv->rho), &(goma_ctx->fem.fv_dot->rho), &(goma_ctx->fem.fv_old->rho));
-    stateVector[v] = goma_ctx->fem.fv->rho;
+    scalar_fv_fill(esp->rho, esp_dot->rho, esp_old->rho, bf[v]->phi,
+                   ei[upd->matrix_index[v]]->dof[v], &(fv->rho), &(fv_dot->rho), &(fv_old->rho));
+    stateVector[v] = fv->rho;
   }
 
   if (pdgv[TFMP_PRES]) {
 
     v = TFMP_PRES;
-    scalar_fv_fill(goma_ctx->fem.esp->tfmp_pres, goma_ctx->fem.esp_dot->tfmp_pres,
-                   goma_ctx->fem.esp_old->tfmp_pres, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v],
-                   &(goma_ctx->fem.fv->tfmp_pres), &(goma_ctx->fem.fv_dot->tfmp_pres),
-                   &(goma_ctx->fem.fv_old->tfmp_pres));
-    stateVector[v] = goma_ctx->fem.fv->tfmp_pres;
+    scalar_fv_fill(esp->tfmp_pres, esp_dot->tfmp_pres, esp_old->tfmp_pres, bf[v]->phi,
+                   ei[pg->imtrx]->dof[v], &(fv->tfmp_pres), &(fv_dot->tfmp_pres),
+                   &(fv_old->tfmp_pres));
+    stateVector[v] = fv->tfmp_pres;
   }
   if (pdgv[TFMP_SAT]) {
     v = TFMP_SAT;
-    scalar_fv_fill(goma_ctx->fem.esp->tfmp_sat, goma_ctx->fem.esp_dot->tfmp_sat,
-                   goma_ctx->fem.esp_old->tfmp_sat, goma_ctx->fem.bf[v]->phi,
-                   goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v], &(goma_ctx->fem.fv->tfmp_sat),
-                   &(goma_ctx->fem.fv_dot->tfmp_sat), &(goma_ctx->fem.fv_old->tfmp_sat));
-    stateVector[v] = goma_ctx->fem.fv->tfmp_sat;
+    scalar_fv_fill(esp->tfmp_sat, esp_dot->tfmp_sat, esp_old->tfmp_sat, bf[v]->phi,
+                   ei[pg->imtrx]->dof[v], &(fv->tfmp_sat), &(fv_dot->tfmp_sat),
+                   &(fv_old->tfmp_sat));
+    stateVector[v] = fv->tfmp_sat;
   }
 
   /*
@@ -1891,23 +1690,20 @@ int load_fv(void)
    */
   if (pdgv[EM_E1_REAL] || pdgv[EM_E2_REAL] || pdgv[EM_E3_REAL]) {
     v = EM_E1_REAL;
-    if (goma_ctx->fem.bf[v]->interpolation == I_N1) {
+    if (bf[v]->interpolation == I_N1) {
       for (p = 0; p < DIM; p++) {
-        goma_ctx->fem.fv->em_er[p] = 0.0;
-        goma_ctx->fem.fv_old->em_er[p] = 0.0;
-        goma_ctx->fem.fv_dot->em_er[p] = 0.0;
+        fv->em_er[p] = 0.0;
+        fv_old->em_er[p] = 0.0;
+        fv_dot->em_er[p] = 0.0;
 
         if (pdgv[v]) {
-          dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+          dofs = ei[pg->imtrx]->dof[v];
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->em_er[p] +=
-                *goma_ctx->fem.esp->em_er[0][i] * goma_ctx->fem.bf[v]->phi_e[i][p];
+            fv->em_er[p] += *esp->em_er[0][i] * bf[v]->phi_e[i][p];
 
-            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-              goma_ctx->fem.fv_old->em_er[p] +=
-                  *goma_ctx->fem.esp_old->em_er[0][i] * goma_ctx->fem.bf[v]->phi_e[i][p];
-              goma_ctx->fem.fv_dot->em_er[p] +=
-                  *goma_ctx->fem.esp_dot->em_er[0][i] * goma_ctx->fem.bf[v]->phi_e[i][p];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_er[p] += *esp_old->em_er[0][i] * bf[v]->phi_e[i][p];
+              fv_dot->em_er[p] += *esp_dot->em_er[0][i] * bf[v]->phi_e[i][p];
             }
           }
         }
@@ -1916,21 +1712,18 @@ int load_fv(void)
     } else {
       for (p = 0; p < DIM; p++) {
         v = EM_E1_REAL + p;
-        goma_ctx->fem.fv->em_er[p] = 0.0;
-        goma_ctx->fem.fv_old->em_er[p] = 0.0;
-        goma_ctx->fem.fv_dot->em_er[p] = 0.0;
+        fv->em_er[p] = 0.0;
+        fv_old->em_er[p] = 0.0;
+        fv_dot->em_er[p] = 0.0;
 
         if (pdgv[v]) {
-          dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+          dofs = ei[pg->imtrx]->dof[v];
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->em_er[p] +=
-                *goma_ctx->fem.esp->em_er[p][i] * goma_ctx->fem.bf[v]->phi[i];
+            fv->em_er[p] += *esp->em_er[p][i] * bf[v]->phi[i];
 
-            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-              goma_ctx->fem.fv_old->em_er[p] +=
-                  *goma_ctx->fem.esp_old->em_er[p][i] * goma_ctx->fem.bf[v]->phi[i];
-              goma_ctx->fem.fv_dot->em_er[p] +=
-                  *goma_ctx->fem.esp_dot->em_er[p][i] * goma_ctx->fem.bf[v]->phi[i];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_er[p] += *esp_old->em_er[p][i] * bf[v]->phi[i];
+              fv_dot->em_er[p] += *esp_dot->em_er[p][i] * bf[v]->phi[i];
             }
           }
         }
@@ -1940,23 +1733,20 @@ int load_fv(void)
 
   if (pdgv[EM_E1_IMAG] || pdgv[EM_E2_IMAG] || pdgv[EM_E3_IMAG]) {
     v = EM_E1_IMAG;
-    if (goma_ctx->fem.bf[v]->interpolation == I_N1) {
+    if (bf[v]->interpolation == I_N1) {
       for (p = 0; p < DIM; p++) {
-        goma_ctx->fem.fv->em_ei[p] = 0.0;
-        goma_ctx->fem.fv_old->em_ei[p] = 0.0;
-        goma_ctx->fem.fv_dot->em_ei[p] = 0.0;
+        fv->em_ei[p] = 0.0;
+        fv_old->em_ei[p] = 0.0;
+        fv_dot->em_ei[p] = 0.0;
 
         if (pdgv[v]) {
-          dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+          dofs = ei[pg->imtrx]->dof[v];
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->em_ei[p] +=
-                *goma_ctx->fem.esp->em_ei[0][i] * goma_ctx->fem.bf[v]->phi_e[i][p];
+            fv->em_ei[p] += *esp->em_ei[0][i] * bf[v]->phi_e[i][p];
 
-            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-              goma_ctx->fem.fv_old->em_ei[p] +=
-                  *goma_ctx->fem.esp_old->em_ei[0][i] * goma_ctx->fem.bf[v]->phi_e[i][p];
-              goma_ctx->fem.fv_dot->em_ei[p] +=
-                  *goma_ctx->fem.esp_dot->em_ei[0][i] * goma_ctx->fem.bf[v]->phi_e[i][p];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_ei[p] += *esp_old->em_ei[0][i] * bf[v]->phi_e[i][p];
+              fv_dot->em_ei[p] += *esp_dot->em_ei[0][i] * bf[v]->phi_e[i][p];
             }
           }
         }
@@ -1965,21 +1755,18 @@ int load_fv(void)
     } else {
       for (p = 0; p < DIM; p++) {
         v = EM_E1_IMAG + p;
-        goma_ctx->fem.fv->em_ei[p] = 0.0;
-        goma_ctx->fem.fv_old->em_ei[p] = 0.0;
-        goma_ctx->fem.fv_dot->em_ei[p] = 0.0;
+        fv->em_ei[p] = 0.0;
+        fv_old->em_ei[p] = 0.0;
+        fv_dot->em_ei[p] = 0.0;
 
         if (pdgv[v]) {
-          dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+          dofs = ei[pg->imtrx]->dof[v];
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->em_ei[p] +=
-                *goma_ctx->fem.esp->em_ei[p][i] * goma_ctx->fem.bf[v]->phi[i];
+            fv->em_ei[p] += *esp->em_ei[p][i] * bf[v]->phi[i];
 
-            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-              goma_ctx->fem.fv_old->em_ei[p] +=
-                  *goma_ctx->fem.esp_old->em_ei[p][i] * goma_ctx->fem.bf[v]->phi[i];
-              goma_ctx->fem.fv_dot->em_ei[p] +=
-                  *goma_ctx->fem.esp_dot->em_ei[p][i] * goma_ctx->fem.bf[v]->phi[i];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->em_ei[p] += *esp_old->em_ei[p][i] * bf[v]->phi[i];
+              fv_dot->em_ei[p] += *esp_dot->em_ei[p][i] * bf[v]->phi[i];
             }
           }
         }
@@ -1990,20 +1777,17 @@ int load_fv(void)
   if (pdgv[EM_H1_REAL] || pdgv[EM_H2_REAL] || pdgv[EM_H3_REAL]) {
     for (p = 0; p < DIM; p++) {
       v = EM_H1_REAL + p;
-      goma_ctx->fem.fv->em_hr[p] = 0.0;
-      goma_ctx->fem.fv_old->em_hr[p] = 0.0;
-      goma_ctx->fem.fv_dot->em_hr[p] = 0.0;
+      fv->em_hr[p] = 0.0;
+      fv_old->em_hr[p] = 0.0;
+      fv_dot->em_hr[p] = 0.0;
       if (pdgv[v]) {
-        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+        dofs = ei[pg->imtrx]->dof[v];
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->em_hr[p] +=
-              *goma_ctx->fem.esp->em_hr[p][i] * goma_ctx->fem.bf[v]->phi[i];
+          fv->em_hr[p] += *esp->em_hr[p][i] * bf[v]->phi[i];
 
-          if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-            goma_ctx->fem.fv_old->em_hr[p] +=
-                *goma_ctx->fem.esp_old->em_hr[p][i] * goma_ctx->fem.bf[v]->phi[i];
-            goma_ctx->fem.fv_dot->em_hr[p] +=
-                *goma_ctx->fem.esp_dot->em_hr[p][i] * goma_ctx->fem.bf[v]->phi[i];
+          if (pd->TimeIntegration != STEADY) {
+            fv_old->em_hr[p] += *esp_old->em_hr[p][i] * bf[v]->phi[i];
+            fv_dot->em_hr[p] += *esp_dot->em_hr[p][i] * bf[v]->phi[i];
           }
         }
       }
@@ -2013,20 +1797,17 @@ int load_fv(void)
   if (pdgv[EM_H1_IMAG] || pdgv[EM_H2_IMAG] || pdgv[EM_H3_IMAG]) {
     for (p = 0; p < DIM; p++) {
       v = EM_H1_IMAG + p;
-      goma_ctx->fem.fv->em_hi[p] = 0.0;
-      goma_ctx->fem.fv_old->em_hi[p] = 0.0;
-      goma_ctx->fem.fv_dot->em_hi[p] = 0.0;
+      fv->em_hi[p] = 0.0;
+      fv_old->em_hi[p] = 0.0;
+      fv_dot->em_hi[p] = 0.0;
       if (pdgv[v]) {
-        dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+        dofs = ei[pg->imtrx]->dof[v];
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->em_hi[p] +=
-              *goma_ctx->fem.esp->em_hi[p][i] * goma_ctx->fem.bf[v]->phi[i];
+          fv->em_hi[p] += *esp->em_hi[p][i] * bf[v]->phi[i];
 
-          if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-            goma_ctx->fem.fv_old->em_hi[p] +=
-                *goma_ctx->fem.esp_old->em_hi[p][i] * goma_ctx->fem.bf[v]->phi[i];
-            goma_ctx->fem.fv_dot->em_hi[p] +=
-                *goma_ctx->fem.esp_dot->em_hi[p][i] * goma_ctx->fem.bf[v]->phi[i];
+          if (pd->TimeIntegration != STEADY) {
+            fv_old->em_hi[p] += *esp_old->em_hi[p][i] * bf[v]->phi[i];
+            fv_dot->em_hi[p] += *esp_dot->em_hi[p][i] * bf[v]->phi[i];
           }
         }
       }
@@ -2034,34 +1815,29 @@ int load_fv(void)
   }
 
   // internal wall distance calculations
-  if (goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
-    goma_ctx->fem.fv->wall_distance = 0.;
-    if (pdgv[goma_ctx->fem.pd->ShapeVar]) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ShapeVar]]
-                 ->dof[goma_ctx->fem.pd->ShapeVar];
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ShapeVar]]
-                 ->dof[goma_ctx->fem.pd->ShapeVar];
+  if (upd->turbulent_info->use_internal_wall_distance) {
+    fv->wall_distance = 0.;
+    if (pdgv[pd->ShapeVar]) {
+      dofs = ei[upd->matrix_index[pd->ShapeVar]]->dof[pd->ShapeVar];
+      dofs = ei[upd->matrix_index[pd->ShapeVar]]->dof[pd->ShapeVar];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->wall_distance +=
-            goma_ctx->fem.upd->turbulent_info->wall_distances
-                [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ShapeVar]]
-                     ->gnn_list[goma_ctx->fem.pd->ShapeVar][i]] *
-            goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->phi[i];
+        fv->wall_distance +=
+            upd->turbulent_info
+                ->wall_distances[ei[upd->matrix_index[pd->ShapeVar]]->gnn_list[pd->ShapeVar][i]] *
+            bf[pd->ShapeVar]->phi[i];
       }
     }
   }
 
-  goma_ctx->fem.fv->multi_contact_line_distance = 0;
-  if (goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
-          ->multi_contact_line_distances != NULL) {
-    if (pdgv[goma_ctx->fem.pd->ShapeVar]) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[goma_ctx->fem.pd->ShapeVar];
+  fv->multi_contact_line_distance = 0;
+  if (goma_ctx->fem.elc_glob[ei[pg->imtrx]->mn]->multi_contact_line_distances != NULL) {
+    if (pdgv[pd->ShapeVar]) {
+      dofs = ei[pg->imtrx]->dof[pd->ShapeVar];
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->multi_contact_line_distance +=
-            goma_ctx->fem.elc_glob[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn]
-                ->multi_contact_line_distances[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                                   ->gnn_list[goma_ctx->fem.pd->ShapeVar][i]] *
-            goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->phi[i];
+        fv->multi_contact_line_distance +=
+            goma_ctx->fem.elc_glob[ei[pg->imtrx]->mn]
+                ->multi_contact_line_distances[ei[pg->imtrx]->gnn_list[pd->ShapeVar][i]] *
+            bf[pd->ShapeVar]->phi[i];
       }
     }
   }
@@ -2069,30 +1845,29 @@ int load_fv(void)
   /*
    * External...
    */
-  if (goma_ctx->fem.efv->ev) {
+  if (efv->ev) {
     int table_id = 0;
     v = EXTERNAL;
-    for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_ext[w];
-      goma_ctx->fem.fv->external_field[w] = 0.;
-      goma_ctx->fem.fv_old->external_field[w] = 0.;
-      goma_ctx->fem.fv_dot->external_field[w] = 0.;
+    for (w = 0; w < efv->Num_external_field; w++) {
+      dofs = ei[pg->imtrx]->dof_ext[w];
+      fv->external_field[w] = 0.;
+      fv_old->external_field[w] = 0.;
+      fv_dot->external_field[w] = 0.;
 
-      if (goma_ctx->fem.efv->i[w] != I_TABLE) {
+      if (efv->i[w] != I_TABLE) {
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->external_field[w] +=
+          fv->external_field[w] +=
               *goma_ctx->fem.evp->external_field[w][i] * goma_ctx->fem.bfex[w]->phi[i];
 
-          if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-            goma_ctx->fem.fv_old->external_field[w] +=
+          if (pd->TimeIntegration != STEADY) {
+            fv_old->external_field[w] +=
                 *goma_ctx->fem.evp->external_field[w][i] * goma_ctx->fem.bfex[w]->phi[i];
-            goma_ctx->fem.fv_dot->external_field[w] += 0.;
+            fv_dot->external_field[w] += 0.;
           }
         }
       } else {
         double slope;
-        goma_ctx->fem.fv->external_field[w] =
-            interpolate_table(ext_Tables[table_id], goma_ctx->fem.fv->x, &slope, NULL);
+        fv->external_field[w] = interpolate_table(ext_Tables[table_id], fv->x, &slope, NULL);
         table_id++;
       }
 
@@ -2100,23 +1875,20 @@ int load_fv(void)
        * If the variable name is velocity, and the momentum equations are not active,
        * load the external_fields into the velocity fv for use in Advection-diffusion analysis
        */
-      if (strcmp(goma_ctx->fem.efv->name[w], "VX") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
-        goma_ctx->fem.fv->v[0] = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->v[0] = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->v[0] = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "VX") == 0 && !pd->v[pg->imtrx][VELOCITY1]) {
+        fv->v[0] = fv->external_field[w];
+        fv_old->v[0] = fv_old->external_field[w];
+        fv_dot->v[0] = fv_dot->external_field[w];
       }
-      if (strcmp(goma_ctx->fem.efv->name[w], "VY") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY2]) {
-        goma_ctx->fem.fv->v[1] = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->v[1] = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->v[1] = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "VY") == 0 && !pd->v[pg->imtrx][VELOCITY2]) {
+        fv->v[1] = fv->external_field[w];
+        fv_old->v[1] = fv_old->external_field[w];
+        fv_dot->v[1] = fv_dot->external_field[w];
       }
-      if (strcmp(goma_ctx->fem.efv->name[w], "VZ") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY3]) {
-        goma_ctx->fem.fv->v[2] = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->v[2] = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->v[2] = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "VZ") == 0 && !pd->v[pg->imtrx][VELOCITY3]) {
+        fv->v[2] = fv->external_field[w];
+        fv_old->v[2] = fv_old->external_field[w];
+        fv_dot->v[2] = fv_dot->external_field[w];
       }
       /*
        * If the variable name is mesh displacement, and the mesh
@@ -2125,81 +1897,75 @@ int load_fv(void)
        * for the decoupled JAS/GOMA, as the displacments are
        * swallowed into the mesh
        */
-      if (strcmp(goma_ctx->fem.efv->name[w], "DMX") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-        goma_ctx->fem.fv->d[0] = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->d[0] = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->d[0] = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "DMX") == 0 && !pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+        fv->d[0] = fv->external_field[w];
+        fv_old->d[0] = fv_old->external_field[w];
+        fv_dot->d[0] = fv_dot->external_field[w];
       }
-      if (strcmp(goma_ctx->fem.efv->name[w], "DMY") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT2]) {
-        goma_ctx->fem.fv->d[1] = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->d[1] = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->d[1] = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "DMY") == 0 && !pd->v[pg->imtrx][MESH_DISPLACEMENT2]) {
+        fv->d[1] = fv->external_field[w];
+        fv_old->d[1] = fv_old->external_field[w];
+        fv_dot->d[1] = fv_dot->external_field[w];
       }
-      if (strcmp(goma_ctx->fem.efv->name[w], "DMZ") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT3]) {
-        goma_ctx->fem.fv->d[2] = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->d[2] = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->d[2] = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "DMZ") == 0 && !pd->v[pg->imtrx][MESH_DISPLACEMENT3]) {
+        fv->d[2] = fv->external_field[w];
+        fv_old->d[2] = fv_old->external_field[w];
+        fv_dot->d[2] = fv_dot->external_field[w];
       }
       /*
        * If the variable name is porosity, and the porosity equation is not active,
        * load the external_fields into the porosity fv
        */
-      if (strcmp(goma_ctx->fem.efv->name[w], "P_POR") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POR_POROSITY]) {
-        goma_ctx->fem.fv->porosity = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->porosity = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->porosity = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "P_POR") == 0 && !pd->v[pg->imtrx][POR_POROSITY]) {
+        fv->porosity = fv->external_field[w];
+        fv_old->porosity = fv_old->external_field[w];
+        fv_dot->porosity = fv_dot->external_field[w];
       }
-      if (strcmp(goma_ctx->fem.efv->name[w], "F") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][FILL]) {
-        goma_ctx->fem.fv->F = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->F = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->F = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "F") == 0 && !pd->v[pg->imtrx][FILL]) {
+        fv->F = fv->external_field[w];
+        fv_old->F = fv_old->external_field[w];
+        fv_dot->F = fv_dot->external_field[w];
       }
-      if (strcmp(goma_ctx->fem.efv->name[w], "F1") == 0 &&
-          !goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][PHASE1]) {
-        goma_ctx->fem.fv->pF[0] = goma_ctx->fem.fv->external_field[w];
-        goma_ctx->fem.fv_old->pF[0] = goma_ctx->fem.fv_old->external_field[w];
-        goma_ctx->fem.fv_dot->pF[0] = goma_ctx->fem.fv_dot->external_field[w];
+      if (strcmp(efv->name[w], "F1") == 0 && !pd->v[pg->imtrx][PHASE1]) {
+        fv->pF[0] = fv->external_field[w];
+        fv_old->pF[0] = fv_old->external_field[w];
+        fv_dot->pF[0] = fv_dot->external_field[w];
       }
     }
-    if (!goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
-      int i_d_wall = goma_ctx->fem.mp->dist_wall_ext_field_index;
-      double d = goma_ctx->fem.fv->external_field[i_d_wall];
-      goma_ctx->fem.fv->wall_distance = d;
+    if (!upd->turbulent_info->use_internal_wall_distance) {
+      int i_d_wall = mp->dist_wall_ext_field_index;
+      double d = fv->external_field[i_d_wall];
+      fv->wall_distance = d;
     }
   } else {
-    for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
-      goma_ctx->fem.fv->external_field[w] = 0.;
-      goma_ctx->fem.fv_old->external_field[w] = 0.;
+    for (w = 0; w < efv->Num_external_field; w++) {
+      fv->external_field[w] = 0.;
+      fv_old->external_field[w] = 0.;
     }
   }
 
   /* initial displacements for TALE anneals. all for KINEMATIC DISPLACEMENT BC */
-  if (goma_ctx->fem.efv->TALE) {
+  if (efv->TALE) {
     for (w = 0; w < dim; w++) {
       v = MESH_DISPLACEMENT1 + w;
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-      goma_ctx->fem.fv->initial_displacements[w] = 0.;
+      dofs = ei[pg->imtrx]->dof[v];
+      fv->initial_displacements[w] = 0.;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->initial_displacements[w] +=
-            *goma_ctx->fem.evp->initial_displacements[w][i] * goma_ctx->fem.bf[v]->phi[i];
+        fv->initial_displacements[w] +=
+            *goma_ctx->fem.evp->initial_displacements[w][i] * bf[v]->phi[i];
       }
       v = SOLID_DISPLACEMENT1 + w;
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-      goma_ctx->fem.fv->initial_displacements[w + DIM] = 0.;
+      dofs = ei[pg->imtrx]->dof[v];
+      fv->initial_displacements[w + DIM] = 0.;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->initial_displacements[w + DIM] +=
-            *goma_ctx->fem.evp->initial_displacements[w + DIM][i] * goma_ctx->fem.bf[v]->phi[i];
+        fv->initial_displacements[w + DIM] +=
+            *goma_ctx->fem.evp->initial_displacements[w + DIM][i] * bf[v]->phi[i];
       }
     }
   } else {
     for (w = 0; w < dim; w++) {
-      goma_ctx->fem.fv->initial_displacements[w] = 0.;
-      goma_ctx->fem.fv->initial_displacements[w + DIM] = 0.;
+      fv->initial_displacements[w] = 0.;
+      fv->initial_displacements[w + DIM] = 0.;
     }
   }
 
@@ -2368,15 +2134,29 @@ int load_fv_grads(void)
  * Modified:	Tue Feb 21 11:08 MST 1995 pasacki@sandia.gov
  ***************************************************************************/
 {
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  const int VIM = goma_ctx->problem.vim;
+  const int WIM = goma_ctx->problem.wim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Diet_Field_Variables *const fv_old = goma_ctx->fem.fv_old;
+  struct Diet_Field_Variables *const fv_dot = goma_ctx->fem.fv_dot;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Element_Stiffness_Pointers *const esp = goma_ctx->fem.esp;
+  struct Element_Variable_Pointers *const esp_old = goma_ctx->fem.esp_old;
+  struct Element_Variable_Pointers *const esp_dot = goma_ctx->fem.esp_dot;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct External_Field_Variables *const efv = goma_ctx->fem.efv;
   int v;          /* variable type indicator */
   int i, a;       /* index */
   int p, q, r, s; /* dimension index */
   int dofs;       /* degrees of freedom */
   int w;          /* concentration species */
-  int dim = goma_ctx->fem.pd->Num_Dim;
+  int dim = pd->Num_Dim;
   int mode; /* modal counter */
   int status = 0;
-  int transient_run = (goma_ctx->fem.pd->TimeIntegration != STEADY);
+  int transient_run = (pd->TimeIntegration != STEADY);
   BASIS_FUNCTIONS_STRUCT *bfn;
 
   /* Use a static flag so unused grads are zero on first call, but are not zero subsequently
@@ -2387,104 +2167,94 @@ int load_fv_grads(void)
   /*
    * grad(T)
    */
-  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+  if (pd->gv[TEMPERATURE]) {
     v = TEMPERATURE;
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_T[p] = 0.0;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_T[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_T[p] +=
-            *goma_ctx->fem.esp->T[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_T[p] += *esp->T[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_T[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TEMPERATURE] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_T[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[FILM_HEIGHT]) {
+  if (pd->gv[FILM_HEIGHT]) {
     v = FILM_HEIGHT;
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_film_height[p] = 0.0;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_film_height[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_film_height[p] +=
-            *goma_ctx->fem.esp->film_height[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_film_height[p] += *esp->film_height[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][FILM_HEIGHT] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_film_height[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][FILM_HEIGHT] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_film_height[p] = 0.0;
   }
 
   /*
    * grad(P)
    */
 
-  if (goma_ctx->fem.pd->gv[PRESSURE]) {
+  if (pd->gv[PRESSURE]) {
     v = PRESSURE;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_P[p] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->grad_P[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_P[p] +=
-            *goma_ctx->fem.esp->P[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_P[p] += *esp->P[i] * bf[v]->grad_phi[i][p];
       }
     }
 #else
-    grad_scalar_fv_fill(goma_ctx->fem.esp->P, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                        goma_ctx->fem.fv->grad_P);
+    grad_scalar_fv_fill(esp->P, bf[v]->grad_phi, dofs, fv->grad_P);
     // if(transient_run && segregated)
     if (transient_run) {
-      grad_scalar_fv_fill(goma_ctx->fem.esp_old->P, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                          goma_ctx->fem.fv_old->grad_P);
+      grad_scalar_fv_fill(esp_old->P, bf[v]->grad_phi, dofs, fv_old->grad_P);
     }
 #endif
 
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PRESSURE] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_P[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][PRESSURE] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_P[p] = 0.0;
       // if(transient_run && segregated)
       if (transient_run) {
-        goma_ctx->fem.fv_old->grad_P[p] = 0.0;
+        fv_old->grad_P[p] = 0.0;
       }
     }
   }
 
-  if (goma_ctx->fem.pd->gv[PSTAR]) {
+  if (pd->gv[PSTAR]) {
     v = PSTAR;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_P[p] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->grad_P[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_P[p] +=
-            *goma_ctx->fem.esp->P[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_P[p] += *esp->P[i] * bf[v]->grad_phi[i][p];
       }
     }
 #else
-    grad_scalar_fv_fill(goma_ctx->fem.esp->P_star, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                        goma_ctx->fem.fv->grad_P_star);
+    grad_scalar_fv_fill(esp->P_star, bf[v]->grad_phi, dofs, fv->grad_P_star);
     // if(transient_run && segregated)
     if (transient_run) {
-      grad_scalar_fv_fill(goma_ctx->fem.esp_old->P_star, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                          goma_ctx->fem.fv_old->grad_P_star);
+      grad_scalar_fv_fill(esp_old->P_star, bf[v]->grad_phi, dofs, fv_old->grad_P_star);
     }
 #endif
 
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PSTAR] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_P[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][PSTAR] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_P[p] = 0.0;
       // if(transient_run && segregated)
       if (transient_run) {
-        goma_ctx->fem.fv_old->grad_P[p] = 0.0;
+        fv_old->grad_P[p] = 0.0;
       }
     }
   }
@@ -2493,14 +2263,13 @@ int load_fv_grads(void)
    * grad(nn)
    */
 
-  if (goma_ctx->fem.pd->gv[BOND_EVOLUTION]) {
+  if (pd->gv[BOND_EVOLUTION]) {
     v = BOND_EVOLUTION;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_nn[p] = 0.;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_nn[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_nn[p] +=
-            *goma_ctx->fem.esp->nn[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_nn[p] += *esp->nn[i] * bf[v]->grad_phi[i][p];
       }
     }
   }
@@ -2509,96 +2278,87 @@ int load_fv_grads(void)
    * grad(F)
    */
 
-  if (goma_ctx->fem.pd->gv[FILL]) {
+  if (pd->gv[FILL]) {
     v = FILL;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_F[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_F[p] = 0.0;
-      goma_ctx->fem.fv_dot->grad_F[p] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->grad_F[p] = 0.0;
+      fv_old->grad_F[p] = 0.0;
+      fv_dot->grad_F[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_F[p] +=
-            *goma_ctx->fem.esp->F[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_F[p] += *esp->F[i] * bf[v]->grad_phi[i][p];
         if (transient_run) {
           /* keep this only for VOF/Taylor-Galerkin stuff */
-          goma_ctx->fem.fv_old->grad_F[p] +=
-              *goma_ctx->fem.esp_old->F[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+          fv_old->grad_F[p] += *esp_old->F[i] * bf[v]->grad_phi[i][p];
 
-          goma_ctx->fem.fv_dot->grad_F[p] +=
-              *goma_ctx->fem.esp_dot->F[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+          fv_dot->grad_F[p] += *esp_dot->F[i] * bf[v]->grad_phi[i][p];
         }
       }
     }
 #else
-    grad_scalar_fv_fill(goma_ctx->fem.esp->F, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                        goma_ctx->fem.fv->grad_F);
+    grad_scalar_fv_fill(esp->F, bf[v]->grad_phi, dofs, fv->grad_F);
 
     if (transient_run) {
-      grad_scalar_fv_fill(goma_ctx->fem.esp_old->F, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                          goma_ctx->fem.fv_old->grad_F);
-      grad_scalar_fv_fill(goma_ctx->fem.esp_dot->F, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                          goma_ctx->fem.fv_dot->grad_F);
+      grad_scalar_fv_fill(esp_old->F, bf[v]->grad_phi, dofs, fv_old->grad_F);
+      grad_scalar_fv_fill(esp_dot->F, bf[v]->grad_phi, dofs, fv_dot->grad_F);
     }
 #endif
 
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][FILL] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_F[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_F[p] = 0.0;
-      goma_ctx->fem.fv_dot->grad_F[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][FILL] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_F[p] = 0.0;
+      fv_old->grad_F[p] = 0.0;
+      fv_dot->grad_F[p] = 0.0;
     }
   }
 
   /*
    * grad(H)
    */
-  if (goma_ctx->fem.pd->gv[CURVATURE]) {
+  if (pd->gv[CURVATURE]) {
     v = CURVATURE;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_H[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_H[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_H[p] +=
-            *goma_ctx->fem.esp->H[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_H[p] += *esp->H[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][CURVATURE] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_H[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][CURVATURE] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_H[p] = 0.0;
     }
   }
 
   /*
    * grad(V)
    */
-  if (goma_ctx->fem.pd->gv[VOLTAGE]) {
+  if (pd->gv[VOLTAGE]) {
     v = VOLTAGE;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_V[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_V[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_V[p] +=
-            *goma_ctx->fem.esp->V[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_V[p] += *esp->V[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VOLTAGE] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_V[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][VOLTAGE] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_V[p] = 0.0;
   }
 
   /*
    * grad(Enorm)
    */
-  if (goma_ctx->fem.pd->gv[ENORM]) {
+  if (pd->gv[ENORM]) {
     v = ENORM;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_Enorm[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_Enorm[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_Enorm[p] +=
-            *goma_ctx->fem.esp->Enorm[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_Enorm[p] += *esp->Enorm[i] * bf[v]->grad_phi[i][p];
       }
     }
   }
@@ -2606,25 +2366,23 @@ int load_fv_grads(void)
   /*
    * grad(qs)
    */
-  if (goma_ctx->fem.pd->gv[SURF_CHARGE]) {
+  if (pd->gv[SURF_CHARGE]) {
     v = SURF_CHARGE;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_qs[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_qs[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         // HKM -> I changed dphidxi to grad_phi below. There didn't seem
         //        to be a case where the raw element derivative (dphidxi), which
         //        doesn't even take into account of the size of the element, should
         //        be used at this level.
         //   fv->grad_qs[p] += *esp->qs[i] * bf[v]->dphidxi[i][p];
-        goma_ctx->fem.fv->grad_qs[p] +=
-            *goma_ctx->fem.esp->qs[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_qs[p] += *esp->qs[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SURF_CHARGE] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim - 1; p++) {
-      goma_ctx->fem.fv->grad_qs[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SURF_CHARGE] == -1) {
+    for (p = 0; p < VIM - 1; p++) {
+      fv->grad_qs[p] = 0.0;
     }
   }
 
@@ -2632,50 +2390,46 @@ int load_fv_grads(void)
    * grad(SH)
    */
 
-  if (goma_ctx->fem.pd->gv[SHEAR_RATE]) {
+  if (pd->gv[SHEAR_RATE]) {
     v = SHEAR_RATE;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_SH[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_SH[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_SH[p] +=
-            *goma_ctx->fem.esp->SH[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_SH[p] += *esp->SH[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHEAR_RATE] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_SH[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHEAR_RATE] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_SH[p] = 0.0;
   }
 
   /*
    * grad(d)
    */
 
-  if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1] &&
+  if (pd->gv[MESH_DISPLACEMENT1] &&
       !ShellElementParentElementCoverageForVariable[MESH_DISPLACEMENT1]) {
     v = MESH_DISPLACEMENT1;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_d[p][q] = 0.0;
-        goma_ctx->fem.fv_old->grad_d[p][q] = 0.0;
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_d[p][q] = 0.0;
+        fv_old->grad_d[p][q] = 0.0;
+        for (r = 0; r < VIM; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_d[p][q] +=
-                *goma_ctx->fem.esp->d[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
-            goma_ctx->fem.fv_old->grad_d[p][q] +=
-                *goma_ctx->fem.esp_old->d[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_d[p][q] += *esp->d[r][i] * bf[v]->grad_phi_e[i][r][p][q];
+            fv_old->grad_d[p][q] += *esp_old->d[r][i] * bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
     }
   } else {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_d[p][q] = 0.0;
-        goma_ctx->fem.fv_old->grad_d[p][q] = 0.0;
-        goma_ctx->fem.fv->grad_d_dot[p][q] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_d[p][q] = 0.0;
+        fv_old->grad_d[p][q] = 0.0;
+        fv->grad_d_dot[p][q] = 0.0;
       }
     }
   }
@@ -2683,18 +2437,17 @@ int load_fv_grads(void)
   /*
    * grad(d_dot)
    */
-  if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1] &&
+  if (pd->gv[MESH_DISPLACEMENT1] &&
       !ShellElementParentElementCoverageForVariable[MESH_DISPLACEMENT1]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         v = MESH_DISPLACEMENT1 + p;
-        if (goma_ctx->fem.pd->gv[v]) {
-          dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-          goma_ctx->fem.fv->grad_d_dot[p][q] = 0.;
+        if (pd->gv[v]) {
+          dofs = ei[upd->matrix_index[v]]->dof[v];
+          fv->grad_d_dot[p][q] = 0.;
           for (r = 0; r < dim; r++) {
             for (i = 0; i < dofs; i++) {
-              goma_ctx->fem.fv->grad_d_dot[p][q] +=
-                  *goma_ctx->fem.esp_dot->d[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+              fv->grad_d_dot[p][q] += *esp_dot->d[r][i] * bf[v]->grad_phi_e[i][r][p][q];
             }
           }
         }
@@ -2705,27 +2458,24 @@ int load_fv_grads(void)
   /*
    * grad(d_rs)
    */
-  if (goma_ctx->fem.pd->gv[SOLID_DISPLACEMENT1]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+  if (pd->gv[SOLID_DISPLACEMENT1]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         v = SOLID_DISPLACEMENT1 + p;
 
-        if (goma_ctx->fem.pd->gv[v]) {
-          dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-          goma_ctx->fem.fv->grad_d_rs[p][q] = 0.0;
+        if (pd->gv[v]) {
+          dofs = ei[upd->matrix_index[v]]->dof[v];
+          fv->grad_d_rs[p][q] = 0.0;
           for (r = 0; r < dim; r++) {
             for (i = 0; i < dofs; i++) {
-              goma_ctx->fem.fv->grad_d_rs[p][q] +=
-                  *goma_ctx->fem.esp->d_rs[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+              fv->grad_d_rs[p][q] += *esp->d_rs[r][i] * bf[v]->grad_phi_e[i][r][p][q];
             }
           }
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SOLID_DISPLACEMENT1] == -1) {
-    memset(goma_ctx->fem.fv->grad_d_rs, 0,
-           sizeof(double) * goma_ctx->problem.vim * goma_ctx->problem.vim);
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SOLID_DISPLACEMENT1] == -1) {
+    memset(fv->grad_d_rs, 0, sizeof(double) * VIM * VIM);
   }
 
   /*
@@ -2736,88 +2486,83 @@ int load_fv_grads(void)
    * div(d_dot)
    */
 
-  if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1] &&
+  if (pd->gv[MESH_DISPLACEMENT1] &&
       !ShellElementParentElementCoverageForVariable[MESH_DISPLACEMENT1]) {
     v = MESH_DISPLACEMENT1;
-    goma_ctx->fem.fv->div_d_dot = 0.0;
-    goma_ctx->fem.fv->div_d = 0.0;
+    fv->div_d_dot = 0.0;
+    fv->div_d = 0.0;
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->div_d_dot += goma_ctx->fem.fv->grad_d_dot[p][p];
-      goma_ctx->fem.fv->div_d += goma_ctx->fem.fv->grad_d[p][p];
+    for (p = 0; p < VIM; p++) {
+      fv->div_d_dot += fv->grad_d_dot[p][p];
+      fv->div_d += fv->grad_d[p][p];
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1] == -1) {
-    goma_ctx->fem.fv->div_d_dot = 0.0;
-    goma_ctx->fem.fv->div_d = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][MESH_DISPLACEMENT1] == -1) {
+    fv->div_d_dot = 0.0;
+    fv->div_d = 0.0;
   }
 
   /*
    * div(d_rs)
    */
 
-  if (goma_ctx->fem.pd->gv[SOLID_DISPLACEMENT1]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->div_d_rs += goma_ctx->fem.fv->grad_d_rs[p][p];
+  if (pd->gv[SOLID_DISPLACEMENT1]) {
+    for (p = 0; p < VIM; p++) {
+      fv->div_d_rs += fv->grad_d_rs[p][p];
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SOLID_DISPLACEMENT1] == -1) {
-    goma_ctx->fem.fv->div_d_rs = 0.;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SOLID_DISPLACEMENT1] == -1) {
+    fv->div_d_rs = 0.;
   }
 
   /////+(*
   ////+(* grad(v)
   ////+(*/
-  if (goma_ctx->fem.pd->gv[VELOCITY1]) {
+  if (pd->gv[VELOCITY1]) {
     v = VELOCITY1;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_v[p][q] = 0.0;
-        goma_ctx->fem.fv_old->grad_v[p][q] = 0.0;
-        for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_v[p][q] = 0.0;
+        fv_old->grad_v[p][q] = 0.0;
+        for (r = 0; r < WIM; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_v[p][q] +=
-                (*goma_ctx->fem.esp->v[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
-            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-              goma_ctx->fem.fv_old->grad_v[p][q] +=
-                  (*goma_ctx->fem.esp_old->v[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_v[p][q] += (*esp->v[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->grad_v[p][q] += (*esp_old->v[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
             }
           }
         }
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VELOCITY1] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_v[p][q] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][VELOCITY1] == -1) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_v[p][q] = 0.0;
 
         // if(segregated)
-        goma_ctx->fem.fv_old->grad_v[p][q] = 0.0;
+        fv_old->grad_v[p][q] = 0.0;
       }
     }
   }
 
-  if (goma_ctx->fem.pd->gv[USTAR]) {
+  if (pd->gv[USTAR]) {
     v = USTAR;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_v_star[p][q] = 0.0;
-        for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_v_star[p][q] = 0.0;
+        for (r = 0; r < WIM; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_v_star[p][q] +=
-                (*goma_ctx->fem.esp->v_star[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_v_star[p][q] += (*esp->v_star[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][USTAR] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_v_star[p][q] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][USTAR] == -1) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_v_star[p][q] = 0.0;
       }
     }
   }
@@ -2825,24 +2570,22 @@ int load_fv_grads(void)
   /*
    * grad(pv), particle velocity gradients.
    */
-  if (goma_ctx->fem.pd->gv[PVELOCITY1]) {
+  if (pd->gv[PVELOCITY1]) {
     v = PVELOCITY1;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (r = 0; r < goma_ctx->problem.wim; r++) {
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (r = 0; r < WIM; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_pv[p][q] +=
-                *goma_ctx->fem.esp->pv[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_pv[p][q] += *esp->pv[r][i] * bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PVELOCITY1] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_pv[p][q] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][PVELOCITY1] == -1) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_pv[p][q] = 0.0;
       }
     }
   }
@@ -2851,52 +2594,48 @@ int load_fv_grads(void)
    * grad(ext_v), extension velocity gradients.
    */
 
-  if (goma_ctx->fem.pd->gv[EXT_VELOCITY]) {
+  if (pd->gv[EXT_VELOCITY]) {
     v = EXT_VELOCITY;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_ext_v[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_ext_v[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_ext_v[p] +=
-            *goma_ctx->fem.esp->ext_v[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_ext_v[p] += *esp->ext_v[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EXT_VELOCITY] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_ext_v[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][EXT_VELOCITY] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_ext_v[p] = 0.0;
     }
   }
 
   /*
    *  grad( n ) .  Level set or shell normal vector gradient
    */
-  if (goma_ctx->fem.pd->gv[NORMAL1] || goma_ctx->fem.pd->gv[SHELL_NORMAL1]) {
-    if (goma_ctx->fem.pd->gv[NORMAL1])
+  if (pd->gv[NORMAL1] || pd->gv[SHELL_NORMAL1]) {
+    if (pd->gv[NORMAL1])
       v = NORMAL1;
-    if (goma_ctx->fem.pd->gv[SHELL_NORMAL1])
+    if (pd->gv[SHELL_NORMAL1])
       v = SHELL_NORMAL1;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_n[p][q] = 0.0;
-        goma_ctx->fem.fv_old->grad_n[p][q] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_n[p][q] = 0.0;
+        fv_old->grad_n[p][q] = 0.0;
         for (r = 0; r < dim; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_n[p][q] +=
-                *(goma_ctx->fem.esp->n[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
-            goma_ctx->fem.fv_old->grad_n[p][q] +=
-                *(goma_ctx->fem.esp_old->n[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_n[p][q] += *(esp->n[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+            fv_old->grad_n[p][q] += *(esp_old->n[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
     }
-  } else if ((zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][NORMAL1] == -1) ||
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_NORMAL1] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_n[p][q] = 0.0;
-        goma_ctx->fem.fv_old->grad_n[p][q] = 0.0;
+  } else if ((zero_unused_grads && upd->vp[pg->imtrx][NORMAL1] == -1) ||
+             upd->vp[pg->imtrx][SHELL_NORMAL1] == -1) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_n[p][q] = 0.0;
+        fv_old->grad_n[p][q] = 0.0;
       }
     }
   }
@@ -2904,38 +2643,35 @@ int load_fv_grads(void)
   /*
    *  div(n)
    */
-  if (goma_ctx->fem.pd->gv[NORMAL1] || goma_ctx->fem.pd->gv[SHELL_NORMAL1]) {
-    goma_ctx->fem.fv->div_n = 0.0;
-    goma_ctx->fem.fv_old->div_n = 0.0;
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->div_n += goma_ctx->fem.fv->grad_n[p][p];
-      goma_ctx->fem.fv_old->div_n += goma_ctx->fem.fv_old->grad_n[p][p];
+  if (pd->gv[NORMAL1] || pd->gv[SHELL_NORMAL1]) {
+    fv->div_n = 0.0;
+    fv_old->div_n = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->div_n += fv->grad_n[p][p];
+      fv_old->div_n += fv_old->grad_n[p][p];
     }
   }
 
   /*
    * div_s(n)
    */
-  if (goma_ctx->fem.pd->gv[NORMAL1] || goma_ctx->fem.pd->gv[SHELL_NORMAL1]) {
-    goma_ctx->fem.fv->div_s_n = 0.0;
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->div_s_n +=
-            (delta(p, q) * goma_ctx->fem.fv->grad_n[p][q] -
-             goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[q] * goma_ctx->fem.fv->grad_n[q][p]);
+  if (pd->gv[NORMAL1] || pd->gv[SHELL_NORMAL1]) {
+    fv->div_s_n = 0.0;
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->div_s_n += (delta(p, q) * fv->grad_n[p][q] - fv->n[p] * fv->n[q] * fv->grad_n[q][p]);
       }
     }
   }
 
   // Calculation of the surface curvature dyadic
   //             = - del_s (n)  = - (I - n n ) grad n
-  if (goma_ctx->fem.pd->gv[SHELL_NORMAL1]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->surfCurvatureDyadic[p][q] = -goma_ctx->fem.fv->grad_n[p][q];
-        for (a = 0; a < goma_ctx->problem.vim; a++) {
-          goma_ctx->fem.fv->surfCurvatureDyadic[p][q] +=
-              goma_ctx->fem.fv->n[p] * goma_ctx->fem.fv->n[a] * goma_ctx->fem.fv->grad_n[a][q];
+  if (pd->gv[SHELL_NORMAL1]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->surfCurvatureDyadic[p][q] = -fv->grad_n[p][q];
+        for (a = 0; a < VIM; a++) {
+          fv->surfCurvatureDyadic[p][q] += fv->n[p] * fv->n[a] * fv->grad_n[a][q];
         }
       }
     }
@@ -2944,43 +2680,41 @@ int load_fv_grads(void)
   /*
    * grad(E_field), Electric field gradients.
    */
-  if (goma_ctx->fem.pd->gv[EFIELD1]) {
+  if (pd->gv[EFIELD1]) {
     v = EFIELD1;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     v = EFIELD1;
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_E_field[p][q] = 0.0;
-        for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_E_field[p][q] = 0.0;
+        for (r = 0; r < WIM; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_E_field[p][q] +=
-                *goma_ctx->fem.esp->E_field[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_E_field[p][q] += *esp->E_field[r][i] * bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EFIELD1] != -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_E_field[p][q] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][EFIELD1] != -1) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_E_field[p][q] = 0.0;
       }
     }
   }
 
   /* Phase Functions */
 
-  if (goma_ctx->fem.pd->gv[PHASE1]) {
+  if (pd->gv[PHASE1]) {
     for (r = 0; r < goma_ctx->fem.pfd->num_phase_funcs; r++) {
       v = PHASE1 + r;
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+      dofs = ei[upd->matrix_index[v]]->dof[v];
 
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        goma_ctx->fem.fv->grad_pF[r][p] = 0.0;
+      for (p = 0; p < VIM; p++) {
+        fv->grad_pF[r][p] = 0.0;
 
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->grad_pF[r][p] +=
-              *goma_ctx->fem.esp->pF[r][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+          fv->grad_pF[r][p] += *esp->pF[r][i] * bf[v]->grad_phi[i][p];
         }
       }
     }
@@ -2991,73 +2725,71 @@ int load_fv_grads(void)
    */
   if (CURL_V != -1 && !InShellElementWithParentElementCoverage) {
     v = VELOCITY1;
-    bfn = goma_ctx->fem.bf[v];
+    bfn = bf[v];
 
-    if (goma_ctx->fem.pd->gv[v] || goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v] != -1) {
+    if (pd->gv[v] || upd->vp[pg->imtrx][v] != -1) {
       for (p = 0; p < DIM; p++)
-        goma_ctx->fem.fv->curl_v[p] = 0.0;
+        fv->curl_v[p] = 0.0;
     }
 
-    if (goma_ctx->fem.pd->gv[v]) {
+    if (pd->gv[v]) {
       /* Always compute all three components of the vorticity
        * vector.  If we are really in 2D, then the output routine will
        * only output the 3rd component. DIM is equal to 3.
        */
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[VELOCITY1];
+      dofs = ei[upd->matrix_index[v]]->dof[VELOCITY1];
       for (p = 0; p < DIM; p++) {
         for (i = 0; i < dofs; i++) {
-          for (a = 0; a < goma_ctx->problem.vim; a++) /* VIM */
+          for (a = 0; a < VIM; a++) /* VIM */
           {
-            goma_ctx->fem.fv->curl_v[p] += *goma_ctx->fem.esp->v[a][i] * bfn->curl_phi_e[i][a][p];
+            fv->curl_v[p] += *esp->v[a][i] * bfn->curl_phi_e[i][a][p];
           }
         }
       }
     }
   }
 
-  if (goma_ctx->fem.pd->gv[EM_E1_REAL]) {
+  if (pd->gv[EM_E1_REAL]) {
     v = EM_E1_REAL;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    bfn = goma_ctx->fem.bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    bfn = bf[v];
 
     if (bfn->interpolation == I_N1) {
       for (p = 0; p < DIM; p++) {
-        goma_ctx->fem.fv->curl_em_er[p] = 0.0;
+        fv->curl_em_er[p] = 0.0;
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->curl_em_er[p] += *goma_ctx->fem.esp->em_er[0][i] * bfn->curl_phi[i][p];
+          fv->curl_em_er[p] += *esp->em_er[0][i] * bfn->curl_phi[i][p];
         }
       }
     } else {
       for (p = 0; p < DIM; p++) {
-        goma_ctx->fem.fv->curl_em_er[p] = 0.0;
+        fv->curl_em_er[p] = 0.0;
         for (i = 0; i < dofs; i++) {
           for (a = 0; a < dim; a++) {
-            goma_ctx->fem.fv->curl_em_er[p] +=
-                *goma_ctx->fem.esp->em_er[a][i] * bfn->curl_phi_e[i][a][p];
+            fv->curl_em_er[p] += *esp->em_er[a][i] * bfn->curl_phi_e[i][a][p];
           }
         }
       }
     }
   }
 
-  if (goma_ctx->fem.pd->gv[EM_E1_IMAG]) {
+  if (pd->gv[EM_E1_IMAG]) {
     v = EM_E1_IMAG;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    bfn = goma_ctx->fem.bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    bfn = bf[v];
     if (bfn->interpolation == I_N1) {
       for (p = 0; p < DIM; p++) {
-        goma_ctx->fem.fv->curl_em_ei[p] = 0.0;
+        fv->curl_em_ei[p] = 0.0;
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->curl_em_ei[p] += *goma_ctx->fem.esp->em_ei[0][i] * bfn->curl_phi[i][p];
+          fv->curl_em_ei[p] += *esp->em_ei[0][i] * bfn->curl_phi[i][p];
         }
       }
     } else {
       for (p = 0; p < DIM; p++) {
-        goma_ctx->fem.fv->curl_em_ei[p] = 0.0;
+        fv->curl_em_ei[p] = 0.0;
         for (i = 0; i < dofs; i++) {
           for (a = 0; a < dim; a++) {
-            goma_ctx->fem.fv->curl_em_ei[p] +=
-                *goma_ctx->fem.esp->em_ei[a][i] * bfn->curl_phi_e[i][a][p];
+            fv->curl_em_ei[p] += *esp->em_ei[a][i] * bfn->curl_phi_e[i][a][p];
           }
         }
       }
@@ -3068,73 +2800,69 @@ int load_fv_grads(void)
    * div(v)
    */
 
-  if (goma_ctx->fem.pd->gv[VELOCITY1]) {
-    goma_ctx->fem.fv->div_v = 0.0;
-    if (goma_ctx->problem.vim == 3 && goma_ctx->fem.pd->CoordinateSystem != CARTESIAN_2pt5D)
-      goma_ctx->fem.fv_old->div_v = 0.0;
-    for (a = 0; a < goma_ctx->problem.vim; a++) {
-      goma_ctx->fem.fv->div_v += goma_ctx->fem.fv->grad_v[a][a];
+  if (pd->gv[VELOCITY1]) {
+    fv->div_v = 0.0;
+    if (VIM == 3 && pd->CoordinateSystem != CARTESIAN_2pt5D)
+      fv_old->div_v = 0.0;
+    for (a = 0; a < VIM; a++) {
+      fv->div_v += fv->grad_v[a][a];
       // if(segregated)
-      goma_ctx->fem.fv_old->div_v += goma_ctx->fem.fv_old->grad_v[a][a];
+      fv_old->div_v += fv_old->grad_v[a][a];
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VELOCITY1] == -1) {
-    goma_ctx->fem.fv->div_v = 0.0;
-    goma_ctx->fem.fv_old->div_v = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][VELOCITY1] == -1) {
+    fv->div_v = 0.0;
+    fv_old->div_v = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[USTAR]) {
-    goma_ctx->fem.fv->div_v_star = 0.0;
-    for (a = 0; a < goma_ctx->problem.vim; a++) {
-      goma_ctx->fem.fv->div_v_star += goma_ctx->fem.fv->grad_v_star[a][a];
+  if (pd->gv[USTAR]) {
+    fv->div_v_star = 0.0;
+    for (a = 0; a < VIM; a++) {
+      fv->div_v_star += fv->grad_v_star[a][a];
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][USTAR] == -1) {
-    goma_ctx->fem.fv->div_v_star = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][USTAR] == -1) {
+    fv->div_v_star = 0.0;
   }
 
   /*
    * div(pv)
    */
 
-  if (goma_ctx->fem.pd->gv[PVELOCITY1]) {
+  if (pd->gv[PVELOCITY1]) {
     v = PVELOCITY1;
-    goma_ctx->fem.fv->div_pv = 0.0;
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->div_pv += goma_ctx->fem.fv->grad_pv[p][p];
+    fv->div_pv = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->div_pv += fv->grad_pv[p][p];
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PVELOCITY1] == -1) {
-    goma_ctx->fem.fv->div_pv = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][PVELOCITY1] == -1) {
+    fv->div_pv = 0.0;
   }
 
   /*
    * Species unknown ...
    */
 
-  if (goma_ctx->fem.pd->gv[MASS_FRACTION]) {
-    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+  if (pd->gv[MASS_FRACTION]) {
+    for (w = 0; w < pd->Num_Species_Eqn; w++) {
       v = MASS_FRACTION;
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        goma_ctx->fem.fv->grad_c[w][p] = 0.;
-        goma_ctx->fem.fv_old->grad_c[w][p] = 0.;
+      dofs = ei[upd->matrix_index[v]]->dof[v];
+      for (p = 0; p < VIM; p++) {
+        fv->grad_c[w][p] = 0.;
+        fv_old->grad_c[w][p] = 0.;
 
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->grad_c[w][p] +=
-              *goma_ctx->fem.esp->c[w][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-          if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+          fv->grad_c[w][p] += *esp->c[w][i] * bf[v]->grad_phi[i][p];
+          if (pd->TimeIntegration != STEADY) {
             /* keep this only for VOF/Taylor-Galerkin stuff */
-            goma_ctx->fem.fv_old->grad_c[w][p] +=
-                *goma_ctx->fem.esp_old->c[w][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+            fv_old->grad_c[w][p] += *esp_old->c[w][i] * bf[v]->grad_phi[i][p];
           }
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][MASS_FRACTION] == -1) {
-    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        goma_ctx->fem.fv->grad_c[w][p] = 0.;
-        goma_ctx->fem.fv_old->grad_c[w][p] = 0.;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][MASS_FRACTION] == -1) {
+    for (w = 0; w < pd->Num_Species_Eqn; w++) {
+      for (p = 0; p < VIM; p++) {
+        fv->grad_c[w][p] = 0.;
+        fv_old->grad_c[w][p] = 0.;
       }
     }
   }
@@ -3143,92 +2871,81 @@ int load_fv_grads(void)
    * Porous media unknowns ...
    */
 
-  if (goma_ctx->fem.pd->gv[POR_LIQ_PRES]) {
+  if (pd->gv[POR_LIQ_PRES]) {
     v = POR_LIQ_PRES;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_p_liq[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_p_liq[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_p_liq[p] = 0.0;
+      fv_old->grad_p_liq[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_p_liq[p] +=
-            *goma_ctx->fem.esp->p_liq[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+        fv->grad_p_liq[p] += *esp->p_liq[i] * bf[v]->grad_phi[i][p];
+        if (pd->TimeIntegration != STEADY) {
           /* keep this only for VOF/Taylor-Galerkin stuff */
-          goma_ctx->fem.fv_old->grad_p_liq[p] +=
-              *goma_ctx->fem.esp_old->p_liq[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+          fv_old->grad_p_liq[p] += *esp_old->p_liq[i] * bf[v]->grad_phi[i][p];
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_p_liq[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_p_liq[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][POR_LIQ_PRES] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_p_liq[p] = 0.0;
+      fv_old->grad_p_liq[p] = 0.0;
     }
   }
 
-  if (goma_ctx->fem.pd->gv[POR_GAS_PRES]) {
+  if (pd->gv[POR_GAS_PRES]) {
     v = POR_GAS_PRES;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_p_gas[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_p_gas[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_p_gas[p] = 0.0;
+      fv_old->grad_p_gas[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_p_gas[p] +=
-            *goma_ctx->fem.esp->p_gas[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+        fv->grad_p_gas[p] += *esp->p_gas[i] * bf[v]->grad_phi[i][p];
+        if (pd->TimeIntegration != STEADY) {
           /* keep this only for VOF/Taylor-Galerkin stuff */
-          goma_ctx->fem.fv_old->grad_p_gas[p] +=
-              *goma_ctx->fem.esp_old->p_gas[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+          fv_old->grad_p_gas[p] += *esp_old->p_gas[i] * bf[v]->grad_phi[i][p];
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_GAS_PRES] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_p_gas[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_p_gas[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][POR_GAS_PRES] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_p_gas[p] = 0.0;
+      fv_old->grad_p_gas[p] = 0.0;
     }
   }
 
-  if (goma_ctx->fem.pd->gv[POR_POROSITY]) {
+  if (pd->gv[POR_POROSITY]) {
     v = POR_POROSITY;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_porosity[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_porosity[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_porosity[p] = 0.0;
+      fv_old->grad_porosity[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_porosity[p] +=
-            *goma_ctx->fem.esp->porosity[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+        fv->grad_porosity[p] += *esp->porosity[i] * bf[v]->grad_phi[i][p];
+        if (pd->TimeIntegration != STEADY) {
           /* keep this only for VOF/Taylor-Galerkin stuff */
-          goma_ctx->fem.fv_old->grad_porosity[p] +=
-              *goma_ctx->fem.esp_old->porosity[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+          fv_old->grad_porosity[p] += *esp_old->porosity[i] * bf[v]->grad_phi[i][p];
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_POROSITY] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_porosity[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_porosity[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][POR_POROSITY] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_porosity[p] = 0.0;
+      fv_old->grad_porosity[p] = 0.0;
     }
   }
 
-  if (goma_ctx->fem.pd->gv[POR_TEMP]) {
+  if (pd->gv[POR_TEMP]) {
     v = POR_TEMP;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_T[p] = 0.;
-      goma_ctx->fem.fv_old->grad_T[p] = 0.;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_T[p] = 0.;
+      fv_old->grad_T[p] = 0.;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_T[p] +=
-            *goma_ctx->fem.esp->T[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
+        fv->grad_T[p] += *esp->T[i] * bf[v]->grad_phi[i][p];
+        if (pd->TimeIntegration != STEADY) {
           /* keep this only for VOF/Taylor-Galerkin stuff */
-          goma_ctx->fem.fv_old->grad_T[p] +=
-              *goma_ctx->fem.esp_old->T[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+          fv_old->grad_T[p] += *esp_old->T[i] * bf[v]->grad_phi[i][p];
         }
       }
     }
@@ -3238,22 +2955,20 @@ int load_fv_grads(void)
    * grad(S), mode 0
    */
 
-  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
+  if (pd->gv[POLYMER_STRESS11]) {
     v = POLYMER_STRESS11;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (r = 0; r < goma_ctx->problem.vim; r++) {
-            goma_ctx->fem.fv->grad_S[mode][r][p][q] = 0.;
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (r = 0; r < VIM; r++) {
+            fv->grad_S[mode][r][p][q] = 0.;
 
             for (i = 0; i < dofs; i++) {
               if (p <= q) {
-                goma_ctx->fem.fv->grad_S[mode][r][p][q] +=
-                    *goma_ctx->fem.esp->S[mode][p][q][i] * goma_ctx->fem.bf[v]->grad_phi[i][r];
+                fv->grad_S[mode][r][p][q] += *esp->S[mode][p][q][i] * bf[v]->grad_phi[i][r];
               } else {
-                goma_ctx->fem.fv->grad_S[mode][r][p][q] +=
-                    *goma_ctx->fem.esp->S[mode][q][p][i] * goma_ctx->fem.bf[v]->grad_phi[i][r];
+                fv->grad_S[mode][r][p][q] += *esp->S[mode][q][p][i] * bf[v]->grad_phi[i][r];
               }
             }
           }
@@ -3266,43 +2981,40 @@ int load_fv_grads(void)
      */
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
       for (r = 0; r < dim; r++) {
-        goma_ctx->fem.fv->div_S[mode][r] = 0.0;
+        fv->div_S[mode][r] = 0.0;
 
         for (q = 0; q < dim; q++) {
-          goma_ctx->fem.fv->div_S[mode][r] += goma_ctx->fem.fv->grad_S[mode][q][q][r];
+          fv->div_S[mode][r] += fv->grad_S[mode][q][q][r];
         }
       }
     }
 
-    if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
+    if (pd->CoordinateSystem != CARTESIAN) {
       for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-        for (s = 0; s < goma_ctx->problem.vim; s++) {
-          for (r = 0; r < goma_ctx->problem.vim; r++) {
-            for (p = 0; p < goma_ctx->problem.vim; p++) {
-              goma_ctx->fem.fv->div_S[mode][s] +=
-                  goma_ctx->fem.fv->S[mode][p][s] * goma_ctx->fem.fv->grad_e[p][r][s];
+        for (s = 0; s < VIM; s++) {
+          for (r = 0; r < VIM; r++) {
+            for (p = 0; p < VIM; p++) {
+              fv->div_S[mode][s] += fv->S[mode][p][s] * fv->grad_e[p][r][s];
             }
           }
         }
-        for (s = 0; s < goma_ctx->problem.vim; s++) {
-          for (r = 0; r < goma_ctx->problem.vim; r++) {
-            for (q = 0; q < goma_ctx->problem.vim; q++) {
-              goma_ctx->fem.fv->div_S[mode][s] +=
-                  goma_ctx->fem.fv->S[mode][r][q] * goma_ctx->fem.fv->grad_e[q][r][s];
+        for (s = 0; s < VIM; s++) {
+          for (r = 0; r < VIM; r++) {
+            for (q = 0; q < VIM; q++) {
+              fv->div_S[mode][s] += fv->S[mode][r][q] * fv->grad_e[q][r][s];
             }
           }
         }
       }
     }
 
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] == -1) {
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][POLYMER_STRESS11] == -1) {
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        goma_ctx->fem.fv->div_S[mode][p] = 0.0;
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (r = 0; r < goma_ctx->problem.vim; r++) {
-            goma_ctx->fem.fv->grad_S[mode][r][p][q] = 0.;
+      for (p = 0; p < VIM; p++) {
+        fv->div_S[mode][p] = 0.0;
+        for (q = 0; q < VIM; q++) {
+          for (r = 0; r < VIM; r++) {
+            fv->grad_S[mode][r][p][q] = 0.;
           }
         }
       }
@@ -3313,20 +3025,18 @@ int load_fv_grads(void)
    * grad(G)
    */
 
-  if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
+  if (pd->gv[VELOCITY_GRADIENT11]) {
     v = VELOCITY_GRADIENT11;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          goma_ctx->fem.fv->grad_G[r][p][q] = 0.0;
-          goma_ctx->fem.fv->grad_Gt[r][p][q] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (r = 0; r < VIM; r++) {
+          fv->grad_G[r][p][q] = 0.0;
+          fv->grad_Gt[r][p][q] = 0.0;
 
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_G[r][p][q] +=
-                *goma_ctx->fem.esp->G[p][q][i] * goma_ctx->fem.bf[v]->grad_phi[i][r];
-            goma_ctx->fem.fv->grad_Gt[r][p][q] +=
-                *goma_ctx->fem.esp->G[q][p][i] * goma_ctx->fem.bf[v]->grad_phi[i][r];
+            fv->grad_G[r][p][q] += *esp->G[p][q][i] * bf[v]->grad_phi[i][r];
+            fv->grad_Gt[r][p][q] += *esp->G[q][p][i] * bf[v]->grad_phi[i][r];
           }
         }
       }
@@ -3336,27 +3046,25 @@ int load_fv_grads(void)
      * div(G) - this is a vector!
      */
     for (r = 0; r < dim; r++) {
-      goma_ctx->fem.fv->div_G[r] = 0.0;
+      fv->div_G[r] = 0.0;
       for (q = 0; q < dim; q++) {
-        goma_ctx->fem.fv->div_G[r] += goma_ctx->fem.fv->grad_G[q][q][r];
+        fv->div_G[r] += fv->grad_G[q][q][r];
       }
     }
 
-    if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < goma_ctx->problem.vim; s++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          for (p = 0; p < goma_ctx->problem.vim; p++) {
-            goma_ctx->fem.fv->div_G[s] +=
-                goma_ctx->fem.fv->G[p][s] * goma_ctx->fem.fv->grad_e[p][r][s];
+    if (pd->CoordinateSystem != CARTESIAN) {
+      for (s = 0; s < VIM; s++) {
+        for (r = 0; r < VIM; r++) {
+          for (p = 0; p < VIM; p++) {
+            fv->div_G[s] += fv->G[p][s] * fv->grad_e[p][r][s];
           }
         }
       }
 
-      for (s = 0; s < goma_ctx->problem.vim; s++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
-            goma_ctx->fem.fv->div_G[s] +=
-                goma_ctx->fem.fv->G[r][q] * goma_ctx->fem.fv->grad_e[q][r][s];
+      for (s = 0; s < VIM; s++) {
+        for (r = 0; r < VIM; r++) {
+          for (q = 0; q < VIM; q++) {
+            fv->div_G[s] += fv->G[r][q] * fv->grad_e[q][r][s];
           }
         }
       }
@@ -3367,40 +3075,37 @@ int load_fv_grads(void)
      * transpose of G.
      */
     for (r = 0; r < dim; r++) {
-      goma_ctx->fem.fv->div_Gt[r] = 0.0;
+      fv->div_Gt[r] = 0.0;
       for (q = 0; q < dim; q++) {
-        goma_ctx->fem.fv->div_Gt[r] += goma_ctx->fem.fv->grad_G[q][r][q];
+        fv->div_Gt[r] += fv->grad_G[q][r][q];
       }
     }
 
-    if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < goma_ctx->problem.vim; s++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          for (p = 0; p < goma_ctx->problem.vim; p++) {
-            goma_ctx->fem.fv->div_Gt[s] +=
-                goma_ctx->fem.fv->G[s][p] * goma_ctx->fem.fv->grad_e[p][r][s];
+    if (pd->CoordinateSystem != CARTESIAN) {
+      for (s = 0; s < VIM; s++) {
+        for (r = 0; r < VIM; r++) {
+          for (p = 0; p < VIM; p++) {
+            fv->div_Gt[s] += fv->G[s][p] * fv->grad_e[p][r][s];
           }
         }
       }
 
-      for (s = 0; s < goma_ctx->problem.vim; s++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
-            goma_ctx->fem.fv->div_Gt[s] +=
-                goma_ctx->fem.fv->G[q][r] * goma_ctx->fem.fv->grad_e[q][r][s];
+      for (s = 0; s < VIM; s++) {
+        for (r = 0; r < VIM; r++) {
+          for (q = 0; q < VIM; q++) {
+            fv->div_Gt[s] += fv->G[q][r] * fv->grad_e[q][r][s];
           }
         }
       }
     }
 
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VELOCITY_GRADIENT11] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->div_G[p] = 0.0;
-      goma_ctx->fem.fv->div_Gt[p] = 0.0;
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          goma_ctx->fem.fv->grad_G[r][p][q] = 0.;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][VELOCITY_GRADIENT11] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->div_G[p] = 0.0;
+      fv->div_Gt[p] = 0.0;
+      for (q = 0; q < VIM; q++) {
+        for (r = 0; r < VIM; r++) {
+          fv->grad_G[r][p][q] = 0.;
         }
       }
     }
@@ -3409,26 +3114,25 @@ int load_fv_grads(void)
   /*
    * grad(vd)
    */
-  if (goma_ctx->fem.pd->gv[VORT_DIR1]) {
+  if (pd->gv[VORT_DIR1]) {
     v = VORT_DIR1;
     ;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 
     for (p = 0; p < DIM; p++) {
       for (q = 0; q < DIM; q++) {
-        goma_ctx->fem.fv->grad_vd[p][q] = 0.0;
+        fv->grad_vd[p][q] = 0.0;
         for (r = 0; r < DIM; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_vd[p][q] +=
-                *goma_ctx->fem.esp->vd[r][i] * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_vd[p][q] += *esp->vd[r][i] * bf[v]->grad_phi_e[i][r][p][q];
           }
         }
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VORT_DIR1] == -1) {
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][VORT_DIR1] == -1) {
     for (p = 0; p < DIM; p++) {
       for (q = 0; q < DIM; q++) {
-        goma_ctx->fem.fv->grad_vd[p][q] = 0.0;
+        fv->grad_vd[p][q] = 0.0;
       }
     }
   }
@@ -3436,70 +3140,64 @@ int load_fv_grads(void)
    * div(vd)
    */
 
-  if (goma_ctx->fem.pd->gv[VORT_DIR1]) {
-    goma_ctx->fem.fv->div_vd = 0.0;
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->div_vd += goma_ctx->fem.fv->grad_vd[p][p];
+  if (pd->gv[VORT_DIR1]) {
+    fv->div_vd = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->div_vd += fv->grad_vd[p][p];
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VORT_DIR1] == -1)
-    goma_ctx->fem.fv->div_vd = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][VORT_DIR1] == -1)
+    fv->div_vd = 0.0;
 
   /*
    * grad_sh_K
    * Gradient of curvature in structural shell
    */
 
-  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE]) {
+  if (pd->v[pg->imtrx][SHELL_CURVATURE]) {
     v = SHELL_CURVATURE;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_K[p] = 0.0;
+    dofs = ei[pg->imtrx]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_K[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_K[p] +=
-            *goma_ctx->fem.esp->sh_K[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_K[p] += *esp->sh_K[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_K[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_CURVATURE] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_K[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE2]) {
+  if (pd->v[pg->imtrx][SHELL_CURVATURE2]) {
     v = SHELL_CURVATURE2;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_K2[p] = 0.0;
+    dofs = ei[pg->imtrx]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_K2[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_K2[p] +=
-            *goma_ctx->fem.esp->sh_K2[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_K2[p] += *esp->sh_K2[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE2] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_K2[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_CURVATURE2] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_K2[p] = 0.0;
   }
 
   /*
    * grad(n_dot_curl_s_v)
    *   This is the normal gradient of a scalar field defined on a shell.
    */
-  if (goma_ctx->fem.pd->gv[N_DOT_CURL_V]) {
+  if (pd->gv[N_DOT_CURL_V]) {
     v = N_DOT_CURL_V;
-    bfn = goma_ctx->fem.bf[v];
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_n_dot_curl_s_v[p] = 0.0;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_n_dot_curl_s_v[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_n_dot_curl_s_v[p] +=
-            *goma_ctx->fem.esp->n_dot_curl_s_v[i] * bfn->grad_phi[i][p];
+        fv->grad_n_dot_curl_s_v[p] += *esp->n_dot_curl_s_v[i] * bfn->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][N_DOT_CURL_V] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_n_dot_curl_s_v[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][N_DOT_CURL_V] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_n_dot_curl_s_v[p] = 0.0;
     }
   }
 
@@ -3508,20 +3206,19 @@ int load_fv_grads(void)
    *   This is the normal gradient of a scalar field defined on a shell.
    *        The scalar field is the surface divergence of the velocity
    */
-  if (goma_ctx->fem.pd->gv[SHELL_SURF_DIV_V]) {
+  if (pd->gv[SHELL_SURF_DIV_V]) {
     v = SHELL_SURF_DIV_V;
-    bfn = goma_ctx->fem.bf[v];
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_div_s_v[p] = 0.0;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_div_s_v[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_div_s_v[p] += *goma_ctx->fem.esp->div_s_v[i] * bfn->grad_phi[i][p];
+        fv->grad_div_s_v[p] += *esp->div_s_v[i] * bfn->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_SURF_DIV_V] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_div_s_v[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_SURF_DIV_V] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_div_s_v[p] = 0.0;
     }
   }
 
@@ -3530,20 +3227,19 @@ int load_fv_grads(void)
    *   This is the normal gradient of a scalar field defined on a shell.
    *        The scalar field is the mean curvature of the surface
    */
-  if (goma_ctx->fem.pd->gv[SHELL_SURF_CURV]) {
+  if (pd->gv[SHELL_SURF_CURV]) {
     v = SHELL_SURF_CURV;
-    bfn = goma_ctx->fem.bf[v];
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_curv[p] = 0.0;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_curv[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_curv[p] += *goma_ctx->fem.esp->curv[i] * bfn->grad_phi[i][p];
+        fv->grad_curv[p] += *esp->curv[i] * bfn->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_SURF_CURV] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_curv[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_SURF_CURV] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_curv[p] = 0.0;
     }
   }
 
@@ -3552,24 +3248,22 @@ int load_fv_grads(void)
    *   This is the normal gradient of a scalar field defined on a shell.
    *        The scalar field is the vector component of the grad_s_v_dot_n
    */
-  if (goma_ctx->fem.pd->gv[GRAD_S_V_DOT_N1]) {
+  if (pd->gv[GRAD_S_V_DOT_N1]) {
     for (r = 0; r < dim; r++) {
       v = GRAD_S_V_DOT_N1 + r;
-      bfn = goma_ctx->fem.bf[v];
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        goma_ctx->fem.fv->serialgrad_grad_s_v_dot_n[r][p] = 0.0;
+      bfn = bf[v];
+      dofs = ei[upd->matrix_index[v]]->dof[v];
+      for (p = 0; p < VIM; p++) {
+        fv->serialgrad_grad_s_v_dot_n[r][p] = 0.0;
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->serialgrad_grad_s_v_dot_n[r][p] +=
-              *(goma_ctx->fem.esp->grad_v_dot_n[r][i]) * bfn->grad_phi[i][p];
+          fv->serialgrad_grad_s_v_dot_n[r][p] += *(esp->grad_v_dot_n[r][i]) * bfn->grad_phi[i][p];
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][GRAD_S_V_DOT_N1] == -1) {
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][GRAD_S_V_DOT_N1] == -1) {
     for (r = 0; r < dim; r++) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        goma_ctx->fem.fv->serialgrad_grad_s_v_dot_n[r][p] = 0.0;
+      for (p = 0; p < VIM; p++) {
+        fv->serialgrad_grad_s_v_dot_n[r][p] = 0.0;
       }
     }
   }
@@ -3577,83 +3271,77 @@ int load_fv_grads(void)
   /*
    * grad(sh_J)
    */
-  if (goma_ctx->fem.pd->gv[SHELL_DIFF_FLUX]) {
+  if (pd->gv[SHELL_DIFF_FLUX]) {
     v = SHELL_DIFF_FLUX;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_J[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_J[p] = 0.0;
       for (i = 0; i < dofs; i++) {
         // HKM -> I changed dphidxi to grad_phi below. There didn't seem
         //        to be a case where the raw element derivative (dphidxi) which
         //        doesn't even take into account of the size of the element should
         //        be used at this level.
         //      fv->grad_sh_J[p] += *esp->sh_J[i] * bf[v]->dphidxi[i][p];
-        goma_ctx->fem.fv->grad_sh_J[p] +=
-            *goma_ctx->fem.esp->sh_J[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_J[p] += *esp->sh_J[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_DIFF_FLUX] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_J[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_DIFF_FLUX] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_J[p] = 0.0;
   }
 
   /* grad(EDDY_NU)
    *
    */
-  if (goma_ctx->fem.pd->gv[EDDY_NU]) {
+  if (pd->gv[EDDY_NU]) {
     v = EDDY_NU;
-    bfn = goma_ctx->fem.bf[v];
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_eddy_nu[p] = 0.0;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_eddy_nu[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_eddy_nu[p] += *goma_ctx->fem.esp->eddy_nu[i] * bfn->grad_phi[i][p];
+        fv->grad_eddy_nu[p] += *esp->eddy_nu[i] * bfn->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EDDY_NU] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_eddy_nu[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][EDDY_NU] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_eddy_nu[p] = 0.0;
     }
   }
 
-  if (goma_ctx->fem.pd->gv[TURB_K]) {
+  if (pd->gv[TURB_K]) {
     v = TURB_K;
-    bfn = goma_ctx->fem.bf[v];
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_turb_k[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_turb_k[p] = 0.0;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_k[p] = 0.0;
+      fv_old->grad_turb_k[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_turb_k[p] += *goma_ctx->fem.esp->turb_k[i] * bfn->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_turb_k[p] +=
-            *goma_ctx->fem.esp_old->turb_k[i] * bfn->grad_phi[i][p];
+        fv->grad_turb_k[p] += *esp->turb_k[i] * bfn->grad_phi[i][p];
+        fv_old->grad_turb_k[p] += *esp_old->turb_k[i] * bfn->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TURB_K] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_turb_k[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TURB_K] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_k[p] = 0.0;
     }
   }
 
-  if (goma_ctx->fem.pd->gv[TURB_OMEGA]) {
+  if (pd->gv[TURB_OMEGA]) {
     v = TURB_OMEGA;
-    bfn = goma_ctx->fem.bf[v];
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_turb_omega[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_turb_omega[p] = 0.0;
+    bfn = bf[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_omega[p] = 0.0;
+      fv_old->grad_turb_omega[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_turb_omega[p] +=
-            *goma_ctx->fem.esp->turb_omega[i] * bfn->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_turb_omega[p] +=
-            *goma_ctx->fem.esp_old->turb_omega[i] * bfn->grad_phi[i][p];
+        fv->grad_turb_omega[p] += *esp->turb_omega[i] * bfn->grad_phi[i][p];
+        fv_old->grad_turb_omega[p] += *esp_old->turb_omega[i] * bfn->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TURB_OMEGA] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_turb_omega[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TURB_OMEGA] == -1) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_turb_omega[p] = 0.0;
     }
   }
 
@@ -3661,567 +3349,489 @@ int load_fv_grads(void)
    * grad(APR)
    */
 
-  if (goma_ctx->fem.pd->gv[ACOUS_PREAL]) {
+  if (pd->gv[ACOUS_PREAL]) {
     v = ACOUS_PREAL;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_apr[p] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->grad_apr[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_apr[p] +=
-            *goma_ctx->fem.esp->apr[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_apr[p] += *esp->apr[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_PREAL] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_apr[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][ACOUS_PREAL] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_apr[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[ACOUS_PIMAG]) {
+  if (pd->gv[ACOUS_PIMAG]) {
     v = ACOUS_PIMAG;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_api[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_api[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_api[p] +=
-            *goma_ctx->fem.esp->api[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_api[p] += *esp->api[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_PIMAG] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_api[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][ACOUS_PIMAG] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_api[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[ACOUS_REYN_STRESS]) {
+  if (pd->gv[ACOUS_REYN_STRESS]) {
     v = ACOUS_REYN_STRESS;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_ars[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_ars[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_ars[p] +=
-            *goma_ctx->fem.esp->ars[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_ars[p] += *esp->ars[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_REYN_STRESS] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_ars[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][ACOUS_REYN_STRESS] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_ars[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_BDYVELO]) {
+  if (pd->gv[SHELL_BDYVELO]) {
     v = SHELL_BDYVELO;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_bv[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_bv[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_bv[p] +=
-            *goma_ctx->fem.esp->sh_bv[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_bv[p] += *esp->sh_bv[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_BDYVELO] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_bv[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_BDYVELO] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_bv[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_LUBP]) {
+  if (pd->gv[SHELL_LUBP]) {
     v = SHELL_LUBP;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_p[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_p[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_p[p] +=
-            *goma_ctx->fem.esp->sh_p[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_p[p] += *esp->sh_p[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_LUBP] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_p[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_LUBP] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_p[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[LUBP]) {
+  if (pd->gv[LUBP]) {
     v = LUBP;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_lubp[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_lubp[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_lubp[p] +=
-            *goma_ctx->fem.esp->lubp[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_lubp[p] +=
-            *goma_ctx->fem.esp_old->lubp[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_lubp[p] += *esp->lubp[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_lubp[p] += *esp_old->lubp[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LUBP] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_lubp[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][LUBP] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_lubp[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[LUBP_2]) {
+  if (pd->gv[LUBP_2]) {
     v = LUBP_2;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_lubp_2[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_lubp_2[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_lubp_2[p] +=
-            *goma_ctx->fem.esp->lubp_2[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_lubp_2[p] +=
-            *goma_ctx->fem.esp_old->lubp_2[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_lubp_2[p] += *esp->lubp_2[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_lubp_2[p] += *esp_old->lubp_2[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LUBP_2] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_lubp_2[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][LUBP_2] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_lubp_2[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_LUB_CURV]) {
+  if (pd->gv[SHELL_LUB_CURV]) {
     v = SHELL_LUB_CURV;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_l_curv[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_l_curv[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_l_curv[p] +=
-            *goma_ctx->fem.esp->sh_l_curv[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_l_curv[p] += *esp->sh_l_curv[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_LUB_CURV] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_l_curv[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_LUB_CURV] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_l_curv[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_LUB_CURV_2]) {
+  if (pd->gv[SHELL_LUB_CURV_2]) {
     v = SHELL_LUB_CURV_2;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_l_curv_2[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_l_curv_2[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_l_curv_2[p] +=
-            *goma_ctx->fem.esp->sh_l_curv_2[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_l_curv_2[p] += *esp->sh_l_curv_2[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_LUB_CURV_2] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_l_curv_2[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_LUB_CURV_2] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_l_curv_2[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_PRESS_OPEN]) {
+  if (pd->gv[SHELL_PRESS_OPEN]) {
     v = SHELL_PRESS_OPEN;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_p_open[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_p_open[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_p_open[p] +=
-            *goma_ctx->fem.esp->sh_p_open[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_sh_p_open[p] +=
-            *goma_ctx->fem.esp_old->sh_p_open[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_p_open[p] += *esp->sh_p_open[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_sh_p_open[p] += *esp_old->sh_p_open[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PRESS_OPEN] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_p_open[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_PRESS_OPEN] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_p_open[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_PRESS_OPEN_2]) {
+  if (pd->gv[SHELL_PRESS_OPEN_2]) {
     v = SHELL_PRESS_OPEN_2;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_p_open_2[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_p_open_2[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_p_open_2[p] +=
-            *goma_ctx->fem.esp->sh_p_open_2[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_sh_p_open_2[p] +=
-            *goma_ctx->fem.esp_old->sh_p_open_2[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_p_open_2[p] += *esp->sh_p_open_2[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_sh_p_open_2[p] += *esp_old->sh_p_open_2[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PRESS_OPEN_2] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_p_open_2[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_PRESS_OPEN_2] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_p_open_2[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_SAT_1]) {
+  if (pd->gv[SHELL_SAT_1]) {
     v = SHELL_SAT_1;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_sat_1[p] = 0.0;
+    dofs = ei[pg->imtrx]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_sat_1[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_sat_1[p] +=
-            *goma_ctx->fem.esp->sh_sat_1[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_sat_1[p] += *esp->sh_sat_1[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_SAT_1] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_sat_1[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_SAT_1] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_sat_1[p] = 0.0;
   }
-  if (goma_ctx->fem.pd->gv[SHELL_FILMP]) {
+  if (pd->gv[SHELL_FILMP]) {
     v = SHELL_FILMP;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_fp[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_sh_fp[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_fp[p] = 0.0;
+      fv_old->grad_sh_fp[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_fp[p] +=
-            *goma_ctx->fem.esp->sh_fp[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_sh_fp[p] +=
-            *goma_ctx->fem.esp_old->sh_fp[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_fp[p] += *esp->sh_fp[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_sh_fp[p] += *esp_old->sh_fp[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_FILMP] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_fp[p] = goma_ctx->fem.fv_old->grad_sh_fp[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_FILMP] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_fp[p] = fv_old->grad_sh_fp[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_FILMH]) {
+  if (pd->gv[SHELL_FILMH]) {
     v = SHELL_FILMH;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_fh[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_sh_fh[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_fh[p] = 0.0;
+      fv_old->grad_sh_fh[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_fh[p] +=
-            *goma_ctx->fem.esp->sh_fh[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_sh_fh[p] +=
-            *goma_ctx->fem.esp_old->sh_fh[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_fh[p] += *esp->sh_fh[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_sh_fh[p] += *esp_old->sh_fh[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_FILMH] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_fh[p] = goma_ctx->fem.fv_old->grad_sh_fh[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_FILMH] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_fh[p] = fv_old->grad_sh_fh[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_PARTC]) {
+  if (pd->gv[SHELL_PARTC]) {
     v = SHELL_PARTC;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_pc[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_pc[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_pc[p] +=
-            *goma_ctx->fem.esp->sh_pc[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_pc[p] += *esp->sh_pc[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PARTC] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_pc[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_PARTC] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_pc[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_TEMPERATURE]) {
+  if (pd->gv[SHELL_TEMPERATURE]) {
     v = SHELL_TEMPERATURE;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_sh_t[p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_sh_t[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_sh_t[p] +=
-            *goma_ctx->fem.esp->sh_t[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_sh_t[p] += *esp->sh_t[i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_TEMPERATURE] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_sh_t[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][SHELL_TEMPERATURE] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_sh_t[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[LIGHT_INTP]) {
+  if (pd->gv[LIGHT_INTP]) {
     v = LIGHT_INTP;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_poynt[0][p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_poynt[0][p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_poynt[0][p] +=
-            *goma_ctx->fem.esp->poynt[0][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_poynt[0][p] += *esp->poynt[0][i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTP] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_poynt[0][p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][LIGHT_INTP] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_poynt[0][p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[LIGHT_INTM]) {
+  if (pd->gv[LIGHT_INTM]) {
     v = LIGHT_INTM;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_poynt[1][p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_poynt[1][p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_poynt[1][p] +=
-            *goma_ctx->fem.esp->poynt[1][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_poynt[1][p] += *esp->poynt[1][i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTM] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_poynt[1][p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][LIGHT_INTM] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_poynt[1][p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[LIGHT_INTD]) {
+  if (pd->gv[LIGHT_INTD]) {
     v = LIGHT_INTD;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_poynt[2][p] = 0.0;
+    dofs = ei[upd->matrix_index[v]]->dof[v];
+    for (p = 0; p < VIM; p++) {
+      fv->grad_poynt[2][p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_poynt[2][p] +=
-            *goma_ctx->fem.esp->poynt[2][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_poynt[2][p] += *esp->poynt[2][i] * bf[v]->grad_phi[i][p];
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTD] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_poynt[2][p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][LIGHT_INTD] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_poynt[2][p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[MOMENT0]) {
+  if (pd->gv[MOMENT0]) {
     for (r = 0; r < MAX_MOMENTS; r++) {
       v = MOMENT0 + r;
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+      dofs = ei[pg->imtrx]->dof[v];
 
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        goma_ctx->fem.fv->grad_moment[r][p] = 0.0;
-        goma_ctx->fem.fv_old->grad_moment[r][p] = 0.0;
+      for (p = 0; p < VIM; p++) {
+        fv->grad_moment[r][p] = 0.0;
+        fv_old->grad_moment[r][p] = 0.0;
 
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->grad_moment[r][p] +=
-              *goma_ctx->fem.esp->moment[r][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-          goma_ctx->fem.fv_old->grad_moment[r][p] +=
-              *goma_ctx->fem.esp_old->moment[r][i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+          fv->grad_moment[r][p] += *esp->moment[r][i] * bf[v]->grad_phi[i][p];
+          fv_old->grad_moment[r][p] += *esp_old->moment[r][i] * bf[v]->grad_phi[i][p];
         }
       }
     }
   }
 
-  if (goma_ctx->fem.pd->gv[DENSITY_EQN]) {
+  if (pd->gv[DENSITY_EQN]) {
     v = DENSITY_EQN;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    dofs = ei[pg->imtrx]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_rho[p] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->grad_rho[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_rho[p] +=
-            *goma_ctx->fem.esp->rho[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_rho[p] += *esp->rho[i] * bf[v]->grad_phi[i][p];
       }
     }
 #else
-    grad_scalar_fv_fill(goma_ctx->fem.esp->rho, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                        goma_ctx->fem.fv->grad_rho);
+    grad_scalar_fv_fill(esp->rho, bf[v]->grad_phi, dofs, fv->grad_rho);
 #endif
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][DENSITY_EQN] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_rho[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][DENSITY_EQN] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_rho[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[TFMP_PRES]) {
+  if (pd->gv[TFMP_PRES]) {
     v = TFMP_PRES;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    dofs = ei[pg->imtrx]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_tfmp_pres[p] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->grad_tfmp_pres[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_tfmp_pres[p] +=
-            *goma_ctx->fem.esp->tfmp_pres[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_tfmp_pres[p] +=
-            *goma_ctx->fem.esp_old->tfmp_pres[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_tfmp_pres[p] += *esp->tfmp_pres[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_tfmp_pres[p] += *esp_old->tfmp_pres[i] * bf[v]->grad_phi[i][p];
       }
     }
 #else
-    grad_scalar_fv_fill(goma_ctx->fem.esp->tfmp_pres, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                        goma_ctx->fem.fv->grad_tfmp_pres);
+    grad_scalar_fv_fill(esp->tfmp_pres, bf[v]->grad_phi, dofs, fv->grad_tfmp_pres);
 #endif
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TFMP_PRES] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_tfmp_pres[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TFMP_PRES] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_tfmp_pres[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[TFMP_SAT]) {
+  if (pd->gv[TFMP_SAT]) {
     v = TFMP_SAT;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    dofs = ei[pg->imtrx]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_tfmp_sat[p] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->grad_tfmp_sat[p] = 0.0;
 
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_tfmp_sat[p] +=
-            *goma_ctx->fem.esp->tfmp_sat[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_tfmp_sat[p] +=
-            *goma_ctx->fem.esp_old->tfmp_sat[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_tfmp_sat[p] += *esp->tfmp_sat[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_tfmp_sat[p] += *esp_old->tfmp_sat[i] * bf[v]->grad_phi[i][p];
       }
     }
 #else
-    grad_scalar_fv_fill(goma_ctx->fem.esp->tfmp_sat, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                        goma_ctx->fem.fv->grad_tfmp_sat);
+    grad_scalar_fv_fill(esp->tfmp_sat, bf[v]->grad_phi, dofs, fv->grad_tfmp_sat);
 #endif
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TFMP_SAT] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_tfmp_sat[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][TFMP_SAT] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_tfmp_sat[p] = 0.0;
   }
 
-  if (goma_ctx->fem.pd->gv[RESTIME]) {
+  if (pd->gv[RESTIME]) {
     v = RESTIME;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    dofs = ei[pg->imtrx]->dof[v];
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_restime[p] = 0.0;
-      goma_ctx->fem.fv_old->grad_restime[p] = 0.0;
+    for (p = 0; p < VIM; p++) {
+      fv->grad_restime[p] = 0.0;
+      fv_old->grad_restime[p] = 0.0;
       for (i = 0; i < dofs; i++) {
-        goma_ctx->fem.fv->grad_restime[p] +=
-            *goma_ctx->fem.esp->restime[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
-        goma_ctx->fem.fv_old->grad_restime[p] +=
-            *goma_ctx->fem.esp_old->restime[i] * goma_ctx->fem.bf[v]->grad_phi[i][p];
+        fv->grad_restime[p] += *esp->restime[i] * bf[v]->grad_phi[i][p];
+        fv_old->grad_restime[p] += *esp_old->restime[i] * bf[v]->grad_phi[i][p];
       }
     }
 #else
-    grad_scalar_fv_fill(goma_ctx->fem.esp->restime, goma_ctx->fem.bf[v]->grad_phi, dofs,
-                        goma_ctx->fem.fv->grad_restime);
+    grad_scalar_fv_fill(esp->restime, bf[v]->grad_phi, dofs, fv->grad_restime);
 #endif
-  } else if (zero_unused_grads && goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][RESTIME] == -1) {
-    for (p = 0; p < goma_ctx->problem.vim; p++)
-      goma_ctx->fem.fv->grad_restime[p] = 0.0;
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][RESTIME] == -1) {
+    for (p = 0; p < VIM; p++)
+      fv->grad_restime[p] = 0.0;
   }
 
   /*
    * EM Wave Vector Gradients
    */
-  if (goma_ctx->fem.pd->gv[EM_E1_REAL] || goma_ctx->fem.pd->gv[EM_E2_REAL] ||
-      goma_ctx->fem.pd->gv[EM_E3_REAL]) {
+  if (pd->gv[EM_E1_REAL] || pd->gv[EM_E2_REAL] || pd->gv[EM_E3_REAL]) {
     v = EM_E1_REAL;
-    if (goma_ctx->fem.bf[v]->interpolation != I_N1) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    if (bf[v]->interpolation != I_N1) {
+      dofs = ei[upd->matrix_index[v]]->dof[v];
 
       // grad_vector_fv_fill(esp->em_er, bf[v]->grad_phi_e, dofs, fv->grad_em_er);
       for (p = 0; p < dim; p++) {
         for (q = 0; q < dim; q++) {
-          goma_ctx->fem.fv->grad_em_er[p][q] = 0.0;
-          goma_ctx->fem.fv_old->grad_em_er[p][q] = 0.0;
+          fv->grad_em_er[p][q] = 0.0;
+          fv_old->grad_em_er[p][q] = 0.0;
           for (r = 0; r < dim; r++) {
             for (i = 0; i < dofs; i++) {
-              goma_ctx->fem.fv->grad_em_er[p][q] +=
-                  (*goma_ctx->fem.esp->em_er[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
-              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-                goma_ctx->fem.fv_old->grad_em_er[p][q] +=
-                    (*goma_ctx->fem.esp_old->em_er[r][i]) *
-                    goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+              fv->grad_em_er[p][q] += (*esp->em_er[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+              if (pd->TimeIntegration != STEADY) {
+                fv_old->grad_em_er[p][q] += (*esp_old->em_er[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
               }
             }
           }
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E1_REAL] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E2_REAL] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E3_REAL] == -1) {
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][EM_E1_REAL] == -1 &&
+             upd->vp[pg->imtrx][EM_E2_REAL] == -1 && upd->vp[pg->imtrx][EM_E3_REAL] == -1) {
     for (p = 0; p < DIM; p++) {
       for (q = 0; q < DIM; q++) {
-        goma_ctx->fem.fv->grad_em_er[p][q] = 0.0;
+        fv->grad_em_er[p][q] = 0.0;
       }
     }
   }
 
-  if (goma_ctx->fem.pd->gv[EM_E1_IMAG] || goma_ctx->fem.pd->gv[EM_E2_IMAG] ||
-      goma_ctx->fem.pd->gv[EM_E3_IMAG]) {
+  if (pd->gv[EM_E1_IMAG] || pd->gv[EM_E2_IMAG] || pd->gv[EM_E3_IMAG]) {
     v = EM_E1_IMAG;
-    if (goma_ctx->fem.bf[v]->interpolation != I_N1) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    if (bf[v]->interpolation != I_N1) {
+      dofs = ei[upd->matrix_index[v]]->dof[v];
 
       // grad_vector_fv_fill(esp->em_ei, bf[v]->grad_phi_e, dofs, fv->grad_em_ei);
       for (p = 0; p < dim; p++) {
         for (q = 0; q < dim; q++) {
-          goma_ctx->fem.fv->grad_em_ei[p][q] = 0.0;
-          goma_ctx->fem.fv_old->grad_em_ei[p][q] = 0.0;
+          fv->grad_em_ei[p][q] = 0.0;
+          fv_old->grad_em_ei[p][q] = 0.0;
           for (r = 0; r < dim; r++) {
             for (i = 0; i < dofs; i++) {
-              goma_ctx->fem.fv->grad_em_ei[p][q] +=
-                  (*goma_ctx->fem.esp->em_ei[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
-              if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-                goma_ctx->fem.fv_old->grad_em_ei[p][q] +=
-                    (*goma_ctx->fem.esp_old->em_ei[r][i]) *
-                    goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+              fv->grad_em_ei[p][q] += (*esp->em_ei[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+              if (pd->TimeIntegration != STEADY) {
+                fv_old->grad_em_ei[p][q] += (*esp_old->em_ei[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
               }
             }
           }
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E1_IMAG] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E2_IMAG] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E3_IMAG] == -1) {
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][EM_E1_IMAG] == -1 &&
+             upd->vp[pg->imtrx][EM_E2_IMAG] == -1 && upd->vp[pg->imtrx][EM_E3_IMAG] == -1) {
     for (p = 0; p < DIM; p++) {
       for (q = 0; q < DIM; q++) {
-        goma_ctx->fem.fv->grad_em_ei[p][q] = 0.0;
+        fv->grad_em_ei[p][q] = 0.0;
       }
     }
   }
-  if (goma_ctx->fem.pd->gv[EM_H1_REAL] || goma_ctx->fem.pd->gv[EM_H2_REAL] ||
-      goma_ctx->fem.pd->gv[EM_H3_REAL]) {
+  if (pd->gv[EM_H1_REAL] || pd->gv[EM_H2_REAL] || pd->gv[EM_H3_REAL]) {
     v = EM_H1_REAL;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 
     // grad_vector_fv_fill(esp->em_hr, bf[v]->grad_phi_e, dofs, fv->grad_em_hr);
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_em_hr[p][q] = 0.0;
-        goma_ctx->fem.fv_old->grad_em_hr[p][q] = 0.0;
-        for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_em_hr[p][q] = 0.0;
+        fv_old->grad_em_hr[p][q] = 0.0;
+        for (r = 0; r < WIM; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_em_hr[p][q] +=
-                (*goma_ctx->fem.esp->em_hr[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
-            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-              goma_ctx->fem.fv_old->grad_em_hr[p][q] += (*goma_ctx->fem.esp_old->em_hr[r][i]) *
-                                                        goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_em_hr[p][q] += (*esp->em_hr[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->grad_em_hr[p][q] += (*esp_old->em_hr[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
             }
           }
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H1_REAL] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H2_REAL] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H3_REAL] == -1) {
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][EM_H1_REAL] == -1 &&
+             upd->vp[pg->imtrx][EM_H2_REAL] == -1 && upd->vp[pg->imtrx][EM_H3_REAL] == -1) {
     for (p = 0; p < DIM; p++) {
       for (q = 0; q < DIM; q++) {
-        goma_ctx->fem.fv->grad_em_hr[p][q] = 0.0;
+        fv->grad_em_hr[p][q] = 0.0;
       }
     }
   }
-  if (goma_ctx->fem.pd->gv[EM_H1_IMAG] || goma_ctx->fem.pd->gv[EM_H2_IMAG] ||
-      goma_ctx->fem.pd->gv[EM_H3_IMAG]) {
+  if (pd->gv[EM_H1_IMAG] || pd->gv[EM_H2_IMAG] || pd->gv[EM_H3_IMAG]) {
     v = EM_H1_IMAG;
-    dofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    dofs = ei[upd->matrix_index[v]]->dof[v];
 
     // grad_vector_fv_fill(esp->em_hi, bf[v]->grad_phi_e, dofs, fv->grad_em_hi);
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        goma_ctx->fem.fv->grad_em_hi[p][q] = 0.0;
-        goma_ctx->fem.fv_old->grad_em_hi[p][q] = 0.0;
-        for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        fv->grad_em_hi[p][q] = 0.0;
+        fv_old->grad_em_hi[p][q] = 0.0;
+        for (r = 0; r < WIM; r++) {
           for (i = 0; i < dofs; i++) {
-            goma_ctx->fem.fv->grad_em_hi[p][q] +=
-                (*goma_ctx->fem.esp->em_hi[r][i]) * goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
-            if (goma_ctx->fem.pd->TimeIntegration != STEADY) {
-              goma_ctx->fem.fv_old->grad_em_hi[p][q] += (*goma_ctx->fem.esp_old->em_hi[r][i]) *
-                                                        goma_ctx->fem.bf[v]->grad_phi_e[i][r][p][q];
+            fv->grad_em_hi[p][q] += (*esp->em_hi[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
+            if (pd->TimeIntegration != STEADY) {
+              fv_old->grad_em_hi[p][q] += (*esp_old->em_hi[r][i]) * bf[v]->grad_phi_e[i][r][p][q];
             }
           }
         }
       }
     }
-  } else if (zero_unused_grads &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H1_IMAG] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H2_IMAG] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H3_IMAG] == -1) {
+  } else if (zero_unused_grads && upd->vp[pg->imtrx][EM_H1_IMAG] == -1 &&
+             upd->vp[pg->imtrx][EM_H2_IMAG] == -1 && upd->vp[pg->imtrx][EM_H3_IMAG] == -1) {
     for (p = 0; p < DIM; p++) {
       for (q = 0; q < DIM; q++) {
-        goma_ctx->fem.fv->grad_em_hi[p][q] = 0.0;
+        fv->grad_em_hi[p][q] = 0.0;
       }
     }
   }
@@ -4229,47 +3839,45 @@ int load_fv_grads(void)
   /* grad(wall_distance)
    *
    */
-  if (goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
-    if (goma_ctx->fem.pd->gv[goma_ctx->fem.pd->ShapeVar]) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[goma_ctx->fem.pd->ShapeVar];
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        goma_ctx->fem.fv->grad_wall_distance[p] = 0.0;
+  if (upd->turbulent_info->use_internal_wall_distance) {
+    if (pd->gv[pd->ShapeVar]) {
+      dofs = ei[pg->imtrx]->dof[pd->ShapeVar];
+      for (p = 0; p < VIM; p++) {
+        fv->grad_wall_distance[p] = 0.0;
         for (i = 0; i < dofs; i++) {
-          goma_ctx->fem.fv->grad_wall_distance[p] +=
-              goma_ctx->fem.upd->turbulent_info
-                  ->wall_distances[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]
-                                       ->gnn_list[goma_ctx->fem.pd->ShapeVar][i]] *
-              goma_ctx->fem.bf[goma_ctx->fem.pd->ShapeVar]->grad_phi[i][p];
+          fv->grad_wall_distance[p] +=
+              upd->turbulent_info->wall_distances[ei[pg->imtrx]->gnn_list[pd->ShapeVar][i]] *
+              bf[pd->ShapeVar]->grad_phi[i][p];
         }
       }
     }
-  } else if (zero_unused_grads && !goma_ctx->fem.upd->turbulent_info->use_internal_wall_distance) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      goma_ctx->fem.fv->grad_wall_distance[p] = 0.0;
+  } else if (zero_unused_grads && !upd->turbulent_info->use_internal_wall_distance) {
+    for (p = 0; p < VIM; p++) {
+      fv->grad_wall_distance[p] = 0.0;
     }
   }
 
   /*
    * External
    */
-  if (goma_ctx->fem.efv->ev) {
+  if (efv->ev) {
     v = EXTERNAL;
-    for (w = 0; w < goma_ctx->fem.efv->Num_external_field; w++) {
-      dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof_ext[w];
-      if (goma_ctx->fem.efv->i[w] != I_TABLE) {
-        if (strcmp(goma_ctx->fem.efv->name[w], "F1") == 0 && !goma_ctx->fem.pd->gv[PHASE1]) {
+    for (w = 0; w < efv->Num_external_field; w++) {
+      dofs = ei[pg->imtrx]->dof_ext[w];
+      if (efv->i[w] != I_TABLE) {
+        if (strcmp(efv->name[w], "F1") == 0 && !pd->gv[PHASE1]) {
 
           /* load up the gradient of the the phase function variables
            * Currently, this is the only field whose gradient is computed when
            * is applied as externally
            */
           grad_scalar_fv_fill(goma_ctx->fem.evp->external_field[w], goma_ctx->fem.bfex[v]->grad_phi,
-                              dofs, goma_ctx->fem.fv->grad_pF[0]);
+                              dofs, fv->grad_pF[0]);
         } else {
-          for (p = 0; p < goma_ctx->problem.vim; p++) {
-            goma_ctx->fem.fv->grad_ext_field[w][p] = 0.0;
+          for (p = 0; p < VIM; p++) {
+            fv->grad_ext_field[w][p] = 0.0;
             for (i = 0; i < dofs; i++) {
-              goma_ctx->fem.fv->grad_ext_field[w][p] +=
+              fv->grad_ext_field[w][p] +=
                   *goma_ctx->fem.evp->external_field[w][i] * goma_ctx->fem.bfex[w]->grad_phi[i][p];
             }
           }
@@ -4382,6 +3990,18 @@ int load_fv_mesh_derivs(int okToZero)
  * Modified:	Tue Feb 21 11:16 MST 1995 pasacki@sandia.gov
  ****************************************************************************/
 {
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  struct Material_Properties *const mp = goma_ctx->fem.mp;
+  const int VIM = goma_ctx->problem.vim;
+  const int WIM = goma_ctx->problem.wim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Element_Stiffness_Pointers *const esp = goma_ctx->fem.esp;
+  struct Element_Variable_Pointers *const esp_dot = goma_ctx->fem.esp_dot;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Transient_Information *const tran = goma_ctx->fem.tran;
   int v;    /* variable type indicator */
   int i, j; /* index */
   int b;
@@ -4406,7 +4026,7 @@ int load_fv_mesh_derivs(int okToZero)
 
   status = 0;
 
-  VIMis3 = (goma_ctx->problem.vim == 3) ? TRUE : FALSE;
+  VIMis3 = (VIM == 3) ? TRUE : FALSE;
 
   /*
    * If this is not a deforming mesh problem, then
@@ -4414,8 +4034,8 @@ int load_fv_mesh_derivs(int okToZero)
    */
   int imtrx;
   int mesh_on = FALSE;
-  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
-    if (goma_ctx->fem.ei[imtrx]->deforming_mesh) {
+  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
+    if (ei[imtrx]->deforming_mesh) {
       mesh_on = TRUE;
     }
   }
@@ -4423,15 +4043,15 @@ int load_fv_mesh_derivs(int okToZero)
     return status;
   }
 
-  dim = goma_ctx->fem.pd->Num_Dim;
-  dimNonSym = goma_ctx->fem.pd->Num_Dim;
+  dim = pd->Num_Dim;
+  dimNonSym = pd->Num_Dim;
 
-  mdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
+  mdofs = ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1];
 
-  bfm = goma_ctx->fem.bf[R_MESH1];
+  bfm = bf[R_MESH1];
 
-  transient_run = goma_ctx->fem.pd->TimeIntegration != STEADY;
-  discontinuous_porous_media = goma_ctx->fem.mp->PorousMediaType != CONTINUOUS;
+  transient_run = pd->TimeIntegration != STEADY;
+  discontinuous_porous_media = mp->PorousMediaType != CONTINUOUS;
   ve_solid = goma_ctx->fem.cr->MeshFluxModel == KELVIN_VOIGT;
 
   okToZero = FALSE;
@@ -4440,1539 +4060,1414 @@ int load_fv_mesh_derivs(int okToZero)
    * d(grad(T))/dmesh
    */
 
-  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
+  if (pd->gv[TEMPERATURE]) {
     v = TEMPERATURE;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_T_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_T_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->T[i];
+      T_i = *esp->T[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_T_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_T_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->T[0];
+      T_i = *esp->T[0];
 
-      goma_ctx->fem.fv->d_grad_T_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_T_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_T_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_T_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_T_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_T_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_T_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_T_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_T_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_T_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_T_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_T_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_T_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_T_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_T_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_T_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_T_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_T_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->T[i];
+        T_i = *esp->T[i];
 
-        goma_ctx->fem.fv->d_grad_T_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_T_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_T_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_T_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_T_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_T_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_T_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_T_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_T_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_T_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_T_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_T_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_T_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_T_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_T_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_T_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_T_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_T_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TEMPERATURE] != -1 && !is_initialized &&
-             okToZero) {
+  } else if (upd->vp[pg->imtrx][TEMPERATURE] != -1 && !is_initialized && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_T_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_T_dmesh[0][0][0]), 0, siz);
   }
 
   int mom;
   for (mom = 0; mom < MAX_MOMENTS; mom++) {
     v = MOMENT0 + mom;
-    if (goma_ctx->fem.pd->gv[v]) {
-      bfv = goma_ctx->fem.bf[v];
-      vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    if (pd->gv[v]) {
+      bfv = bf[v];
+      vdofs = ei[pg->imtrx]->dof[v];
 
       siz = sizeof(double) * DIM * DIM * MDE;
-      memset(&(goma_ctx->fem.fv->d_grad_moment_dmesh[mom][0][0][0]), 0, siz);
+      memset(&(fv->d_grad_moment_dmesh[mom][0][0][0]), 0, siz);
       for (i = 0; i < vdofs; i++) {
         for (p = 0; p < dimNonSym; p++) {
           for (b = 0; b < dim; b++) {
             for (j = 0; j < mdofs; j++) {
-              goma_ctx->fem.fv->d_grad_moment_dmesh[mom][p][b][j] +=
-                  (*goma_ctx->fem.esp->moment[mom][i]) * bfv->d_grad_phi_dmesh[i][p][b][j];
+              fv->d_grad_moment_dmesh[mom][p][b][j] +=
+                  (*esp->moment[mom][i]) * bfv->d_grad_phi_dmesh[i][p][b][j];
             }
           }
         }
       }
 
-    } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][v] != -1 && !is_initialized &&
-               okToZero) {
+    } else if (upd->vp[pg->imtrx][v] != -1 && !is_initialized && okToZero) {
       siz = sizeof(double) * DIM * DIM * MDE;
-      memset(&(goma_ctx->fem.fv->d_grad_moment_dmesh[mom][0][0][0]), 0, siz);
+      memset(&(fv->d_grad_moment_dmesh[mom][0][0][0]), 0, siz);
     }
   }
 
   /*
    * d(grad(V))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[VOLTAGE]) {
+  if (pd->gv[VOLTAGE]) {
     v = VOLTAGE;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_V_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_V_dmesh[0][0][0]), 0, siz);
     for (p = 0; p < dimNonSym; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_V_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_V_dmesh[p][b][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      goma_ctx->fem.fv->d_grad_V_dmesh[0][0][j] =
-          *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_V_dmesh[1][1][j] =
-          *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_V_dmesh[1][0][j] =
-          *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_V_dmesh[0][1][j] =
-          *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_V_dmesh[0][0][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_V_dmesh[1][1][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_V_dmesh[1][0][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_V_dmesh[0][1][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_V_dmesh[2][2][j] =
-            *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_V_dmesh[2][0][j] =
-            *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_V_dmesh[2][1][j] =
-            *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_V_dmesh[0][2][j] =
-            *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_V_dmesh[1][2][j] =
-            *goma_ctx->fem.esp->V[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_V_dmesh[2][2][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_V_dmesh[2][0][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_V_dmesh[2][1][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_V_dmesh[0][2][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_V_dmesh[1][2][j] = *esp->V[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        goma_ctx->fem.fv->d_grad_V_dmesh[0][0][j] +=
-            *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_V_dmesh[1][1][j] +=
-            *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_V_dmesh[1][0][j] +=
-            *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_V_dmesh[0][1][j] +=
-            *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_V_dmesh[0][0][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_V_dmesh[1][1][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_V_dmesh[1][0][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_V_dmesh[0][1][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_V_dmesh[2][2][j] +=
-              *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_V_dmesh[2][0][j] +=
-              *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_V_dmesh[2][1][j] +=
-              *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_V_dmesh[0][2][j] +=
-              *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_V_dmesh[1][2][j] +=
-              *goma_ctx->fem.esp->V[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_V_dmesh[2][2][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_V_dmesh[2][0][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_V_dmesh[2][1][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_V_dmesh[0][2][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_V_dmesh[1][2][j] += *esp->V[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VOLTAGE] != -1 && !is_initialized &&
-             okToZero) {
+  } else if (upd->vp[pg->imtrx][VOLTAGE] != -1 && !is_initialized && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_V_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_V_dmesh[0][0][0]), 0, siz);
   }
 
   /*
    * d(grad(sh_K))/dmesh
    */
 
-  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE]) {
+  if (pd->v[pg->imtrx][SHELL_CURVATURE]) {
     v = SHELL_CURVATURE;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_K_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_K_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_K[i];
+      T_i = *esp->sh_K[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_K_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_K_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_K[0];
+      T_i = *esp->sh_K[0];
 
-      goma_ctx->fem.fv->d_grad_sh_K_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_K_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_K_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_K_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_K_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_K_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_K_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_K_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_K_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_K_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_K_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_K_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_K_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_K[i];
+        T_i = *esp->sh_K[i];
 
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_K_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_K_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_K_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_K_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_K_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_K_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_K_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_K_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_K_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_K_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_K_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_K_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_K_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_K_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_K_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_CURVATURE] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_K_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_K_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE2]) {
+  if (pd->v[pg->imtrx][SHELL_CURVATURE2]) {
     v = SHELL_CURVATURE2;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_K2_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_K2_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_K2[i];
+      T_i = *esp->sh_K2[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_K2_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_K2_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_K2[0];
+      T_i = *esp->sh_K2[0];
 
-      goma_ctx->fem.fv->d_grad_sh_K2_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_K2_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_K2_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_K2_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_K2_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_K2_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_K2_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_K2_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_K2_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_K2_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_K2_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_K2_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_K2_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_K2[i];
+        T_i = *esp->sh_K2[i];
 
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_K2_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_K2_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_K2_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_K2_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_K2_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_K2_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_K2_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_K2_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_K2_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_K2_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_K2_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_K2_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_K2_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_K2_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_K2_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_CURVATURE2] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_CURVATURE2] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_K2_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_K2_dmesh[0][0][0]), 0, siz);
   }
 
   /*
    * d(grad(apr))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[ACOUS_PREAL]) {
+  if (pd->gv[ACOUS_PREAL]) {
     v = ACOUS_PREAL;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_apr_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_apr_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->apr[i];
+      T_i = *esp->apr[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_apr_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_apr_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->apr[0];
+      T_i = *esp->apr[0];
 
-      goma_ctx->fem.fv->d_grad_apr_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_apr_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_apr_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_apr_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_apr_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_apr_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_apr_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_apr_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_apr_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_apr_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_apr_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_apr_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_apr_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_apr_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_apr_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_apr_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_apr_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_apr_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->apr[i];
+        T_i = *esp->apr[i];
 
-        goma_ctx->fem.fv->d_grad_apr_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_apr_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_apr_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_apr_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_apr_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_apr_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_apr_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_apr_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_apr_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_apr_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_apr_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_apr_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_apr_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_apr_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_apr_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_apr_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_apr_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_apr_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_PREAL] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][ACOUS_PREAL] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_apr_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_apr_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[ACOUS_PIMAG]) {
+  if (pd->gv[ACOUS_PIMAG]) {
     v = ACOUS_PIMAG;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_api_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_api_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->api[i];
+      T_i = *esp->api[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_api_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_api_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->api[0];
+      T_i = *esp->api[0];
 
-      goma_ctx->fem.fv->d_grad_api_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_api_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_api_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_api_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_api_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_api_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_api_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_api_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_api_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_api_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_api_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_api_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_api_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_api_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_api_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_api_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_api_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_api_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->api[i];
+        T_i = *esp->api[i];
 
-        goma_ctx->fem.fv->d_grad_api_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_api_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_api_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_api_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_api_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_api_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_api_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_api_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_api_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_api_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_api_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_api_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_api_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_api_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_api_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_api_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_api_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_api_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_PIMAG] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][ACOUS_PIMAG] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_api_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_api_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[ACOUS_REYN_STRESS]) {
+  if (pd->gv[ACOUS_REYN_STRESS]) {
     v = ACOUS_REYN_STRESS;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_ars_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_ars_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->ars[i];
+      T_i = *esp->ars[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_ars_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_ars_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->ars[0];
+      T_i = *esp->ars[0];
 
-      goma_ctx->fem.fv->d_grad_ars_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_ars_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_ars_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_ars_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_ars_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_ars_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_ars_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_ars_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_ars_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_ars_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_ars_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_ars_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_ars_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_ars_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_ars_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_ars_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_ars_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_ars_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->ars[i];
+        T_i = *esp->ars[i];
 
-        goma_ctx->fem.fv->d_grad_ars_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_ars_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_ars_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_ars_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_ars_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_ars_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_ars_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_ars_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_ars_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_ars_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_ars_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_ars_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_ars_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_ars_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_ars_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_ars_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_ars_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_ars_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][ACOUS_REYN_STRESS] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][ACOUS_REYN_STRESS] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_ars_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_ars_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_BDYVELO]) {
+  if (pd->gv[SHELL_BDYVELO]) {
     v = SHELL_BDYVELO;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_bv_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_bv_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_bv[i];
+      T_i = *esp->sh_bv[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_bv_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_bv_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_bv[0];
+      T_i = *esp->sh_bv[0];
 
-      goma_ctx->fem.fv->d_grad_sh_bv_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_bv_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_bv_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_bv_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_bv_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_bv_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_bv_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_bv_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_bv_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_bv_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_bv_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_bv_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_bv_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_bv[i];
+        T_i = *esp->sh_bv[i];
 
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_bv_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_bv_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_bv_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_bv_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_bv_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_bv_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_bv_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_bv_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_bv_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_bv_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_bv_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_bv_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_bv_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_bv_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_bv_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_BDYVELO] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_BDYVELO] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_bv_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_bv_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[LUBP]) {
+  if (pd->gv[LUBP]) {
     v = LUBP;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_lubp_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_lubp_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->lubp[i];
+      T_i = *esp->lubp[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_lubp_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_lubp_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->lubp[0];
+      T_i = *esp->lubp[0];
 
-      goma_ctx->fem.fv->d_grad_lubp_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_lubp_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_lubp_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_lubp_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_lubp_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_lubp_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_lubp_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_lubp_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_lubp_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_lubp_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_lubp_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_lubp_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_lubp_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->lubp[i];
+        T_i = *esp->lubp[i];
 
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_lubp_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_lubp_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_lubp_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_lubp_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_lubp_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_lubp_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_lubp_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_lubp_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_lubp_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_lubp_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_lubp_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_lubp_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_lubp_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_lubp_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_lubp_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LUBP] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][LUBP] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_lubp_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_lubp_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[LUBP_2]) {
+  if (pd->gv[LUBP_2]) {
     v = LUBP_2;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_lubp_2_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_lubp_2_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->lubp_2[i];
+      T_i = *esp->lubp_2[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_lubp_2_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_lubp_2_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->lubp_2[0];
+      T_i = *esp->lubp_2[0];
 
-      goma_ctx->fem.fv->d_grad_lubp_2_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_lubp_2_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_lubp_2_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_lubp_2_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_lubp_2_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_lubp_2_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_lubp_2_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_lubp_2_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_lubp_2_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_lubp_2_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_lubp_2_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_lubp_2_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_lubp_2_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->lubp_2[i];
+        T_i = *esp->lubp_2[i];
 
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_lubp_2_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_lubp_2_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_lubp_2_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_lubp_2_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_lubp_2_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_lubp_2_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_lubp_2_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_lubp_2_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_lubp_2_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_lubp_2_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_lubp_2_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_lubp_2_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_lubp_2_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_lubp_2_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_lubp_2_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LUBP_2] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][LUBP_2] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_lubp_2_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_lubp_2_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_PRESS_OPEN]) {
+  if (pd->gv[SHELL_PRESS_OPEN]) {
     v = SHELL_PRESS_OPEN;
-    bfv = goma_ctx->fem.bf[v];
+    bfv = bf[v];
 #ifdef DO_NOT_UNROLL
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_p_open_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_p_open[i];
+      T_i = *esp->sh_p_open[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_p_open_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_p_open[0];
+      T_i = *esp->sh_p_open[0];
 
-      goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_p_open_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_p_open_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_p_open_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_p_open_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_p_open_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_p_open_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_p_open_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_p_open_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_p_open_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_p_open[i];
+        T_i = *esp->sh_p_open[i];
 
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[0][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[1][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[1][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[0][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_p_open_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_p_open_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_p_open_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_p_open_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[2][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[2][0][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[2][1][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[0][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[1][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_p_open_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_p_open_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_p_open_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_p_open_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_p_open_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PRESS_OPEN] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_PRESS_OPEN] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_p_open_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_p_open_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_PRESS_OPEN_2]) {
+  if (pd->gv[SHELL_PRESS_OPEN_2]) {
     v = SHELL_PRESS_OPEN_2;
-    bfv = goma_ctx->fem.bf[v];
+    bfv = bf[v];
 #ifdef DO_NOT_UNROLL
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_p_open_2_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_p_open_2[i];
+      T_i = *esp->sh_p_open_2[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_p_open_2_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_p_open_2[0];
+      T_i = *esp->sh_p_open_2[0];
 
-      goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_p_open_2_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_p_open_2_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_p_open_2_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_p_open_2_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[2][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[2][0][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[2][1][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[0][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[1][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_p_open_2_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_p_open_2_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_p_open_2_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_p_open_2_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_p_open_2_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_p_open_2[i];
+        T_i = *esp->sh_p_open_2[i];
 
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[0][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[1][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[1][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[0][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_p_open_2_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_p_open_2_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_p_open_2_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_p_open_2_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[2][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[2][0][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[2][1][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[0][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[1][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_p_open_2_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_p_open_2_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_p_open_2_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_p_open_2_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_p_open_2_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PRESS_OPEN_2] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_PRESS_OPEN_2] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_p_open_2_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_p_open_2_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_FILMP]) {
+  if (pd->gv[SHELL_FILMP]) {
     v = SHELL_FILMP;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_fp_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_fp_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_fp[i];
+      T_i = *esp->sh_fp[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_fp_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_fp_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_fp[0];
+      T_i = *esp->sh_fp[0];
 
-      goma_ctx->fem.fv->d_grad_sh_fp_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_fp_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_fp_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_fp_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_fp_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_fp_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_fp_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_fp_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_fp_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_fp_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_fp_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_fp_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_fp_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_fp[i];
+        T_i = *esp->sh_fp[i];
 
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_fp_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_fp_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_fp_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_fp_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_fp_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_fp_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_fp_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_fp_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_fp_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_fp_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_fp_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_fp_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_fp_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_fp_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_fp_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_FILMP] != -1) {
+  } else if (upd->vp[pg->imtrx][SHELL_FILMP] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_fp_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_fp_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_FILMH]) {
+  if (pd->gv[SHELL_FILMH]) {
     v = SHELL_FILMH;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_fh_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_fh_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_fh[i];
+      T_i = *esp->sh_fh[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_fh_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_fh_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_fh[0];
+      T_i = *esp->sh_fh[0];
 
-      goma_ctx->fem.fv->d_grad_sh_fh_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_fh_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_fh_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_fh_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_fh_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_fh_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_fh_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_fh_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_fh_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_fh_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_fh_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_fh_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_fh_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_fh[i];
+        T_i = *esp->sh_fh[i];
 
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_fh_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_fh_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_fh_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_fh_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_fh_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_fh_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_fh_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_fh_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_fh_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_fh_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_fh_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_fh_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_fh_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_fh_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_fh_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_FILMH] != -1) {
+  } else if (upd->vp[pg->imtrx][SHELL_FILMH] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_fh_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_fh_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_PARTC]) {
+  if (pd->gv[SHELL_PARTC]) {
     v = SHELL_PARTC;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_pc_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_pc_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_pc[i];
+      T_i = *esp->sh_pc[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_pc_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_pc_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_pc[0];
+      T_i = *esp->sh_pc[0];
 
-      goma_ctx->fem.fv->d_grad_sh_pc_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_pc_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_pc_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_pc_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_pc_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_pc_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_pc_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_pc_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_pc_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_pc_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_pc_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_pc_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_pc_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_pc[i];
+        T_i = *esp->sh_pc[i];
 
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_pc_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_pc_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_pc_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_pc_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_pc_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_pc_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_pc_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_pc_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_pc_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_pc_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_pc_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_pc_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_pc_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_pc_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_pc_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_PARTC] != -1) {
+  } else if (upd->vp[pg->imtrx][SHELL_PARTC] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_pc_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_pc_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_TEMPERATURE]) {
+  if (pd->gv[SHELL_TEMPERATURE]) {
     v = SHELL_TEMPERATURE;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_t_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_t_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_t[i];
+      T_i = *esp->sh_t[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_t_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_t_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_t[0];
+      T_i = *esp->sh_t[0];
 
-      goma_ctx->fem.fv->d_grad_sh_t_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_t_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_t_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_t_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_t_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_t_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_t_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_t_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_t_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_t_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_t_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_t_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_t_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_t[i];
+        T_i = *esp->sh_t[i];
 
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_t_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_t_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_t_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_t_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_t_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_t_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_t_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_t_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_t_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_t_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_t_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_t_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_t_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_t_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_t_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_TEMPERATURE] != -1) {
+  } else if (upd->vp[pg->imtrx][SHELL_TEMPERATURE] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_t_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_t_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[EDDY_NU]) {
+  if (pd->gv[EDDY_NU]) {
     v = EDDY_NU;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_eddy_nu_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->eddy_nu[i];
+      T_i = *esp->eddy_nu[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_eddy_nu_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->eddy_nu[0];
+      T_i = *esp->eddy_nu[0];
 
-      goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_eddy_nu_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_eddy_nu_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_eddy_nu_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_eddy_nu_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_eddy_nu_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_eddy_nu_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_eddy_nu_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_eddy_nu_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_eddy_nu_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->eddy_nu[i];
+        T_i = *esp->eddy_nu[i];
 
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_eddy_nu_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_eddy_nu_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_eddy_nu_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_eddy_nu_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[2][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[2][0][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[2][1][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[0][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[1][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_eddy_nu_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_eddy_nu_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_eddy_nu_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_eddy_nu_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_eddy_nu_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EDDY_NU] != -1) {
+  } else if (upd->vp[pg->imtrx][EDDY_NU] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_eddy_nu_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_eddy_nu_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[TURB_K]) {
+  if (pd->gv[TURB_K]) {
     v = TURB_K;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_turb_k_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_turb_k_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->turb_k[i];
+      T_i = *esp->turb_k[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_turb_k_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_turb_k_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->turb_k[0];
+      T_i = *esp->turb_k[0];
 
-      goma_ctx->fem.fv->d_grad_turb_k_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_turb_k_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_turb_k_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_turb_k_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_turb_k_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_turb_k_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_turb_k_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_turb_k_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_turb_k_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_turb_k_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_turb_k_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_turb_k_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_turb_k_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->turb_k[i];
+        T_i = *esp->turb_k[i];
 
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_turb_k_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_turb_k_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_turb_k_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_turb_k_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_turb_k_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_turb_k_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_turb_k_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_turb_k_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_turb_k_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_turb_k_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_turb_k_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_turb_k_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_turb_k_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_turb_k_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_turb_k_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TURB_K] != -1) {
+  } else if (upd->vp[pg->imtrx][TURB_K] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_turb_k_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_turb_k_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[TURB_OMEGA]) {
+  if (pd->gv[TURB_OMEGA]) {
     v = TURB_OMEGA;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_turb_omega_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_turb_omega_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->turb_omega[i];
+      T_i = *esp->turb_omega[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_turb_omega_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_turb_omega_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->turb_omega[0];
+      T_i = *esp->turb_omega[0];
 
-      goma_ctx->fem.fv->d_grad_turb_omega_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_turb_omega_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_turb_omega_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_turb_omega_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_turb_omega_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_turb_omega_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_turb_omega_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_turb_omega_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[2][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[2][0][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[2][1][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[0][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[1][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_turb_omega_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_turb_omega_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_turb_omega_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_turb_omega_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_turb_omega_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->turb_omega[i];
+        T_i = *esp->turb_omega[i];
 
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[0][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[1][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[1][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_turb_omega_dmesh[0][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_turb_omega_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_turb_omega_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_turb_omega_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_turb_omega_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_turb_omega_dmesh[2][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_turb_omega_dmesh[2][0][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_turb_omega_dmesh[2][1][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_turb_omega_dmesh[0][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_turb_omega_dmesh[1][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_turb_omega_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_turb_omega_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_turb_omega_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_turb_omega_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_turb_omega_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TURB_OMEGA] != -1) {
+  } else if (upd->vp[pg->imtrx][TURB_OMEGA] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_turb_omega_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_turb_omega_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[LIGHT_INTP]) {
+  if (pd->gv[LIGHT_INTP]) {
     v = LIGHT_INTP;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_poynt_dmesh[0][0][0][0]), 0, siz);
+    memset(&(fv->d_grad_poynt_dmesh[0][0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->poynt[0][i];
+      T_i = *esp->poynt[0][i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_poynt_dmesh[0][p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_poynt_dmesh[0][p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTP] != -1) {
+  } else if (upd->vp[pg->imtrx][LIGHT_INTP] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_poynt_dmesh[0][0][0][0]), 0, siz);
+    memset(&(fv->d_grad_poynt_dmesh[0][0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[LIGHT_INTM]) {
+  if (pd->gv[LIGHT_INTM]) {
     v = LIGHT_INTM;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_poynt_dmesh[1][0][0][0]), 0, siz);
+    memset(&(fv->d_grad_poynt_dmesh[1][0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->poynt[1][i];
+      T_i = *esp->poynt[1][i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_poynt_dmesh[1][p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_poynt_dmesh[1][p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTM] != -1) {
+  } else if (upd->vp[pg->imtrx][LIGHT_INTM] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_poynt_dmesh[1][0][0][0]), 0, siz);
+    memset(&(fv->d_grad_poynt_dmesh[1][0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[LIGHT_INTD]) {
+  if (pd->gv[LIGHT_INTD]) {
     v = LIGHT_INTD;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_poynt_dmesh[2][0][0][0]), 0, siz);
+    memset(&(fv->d_grad_poynt_dmesh[2][0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->poynt[2][i];
+      T_i = *esp->poynt[2][i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_poynt_dmesh[2][p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_poynt_dmesh[2][p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][LIGHT_INTD] != -1) {
+  } else if (upd->vp[pg->imtrx][LIGHT_INTD] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_poynt_dmesh[2][0][0][0]), 0, siz);
+    memset(&(fv->d_grad_poynt_dmesh[2][0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[TFMP_PRES]) {
+  if (pd->gv[TFMP_PRES]) {
     v = TFMP_PRES;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_tfmp_pres_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_tfmp_pres_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->tfmp_pres[i];
+      T_i = *esp->tfmp_pres[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_tfmp_pres_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_tfmp_pres_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TFMP_PRES] != -1) {
+  } else if (upd->vp[pg->imtrx][TFMP_PRES] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_tfmp_pres_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_tfmp_pres_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[TFMP_SAT]) {
+  if (pd->gv[TFMP_SAT]) {
     v = TFMP_SAT;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_tfmp_sat_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_tfmp_sat_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->tfmp_sat[i];
+      T_i = *esp->tfmp_sat[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_tfmp_sat_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_tfmp_sat_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][TFMP_PRES] != -1) {
+  } else if (upd->vp[pg->imtrx][TFMP_PRES] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_tfmp_pres_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_tfmp_pres_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[RESTIME]) {
+  if (pd->gv[RESTIME]) {
     v = RESTIME;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_restime_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_restime_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->restime[i];
+      T_i = *esp->restime[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_restime_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_restime_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][RESTIME] != -1) {
+  } else if (upd->vp[pg->imtrx][RESTIME] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_restime_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_restime_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_LUB_CURV]) {
+  if (pd->gv[SHELL_LUB_CURV]) {
     v = SHELL_LUB_CURV;
-    bfv = goma_ctx->fem.bf[v];
+    bfv = bf[v];
 #ifdef DO_NOT_UNROLL
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_l_curv_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_l_curv[i];
+      T_i = *esp->sh_l_curv[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_l_curv_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_l_curv[0];
+      T_i = *esp->sh_l_curv[0];
 
-      goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_l_curv_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_l_curv_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_l_curv_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_l_curv_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_l_curv_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_l_curv_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_l_curv_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_l_curv_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_l_curv_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_l_curv[i];
+        T_i = *esp->sh_l_curv[i];
 
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[0][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[1][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[1][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[0][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_l_curv_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_l_curv_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_l_curv_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_l_curv_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[2][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[2][0][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[2][1][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[0][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[1][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_l_curv_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_l_curv_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_l_curv_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_l_curv_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_l_curv_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_LUB_CURV] != -1) {
+  } else if (upd->vp[pg->imtrx][SHELL_LUB_CURV] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_l_curv_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_l_curv_dmesh[0][0][0]), 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[SHELL_LUB_CURV_2]) {
+  if (pd->gv[SHELL_LUB_CURV_2]) {
     v = SHELL_LUB_CURV_2;
-    bfv = goma_ctx->fem.bf[v];
+    bfv = bf[v];
 #ifdef DO_NOT_UNROLL
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_l_curv_2_dmesh[0][0][0]), 0, siz);
     for (i = 0; i < vdofs; i++) {
-      T_i = *goma_ctx->fem.esp->sh_l_curv_2[i];
+      T_i = *esp->sh_l_curv_2[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[p][b][j] +=
-                T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_l_curv_2_dmesh[p][b][j] += T_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      T_i = *goma_ctx->fem.esp->sh_l_curv_2[0];
+      T_i = *esp->sh_l_curv_2[0];
 
-      goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_l_curv_2_dmesh[0][0][j] = T_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_l_curv_2_dmesh[1][1][j] = T_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_l_curv_2_dmesh[1][0][j] = T_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_l_curv_2_dmesh[0][1][j] = T_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[2][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[2][0][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[2][1][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[0][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[1][2][j] =
-            T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_l_curv_2_dmesh[2][2][j] = T_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_l_curv_2_dmesh[2][0][j] = T_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_l_curv_2_dmesh[2][1][j] = T_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_l_curv_2_dmesh[0][2][j] = T_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_l_curv_2_dmesh[1][2][j] = T_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        T_i = *goma_ctx->fem.esp->sh_l_curv[i];
+        T_i = *esp->sh_l_curv[i];
 
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[0][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[1][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[1][0][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[0][1][j] +=
-            T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_l_curv_2_dmesh[0][0][j] += T_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_l_curv_2_dmesh[1][1][j] += T_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_l_curv_2_dmesh[1][0][j] += T_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_l_curv_2_dmesh[0][1][j] += T_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[2][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[2][0][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[2][1][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[0][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[1][2][j] +=
-              T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_l_curv_2_dmesh[2][2][j] += T_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_l_curv_2_dmesh[2][0][j] += T_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_l_curv_2_dmesh[2][1][j] += T_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_l_curv_2_dmesh[0][2][j] += T_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_l_curv_2_dmesh[1][2][j] += T_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_LUB_CURV_2] != -1) {
+  } else if (upd->vp[pg->imtrx][SHELL_LUB_CURV_2] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_l_curv_2_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_l_curv_2_dmesh[0][0][0]), 0, siz);
   }
 
   /*
    * d(grad(qs))/dmesh
    */
 
-  if (goma_ctx->fem.pd->gv[SURF_CHARGE]) {
+  if (pd->gv[SURF_CHARGE]) {
     v = SURF_CHARGE;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_qs_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_qs_dmesh[0][0][0]), 0, siz);
     for (p = 0; p < dimNonSym; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_qs_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_qs_dmesh[p][b][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      goma_ctx->fem.fv->d_grad_qs_dmesh[0][0][j] =
-          *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_qs_dmesh[1][1][j] =
-          *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_qs_dmesh[1][0][j] =
-          *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_qs_dmesh[0][1][j] =
-          *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_qs_dmesh[0][0][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_qs_dmesh[1][1][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_qs_dmesh[1][0][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_qs_dmesh[0][1][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_qs_dmesh[2][2][j] =
-            *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_qs_dmesh[2][0][j] =
-            *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_qs_dmesh[2][1][j] =
-            *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_qs_dmesh[0][2][j] =
-            *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_qs_dmesh[1][2][j] =
-            *goma_ctx->fem.esp->qs[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_qs_dmesh[2][2][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_qs_dmesh[2][0][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_qs_dmesh[2][1][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_qs_dmesh[0][2][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_qs_dmesh[1][2][j] = *esp->qs[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        goma_ctx->fem.fv->d_grad_qs_dmesh[0][0][j] +=
-            *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_qs_dmesh[1][1][j] +=
-            *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_qs_dmesh[1][0][j] +=
-            *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_qs_dmesh[0][1][j] +=
-            *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_qs_dmesh[0][0][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_qs_dmesh[1][1][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_qs_dmesh[1][0][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_qs_dmesh[0][1][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_qs_dmesh[2][2][j] +=
-              *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_qs_dmesh[2][0][j] +=
-              *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_qs_dmesh[2][1][j] +=
-              *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_qs_dmesh[0][2][j] +=
-              *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_qs_dmesh[1][2][j] +=
-              *goma_ctx->fem.esp->qs[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_qs_dmesh[2][2][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_qs_dmesh[2][0][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_qs_dmesh[2][1][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_qs_dmesh[0][2][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_qs_dmesh[1][2][j] += *esp->qs[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SURF_CHARGE] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SURF_CHARGE] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_qs_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_qs_dmesh[0][0][0]), 0, siz);
   }
 
   /*
@@ -5980,357 +5475,279 @@ int load_fv_mesh_derivs(int okToZero)
    */
 
   /* This is needed for bulk assembly of shell diffusion KBC */
-  if (goma_ctx->fem.pd->gv[SHELL_DIFF_FLUX] &&
-      goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[SHELL_DIFF_FLUX]]->dof[SHELL_DIFF_FLUX] >
-          0) {
+  if (pd->gv[SHELL_DIFF_FLUX] && ei[upd->matrix_index[SHELL_DIFF_FLUX]]->dof[SHELL_DIFF_FLUX] > 0) {
     v = SHELL_DIFF_FLUX;
-    bfv = goma_ctx->fem.bf[v];
+    bfv = bf[v];
 #ifdef DO_NOT_UNROLL
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
     for (p = 0; p < dimNonSym; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_sh_J_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_J_dmesh[p][b][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][0][j] =
-          *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_sh_J_dmesh[1][1][j] =
-          *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_sh_J_dmesh[1][0][j] =
-          *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][1][j] =
-          *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_sh_J_dmesh[0][0][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_sh_J_dmesh[1][1][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_sh_J_dmesh[1][0][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_sh_J_dmesh[0][1][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[2][2][j] =
-            *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[2][0][j] =
-            *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[2][1][j] =
-            *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][2][j] =
-            *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[1][2][j] =
-            *goma_ctx->fem.esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_sh_J_dmesh[2][2][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_sh_J_dmesh[2][0][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_sh_J_dmesh[2][1][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_sh_J_dmesh[0][2][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_sh_J_dmesh[1][2][j] = *esp->sh_J[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][0][j] +=
-            *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[1][1][j] +=
-            *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[1][0][j] +=
-            *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][1][j] +=
-            *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_sh_J_dmesh[0][0][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_sh_J_dmesh[1][1][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_sh_J_dmesh[1][0][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_sh_J_dmesh[0][1][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_sh_J_dmesh[2][2][j] +=
-              *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_sh_J_dmesh[2][0][j] +=
-              *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_sh_J_dmesh[2][1][j] +=
-              *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][2][j] +=
-              *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_sh_J_dmesh[1][2][j] +=
-              *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_sh_J_dmesh[2][2][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_sh_J_dmesh[2][0][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_sh_J_dmesh[2][1][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_sh_J_dmesh[0][2][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_sh_J_dmesh[1][2][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_DIFF_FLUX] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_DIFF_FLUX] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
   }
 
   /*
    * d(grad(SH))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[SHEAR_RATE]) {
+  if (pd->gv[SHEAR_RATE]) {
     v = SHEAR_RATE;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_SH_dmesh, 0, siz);
+    memset(fv->d_grad_SH_dmesh, 0, siz);
 
     for (p = 0; p < dimNonSym; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_SH_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_SH_dmesh[p][b][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      goma_ctx->fem.fv->d_grad_SH_dmesh[0][0][j] =
-          *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_SH_dmesh[1][1][j] =
-          *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_SH_dmesh[1][0][j] =
-          *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_SH_dmesh[0][1][j] =
-          *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_SH_dmesh[0][0][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_SH_dmesh[1][1][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_SH_dmesh[1][0][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_SH_dmesh[0][1][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_SH_dmesh[2][2][j] =
-            *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_SH_dmesh[2][0][j] =
-            *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_SH_dmesh[2][1][j] =
-            *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_SH_dmesh[0][2][j] =
-            *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_SH_dmesh[1][2][j] =
-            *goma_ctx->fem.esp->SH[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_SH_dmesh[2][2][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_SH_dmesh[2][0][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_SH_dmesh[2][1][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_SH_dmesh[0][2][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_SH_dmesh[1][2][j] = *esp->SH[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        goma_ctx->fem.fv->d_grad_SH_dmesh[0][0][j] +=
-            *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_SH_dmesh[1][1][j] +=
-            *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_SH_dmesh[1][0][j] +=
-            *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_SH_dmesh[0][1][j] +=
-            *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_SH_dmesh[0][0][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_SH_dmesh[1][1][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_SH_dmesh[1][0][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_SH_dmesh[0][1][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_api_dmesh[2][2][j] +=
-              *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_api_dmesh[2][0][j] +=
-              *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_api_dmesh[2][1][j] +=
-              *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_api_dmesh[0][2][j] +=
-              *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_api_dmesh[1][2][j] +=
-              *goma_ctx->fem.esp->SH[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_api_dmesh[2][2][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_api_dmesh[2][0][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_api_dmesh[2][1][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_api_dmesh[0][2][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_api_dmesh[1][2][j] += *esp->SH[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHEAR_RATE] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHEAR_RATE] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_SH_dmesh, 0, siz);
+    memset(fv->d_grad_SH_dmesh, 0, siz);
   }
 
   /*
    * d(grad(F))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[FILL]) {
+  if (pd->gv[FILL]) {
     v = FILL;
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_F_dmesh, 0, siz);
+    memset(fv->d_grad_F_dmesh, 0, siz);
     for (p = 0; p < dimNonSym; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_F_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->F[i] * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_F_dmesh[p][b][j] += *esp->F[i] * bf[v]->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      F_i = *goma_ctx->fem.esp->F[0];
+      F_i = *esp->F[0];
 
-      goma_ctx->fem.fv->d_grad_F_dmesh[0][0][j] =
-          F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_F_dmesh[1][1][j] =
-          F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_F_dmesh[1][0][j] =
-          F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_F_dmesh[0][1][j] =
-          F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_F_dmesh[0][0][j] = F_i * bf[v]->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_F_dmesh[1][1][j] = F_i * bf[v]->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_F_dmesh[1][0][j] = F_i * bf[v]->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_F_dmesh[0][1][j] = F_i * bf[v]->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_F_dmesh[2][2][j] =
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_F_dmesh[2][0][j] =
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_F_dmesh[2][1][j] =
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_F_dmesh[0][2][j] =
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_F_dmesh[1][2][j] =
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_F_dmesh[2][2][j] = F_i * bf[v]->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_F_dmesh[2][0][j] = F_i * bf[v]->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_F_dmesh[2][1][j] = F_i * bf[v]->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_F_dmesh[0][2][j] = F_i * bf[v]->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_F_dmesh[1][2][j] = F_i * bf[v]->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        F_i = *goma_ctx->fem.esp->F[i];
+        F_i = *esp->F[i];
 
-        goma_ctx->fem.fv->d_grad_F_dmesh[0][0][j] +=
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_F_dmesh[1][1][j] +=
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_F_dmesh[1][0][j] +=
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_F_dmesh[0][1][j] +=
-            F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_F_dmesh[0][0][j] += F_i * bf[v]->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_F_dmesh[1][1][j] += F_i * bf[v]->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_F_dmesh[1][0][j] += F_i * bf[v]->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_F_dmesh[0][1][j] += F_i * bf[v]->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_F_dmesh[2][2][j] +=
-              F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_F_dmesh[2][0][j] +=
-              F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_F_dmesh[2][1][j] +=
-              F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_F_dmesh[0][2][j] +=
-              F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_F_dmesh[1][2][j] +=
-              F_i * goma_ctx->fem.bf[v]->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_F_dmesh[2][2][j] += F_i * bf[v]->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_F_dmesh[2][0][j] += F_i * bf[v]->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_F_dmesh[2][1][j] += F_i * bf[v]->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_F_dmesh[0][2][j] += F_i * bf[v]->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_F_dmesh[1][2][j] += F_i * bf[v]->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
 
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][FILL] != -1) {
+  } else if (upd->vp[pg->imtrx][FILL] != -1) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_F_dmesh, 0, siz);
+    memset(fv->d_grad_F_dmesh, 0, siz);
   }
 
   /*
    * d(grad(P))/dmesh
    */
 
-  if (goma_ctx->fem.pd->gv[PRESSURE]) {
+  if (pd->gv[PRESSURE]) {
     v = PRESSURE;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_P_dmesh, 0, siz);
+    memset(fv->d_grad_P_dmesh, 0, siz);
     for (i = 0; i < vdofs; i++) {
-      P_i = *goma_ctx->fem.esp->P[i];
+      P_i = *esp->P[i];
       for (p = 0; p < dimNonSym; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_P_dmesh[p][b][j] += P_i * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_P_dmesh[p][b][j] += P_i * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      P_i = *goma_ctx->fem.esp->P[0];
-      goma_ctx->fem.fv->d_grad_P_dmesh[0][0][j] = P_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_P_dmesh[1][1][j] = P_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_P_dmesh[1][0][j] = P_i * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_P_dmesh[0][1][j] = P_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      P_i = *esp->P[0];
+      fv->d_grad_P_dmesh[0][0][j] = P_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_P_dmesh[1][1][j] = P_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_P_dmesh[1][0][j] = P_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_P_dmesh[0][1][j] = P_i * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_P_dmesh[2][2][j] = P_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_P_dmesh[2][0][j] = P_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_P_dmesh[2][1][j] = P_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_P_dmesh[1][2][j] = P_i * bfv->d_grad_phi_dmesh[0][1][2][j];
-        goma_ctx->fem.fv->d_grad_P_dmesh[0][2][j] = P_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_P_dmesh[2][2][j] = P_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_P_dmesh[2][0][j] = P_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_P_dmesh[2][1][j] = P_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_P_dmesh[1][2][j] = P_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_P_dmesh[0][2][j] = P_i * bfv->d_grad_phi_dmesh[0][0][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        P_i = *goma_ctx->fem.esp->P[i];
-        goma_ctx->fem.fv->d_grad_P_dmesh[0][0][j] += P_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_P_dmesh[1][1][j] += P_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_P_dmesh[1][0][j] += P_i * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_P_dmesh[0][1][j] += P_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        P_i = *esp->P[i];
+        fv->d_grad_P_dmesh[0][0][j] += P_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_P_dmesh[1][1][j] += P_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_P_dmesh[1][0][j] += P_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_P_dmesh[0][1][j] += P_i * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_P_dmesh[2][2][j] += P_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_P_dmesh[2][0][j] += P_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_P_dmesh[2][1][j] += P_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_P_dmesh[1][2][j] += P_i * bfv->d_grad_phi_dmesh[i][1][2][j];
-          goma_ctx->fem.fv->d_grad_P_dmesh[0][2][j] += P_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_P_dmesh[2][2][j] += P_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_P_dmesh[2][0][j] += P_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_P_dmesh[2][1][j] += P_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_P_dmesh[1][2][j] += P_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_P_dmesh[0][2][j] += P_i * bfv->d_grad_phi_dmesh[i][0][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PRESSURE] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][PRESSURE] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_P_dmesh, 0, siz);
+    memset(fv->d_grad_P_dmesh, 0, siz);
   }
 
   /*
    * d(grad(nn))/dmesh
    */
 
-  if (goma_ctx->fem.pd->gv[BOND_EVOLUTION]) {
+  if (pd->gv[BOND_EVOLUTION]) {
     v = BOND_EVOLUTION;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_nn_dmesh, 0, siz);
+    memset(fv->d_grad_nn_dmesh, 0, siz);
     for (i = 0; i < vdofs; i++) {
       for (p = 0; p < dim; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_nn_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_nn_dmesh[p][b][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      goma_ctx->fem.fv->d_grad_nn_dmesh[0][0][j] =
-          *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_nn_dmesh[1][1][j] =
-          *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_nn_dmesh[1][0][j] =
-          *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_nn_dmesh[0][1][j] =
-          *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_nn_dmesh[0][0][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_nn_dmesh[1][1][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_nn_dmesh[1][0][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_nn_dmesh[0][1][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_nn_dmesh[2][2][j] =
-            *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_nn_dmesh[2][0][j] =
-            *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_nn_dmesh[2][1][j] =
-            *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_nn_dmesh[0][2][j] =
-            *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_nn_dmesh[1][2][j] =
-            *goma_ctx->fem.esp->nn[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_nn_dmesh[2][2][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_nn_dmesh[2][0][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_nn_dmesh[2][1][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_nn_dmesh[0][2][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_nn_dmesh[1][2][j] = *esp->nn[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        goma_ctx->fem.fv->d_grad_nn_dmesh[0][0][j] +=
-            *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_nn_dmesh[1][1][j] +=
-            *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_nn_dmesh[1][0][j] +=
-            *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_nn_dmesh[0][1][j] +=
-            *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_nn_dmesh[0][0][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_nn_dmesh[1][1][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_nn_dmesh[1][0][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_nn_dmesh[0][1][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_nn_dmesh[2][2][j] +=
-              *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_nn_dmesh[2][0][j] +=
-              *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_nn_dmesh[2][1][j] +=
-              *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_nn_dmesh[0][2][j] +=
-              *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_nn_dmesh[1][2][j] +=
-              *goma_ctx->fem.esp->nn[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_nn_dmesh[2][2][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_nn_dmesh[2][0][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_nn_dmesh[2][1][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_nn_dmesh[0][2][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_nn_dmesh[1][2][j] += *esp->nn[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
@@ -6340,308 +5757,255 @@ int load_fv_mesh_derivs(int okToZero)
   /*
    * d(grad(c_w))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[MASS_FRACTION]) {
+  if (pd->gv[MASS_FRACTION]) {
     v = MASS_FRACTION;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MAX_CONC * MDE;
-    memset(goma_ctx->fem.fv->d_grad_c_dmesh, 0, siz);
+    memset(fv->d_grad_c_dmesh, 0, siz);
 
-    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    for (w = 0; w < pd->Num_Species_Eqn; w++) {
       for (p = 0; p < dim; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
             for (i = 0; i < vdofs; i++) {
-              goma_ctx->fem.fv->d_grad_c_dmesh[p][w][b][j] +=
-                  *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+              fv->d_grad_c_dmesh[p][w][b][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][p][b][j];
             }
           }
         }
       }
     }
 #else
-    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+    for (w = 0; w < pd->Num_Species_Eqn; w++) {
       for (j = 0; j < mdofs; j++) {
-        goma_ctx->fem.fv->d_grad_c_dmesh[0][w][0][j] =
-            *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][0][0][j];
-        goma_ctx->fem.fv->d_grad_c_dmesh[1][w][1][j] =
-            *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][1][1][j];
-        goma_ctx->fem.fv->d_grad_c_dmesh[1][w][0][j] =
-            *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][1][0][j];
-        goma_ctx->fem.fv->d_grad_c_dmesh[0][w][1][j] =
-            *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][0][1][j];
+        fv->d_grad_c_dmesh[0][w][0][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][0][0][j];
+        fv->d_grad_c_dmesh[1][w][1][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][1][1][j];
+        fv->d_grad_c_dmesh[1][w][0][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][1][0][j];
+        fv->d_grad_c_dmesh[0][w][1][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_c_dmesh[2][w][2][j] =
-              *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][2][2][j];
-          goma_ctx->fem.fv->d_grad_c_dmesh[2][w][0][j] =
-              *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][2][0][j];
-          goma_ctx->fem.fv->d_grad_c_dmesh[2][w][1][j] =
-              *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][2][1][j];
-          goma_ctx->fem.fv->d_grad_c_dmesh[0][w][2][j] =
-              *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][0][2][j];
-          goma_ctx->fem.fv->d_grad_c_dmesh[1][w][2][j] =
-              *goma_ctx->fem.esp->c[w][0] * bfv->d_grad_phi_dmesh[0][1][2][j];
+          fv->d_grad_c_dmesh[2][w][2][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][2][2][j];
+          fv->d_grad_c_dmesh[2][w][0][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][2][0][j];
+          fv->d_grad_c_dmesh[2][w][1][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][2][1][j];
+          fv->d_grad_c_dmesh[0][w][2][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][0][2][j];
+          fv->d_grad_c_dmesh[1][w][2][j] = *esp->c[w][0] * bfv->d_grad_phi_dmesh[0][1][2][j];
         }
 
         for (i = 1; i < vdofs; i++) {
-          goma_ctx->fem.fv->d_grad_c_dmesh[0][w][0][j] +=
-              *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][0][0][j];
-          goma_ctx->fem.fv->d_grad_c_dmesh[1][w][1][j] +=
-              *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][1][1][j];
-          goma_ctx->fem.fv->d_grad_c_dmesh[1][w][0][j] +=
-              *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][1][0][j];
-          goma_ctx->fem.fv->d_grad_c_dmesh[0][w][1][j] +=
-              *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][0][1][j];
+          fv->d_grad_c_dmesh[0][w][0][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][0][0][j];
+          fv->d_grad_c_dmesh[1][w][1][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][1][1][j];
+          fv->d_grad_c_dmesh[1][w][0][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][1][0][j];
+          fv->d_grad_c_dmesh[0][w][1][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][0][1][j];
 
           if (dimNonSym == 3) {
-            goma_ctx->fem.fv->d_grad_c_dmesh[2][w][2][j] +=
-                *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][2][2][j];
-            goma_ctx->fem.fv->d_grad_c_dmesh[2][w][0][j] +=
-                *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][2][0][j];
-            goma_ctx->fem.fv->d_grad_c_dmesh[2][w][1][j] +=
-                *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][2][1][j];
-            goma_ctx->fem.fv->d_grad_c_dmesh[0][w][2][j] +=
-                *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][0][2][j];
-            goma_ctx->fem.fv->d_grad_c_dmesh[1][w][2][j] +=
-                *goma_ctx->fem.esp->c[w][i] * bfv->d_grad_phi_dmesh[i][1][2][j];
+            fv->d_grad_c_dmesh[2][w][2][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][2][2][j];
+            fv->d_grad_c_dmesh[2][w][0][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][2][0][j];
+            fv->d_grad_c_dmesh[2][w][1][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][2][1][j];
+            fv->d_grad_c_dmesh[0][w][2][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][0][2][j];
+            fv->d_grad_c_dmesh[1][w][2][j] += *esp->c[w][i] * bfv->d_grad_phi_dmesh[i][1][2][j];
           }
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][MASS_FRACTION] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][MASS_FRACTION] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MAX_CONC * MDE;
-    memset(goma_ctx->fem.fv->d_grad_c_dmesh, 0, siz);
+    memset(fv->d_grad_c_dmesh, 0, siz);
   }
 
   /*
    * d(grad(porous_media_variables))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[POR_LIQ_PRES]) {
+  if (pd->gv[POR_LIQ_PRES]) {
     v = POR_LIQ_PRES;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NO_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_p_liq_dmesh, 0, siz);
+    memset(fv->d_grad_p_liq_dmesh, 0, siz);
 
     for (p = 0; p < dim; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_p_liq_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->p_liq[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_p_liq_dmesh[p][b][j] += *esp->p_liq[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      P_i = *goma_ctx->fem.esp->p_liq[0];
-      goma_ctx->fem.fv->d_grad_p_liq_dmesh[0][0][j] = P_i * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_p_liq_dmesh[1][1][j] = P_i * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_p_liq_dmesh[0][1][j] = P_i * bfv->d_grad_phi_dmesh[0][0][1][j];
-      goma_ctx->fem.fv->d_grad_p_liq_dmesh[1][0][j] = P_i * bfv->d_grad_phi_dmesh[0][1][0][j];
+      P_i = *esp->p_liq[0];
+      fv->d_grad_p_liq_dmesh[0][0][j] = P_i * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_p_liq_dmesh[1][1][j] = P_i * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_p_liq_dmesh[0][1][j] = P_i * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_p_liq_dmesh[1][0][j] = P_i * bfv->d_grad_phi_dmesh[0][1][0][j];
 
       if (dim == 3) {
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[2][2][j] = P_i * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[2][0][j] = P_i * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[2][1][j] = P_i * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[0][2][j] = P_i * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[1][2][j] = P_i * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_p_liq_dmesh[2][2][j] = P_i * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_p_liq_dmesh[2][0][j] = P_i * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_p_liq_dmesh[2][1][j] = P_i * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_p_liq_dmesh[0][2][j] = P_i * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_p_liq_dmesh[1][2][j] = P_i * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        P_i = *goma_ctx->fem.esp->p_liq[i];
+        P_i = *esp->p_liq[i];
         /* fv->d_grad_p_liq_dmesh[p] [b][j] +=  P_i * bfv->d_grad_phi_dmesh[i][p] [b][j];*/
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[0][0][j] += P_i * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[1][1][j] += P_i * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[0][1][j] += P_i * bfv->d_grad_phi_dmesh[i][0][1][j];
-        goma_ctx->fem.fv->d_grad_p_liq_dmesh[1][0][j] += P_i * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_p_liq_dmesh[0][0][j] += P_i * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_p_liq_dmesh[1][1][j] += P_i * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_p_liq_dmesh[0][1][j] += P_i * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_p_liq_dmesh[1][0][j] += P_i * bfv->d_grad_phi_dmesh[i][1][0][j];
 
         if (dim == 3) {
-          goma_ctx->fem.fv->d_grad_p_liq_dmesh[2][2][j] += P_i * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_p_liq_dmesh[2][0][j] += P_i * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_p_liq_dmesh[2][1][j] += P_i * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_p_liq_dmesh[0][2][j] += P_i * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_p_liq_dmesh[1][2][j] += P_i * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_p_liq_dmesh[2][2][j] += P_i * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_p_liq_dmesh[2][0][j] += P_i * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_p_liq_dmesh[2][1][j] += P_i * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_p_liq_dmesh[0][2][j] += P_i * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_p_liq_dmesh[1][2][j] += P_i * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
 
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_LIQ_PRES] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][POR_LIQ_PRES] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_p_liq_dmesh, 0, siz);
+    memset(fv->d_grad_p_liq_dmesh, 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[POR_GAS_PRES]) {
+  if (pd->gv[POR_GAS_PRES]) {
     v = POR_GAS_PRES;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_p_gas_dmesh, 0, siz);
+    memset(fv->d_grad_p_gas_dmesh, 0, siz);
 
     for (p = 0; p < dim; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_p_gas_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_p_gas_dmesh[p][b][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      goma_ctx->fem.fv->d_grad_p_gas_dmesh[0][0][j] =
-          *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_p_gas_dmesh[1][1][j] =
-          *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_p_gas_dmesh[1][0][j] =
-          *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_p_gas_dmesh[0][1][j] =
-          *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_p_gas_dmesh[0][0][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_p_gas_dmesh[1][1][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_p_gas_dmesh[1][0][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_p_gas_dmesh[0][1][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[2][2][j] =
-            *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[2][0][j] =
-            *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[2][1][j] =
-            *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[0][2][j] =
-            *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[1][2][j] =
-            *goma_ctx->fem.esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_p_gas_dmesh[2][2][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_p_gas_dmesh[2][0][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_p_gas_dmesh[2][1][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_p_gas_dmesh[0][2][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_p_gas_dmesh[1][2][j] = *esp->p_gas[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[0][0][j] +=
-            *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[1][1][j] +=
-            *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[1][0][j] +=
-            *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_p_gas_dmesh[0][1][j] +=
-            *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_p_gas_dmesh[0][0][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_p_gas_dmesh[1][1][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_p_gas_dmesh[1][0][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_p_gas_dmesh[0][1][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_p_gas_dmesh[2][2][j] +=
-              *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_p_gas_dmesh[2][0][j] +=
-              *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_p_gas_dmesh[2][1][j] +=
-              *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_p_gas_dmesh[0][2][j] +=
-              *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_p_gas_dmesh[1][2][j] +=
-              *goma_ctx->fem.esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_p_gas_dmesh[2][2][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_p_gas_dmesh[2][0][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_p_gas_dmesh[2][1][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_p_gas_dmesh[0][2][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_p_gas_dmesh[1][2][j] += *esp->p_gas[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_GAS_PRES] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][POR_GAS_PRES] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_p_gas_dmesh, 0, siz);
+    memset(fv->d_grad_p_gas_dmesh, 0, siz);
   }
 
-  if (goma_ctx->fem.pd->gv[POR_POROSITY]) {
+  if (pd->gv[POR_POROSITY]) {
     v = POR_POROSITY;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 #ifdef DO_NOT_UNROLL
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_porosity_dmesh, 0, siz);
+    memset(fv->d_grad_porosity_dmesh, 0, siz);
 
     for (p = 0; p < dim; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_porosity_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_porosity_dmesh[p][b][j] +=
+                *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
 #else
     for (j = 0; j < mdofs; j++) {
-      goma_ctx->fem.fv->d_grad_porosity_dmesh[0][0][j] =
-          *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_grad_porosity_dmesh[1][1][j] =
-          *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
-      goma_ctx->fem.fv->d_grad_porosity_dmesh[1][0][j] =
-          *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
-      goma_ctx->fem.fv->d_grad_porosity_dmesh[0][1][j] =
-          *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
+      fv->d_grad_porosity_dmesh[0][0][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][0][0][j];
+      fv->d_grad_porosity_dmesh[1][1][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][1][1][j];
+      fv->d_grad_porosity_dmesh[1][0][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][1][0][j];
+      fv->d_grad_porosity_dmesh[0][1][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][0][1][j];
 
       if (dimNonSym == 3) {
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[2][2][j] =
-            *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[2][0][j] =
-            *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[2][1][j] =
-            *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[0][2][j] =
-            *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[1][2][j] =
-            *goma_ctx->fem.esp->porosity[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
+        fv->d_grad_porosity_dmesh[2][2][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][2][2][j];
+        fv->d_grad_porosity_dmesh[2][0][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][2][0][j];
+        fv->d_grad_porosity_dmesh[2][1][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][2][1][j];
+        fv->d_grad_porosity_dmesh[0][2][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][0][2][j];
+        fv->d_grad_porosity_dmesh[1][2][j] = *esp->porosity[0] * bfv->d_grad_phi_dmesh[0][1][2][j];
       }
 
       for (i = 1; i < vdofs; i++) {
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[0][0][j] +=
-            *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[1][1][j] +=
-            *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[1][0][j] +=
-            *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
-        goma_ctx->fem.fv->d_grad_porosity_dmesh[0][1][j] +=
-            *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
+        fv->d_grad_porosity_dmesh[0][0][j] += *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][0][0][j];
+        fv->d_grad_porosity_dmesh[1][1][j] += *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][1][1][j];
+        fv->d_grad_porosity_dmesh[1][0][j] += *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][1][0][j];
+        fv->d_grad_porosity_dmesh[0][1][j] += *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][0][1][j];
 
         if (dimNonSym == 3) {
-          goma_ctx->fem.fv->d_grad_porosity_dmesh[2][2][j] +=
-              *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
-          goma_ctx->fem.fv->d_grad_porosity_dmesh[2][0][j] +=
-              *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
-          goma_ctx->fem.fv->d_grad_porosity_dmesh[2][1][j] +=
-              *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
-          goma_ctx->fem.fv->d_grad_porosity_dmesh[0][2][j] +=
-              *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
-          goma_ctx->fem.fv->d_grad_porosity_dmesh[1][2][j] +=
-              *goma_ctx->fem.esp->porosity[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
+          fv->d_grad_porosity_dmesh[2][2][j] +=
+              *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][2][2][j];
+          fv->d_grad_porosity_dmesh[2][0][j] +=
+              *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][2][0][j];
+          fv->d_grad_porosity_dmesh[2][1][j] +=
+              *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][2][1][j];
+          fv->d_grad_porosity_dmesh[0][2][j] +=
+              *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][0][2][j];
+          fv->d_grad_porosity_dmesh[1][2][j] +=
+              *esp->porosity[i] * bfv->d_grad_phi_dmesh[i][1][2][j];
         }
       }
     }
 #endif
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POR_POROSITY] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][POR_POROSITY] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_porosity_dmesh, 0, siz);
+    memset(fv->d_grad_porosity_dmesh, 0, siz);
   }
 
   /*
    * d( grad(v))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[VELOCITY1]) {
+  if (pd->gv[VELOCITY1]) {
     v = VELOCITY1;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_v_dmesh, 0, siz);
+    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    memset(fv->d_grad_v_dmesh, 0, siz);
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        v_ri = *goma_ctx->fem.esp->v[r][i];
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        v_ri = *esp->v[r][i];
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_v_dmesh[p][q][b][j] +=
-                    v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
+                fv->d_grad_v_dmesh[p][q][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
           }
@@ -6650,49 +6014,40 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #else
 
-    v_ri = *goma_ctx->fem.esp->v[0][0];
+    v_ri = *esp->v[0][0];
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        goma_ctx->fem.fv->d_grad_v_dmesh[0][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_v_dmesh[1][1][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_v_dmesh[1][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_v_dmesh[0][1][b][j] = 0.0;
+        fv->d_grad_v_dmesh[0][0][b][j] = 0.0;
+        fv->d_grad_v_dmesh[1][1][b][j] = 0.0;
+        fv->d_grad_v_dmesh[1][0][b][j] = 0.0;
+        fv->d_grad_v_dmesh[0][1][b][j] = 0.0;
         if (VIMis3) {
-          goma_ctx->fem.fv->d_grad_v_dmesh[2][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_v_dmesh[2][0][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_v_dmesh[2][1][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_v_dmesh[0][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_v_dmesh[1][2][b][j] = 0.0;
+          fv->d_grad_v_dmesh[2][2][b][j] = 0.0;
+          fv->d_grad_v_dmesh[2][0][b][j] = 0.0;
+          fv->d_grad_v_dmesh[2][1][b][j] = 0.0;
+          fv->d_grad_v_dmesh[0][2][b][j] = 0.0;
+          fv->d_grad_v_dmesh[1][2][b][j] = 0.0;
         }
       }
     }
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        v_ri = *goma_ctx->fem.esp->v[r][i];
+        v_ri = *esp->v[r][i];
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_v_dmesh[0][0][b][j] +=
-                v_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
-            goma_ctx->fem.fv->d_grad_v_dmesh[1][1][b][j] +=
-                v_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
-            goma_ctx->fem.fv->d_grad_v_dmesh[1][0][b][j] +=
-                v_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
-            goma_ctx->fem.fv->d_grad_v_dmesh[0][1][b][j] +=
-                v_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
+            fv->d_grad_v_dmesh[0][0][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
+            fv->d_grad_v_dmesh[1][1][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
+            fv->d_grad_v_dmesh[1][0][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
+            fv->d_grad_v_dmesh[0][1][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
 
             if (VIMis3) {
-              goma_ctx->fem.fv->d_grad_v_dmesh[2][2][b][j] +=
-                  v_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
-              goma_ctx->fem.fv->d_grad_v_dmesh[2][0][b][j] +=
-                  v_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
-              goma_ctx->fem.fv->d_grad_v_dmesh[2][1][b][j] +=
-                  v_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
-              goma_ctx->fem.fv->d_grad_v_dmesh[0][2][b][j] +=
-                  v_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
-              goma_ctx->fem.fv->d_grad_v_dmesh[1][2][b][j] +=
-                  v_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
+              fv->d_grad_v_dmesh[2][2][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
+              fv->d_grad_v_dmesh[2][0][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
+              fv->d_grad_v_dmesh[2][1][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
+              fv->d_grad_v_dmesh[0][2][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
+              fv->d_grad_v_dmesh[1][2][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
             }
           }
         }
@@ -6706,76 +6061,74 @@ int load_fv_mesh_derivs(int okToZero)
      * There is currently no need for div(pv), so this isn't cloned.
      */
     siz = sizeof(double) * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_v_dmesh, 0, siz);
+    memset(fv->d_div_v_dmesh, 0, siz);
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          goma_ctx->fem.fv->d_div_v_dmesh[b][j] += goma_ctx->fem.fv->d_grad_v_dmesh[p][p][b][j];
+        for (p = 0; p < VIM; p++) {
+          fv->d_div_v_dmesh[b][j] += fv->d_grad_v_dmesh[p][p][b][j];
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VELOCITY1] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][VELOCITY1] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_v_dmesh, 0, siz);
+    memset(fv->d_grad_v_dmesh, 0, siz);
     siz = sizeof(double) * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_v_dmesh, 0, siz);
+    memset(fv->d_div_v_dmesh, 0, siz);
   }
 
   /*
    * d( grad(pv))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[PVELOCITY1]) {
+  if (pd->gv[PVELOCITY1]) {
     v = PVELOCITY1;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_pv_dmesh, 0, siz);
+    memset(fv->d_grad_pv_dmesh, 0, siz);
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        v_ri = *goma_ctx->fem.esp->pv[r][i];
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        v_ri = *esp->pv[r][i];
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_pv_dmesh[p][q][b][j] +=
-                    v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
+                fv->d_grad_pv_dmesh[p][q][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][PVELOCITY1] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][PVELOCITY1] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_pv_dmesh, 0, siz);
+    memset(fv->d_grad_pv_dmesh, 0, siz);
   }
 
   /*
    * d( grad(ext_v))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[EXT_VELOCITY]) {
+  if (pd->gv[EXT_VELOCITY]) {
     v = EXT_VELOCITY;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_ext_v_dmesh, 0, siz);
+    memset(fv->d_grad_ext_v_dmesh, 0, siz);
 
     for (i = 0; i < vdofs; i++) {
-      v_ri = *goma_ctx->fem.esp->ext_v[i];
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
+      v_ri = *esp->ext_v[i];
+      for (p = 0; p < VIM; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_ext_v_dmesh[p][b][j] +=
-                v_ri * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_ext_v_dmesh[p][b][j] += v_ri * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EXT_VELOCITY] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][EXT_VELOCITY] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_ext_v_dmesh, 0, siz);
+    memset(fv->d_grad_ext_v_dmesh, 0, siz);
   }
 
   /*
@@ -6792,28 +6145,28 @@ int load_fv_mesh_derivs(int okToZero)
    *             (note for SHELL_NORMAL_1 this element refers to the shell element dof)
    *
    */
-  if (goma_ctx->fem.pd->gv[NORMAL1] || goma_ctx->fem.pd->gv[SHELL_NORMAL1]) {
-    if (goma_ctx->fem.pd->gv[NORMAL1])
+  if (pd->gv[NORMAL1] || pd->gv[SHELL_NORMAL1]) {
+    if (pd->gv[NORMAL1])
       v = NORMAL1;
-    if (goma_ctx->fem.pd->gv[SHELL_NORMAL1])
+    if (pd->gv[SHELL_NORMAL1])
       v = SHELL_NORMAL1;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_n_dmesh, 0, siz);
+    memset(fv->d_grad_n_dmesh, 0, siz);
     siz = sizeof(double) * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_n_dmesh, 0, siz);
+    memset(fv->d_div_n_dmesh, 0, siz);
 
     if (v == NORMAL1) {
       // HKM -> looks good according to d_grad_v_dmesh[][][][]
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
           for (b = 0; b < dim; b++) {
             for (j = 0; j < mdofs; j++) {
               for (r = 0; r < dim; r++) {
                 for (i = 0; i < vdofs; i++) {
-                  v_ri = *goma_ctx->fem.esp->n[r][i];
-                  goma_ctx->fem.fv->d_grad_n_dmesh[p][q][b][j] +=
+                  v_ri = *esp->n[r][i];
+                  fv->d_grad_n_dmesh[p][q][b][j] +=
                       v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
                 }
               }
@@ -6826,12 +6179,11 @@ int load_fv_mesh_derivs(int okToZero)
     else if (v == SHELL_NORMAL1) {
       for (r = 0; r < dim; r++) {
         for (i = 0; i < vdofs; i++) {
-          v_ri = *goma_ctx->fem.esp->n[r][i];
-          for (p = 0; p < goma_ctx->problem.vim; p++) {
+          v_ri = *esp->n[r][i];
+          for (p = 0; p < VIM; p++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_n_dmesh[p][r][b][j] +=
-                    v_ri * bfv->d_grad_phi_dmesh[i][p][b][j];
+                fv->d_grad_n_dmesh[p][r][b][j] += v_ri * bfv->d_grad_phi_dmesh[i][p][b][j];
               }
             }
           }
@@ -6841,40 +6193,39 @@ int load_fv_mesh_derivs(int okToZero)
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          goma_ctx->fem.fv->d_div_n_dmesh[b][j] += goma_ctx->fem.fv->d_grad_n_dmesh[p][p][b][j];
+        for (p = 0; p < VIM; p++) {
+          fv->d_div_n_dmesh[b][j] += fv->d_grad_n_dmesh[p][p][b][j];
         }
       }
     }
-  } else if (((goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][NORMAL1] != -1) &&
-              (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_NORMAL1] != -1)) &&
+  } else if (((upd->vp[pg->imtrx][NORMAL1] != -1) && (upd->vp[pg->imtrx][SHELL_NORMAL1] != -1)) &&
              (okToZero)) {
-    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_n_dmesh, 0, siz);
+    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    memset(fv->d_grad_n_dmesh, 0, siz);
     siz = sizeof(double) * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_n_dmesh, 0, siz);
+    memset(fv->d_div_n_dmesh, 0, siz);
   }
 
   /*
    * d( grad(E_field))/dmesh
    */
 
-  if (goma_ctx->fem.pd->gv[EFIELD1]) {
+  if (pd->gv[EFIELD1]) {
     v = EFIELD1;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_E_field_dmesh, 0, siz);
+    memset(fv->d_grad_E_field_dmesh, 0, siz);
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        v_ri = *goma_ctx->fem.esp->E_field[r][i];
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        v_ri = *esp->E_field[r][i];
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_E_field_dmesh[p][q][b][j] +=
+                fv->d_grad_E_field_dmesh[p][q][b][j] +=
                     v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
@@ -6882,33 +6233,32 @@ int load_fv_mesh_derivs(int okToZero)
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EFIELD1] != -1 && okToZero) {
-    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_E_field_dmesh, 0, siz);
+  } else if (upd->vp[pg->imtrx][EFIELD1] != -1 && okToZero) {
+    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    memset(fv->d_grad_E_field_dmesh, 0, siz);
   }
 
   /*
    * d( grad(em_er))/dmesh
    */
-  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_REAL] ||
-      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E2_REAL] ||
-      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E3_REAL]) {
+  if (pd->v[pg->imtrx][EM_E1_REAL] || pd->v[pg->imtrx][EM_E2_REAL] ||
+      pd->v[pg->imtrx][EM_E3_REAL]) {
     v = EM_E1_REAL;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_em_er_dmesh, 0, siz);
+    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    memset(fv->d_grad_em_er_dmesh, 0, siz);
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        em_er_ri = *goma_ctx->fem.esp->em_er[r][i];
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        em_er_ri = *esp->em_er[r][i];
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_em_er_dmesh[p][q][b][j] +=
+                fv->d_grad_em_er_dmesh[p][q][b][j] +=
                     em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
@@ -6918,48 +6268,48 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #else
 
-    em_er_ri = *goma_ctx->fem.esp->em_er[0][0];
+    em_er_ri = *esp->em_er[0][0];
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        goma_ctx->fem.fv->d_grad_em_er_dmesh[0][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_er_dmesh[1][1][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_er_dmesh[1][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_er_dmesh[0][1][b][j] = 0.0;
+        fv->d_grad_em_er_dmesh[0][0][b][j] = 0.0;
+        fv->d_grad_em_er_dmesh[1][1][b][j] = 0.0;
+        fv->d_grad_em_er_dmesh[1][0][b][j] = 0.0;
+        fv->d_grad_em_er_dmesh[0][1][b][j] = 0.0;
         if (VIMis3) {
-          goma_ctx->fem.fv->d_grad_em_er_dmesh[2][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_er_dmesh[2][0][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_er_dmesh[2][1][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_er_dmesh[0][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_er_dmesh[1][2][b][j] = 0.0;
+          fv->d_grad_em_er_dmesh[2][2][b][j] = 0.0;
+          fv->d_grad_em_er_dmesh[2][0][b][j] = 0.0;
+          fv->d_grad_em_er_dmesh[2][1][b][j] = 0.0;
+          fv->d_grad_em_er_dmesh[0][2][b][j] = 0.0;
+          fv->d_grad_em_er_dmesh[1][2][b][j] = 0.0;
         }
       }
     }
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        em_er_ri = *goma_ctx->fem.esp->em_er[r][i];
+        em_er_ri = *esp->em_er[r][i];
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_em_er_dmesh[0][0][b][j] +=
+            fv->d_grad_em_er_dmesh[0][0][b][j] +=
                 em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
-            goma_ctx->fem.fv->d_grad_em_er_dmesh[1][1][b][j] +=
+            fv->d_grad_em_er_dmesh[1][1][b][j] +=
                 em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
-            goma_ctx->fem.fv->d_grad_em_er_dmesh[1][0][b][j] +=
+            fv->d_grad_em_er_dmesh[1][0][b][j] +=
                 em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
-            goma_ctx->fem.fv->d_grad_em_er_dmesh[0][1][b][j] +=
+            fv->d_grad_em_er_dmesh[0][1][b][j] +=
                 em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
 
             if (VIMis3) {
-              goma_ctx->fem.fv->d_grad_em_er_dmesh[2][2][b][j] +=
+              fv->d_grad_em_er_dmesh[2][2][b][j] +=
                   em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
-              goma_ctx->fem.fv->d_grad_em_er_dmesh[2][0][b][j] +=
+              fv->d_grad_em_er_dmesh[2][0][b][j] +=
                   em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
-              goma_ctx->fem.fv->d_grad_em_er_dmesh[2][1][b][j] +=
+              fv->d_grad_em_er_dmesh[2][1][b][j] +=
                   em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
-              goma_ctx->fem.fv->d_grad_em_er_dmesh[0][2][b][j] +=
+              fv->d_grad_em_er_dmesh[0][2][b][j] +=
                   em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
-              goma_ctx->fem.fv->d_grad_em_er_dmesh[1][2][b][j] +=
+              fv->d_grad_em_er_dmesh[1][2][b][j] +=
                   em_er_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
             }
           }
@@ -6968,35 +6318,33 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #endif
 
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E1_REAL] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E2_REAL] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E3_REAL] == -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][EM_E1_REAL] == -1 && upd->vp[pg->imtrx][EM_E2_REAL] == -1 &&
+             upd->vp[pg->imtrx][EM_E3_REAL] == -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_em_er_dmesh, 0, siz);
+    memset(fv->d_grad_em_er_dmesh, 0, siz);
   }
 
   /*
    * d( grad(em_ei))/dmesh
    */
-  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E1_IMAG] ||
-      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E2_IMAG] ||
-      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_E3_IMAG]) {
+  if (pd->v[pg->imtrx][EM_E1_IMAG] || pd->v[pg->imtrx][EM_E2_IMAG] ||
+      pd->v[pg->imtrx][EM_E3_IMAG]) {
     v = EM_E1_IMAG;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_em_ei_dmesh, 0, siz);
+    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    memset(fv->d_grad_em_ei_dmesh, 0, siz);
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        em_ei_ri = *goma_ctx->fem.esp->em_ei[r][i];
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        em_ei_ri = *esp->em_ei[r][i];
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_em_ei_dmesh[p][q][b][j] +=
+                fv->d_grad_em_ei_dmesh[p][q][b][j] +=
                     em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
@@ -7006,48 +6354,48 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #else
 
-    em_ei_ri = *goma_ctx->fem.esp->em_ei[0][0];
+    em_ei_ri = *esp->em_ei[0][0];
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        goma_ctx->fem.fv->d_grad_em_ei_dmesh[0][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_ei_dmesh[1][1][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_ei_dmesh[1][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_ei_dmesh[0][1][b][j] = 0.0;
+        fv->d_grad_em_ei_dmesh[0][0][b][j] = 0.0;
+        fv->d_grad_em_ei_dmesh[1][1][b][j] = 0.0;
+        fv->d_grad_em_ei_dmesh[1][0][b][j] = 0.0;
+        fv->d_grad_em_ei_dmesh[0][1][b][j] = 0.0;
         if (VIMis3) {
-          goma_ctx->fem.fv->d_grad_em_ei_dmesh[2][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_ei_dmesh[2][0][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_ei_dmesh[2][1][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_ei_dmesh[0][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_ei_dmesh[1][2][b][j] = 0.0;
+          fv->d_grad_em_ei_dmesh[2][2][b][j] = 0.0;
+          fv->d_grad_em_ei_dmesh[2][0][b][j] = 0.0;
+          fv->d_grad_em_ei_dmesh[2][1][b][j] = 0.0;
+          fv->d_grad_em_ei_dmesh[0][2][b][j] = 0.0;
+          fv->d_grad_em_ei_dmesh[1][2][b][j] = 0.0;
         }
       }
     }
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        em_ei_ri = *goma_ctx->fem.esp->em_ei[r][i];
+        em_ei_ri = *esp->em_ei[r][i];
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_em_ei_dmesh[0][0][b][j] +=
+            fv->d_grad_em_ei_dmesh[0][0][b][j] +=
                 em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
-            goma_ctx->fem.fv->d_grad_em_ei_dmesh[1][1][b][j] +=
+            fv->d_grad_em_ei_dmesh[1][1][b][j] +=
                 em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
-            goma_ctx->fem.fv->d_grad_em_ei_dmesh[1][0][b][j] +=
+            fv->d_grad_em_ei_dmesh[1][0][b][j] +=
                 em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
-            goma_ctx->fem.fv->d_grad_em_ei_dmesh[0][1][b][j] +=
+            fv->d_grad_em_ei_dmesh[0][1][b][j] +=
                 em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
 
             if (VIMis3) {
-              goma_ctx->fem.fv->d_grad_em_ei_dmesh[2][2][b][j] +=
+              fv->d_grad_em_ei_dmesh[2][2][b][j] +=
                   em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
-              goma_ctx->fem.fv->d_grad_em_ei_dmesh[2][0][b][j] +=
+              fv->d_grad_em_ei_dmesh[2][0][b][j] +=
                   em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
-              goma_ctx->fem.fv->d_grad_em_ei_dmesh[2][1][b][j] +=
+              fv->d_grad_em_ei_dmesh[2][1][b][j] +=
                   em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
-              goma_ctx->fem.fv->d_grad_em_ei_dmesh[0][2][b][j] +=
+              fv->d_grad_em_ei_dmesh[0][2][b][j] +=
                   em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
-              goma_ctx->fem.fv->d_grad_em_ei_dmesh[1][2][b][j] +=
+              fv->d_grad_em_ei_dmesh[1][2][b][j] +=
                   em_ei_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
             }
           }
@@ -7056,35 +6404,33 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #endif
 
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E1_IMAG] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E2_IMAG] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_E3_IMAG] == -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][EM_E1_IMAG] == -1 && upd->vp[pg->imtrx][EM_E2_IMAG] == -1 &&
+             upd->vp[pg->imtrx][EM_E3_IMAG] == -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_em_ei_dmesh, 0, siz);
+    memset(fv->d_grad_em_ei_dmesh, 0, siz);
   }
 
   /*
    * d( grad(em_hr))/dmesh
    */
-  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_H1_REAL] ||
-      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_H2_REAL] ||
-      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_H3_REAL]) {
+  if (pd->v[pg->imtrx][EM_H1_REAL] || pd->v[pg->imtrx][EM_H2_REAL] ||
+      pd->v[pg->imtrx][EM_H3_REAL]) {
     v = EM_H1_REAL;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_em_hr_dmesh, 0, siz);
+    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    memset(fv->d_grad_em_hr_dmesh, 0, siz);
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        em_hr_ri = *goma_ctx->fem.esp->em_hr[r][i];
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        em_hr_ri = *esp->em_hr[r][i];
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_em_hr_dmesh[p][q][b][j] +=
+                fv->d_grad_em_hr_dmesh[p][q][b][j] +=
                     em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
@@ -7094,48 +6440,48 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #else
 
-    em_hr_ri = *goma_ctx->fem.esp->em_hr[0][0];
+    em_hr_ri = *esp->em_hr[0][0];
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        goma_ctx->fem.fv->d_grad_em_hr_dmesh[0][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_hr_dmesh[1][1][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_hr_dmesh[1][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_hr_dmesh[0][1][b][j] = 0.0;
+        fv->d_grad_em_hr_dmesh[0][0][b][j] = 0.0;
+        fv->d_grad_em_hr_dmesh[1][1][b][j] = 0.0;
+        fv->d_grad_em_hr_dmesh[1][0][b][j] = 0.0;
+        fv->d_grad_em_hr_dmesh[0][1][b][j] = 0.0;
         if (VIMis3) {
-          goma_ctx->fem.fv->d_grad_em_hr_dmesh[2][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_hr_dmesh[2][0][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_hr_dmesh[2][1][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_hr_dmesh[0][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_hr_dmesh[1][2][b][j] = 0.0;
+          fv->d_grad_em_hr_dmesh[2][2][b][j] = 0.0;
+          fv->d_grad_em_hr_dmesh[2][0][b][j] = 0.0;
+          fv->d_grad_em_hr_dmesh[2][1][b][j] = 0.0;
+          fv->d_grad_em_hr_dmesh[0][2][b][j] = 0.0;
+          fv->d_grad_em_hr_dmesh[1][2][b][j] = 0.0;
         }
       }
     }
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        em_hr_ri = *goma_ctx->fem.esp->em_hr[r][i];
+        em_hr_ri = *esp->em_hr[r][i];
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_em_hr_dmesh[0][0][b][j] +=
+            fv->d_grad_em_hr_dmesh[0][0][b][j] +=
                 em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
-            goma_ctx->fem.fv->d_grad_em_hr_dmesh[1][1][b][j] +=
+            fv->d_grad_em_hr_dmesh[1][1][b][j] +=
                 em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
-            goma_ctx->fem.fv->d_grad_em_hr_dmesh[1][0][b][j] +=
+            fv->d_grad_em_hr_dmesh[1][0][b][j] +=
                 em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
-            goma_ctx->fem.fv->d_grad_em_hr_dmesh[0][1][b][j] +=
+            fv->d_grad_em_hr_dmesh[0][1][b][j] +=
                 em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
 
             if (VIMis3) {
-              goma_ctx->fem.fv->d_grad_em_hr_dmesh[2][2][b][j] +=
+              fv->d_grad_em_hr_dmesh[2][2][b][j] +=
                   em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
-              goma_ctx->fem.fv->d_grad_em_hr_dmesh[2][0][b][j] +=
+              fv->d_grad_em_hr_dmesh[2][0][b][j] +=
                   em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
-              goma_ctx->fem.fv->d_grad_em_hr_dmesh[2][1][b][j] +=
+              fv->d_grad_em_hr_dmesh[2][1][b][j] +=
                   em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
-              goma_ctx->fem.fv->d_grad_em_hr_dmesh[0][2][b][j] +=
+              fv->d_grad_em_hr_dmesh[0][2][b][j] +=
                   em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
-              goma_ctx->fem.fv->d_grad_em_hr_dmesh[1][2][b][j] +=
+              fv->d_grad_em_hr_dmesh[1][2][b][j] +=
                   em_hr_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
             }
           }
@@ -7144,35 +6490,33 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #endif
 
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H1_REAL] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H2_REAL] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H3_REAL] == -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][EM_H1_REAL] == -1 && upd->vp[pg->imtrx][EM_H2_REAL] == -1 &&
+             upd->vp[pg->imtrx][EM_H3_REAL] == -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_em_hr_dmesh, 0, siz);
+    memset(fv->d_grad_em_hr_dmesh, 0, siz);
   }
 
   /*
    * d( grad(em_hi))/dmesh
    */
-  if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_H1_IMAG] ||
-      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_H2_IMAG] ||
-      goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][EM_H3_IMAG]) {
+  if (pd->v[pg->imtrx][EM_H1_IMAG] || pd->v[pg->imtrx][EM_H2_IMAG] ||
+      pd->v[pg->imtrx][EM_H3_IMAG]) {
     v = EM_H1_IMAG;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[pg->imtrx]->dof[v];
 
 #ifdef DO_NO_UNROLL
-    siz = sizeof(double) * DIM * goma_ctx->problem.vim * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_em_hi_dmesh, 0, siz);
+    siz = sizeof(double) * DIM * VIM * DIM * MDE;
+    memset(fv->d_grad_em_hi_dmesh, 0, siz);
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        em_hi_ri = *goma_ctx->fem.esp->em_hi[r][i];
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        em_hi_ri = *esp->em_hi[r][i];
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_em_hi_dmesh[p][q][b][j] +=
+                fv->d_grad_em_hi_dmesh[p][q][b][j] +=
                     em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
@@ -7182,48 +6526,48 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #else
 
-    em_hi_ri = *goma_ctx->fem.esp->em_hi[0][0];
+    em_hi_ri = *esp->em_hi[0][0];
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        goma_ctx->fem.fv->d_grad_em_hi_dmesh[0][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_hi_dmesh[1][1][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_hi_dmesh[1][0][b][j] = 0.0;
-        goma_ctx->fem.fv->d_grad_em_hi_dmesh[0][1][b][j] = 0.0;
+        fv->d_grad_em_hi_dmesh[0][0][b][j] = 0.0;
+        fv->d_grad_em_hi_dmesh[1][1][b][j] = 0.0;
+        fv->d_grad_em_hi_dmesh[1][0][b][j] = 0.0;
+        fv->d_grad_em_hi_dmesh[0][1][b][j] = 0.0;
         if (VIMis3) {
-          goma_ctx->fem.fv->d_grad_em_hi_dmesh[2][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_hi_dmesh[2][0][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_hi_dmesh[2][1][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_hi_dmesh[0][2][b][j] = 0.0;
-          goma_ctx->fem.fv->d_grad_em_hi_dmesh[1][2][b][j] = 0.0;
+          fv->d_grad_em_hi_dmesh[2][2][b][j] = 0.0;
+          fv->d_grad_em_hi_dmesh[2][0][b][j] = 0.0;
+          fv->d_grad_em_hi_dmesh[2][1][b][j] = 0.0;
+          fv->d_grad_em_hi_dmesh[0][2][b][j] = 0.0;
+          fv->d_grad_em_hi_dmesh[1][2][b][j] = 0.0;
         }
       }
     }
 
-    for (r = 0; r < goma_ctx->problem.wim; r++) {
+    for (r = 0; r < WIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        em_hi_ri = *goma_ctx->fem.esp->em_hi[r][i];
+        em_hi_ri = *esp->em_hi[r][i];
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_grad_em_hi_dmesh[0][0][b][j] +=
+            fv->d_grad_em_hi_dmesh[0][0][b][j] +=
                 em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
-            goma_ctx->fem.fv->d_grad_em_hi_dmesh[1][1][b][j] +=
+            fv->d_grad_em_hi_dmesh[1][1][b][j] +=
                 em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
-            goma_ctx->fem.fv->d_grad_em_hi_dmesh[1][0][b][j] +=
+            fv->d_grad_em_hi_dmesh[1][0][b][j] +=
                 em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
-            goma_ctx->fem.fv->d_grad_em_hi_dmesh[0][1][b][j] +=
+            fv->d_grad_em_hi_dmesh[0][1][b][j] +=
                 em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
 
             if (VIMis3) {
-              goma_ctx->fem.fv->d_grad_em_hi_dmesh[2][2][b][j] +=
+              fv->d_grad_em_hi_dmesh[2][2][b][j] +=
                   em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
-              goma_ctx->fem.fv->d_grad_em_hi_dmesh[2][0][b][j] +=
+              fv->d_grad_em_hi_dmesh[2][0][b][j] +=
                   em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
-              goma_ctx->fem.fv->d_grad_em_hi_dmesh[2][1][b][j] +=
+              fv->d_grad_em_hi_dmesh[2][1][b][j] +=
                   em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
-              goma_ctx->fem.fv->d_grad_em_hi_dmesh[0][2][b][j] +=
+              fv->d_grad_em_hi_dmesh[0][2][b][j] +=
                   em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
-              goma_ctx->fem.fv->d_grad_em_hi_dmesh[1][2][b][j] +=
+              fv->d_grad_em_hi_dmesh[1][2][b][j] +=
                   em_hi_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
             }
           }
@@ -7232,11 +6576,10 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #endif
 
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H1_IMAG] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H2_IMAG] == -1 &&
-             goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][EM_H3_IMAG] == -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][EM_H1_IMAG] == -1 && upd->vp[pg->imtrx][EM_H2_IMAG] == -1 &&
+             upd->vp[pg->imtrx][EM_H3_IMAG] == -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_em_hi_dmesh, 0, siz);
+    memset(fv->d_grad_em_hi_dmesh, 0, siz);
   }
   /*
    * d( grad(d) )/dmesh
@@ -7248,30 +6591,29 @@ int load_fv_mesh_derivs(int okToZero)
   /* components of vectors and tensors for */
   /* less than 3 independent spatial dimensions*/
 
-  if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1] == 1) {
+  if (pd->gv[MESH_DISPLACEMENT1] == 1) {
     v = MESH_DISPLACEMENT1;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 
 #ifdef DO_NO_UNROLL
     siz = sizeof(double) * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_d_dmesh, 0, siz);
+    memset(fv->d_div_d_dmesh, 0, siz);
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_d_dmesh, 0, siz);
-    memset(goma_ctx->fem.fv->d_grad_d_dot_dmesh, 0, siz);
+    memset(fv->d_grad_d_dmesh, 0, siz);
+    memset(fv->d_grad_d_dot_dmesh, 0, siz);
     for (r = 0; r < dim; r++) {
       for (i = 0; i < vdofs; i++) {
-        d_ri = *goma_ctx->fem.esp->d[r][i];
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        d_ri = *esp->d[r][i];
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             for (b = 0; b < dim; b++) {
               for (j = 0; j < mdofs; j++) {
                 /*  fv->d_grad_d_dmesh[p][q] [b][j] = 0.; */
-                goma_ctx->fem.fv->d_grad_d_dmesh[p][q][b][j] +=
-                    d_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
+                fv->d_grad_d_dmesh[p][q][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
 
-                goma_ctx->fem.fv->d_grad_d_dot_dmesh[p][q][b][j] +=
-                    *goma_ctx->fem.esp_dot->d[r][i] * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
+                fv->d_grad_d_dot_dmesh[p][q][b][j] +=
+                    *esp_dot->d[r][i] * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
           }
@@ -7280,8 +6622,8 @@ int load_fv_mesh_derivs(int okToZero)
     }
 #else
 
-    d_ri = *goma_ctx->fem.esp->d[0][0];
-    d_dot_ri = *goma_ctx->fem.esp_dot->d[0][0];
+    d_ri = *esp->d[0][0];
+    d_dot_ri = *esp_dot->d[0][0];
 
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
@@ -7291,57 +6633,39 @@ int load_fv_mesh_derivs(int okToZero)
         /*	  fv->d_grad_d_dmesh[p][q] [b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r] [p][q]
          * [b][j]; */
 
-        goma_ctx->fem.fv->d_grad_d_dmesh[0][0][b][j] =
-            d_ri * bfv->d_grad_phi_e_dmesh[0][0][0][0][b][j];
-        goma_ctx->fem.fv->d_grad_d_dmesh[1][1][b][j] =
-            d_ri * bfv->d_grad_phi_e_dmesh[0][0][1][1][b][j];
-        goma_ctx->fem.fv->d_grad_d_dmesh[1][0][b][j] =
-            d_ri * bfv->d_grad_phi_e_dmesh[0][0][1][0][b][j];
-        goma_ctx->fem.fv->d_grad_d_dmesh[0][1][b][j] =
-            d_ri * bfv->d_grad_phi_e_dmesh[0][0][0][1][b][j];
+        fv->d_grad_d_dmesh[0][0][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][0][0][b][j];
+        fv->d_grad_d_dmesh[1][1][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][1][1][b][j];
+        fv->d_grad_d_dmesh[1][0][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][1][0][b][j];
+        fv->d_grad_d_dmesh[0][1][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][0][1][b][j];
 
         /*  fv->d_grad_d_dot_dmesh[p][q] [b][j] += d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r] [p][q]
          * [b][j];*/
 
-        goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][0][b][j] =
-            d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][0][0][b][j];
-        goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][1][b][j] =
-            d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][1][1][b][j];
-        goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][0][b][j] =
-            d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][1][0][b][j];
-        goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][1][b][j] =
-            d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][0][1][b][j];
+        fv->d_grad_d_dot_dmesh[0][0][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][0][0][b][j];
+        fv->d_grad_d_dot_dmesh[1][1][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][1][1][b][j];
+        fv->d_grad_d_dot_dmesh[1][0][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][1][0][b][j];
+        fv->d_grad_d_dot_dmesh[0][1][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][0][1][b][j];
 
         if (VIMis3) {
-          goma_ctx->fem.fv->d_grad_d_dmesh[2][2][b][j] =
-              d_ri * bfv->d_grad_phi_e_dmesh[0][0][2][2][b][j];
-          goma_ctx->fem.fv->d_grad_d_dmesh[2][0][b][j] =
-              d_ri * bfv->d_grad_phi_e_dmesh[0][0][2][0][b][j];
-          goma_ctx->fem.fv->d_grad_d_dmesh[2][1][b][j] =
-              d_ri * bfv->d_grad_phi_e_dmesh[0][0][2][1][b][j];
-          goma_ctx->fem.fv->d_grad_d_dmesh[0][2][b][j] =
-              d_ri * bfv->d_grad_phi_e_dmesh[0][0][0][2][b][j];
-          goma_ctx->fem.fv->d_grad_d_dmesh[1][2][b][j] =
-              d_ri * bfv->d_grad_phi_e_dmesh[0][0][1][2][b][j];
+          fv->d_grad_d_dmesh[2][2][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][2][2][b][j];
+          fv->d_grad_d_dmesh[2][0][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][2][0][b][j];
+          fv->d_grad_d_dmesh[2][1][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][2][1][b][j];
+          fv->d_grad_d_dmesh[0][2][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][0][2][b][j];
+          fv->d_grad_d_dmesh[1][2][b][j] = d_ri * bfv->d_grad_phi_e_dmesh[0][0][1][2][b][j];
 
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][2][b][j] =
-              d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][2][2][b][j];
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][0][b][j] =
-              d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][2][0][b][j];
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][1][b][j] =
-              d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][2][1][b][j];
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][2][b][j] =
-              d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][0][2][b][j];
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][2][b][j] =
-              d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][1][2][b][j];
+          fv->d_grad_d_dot_dmesh[2][2][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][2][2][b][j];
+          fv->d_grad_d_dot_dmesh[2][0][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][2][0][b][j];
+          fv->d_grad_d_dot_dmesh[2][1][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][2][1][b][j];
+          fv->d_grad_d_dot_dmesh[0][2][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][0][2][b][j];
+          fv->d_grad_d_dot_dmesh[1][2][b][j] = d_dot_ri * bfv->d_grad_phi_e_dmesh[0][0][1][2][b][j];
         }
       }
     }
 
     for (r = 0; r < dim; r++) {
       for (i = 0; i < vdofs; i++) {
-        d_ri = *goma_ctx->fem.esp->d[r][i];
-        d_dot_ri = *goma_ctx->fem.esp_dot->d[r][i];
+        d_ri = *esp->d[r][i];
+        d_dot_ri = *esp_dot->d[r][i];
 
         for (b = 0; (r + i) && (b < dim);
              b++) /* the (r+i) test is needed to make sure only the (r=0,i=0) element is excluded */
@@ -7351,48 +6675,39 @@ int load_fv_mesh_derivs(int okToZero)
             /*	  fv->d_grad_d_dmesh[p][q] [b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r] [p][q]
              * [b][j]; */
 
-            goma_ctx->fem.fv->d_grad_d_dmesh[0][0][b][j] +=
-                d_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
-            goma_ctx->fem.fv->d_grad_d_dmesh[1][1][b][j] +=
-                d_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
-            goma_ctx->fem.fv->d_grad_d_dmesh[1][0][b][j] +=
-                d_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
-            goma_ctx->fem.fv->d_grad_d_dmesh[0][1][b][j] +=
-                d_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
+            fv->d_grad_d_dmesh[0][0][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
+            fv->d_grad_d_dmesh[1][1][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
+            fv->d_grad_d_dmesh[1][0][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
+            fv->d_grad_d_dmesh[0][1][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
 
             /*  fv->d_grad_d_dot_dmesh[p][q] [b][j] += d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r]
              * [p][q] [b][j];*/
 
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][0][b][j] +=
+            fv->d_grad_d_dot_dmesh[0][0][b][j] +=
                 d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][0][0][b][j];
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][1][b][j] +=
+            fv->d_grad_d_dot_dmesh[1][1][b][j] +=
                 d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][1][1][b][j];
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][0][b][j] +=
+            fv->d_grad_d_dot_dmesh[1][0][b][j] +=
                 d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][1][0][b][j];
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][1][b][j] +=
+            fv->d_grad_d_dot_dmesh[0][1][b][j] +=
                 d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][0][1][b][j];
 
             if (VIMis3) {
-              goma_ctx->fem.fv->d_grad_d_dmesh[2][2][b][j] +=
-                  d_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
-              goma_ctx->fem.fv->d_grad_d_dmesh[2][0][b][j] +=
-                  d_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
-              goma_ctx->fem.fv->d_grad_d_dmesh[2][1][b][j] +=
-                  d_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
-              goma_ctx->fem.fv->d_grad_d_dmesh[0][2][b][j] +=
-                  d_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
-              goma_ctx->fem.fv->d_grad_d_dmesh[1][2][b][j] +=
-                  d_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
+              fv->d_grad_d_dmesh[2][2][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
+              fv->d_grad_d_dmesh[2][0][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
+              fv->d_grad_d_dmesh[2][1][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
+              fv->d_grad_d_dmesh[0][2][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
+              fv->d_grad_d_dmesh[1][2][b][j] += d_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
 
-              goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][2][b][j] +=
+              fv->d_grad_d_dot_dmesh[2][2][b][j] +=
                   d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][2][2][b][j];
-              goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][0][b][j] +=
+              fv->d_grad_d_dot_dmesh[2][0][b][j] +=
                   d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][2][0][b][j];
-              goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][1][b][j] +=
+              fv->d_grad_d_dot_dmesh[2][1][b][j] +=
                   d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][2][1][b][j];
-              goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][2][b][j] +=
+              fv->d_grad_d_dot_dmesh[0][2][b][j] +=
                   d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][0][2][b][j];
-              goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][2][b][j] +=
+              fv->d_grad_d_dot_dmesh[1][2][b][j] +=
                   d_dot_ri * bfv->d_grad_phi_e_dmesh[i][r][1][2][b][j];
             }
           }
@@ -7402,20 +6717,19 @@ int load_fv_mesh_derivs(int okToZero)
 #endif
 
 #ifdef DO_NO_UNROLL
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
             /*
              * Special added Lagrangian piece for d grad_d / d mesh...
              */
-            goma_ctx->fem.fv->d_grad_d_dmesh[p][q][b][j] += bfv->grad_phi_e[j][b][p][q];
+            fv->d_grad_d_dmesh[p][q][b][j] += bfv->grad_phi_e[j][b][p][q];
 
             /*N.B. PRS: need to actually furbish this for Newmark Beta schemes */
             if (transient_run && (discontinuous_porous_media || ve_solid)) {
-              goma_ctx->fem.fv->d_grad_d_dot_dmesh[p][q][b][j] +=
-                  (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][p][q] /
-                  goma_ctx->fem.tran->delta_t;
+              fv->d_grad_d_dot_dmesh[p][q][b][j] +=
+                  (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][p][q] / tran->delta_t;
             }
           }
         }
@@ -7430,17 +6744,17 @@ int load_fv_mesh_derivs(int okToZero)
          */
         /*  fv->d_grad_d_dmesh[p][q] [b][j] += bfv->grad_phi_e[j][b] [p][q];*/
 
-        goma_ctx->fem.fv->d_grad_d_dmesh[0][0][b][j] += bfv->grad_phi_e[j][b][0][0];
-        goma_ctx->fem.fv->d_grad_d_dmesh[1][1][b][j] += bfv->grad_phi_e[j][b][1][1];
-        goma_ctx->fem.fv->d_grad_d_dmesh[1][0][b][j] += bfv->grad_phi_e[j][b][1][0];
-        goma_ctx->fem.fv->d_grad_d_dmesh[0][1][b][j] += bfv->grad_phi_e[j][b][0][1];
+        fv->d_grad_d_dmesh[0][0][b][j] += bfv->grad_phi_e[j][b][0][0];
+        fv->d_grad_d_dmesh[1][1][b][j] += bfv->grad_phi_e[j][b][1][1];
+        fv->d_grad_d_dmesh[1][0][b][j] += bfv->grad_phi_e[j][b][1][0];
+        fv->d_grad_d_dmesh[0][1][b][j] += bfv->grad_phi_e[j][b][0][1];
 
         if (VIMis3) {
-          goma_ctx->fem.fv->d_grad_d_dmesh[2][2][b][j] += bfv->grad_phi_e[j][b][2][2];
-          goma_ctx->fem.fv->d_grad_d_dmesh[2][0][b][j] += bfv->grad_phi_e[j][b][2][0];
-          goma_ctx->fem.fv->d_grad_d_dmesh[2][1][b][j] += bfv->grad_phi_e[j][b][2][1];
-          goma_ctx->fem.fv->d_grad_d_dmesh[0][2][b][j] += bfv->grad_phi_e[j][b][0][2];
-          goma_ctx->fem.fv->d_grad_d_dmesh[1][2][b][j] += bfv->grad_phi_e[j][b][1][2];
+          fv->d_grad_d_dmesh[2][2][b][j] += bfv->grad_phi_e[j][b][2][2];
+          fv->d_grad_d_dmesh[2][0][b][j] += bfv->grad_phi_e[j][b][2][0];
+          fv->d_grad_d_dmesh[2][1][b][j] += bfv->grad_phi_e[j][b][2][1];
+          fv->d_grad_d_dmesh[0][2][b][j] += bfv->grad_phi_e[j][b][0][2];
+          fv->d_grad_d_dmesh[1][2][b][j] += bfv->grad_phi_e[j][b][1][2];
         }
 
         /*N.B. PRS: need to actually furbish this for Newmark Beta schemes */
@@ -7448,36 +6762,27 @@ int load_fv_mesh_derivs(int okToZero)
           /* fv->d_grad_d_dot_dmesh[p][q] [b][j] += (1.+2.*tran->theta)*bfv->grad_phi_e[j][b]
            * [p][q]/tran->delta_t;*/
 
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][0][b][j] +=
-              (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][0][0] /
-              goma_ctx->fem.tran->delta_t;
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][1][b][j] +=
-              (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][1][1] /
-              goma_ctx->fem.tran->delta_t;
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][0][b][j] +=
-              (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][1][0] /
-              goma_ctx->fem.tran->delta_t;
-          goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][1][b][j] +=
-              (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][0][1] /
-              goma_ctx->fem.tran->delta_t;
+          fv->d_grad_d_dot_dmesh[0][0][b][j] +=
+              (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][0][0] / tran->delta_t;
+          fv->d_grad_d_dot_dmesh[1][1][b][j] +=
+              (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][1][1] / tran->delta_t;
+          fv->d_grad_d_dot_dmesh[1][0][b][j] +=
+              (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][1][0] / tran->delta_t;
+          fv->d_grad_d_dot_dmesh[0][1][b][j] +=
+              (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][0][1] / tran->delta_t;
 
           if (VIMis3) {
 
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][2][b][j] +=
-                (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][2][2] /
-                goma_ctx->fem.tran->delta_t;
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][0][b][j] +=
-                (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][2][0] /
-                goma_ctx->fem.tran->delta_t;
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[2][1][b][j] +=
-                (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][2][1] /
-                goma_ctx->fem.tran->delta_t;
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[0][2][b][j] +=
-                (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][0][2] /
-                goma_ctx->fem.tran->delta_t;
-            goma_ctx->fem.fv->d_grad_d_dot_dmesh[1][2][b][j] +=
-                (1. + 2. * goma_ctx->fem.tran->theta) * bfv->grad_phi_e[j][b][1][2] /
-                goma_ctx->fem.tran->delta_t;
+            fv->d_grad_d_dot_dmesh[2][2][b][j] +=
+                (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][2][2] / tran->delta_t;
+            fv->d_grad_d_dot_dmesh[2][0][b][j] +=
+                (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][2][0] / tran->delta_t;
+            fv->d_grad_d_dot_dmesh[2][1][b][j] +=
+                (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][2][1] / tran->delta_t;
+            fv->d_grad_d_dot_dmesh[0][2][b][j] +=
+                (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][0][2] / tran->delta_t;
+            fv->d_grad_d_dot_dmesh[1][2][b][j] +=
+                (1. + 2. * tran->theta) * bfv->grad_phi_e[j][b][1][2] / tran->delta_t;
           }
         }
       }
@@ -7491,52 +6796,52 @@ int load_fv_mesh_derivs(int okToZero)
 #ifdef DO_NO_UNROLL
     for (b = 0; b < dim; b++) {
       for (j = 0; j < mdofs; j++) {
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          goma_ctx->fem.fv->d_div_d_dmesh[b][j] += goma_ctx->fem.fv->d_grad_d_dmesh[p][p][b][j];
+        for (p = 0; p < VIM; p++) {
+          fv->d_div_d_dmesh[b][j] += fv->d_grad_d_dmesh[p][p][b][j];
         }
       }
     }
 #else
 
-    goma_ctx->fem.fv->d_div_d_dmesh[0][0] = goma_ctx->fem.fv->d_grad_d_dmesh[0][0][0][0];
-    goma_ctx->fem.fv->d_div_d_dmesh[1][0] = goma_ctx->fem.fv->d_grad_d_dmesh[1][1][1][0];
-    goma_ctx->fem.fv->d_div_d_dmesh[0][0] = goma_ctx->fem.fv->d_grad_d_dmesh[1][1][0][0];
-    goma_ctx->fem.fv->d_div_d_dmesh[1][0] = goma_ctx->fem.fv->d_grad_d_dmesh[0][0][1][0];
+    fv->d_div_d_dmesh[0][0] = fv->d_grad_d_dmesh[0][0][0][0];
+    fv->d_div_d_dmesh[1][0] = fv->d_grad_d_dmesh[1][1][1][0];
+    fv->d_div_d_dmesh[0][0] = fv->d_grad_d_dmesh[1][1][0][0];
+    fv->d_div_d_dmesh[1][0] = fv->d_grad_d_dmesh[0][0][1][0];
 
     if (VIMis3) {
-      goma_ctx->fem.fv->d_div_d_dmesh[2][0] = goma_ctx->fem.fv->d_grad_d_dmesh[2][2][2][0];
-      goma_ctx->fem.fv->d_div_d_dmesh[2][0] = goma_ctx->fem.fv->d_grad_d_dmesh[0][0][2][0];
-      goma_ctx->fem.fv->d_div_d_dmesh[2][0] = goma_ctx->fem.fv->d_grad_d_dmesh[1][1][2][0];
-      goma_ctx->fem.fv->d_div_d_dmesh[0][0] = goma_ctx->fem.fv->d_grad_d_dmesh[2][2][0][0];
-      goma_ctx->fem.fv->d_div_d_dmesh[1][0] = goma_ctx->fem.fv->d_grad_d_dmesh[2][2][1][0];
+      fv->d_div_d_dmesh[2][0] = fv->d_grad_d_dmesh[2][2][2][0];
+      fv->d_div_d_dmesh[2][0] = fv->d_grad_d_dmesh[0][0][2][0];
+      fv->d_div_d_dmesh[2][0] = fv->d_grad_d_dmesh[1][1][2][0];
+      fv->d_div_d_dmesh[0][0] = fv->d_grad_d_dmesh[2][2][0][0];
+      fv->d_div_d_dmesh[1][0] = fv->d_grad_d_dmesh[2][2][1][0];
     }
 
     for (j = 1; j < mdofs; j++) {
 
       /* fv->d_div_d_dmesh[b][j] += fv->d_grad_d_dmesh[p][p] [b][j]; */
 
-      goma_ctx->fem.fv->d_div_d_dmesh[0][j] += goma_ctx->fem.fv->d_grad_d_dmesh[0][0][0][j];
-      goma_ctx->fem.fv->d_div_d_dmesh[1][j] += goma_ctx->fem.fv->d_grad_d_dmesh[1][1][1][j];
-      goma_ctx->fem.fv->d_div_d_dmesh[0][j] += goma_ctx->fem.fv->d_grad_d_dmesh[1][1][0][j];
-      goma_ctx->fem.fv->d_div_d_dmesh[1][j] += goma_ctx->fem.fv->d_grad_d_dmesh[0][0][1][j];
+      fv->d_div_d_dmesh[0][j] += fv->d_grad_d_dmesh[0][0][0][j];
+      fv->d_div_d_dmesh[1][j] += fv->d_grad_d_dmesh[1][1][1][j];
+      fv->d_div_d_dmesh[0][j] += fv->d_grad_d_dmesh[1][1][0][j];
+      fv->d_div_d_dmesh[1][j] += fv->d_grad_d_dmesh[0][0][1][j];
 
       if (VIMis3) {
-        goma_ctx->fem.fv->d_div_d_dmesh[2][j] += goma_ctx->fem.fv->d_grad_d_dmesh[2][2][2][j];
-        goma_ctx->fem.fv->d_div_d_dmesh[2][j] += goma_ctx->fem.fv->d_grad_d_dmesh[0][0][2][j];
-        goma_ctx->fem.fv->d_div_d_dmesh[2][j] += goma_ctx->fem.fv->d_grad_d_dmesh[1][1][2][j];
-        goma_ctx->fem.fv->d_div_d_dmesh[0][j] += goma_ctx->fem.fv->d_grad_d_dmesh[2][2][0][j];
-        goma_ctx->fem.fv->d_div_d_dmesh[1][j] += goma_ctx->fem.fv->d_grad_d_dmesh[2][2][1][j];
+        fv->d_div_d_dmesh[2][j] += fv->d_grad_d_dmesh[2][2][2][j];
+        fv->d_div_d_dmesh[2][j] += fv->d_grad_d_dmesh[0][0][2][j];
+        fv->d_div_d_dmesh[2][j] += fv->d_grad_d_dmesh[1][1][2][j];
+        fv->d_div_d_dmesh[0][j] += fv->d_grad_d_dmesh[2][2][0][j];
+        fv->d_div_d_dmesh[1][j] += fv->d_grad_d_dmesh[2][2][1][j];
       }
     }
 
 #endif
 
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][MESH_DISPLACEMENT1] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_d_dmesh, 0, siz);
-    memset(goma_ctx->fem.fv->d_grad_d_dot_dmesh, 0, siz);
+    memset(fv->d_grad_d_dmesh, 0, siz);
+    memset(fv->d_grad_d_dot_dmesh, 0, siz);
     siz = sizeof(double) * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_d_dmesh, 0, siz);
+    memset(fv->d_div_d_dmesh, 0, siz);
   }
 
   /*
@@ -7548,24 +6853,24 @@ int load_fv_mesh_derivs(int okToZero)
   /* components of vectors and tensors for */
   /* less than 3 independent spatial dimensions*/
 
-  if (goma_ctx->fem.pd->gv[SOLID_DISPLACEMENT1]) {
+  if (pd->gv[SOLID_DISPLACEMENT1]) {
     v = SOLID_DISPLACEMENT1;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_d_rs_dmesh, 0, siz);
+    memset(fv->d_grad_d_rs_dmesh, 0, siz);
     siz = sizeof(double) * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_d_rs_dmesh, 0, siz);
+    memset(fv->d_div_d_rs_dmesh, 0, siz);
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
             /*  fv->d_grad_d_rs_dmesh[p][q] [b][j] = 0.; */
             for (r = 0; r < dim; r++) {
               for (i = 0; i < vdofs; i++) {
-                goma_ctx->fem.fv->d_grad_d_rs_dmesh[p][q][b][j] +=
-                    *goma_ctx->fem.esp->d_rs[r][i] * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
+                fv->d_grad_d_rs_dmesh[p][q][b][j] +=
+                    *esp->d_rs[r][i] * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
           }
@@ -7576,48 +6881,46 @@ int load_fv_mesh_derivs(int okToZero)
     /*
      * d( div(d_rs) )/dmesh [ just trace(grad(d_rs)) ]
      */
-    for (b = 0; b < goma_ctx->problem.vim; b++) {
+    for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          goma_ctx->fem.fv->d_div_d_rs_dmesh[b][j] +=
-              goma_ctx->fem.fv->d_grad_d_rs_dmesh[p][p][b][j];
+        for (p = 0; p < VIM; p++) {
+          fv->d_div_d_rs_dmesh[b][j] += fv->d_grad_d_rs_dmesh[p][p][b][j];
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SOLID_DISPLACEMENT1] != -1 &&
-             okToZero) {
+  } else if (upd->vp[pg->imtrx][SOLID_DISPLACEMENT1] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_d_rs_dmesh, 0, siz);
+    memset(fv->d_grad_d_rs_dmesh, 0, siz);
     siz = sizeof(double) * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_d_rs_dmesh, 0, siz);
+    memset(fv->d_div_d_rs_dmesh, 0, siz);
   }
 
   /*
    * d(grad(S))/dmesh
    */
 
-  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
+  if (pd->gv[POLYMER_STRESS11]) {
     v = POLYMER_STRESS11;
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
-    bfv = goma_ctx->fem.bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
     siz = sizeof(double) * MAX_MODES * DIM * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_S_dmesh, 0, siz);
+    memset(fv->d_grad_S_dmesh, 0, siz);
     siz = sizeof(double) * MAX_MODES * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_S_dmesh, 0, siz);
+    memset(fv->d_div_S_dmesh, 0, siz);
 
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (r = 0; r < goma_ctx->problem.vim; r++) {
-            for (b = 0; b < goma_ctx->problem.vim; b++) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (r = 0; r < VIM; r++) {
+            for (b = 0; b < VIM; b++) {
               for (j = 0; j < mdofs; j++) {
                 for (i = 0; i < vdofs; i++) {
                   if (p <= q) {
-                    goma_ctx->fem.fv->d_grad_S_dmesh[mode][r][p][q][b][j] +=
-                        *goma_ctx->fem.esp->S[mode][p][q][i] * bfv->d_grad_phi_dmesh[i][r][b][j];
+                    fv->d_grad_S_dmesh[mode][r][p][q][b][j] +=
+                        *esp->S[mode][p][q][i] * bfv->d_grad_phi_dmesh[i][r][b][j];
                   } else {
-                    goma_ctx->fem.fv->d_grad_S_dmesh[mode][r][p][q][b][j] +=
-                        *goma_ctx->fem.esp->S[mode][q][p][i] * bfv->d_grad_phi_dmesh[i][r][b][j];
+                    fv->d_grad_S_dmesh[mode][r][p][q][b][j] +=
+                        *esp->S[mode][q][p][i] * bfv->d_grad_phi_dmesh[i][r][b][j];
                   }
                 }
               }
@@ -7626,30 +6929,27 @@ int load_fv_mesh_derivs(int okToZero)
         }
       }
 
-      for (r = 0; r < goma_ctx->problem.vim; r++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (b = 0; b < goma_ctx->problem.vim; b++) {
+      for (r = 0; r < VIM; r++) {
+        for (q = 0; q < VIM; q++) {
+          for (b = 0; b < VIM; b++) {
             for (j = 0; j < mdofs; j++) {
-              goma_ctx->fem.fv->d_div_S_dmesh[mode][r][b][j] +=
-                  goma_ctx->fem.fv->d_grad_S_dmesh[mode][q][q][r][b][j];
+              fv->d_div_S_dmesh[mode][r][b][j] += fv->d_grad_S_dmesh[mode][q][q][r][b][j];
             }
           }
         }
       }
 
-      if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-        for (s = 0; s < goma_ctx->problem.vim; s++) {
-          for (r = 0; r < goma_ctx->problem.vim; r++) {
-            for (p = 0; p < goma_ctx->problem.vim; p++) {
-              for (q = 0; q < goma_ctx->problem.vim; q++) {
-                for (b = 0; b < goma_ctx->problem.vim; b++) {
+      if (pd->CoordinateSystem != CARTESIAN) {
+        for (s = 0; s < VIM; s++) {
+          for (r = 0; r < VIM; r++) {
+            for (p = 0; p < VIM; p++) {
+              for (q = 0; q < VIM; q++) {
+                for (b = 0; b < VIM; b++) {
                   for (j = 0; j < mdofs; j++) {
-                    goma_ctx->fem.fv->d_div_S_dmesh[mode][s][b][j] +=
-                        goma_ctx->fem.fv->S[mode][p][q] *
-                        (goma_ctx->fem.fv->d_grad_e_dq[p][r][q][b] * bfm->phi[j] *
-                             (double)delta(s, q) +
-                         goma_ctx->fem.fv->d_grad_e_dq[q][p][s][b] * bfm->phi[j] *
-                             (double)delta(r, p));
+                    fv->d_div_S_dmesh[mode][s][b][j] +=
+                        fv->S[mode][p][q] *
+                        (fv->d_grad_e_dq[p][r][q][b] * bfm->phi[j] * (double)delta(s, q) +
+                         fv->d_grad_e_dq[q][p][s][b] * bfm->phi[j] * (double)delta(r, p));
                   }
                 }
               }
@@ -7658,36 +6958,36 @@ int load_fv_mesh_derivs(int okToZero)
         }
       }
     } /* end of modal loop */
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][POLYMER_STRESS11] != -1 && okToZero) {
     siz = sizeof(double) * MAX_MODES * DIM * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_S_dmesh, 0, siz);
+    memset(fv->d_grad_S_dmesh, 0, siz);
     siz = sizeof(double) * MAX_MODES * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_S_dmesh, 0, siz);
+    memset(fv->d_div_S_dmesh, 0, siz);
   }
 
   /*
    * d(grad(G))/dmesh
    */
 
-  if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
+  if (pd->gv[VELOCITY_GRADIENT11]) {
     v = VELOCITY_GRADIENT11;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 
     siz = sizeof(double) * DIM * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_G_dmesh, 0, siz);
+    memset(fv->d_grad_G_dmesh, 0, siz);
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_G_dmesh, 0, siz);
-    memset(goma_ctx->fem.fv->d_div_Gt_dmesh, 0, siz);
+    memset(fv->d_div_G_dmesh, 0, siz);
+    memset(fv->d_div_Gt_dmesh, 0, siz);
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          for (b = 0; b < goma_ctx->problem.vim; b++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (r = 0; r < VIM; r++) {
+          for (b = 0; b < VIM; b++) {
             for (j = 0; j < mdofs; j++) {
               for (i = 0; i < vdofs; i++) {
-                goma_ctx->fem.fv->d_grad_G_dmesh[r][p][q][b][j] +=
-                    *goma_ctx->fem.esp->G[p][q][i] * bfv->d_grad_phi_dmesh[i][r][b][j];
+                fv->d_grad_G_dmesh[r][p][q][b][j] +=
+                    *esp->G[p][q][i] * bfv->d_grad_phi_dmesh[i][r][b][j];
               }
             }
           }
@@ -7695,29 +6995,27 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < goma_ctx->problem.vim; r++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (b = 0; b < goma_ctx->problem.vim; b++) {
+    for (r = 0; r < VIM; r++) {
+      for (q = 0; q < VIM; q++) {
+        for (b = 0; b < VIM; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_div_G_dmesh[r][b][j] +=
-                goma_ctx->fem.fv->d_grad_G_dmesh[q][q][r][b][j];
+            fv->d_div_G_dmesh[r][b][j] += fv->d_grad_G_dmesh[q][q][r][b][j];
           }
         }
       }
     }
 
-    if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < goma_ctx->problem.vim; s++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          for (p = 0; p < goma_ctx->problem.vim; p++) {
-            for (q = 0; q < goma_ctx->problem.vim; q++) {
+    if (pd->CoordinateSystem != CARTESIAN) {
+      for (s = 0; s < VIM; s++) {
+        for (r = 0; r < VIM; r++) {
+          for (p = 0; p < VIM; p++) {
+            for (q = 0; q < VIM; q++) {
               for (b = 0; b < dim; b++) {
                 for (j = 0; j < mdofs; j++) {
-                  goma_ctx->fem.fv->d_div_G_dmesh[s][b][j] +=
-                      goma_ctx->fem.fv->G[p][q] * (goma_ctx->fem.fv->d_grad_e_dq[p][r][q][b] *
-                                                       bfm->phi[j] * (double)delta(s, q) +
-                                                   goma_ctx->fem.fv->d_grad_e_dq[q][p][s][b] *
-                                                       bfm->phi[j] * (double)delta(r, p));
+                  fv->d_div_G_dmesh[s][b][j] +=
+                      fv->G[p][q] *
+                      (fv->d_grad_e_dq[p][r][q][b] * bfm->phi[j] * (double)delta(s, q) +
+                       fv->d_grad_e_dq[q][p][s][b] * bfm->phi[j] * (double)delta(r, p));
                 }
               }
             }
@@ -7726,29 +7024,27 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-    for (r = 0; r < goma_ctx->problem.vim; r++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (b = 0; b < goma_ctx->problem.vim; b++) {
+    for (r = 0; r < VIM; r++) {
+      for (q = 0; q < VIM; q++) {
+        for (b = 0; b < VIM; b++) {
           for (j = 0; j < mdofs; j++) {
-            goma_ctx->fem.fv->d_div_Gt_dmesh[r][b][j] +=
-                goma_ctx->fem.fv->d_grad_G_dmesh[q][r][q][b][j];
+            fv->d_div_Gt_dmesh[r][b][j] += fv->d_grad_G_dmesh[q][r][q][b][j];
           }
         }
       }
     }
 
-    if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
-      for (s = 0; s < goma_ctx->problem.vim; s++) {
-        for (r = 0; r < goma_ctx->problem.vim; r++) {
-          for (p = 0; p < goma_ctx->problem.vim; p++) {
-            for (q = 0; q < goma_ctx->problem.vim; q++) {
-              for (b = 0; b < goma_ctx->problem.vim; b++) {
+    if (pd->CoordinateSystem != CARTESIAN) {
+      for (s = 0; s < VIM; s++) {
+        for (r = 0; r < VIM; r++) {
+          for (p = 0; p < VIM; p++) {
+            for (q = 0; q < VIM; q++) {
+              for (b = 0; b < VIM; b++) {
                 for (j = 0; j < mdofs; j++) {
-                  goma_ctx->fem.fv->d_div_G_dmesh[s][b][j] +=
-                      goma_ctx->fem.fv->G[q][p] * (goma_ctx->fem.fv->d_grad_e_dq[p][r][q][b] *
-                                                       bfm->phi[j] * (double)delta(s, q) +
-                                                   goma_ctx->fem.fv->d_grad_e_dq[q][p][s][b] *
-                                                       bfm->phi[j] * (double)delta(r, p));
+                  fv->d_div_G_dmesh[s][b][j] +=
+                      fv->G[q][p] *
+                      (fv->d_grad_e_dq[p][r][q][b] * bfm->phi[j] * (double)delta(s, q) +
+                       fv->d_grad_e_dq[q][p][s][b] * bfm->phi[j] * (double)delta(r, p));
                 }
               }
             }
@@ -7757,35 +7053,33 @@ int load_fv_mesh_derivs(int okToZero)
       }
     }
 
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VELOCITY_GRADIENT11] != -1 &&
-             okToZero) {
+  } else if (upd->vp[pg->imtrx][VELOCITY_GRADIENT11] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_G_dmesh, 0, siz);
+    memset(fv->d_grad_G_dmesh, 0, siz);
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_div_G_dmesh, 0, siz);
-    memset(goma_ctx->fem.fv->d_div_Gt_dmesh, 0, siz);
+    memset(fv->d_div_G_dmesh, 0, siz);
+    memset(fv->d_div_Gt_dmesh, 0, siz);
   }
 
   /*
    * d(grad(vd))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[VORT_DIR1]) {
+  if (pd->gv[VORT_DIR1]) {
     v = VORT_DIR1;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_vd_dmesh, 0, siz);
+    memset(fv->d_grad_vd_dmesh, 0, siz);
 
     for (r = 0; r < DIM; r++) {
       for (i = 0; i < vdofs; i++) {
-        v_ri = *goma_ctx->fem.esp->vd[r][i];
+        v_ri = *esp->vd[r][i];
         for (p = 0; p < DIM; p++) {
           for (q = 0; q < DIM; q++) {
-            for (b = 0; b < goma_ctx->problem.vim; b++) {
+            for (b = 0; b < VIM; b++) {
               for (j = 0; j < mdofs; j++) {
-                goma_ctx->fem.fv->d_grad_vd_dmesh[p][q][b][j] +=
-                    v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
+                fv->d_grad_vd_dmesh[p][q][b][j] += v_ri * bfv->d_grad_phi_e_dmesh[i][r][p][q][b][j];
               }
             }
           }
@@ -7797,144 +7091,142 @@ int load_fv_mesh_derivs(int okToZero)
      * d( div(vd) )/dmesh
      */
 
-    for (b = 0; b < goma_ctx->problem.vim; b++) {
+    for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
         for (p = 0; p < DIM; p++) {
-          goma_ctx->fem.fv->d_div_vd_dmesh[b][j] += goma_ctx->fem.fv->d_grad_vd_dmesh[p][p][b][j];
+          fv->d_div_vd_dmesh[b][j] += fv->d_grad_vd_dmesh[p][p][b][j];
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][VORT_DIR1] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][VORT_DIR1] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_vd_dmesh, 0, siz);
+    memset(fv->d_grad_vd_dmesh, 0, siz);
   }
 
   /*
    *   d(n_dot_curl_s_v)/dmesh
    *        This is carried out on a shell
    */
-  if (goma_ctx->fem.pd->gv[N_DOT_CURL_V]) {
+  if (pd->gv[N_DOT_CURL_V]) {
     v = N_DOT_CURL_V;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_n_dot_curl_s_v_dmesh, 0, siz);
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
+    memset(fv->d_grad_n_dot_curl_s_v_dmesh, 0, siz);
+    for (p = 0; p < VIM; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_n_dot_curl_s_v_dmesh[p][b][j] +=
-                (*goma_ctx->fem.esp->n_dot_curl_s_v[i] * bfv->d_grad_phi_dmesh[i][p][b][j]);
+            fv->d_grad_n_dot_curl_s_v_dmesh[p][b][j] +=
+                (*esp->n_dot_curl_s_v[i] * bfv->d_grad_phi_dmesh[i][p][b][j]);
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][N_DOT_CURL_V] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][N_DOT_CURL_V] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_n_dot_curl_s_v_dmesh, 0, siz);
+    memset(fv->d_grad_n_dot_curl_s_v_dmesh, 0, siz);
   }
 
   /*
    *   d(grad_div_s_v_dmesh[b][jvar][jShell]);
    *        This is carried out on a shell
    */
-  if (goma_ctx->fem.pd->gv[SHELL_SURF_DIV_V]) {
+  if (pd->gv[SHELL_SURF_DIV_V]) {
     v = SHELL_SURF_DIV_V;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_div_s_v_dmesh, 0, siz);
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
+    memset(fv->d_grad_div_s_v_dmesh, 0, siz);
+    for (p = 0; p < VIM; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_div_s_v_dmesh[p][b][j] +=
-                (*goma_ctx->fem.esp->div_s_v[i] * bfv->d_grad_phi_dmesh[i][p][b][j]);
+            fv->d_grad_div_s_v_dmesh[p][b][j] +=
+                (*esp->div_s_v[i] * bfv->d_grad_phi_dmesh[i][p][b][j]);
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_SURF_DIV_V] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_SURF_DIV_V] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_div_s_v_dmesh, 0, siz);
+    memset(fv->d_grad_div_s_v_dmesh, 0, siz);
   }
 
   /*
    *   d_grad_curv_dmesh[b][jvar][jShell])
    *        This is carried out on a shell
    */
-  if (goma_ctx->fem.pd->gv[SHELL_SURF_CURV]) {
+  if (pd->gv[SHELL_SURF_CURV]) {
     v = SHELL_SURF_CURV;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_curv_dmesh, 0, siz);
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
+    memset(fv->d_grad_curv_dmesh, 0, siz);
+    for (p = 0; p < VIM; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_curv_dmesh[p][b][j] +=
-                (*goma_ctx->fem.esp->curv[i] * bfv->d_grad_phi_dmesh[i][p][b][j]);
+            fv->d_grad_curv_dmesh[p][b][j] += (*esp->curv[i] * bfv->d_grad_phi_dmesh[i][p][b][j]);
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_SURF_CURV] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_SURF_CURV] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_grad_curv_dmesh, 0, siz);
+    memset(fv->d_grad_curv_dmesh, 0, siz);
   }
 
   /*
    *   d_serialgrad_div_s_v_dmesh[b][jvar][jShell]);
    *        This is carried out on a shell
    */
-  if (goma_ctx->fem.pd->gv[GRAD_S_V_DOT_N1]) {
+  if (pd->gv[GRAD_S_V_DOT_N1]) {
     for (r = 0; r < dim; r++) {
       v = GRAD_S_V_DOT_N1 + r;
-      bfv = goma_ctx->fem.bf[v];
-      vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+      bfv = bf[v];
+      vdofs = ei[upd->matrix_index[v]]->dof[v];
       siz = sizeof(double) * DIM * DIM * DIM * MDE;
-      memset(goma_ctx->fem.fv->d_serialgrad_grad_s_v_dot_n_dmesh, 0, siz);
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
+      memset(fv->d_serialgrad_grad_s_v_dot_n_dmesh, 0, siz);
+      for (p = 0; p < VIM; p++) {
         for (b = 0; b < dim; b++) {
           for (j = 0; j < mdofs; j++) {
             for (i = 0; i < vdofs; i++) {
-              goma_ctx->fem.fv->d_serialgrad_grad_s_v_dot_n_dmesh[r][p][b][j] +=
-                  (*goma_ctx->fem.esp->grad_v_dot_n[r][i] * bfv->d_grad_phi_dmesh[i][p][b][j]);
+              fv->d_serialgrad_grad_s_v_dot_n_dmesh[r][p][b][j] +=
+                  (*esp->grad_v_dot_n[r][i] * bfv->d_grad_phi_dmesh[i][p][b][j]);
             }
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][GRAD_S_V_DOT_N1] != -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][GRAD_S_V_DOT_N1] != -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * DIM * MDE;
-    memset(goma_ctx->fem.fv->d_serialgrad_grad_s_v_dot_n_dmesh, 0, siz);
+    memset(fv->d_serialgrad_grad_s_v_dot_n_dmesh, 0, siz);
   }
 
   /*
    * d(grad(sh_J))/dmesh
    */
-  if (goma_ctx->fem.pd->gv[SHELL_DIFF_FLUX]) {
+  if (pd->gv[SHELL_DIFF_FLUX]) {
     v = SHELL_DIFF_FLUX;
-    bfv = goma_ctx->fem.bf[v];
-    vdofs = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[v]]->dof[v];
+    bfv = bf[v];
+    vdofs = ei[upd->matrix_index[v]]->dof[v];
 
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
+    for (p = 0; p < VIM; p++) {
       for (b = 0; b < dim; b++) {
         for (j = 0; j < mdofs; j++) {
           for (i = 0; i < vdofs; i++) {
-            goma_ctx->fem.fv->d_grad_sh_J_dmesh[p][b][j] +=
-                *goma_ctx->fem.esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
+            fv->d_grad_sh_J_dmesh[p][b][j] += *esp->sh_J[i] * bfv->d_grad_phi_dmesh[i][p][b][j];
           }
         }
       }
     }
-  } else if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SHELL_DIFF_FLUX] == -1 && okToZero) {
+  } else if (upd->vp[pg->imtrx][SHELL_DIFF_FLUX] == -1 && okToZero) {
     siz = sizeof(double) * DIM * DIM * MDE;
-    memset(&(goma_ctx->fem.fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
+    memset(&(fv->d_grad_sh_J_dmesh[0][0][0]), 0, siz);
   }
 
   /*
@@ -7943,10 +7235,10 @@ int load_fv_mesh_derivs(int okToZero)
    *
    * d ( h3 ) / d ( mesh_bj )
    */
-  if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1] == 1) {
-    for (b = 0; b < goma_ctx->problem.vim; b++) {
+  if (pd->gv[MESH_DISPLACEMENT1] == 1) {
+    for (b = 0; b < VIM; b++) {
       for (j = 0; j < mdofs; j++) {
-        goma_ctx->fem.fv->dh3dmesh[b][j] = goma_ctx->fem.fv->dh3dq[b] * bfm->phi[j];
+        fv->dh3dmesh[b][j] = fv->dh3dq[b] * bfm->phi[j];
       }
     }
   }

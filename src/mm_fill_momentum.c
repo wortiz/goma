@@ -105,6 +105,16 @@ int assemble_momentum(dbl time,       /* current time */
                       const PG_DATA *pg_data,
                       double xi[DIM], /* Local stu coordinates */
                       const Exo_DB *exo) {
+  const int VIM = goma_ctx->problem.vim;
+  const int WIM = goma_ctx->problem.wim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Diet_Field_Variables *const fv_dot = goma_ctx->fem.fv_dot;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Local_Element_Contributions *const lec = goma_ctx->fem.lec;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Action_Flags *const af = goma_ctx->fem.af;
 #ifdef DEBUG_MOMENTUM_JAC
   int adx;
 #endif
@@ -114,8 +124,8 @@ int assemble_momentum(dbl time,       /* current time */
 
   int ledof, eqn, var, ii, peqn, pvar, w;
 
-  int *pde = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx];
-  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
+  int *pde = goma_ctx->fem.pd->e[pg->imtrx];
+  int *pdv = goma_ctx->fem.pd->v[pg->imtrx];
 
   int status;
   struct Basis_Functions *bfm;
@@ -134,7 +144,7 @@ int assemble_momentum(dbl time,       /* current time */
   /* field variables */
   /*dbl grad_v[DIM][DIM];*/ /* Gradient of v. */
   dbl *grad_v[DIM];
-  dbl *v = goma_ctx->fem.fv->v;
+  dbl *v = fv->v;
 
   dbl rho; /* Density. */
 
@@ -267,17 +277,17 @@ int assemble_momentum(dbl time,       /* current time */
   /*
    * Bail out fast if there's nothing to do...
    */
-  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
+  if (!goma_ctx->fem.pd->e[pg->imtrx][eqn]) {
     return (status);
   }
 
   dim = goma_ctx->fem.pd->Num_Dim;
 
-  wt = goma_ctx->fem.fv->wt;
+  wt = fv->wt;
 
-  det_J = goma_ctx->fem.bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
 
-  h3 = goma_ctx->fem.fv->h3; /* Differential volume element (scales). */
+  h3 = fv->h3; /* Differential volume element (scales). */
 
   d_area = det_J * wt * h3;
 
@@ -322,7 +332,7 @@ int assemble_momentum(dbl time,       /* current time */
     particle_momentum_on = 1;
     /* This is the species number of the particle phase. */
     species = (int)goma_ctx->fem.mp->u_density[0];
-    p_vol_frac = goma_ctx->fem.fv->c[species];
+    p_vol_frac = fv->c[species];
     ompvf = 1.0 - p_vol_frac;
     /* Uncomment this to check for when the particle volume fraction
      * becomes non-physical.  Beware, however, that the intermediate
@@ -346,7 +356,7 @@ int assemble_momentum(dbl time,       /* current time */
    * Gauss point were evaluated in load_material_properties().
    */
 
-  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_POROUS_BRINK) {
+  if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_POROUS_BRINK) {
     /* Load up remaining parameters for the Brinkman Equation. */
     por = goma_ctx->fem.mp->porosity;
     vis = goma_ctx->fem.mp->FlowingLiquid_viscosity;
@@ -359,8 +369,8 @@ int assemble_momentum(dbl time,       /* current time */
     if (goma_ctx->fem.mp->FSIModel > 0) {
 
       /* Store proper Gauss weights */
-      wt = goma_ctx->fem.fv->wt;
-      h3 = goma_ctx->fem.fv->h3;
+      wt = fv->wt;
+      h3 = fv->h3;
 
       /* Prepare geometry */
       n_dof = (int *)array_alloc(1, MAX_VARIABLE_TYPES, sizeof(int));
@@ -368,8 +378,8 @@ int assemble_momentum(dbl time,       /* current time */
 
       /* Adjust FEM weights */
       dim = goma_ctx->fem.pd->Num_Dim;
-      goma_ctx->fem.fv->wt = wt;
-      det_J = goma_ctx->fem.fv->sdet;
+      fv->wt = wt;
+      det_J = fv->sdet;
 
       /*
        * Calculate the velocity from the velocity calculator, of course!
@@ -378,7 +388,7 @@ int assemble_momentum(dbl time,       /* current time */
        */
       calculate_lub_q_v(R_LUBP, time, dt, xi, exo);
 
-      goma_ctx->fem.fv->wt = wt; /*load_neighbor_var_data screws fv->wt up */
+      fv->wt = wt; /*load_neighbor_var_data screws fv->wt up */
     }
 
     if (goma_ctx->fem.mp->PorousMediaType != POROUS_BRINKMAN)
@@ -414,41 +424,41 @@ int assemble_momentum(dbl time,       /* current time */
 
   x_dot = zero;
   if (transient_run && mesh_disp_on)
-    x_dot = goma_ctx->fem.fv_dot->x;
+    x_dot = fv_dot->x;
 
   if (transient_run)
-    v_dot = goma_ctx->fem.fv_dot->v;
+    v_dot = fv_dot->v;
   else
     v_dot = zero;
 
   /* for porous media stuff */
 #ifdef DO_NO_UNROLL
   speed = 0.0;
-  for (a = 0; a < goma_ctx->problem.wim; a++) {
+  for (a = 0; a < WIM; a++) {
     speed += v[a] * v[a];
   }
   speed = sqrt(speed);
 
-  for (a = 0; a < goma_ctx->problem.vim; a++)
-    grad_v[a] = goma_ctx->fem.fv->grad_v[a];
+  for (a = 0; a < VIM; a++)
+    grad_v[a] = fv->grad_v[a];
 #else
   speed = 0.0;
   speed += v[0] * v[0] + v[1] * v[1];
-  if (goma_ctx->problem.wim == 3)
+  if (WIM == 3)
     speed += v[2] * v[2];
 
   speed = sqrt(speed);
 
-  grad_v[0] = goma_ctx->fem.fv->grad_v[0];
-  grad_v[1] = goma_ctx->fem.fv->grad_v[1];
-  if (goma_ctx->problem.vim == 3)
-    grad_v[2] = goma_ctx->fem.fv->grad_v[2];
+  grad_v[0] = fv->grad_v[0];
+  grad_v[1] = fv->grad_v[1];
+  if (VIM == 3)
+    grad_v[2] = fv->grad_v[2];
 #endif
 
   /*
    * Calculate the momentum stress tensor at the current gauss point
    */
-  if (goma_ctx->fem.af->Assemble_Jacobian) {
+  if (af->Assemble_Jacobian) {
     fluid_stress(Pi, d_Pi);
   } else {
     fluid_stress(Pi, NULL);
@@ -464,7 +474,7 @@ int assemble_momentum(dbl time,       /* current time */
   double pspg[3] = {0.0, 0.0, 0.0};
   PSPG_DEPENDENCE_STRUCT d_pspg;
 
-  if (goma_ctx->fem.upd->PSPG_advection_correction) {
+  if (upd->PSPG_advection_correction) {
     calc_pspg(pspg, &d_pspg, time, tt, dt, pg_data);
   }
 
@@ -472,14 +482,14 @@ int assemble_momentum(dbl time,       /* current time */
    * Residuals_________________________________________________________________
    */
 
-  if (goma_ctx->fem.af->Assemble_Residual) {
+  if (af->Assemble_Residual) {
     /*
      * Assemble each component "a" of the momentum equation...
      */
-    for (a = 0; a < goma_ctx->problem.wim; a++) {
+    for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
-      bfm = goma_ctx->fem.bf[eqn];
+      peqn = upd->ep[pg->imtrx][eqn];
+      bfm = bf[eqn];
 
       mass_on = pde[eqn] & T_MASS;
       advection_on = pde[eqn] & T_ADVECTION;
@@ -487,31 +497,30 @@ int assemble_momentum(dbl time,       /* current time */
       source_on = pde[eqn] & T_SOURCE;
       porous_brinkman_on = pde[eqn] & T_POROUS_BRINK;
 
-      mass_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
-      advection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
-      diffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
-      porous_brinkman_etm =
-          goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_POROUS_BRINK)];
-      source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
+      mass_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+      advection_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+      diffusion_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      porous_brinkman_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_POROUS_BRINK)];
+      source_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
       /*
        * In the element, there will be contributions to this many equations
        * based on the number of degrees of freedom...
        */
 
-      R = &(goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, 0)]);
+      R = &(lec->R[LEC_R_INDEX(peqn, 0)]);
       phi_i_vector = bfm->phi;
 
-      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
-        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
           /*
            *  Here is where we figure out whether the row is to placed in
            *  the normal spot (e.g., ii = i), or whether a boundary condition
            *  require that the volumetric contribution be stuck in another
            *  ldof pertaining to the same variable type.
            */
-          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = phi_i_vector[i];
           /* only use Petrov Galerkin on advective term - if required */
@@ -527,9 +536,8 @@ int assemble_momentum(dbl time,       /* current time */
           /* this is an optimization for xfem */
           if (xfem != NULL) {
             int xfem_active, extended_dof, base_interp, base_dof;
-            xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
-                           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
-                           &extended_dof, &base_interp, &base_dof);
+            xfem_dof_state(i, goma_ctx->fem.pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape,
+                           &xfem_active, &extended_dof, &base_interp, &base_dof);
             if (extended_dof && !xfem_active)
               continue;
           }
@@ -554,20 +562,20 @@ int assemble_momentum(dbl time,       /* current time */
           advection = 0.;
           if (advection_on) {
 #ifdef DO_NO_UNROLL
-            for (p = 0; p < goma_ctx->problem.wim; p++) {
+            for (p = 0; p < WIM; p++) {
               advection += (v[p] - x_dot[p]) * grad_v[p][a];
             }
 #else
             advection += (v[0] - x_dot[0]) * grad_v[0][a];
             advection += (v[1] - x_dot[1]) * grad_v[1][a];
-            if (goma_ctx->problem.wim == 3)
+            if (WIM == 3)
               advection += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
-            if (goma_ctx->fem.upd->PSPG_advection_correction) {
+            if (upd->PSPG_advection_correction) {
               advection -= pspg[0] * grad_v[0][a];
               advection -= pspg[1] * grad_v[1][a];
-              if (goma_ctx->problem.wim == 3)
+              if (WIM == 3)
                 advection -= pspg[2] * grad_v[2][a];
             }
 
@@ -593,7 +601,7 @@ int assemble_momentum(dbl time,       /* current time */
               porous *= porous_brinkman_etm;
             } else if (goma_ctx->fem.mp->FSIModel > 0) {
               porous = v[a] - goma_ctx->fem.lub_aux->v_avg[a];
-              porous *= phi_i * wt * goma_ctx->fem.fv->sdet * h3;
+              porous *= phi_i * wt * fv->sdet * h3;
               porous *= porous_brinkman_etm;
             } else if (vis == 0. && goma_ctx->fem.mp->viscosity == 0.) {
               GOMA_EH(GOMA_ERROR,
@@ -604,8 +612,8 @@ int assemble_momentum(dbl time,       /* current time */
           diffusion = 0.;
           if (diffusion_on) {
 #ifdef DO_NO_UNROLL
-            for (p = 0; p < goma_ctx->problem.vim; p++) {
-              for (q = 0; q < goma_ctx->problem.vim; q++) {
+            for (p = 0; p < VIM; p++) {
+              for (q = 0; q < VIM; q++) {
                 diffusion += grad_phi_i_e_a[p][q] * Pi[q][p];
               }
             }
@@ -614,7 +622,7 @@ int assemble_momentum(dbl time,       /* current time */
             diffusion += grad_phi_i_e_a[1][1] * Pi[1][1];
             diffusion += grad_phi_i_e_a[1][0] * Pi[0][1];
             diffusion += grad_phi_i_e_a[0][1] * Pi[1][0];
-            if (goma_ctx->problem.vim == 3) {
+            if (VIM == 3) {
               diffusion += grad_phi_i_e_a[2][2] * Pi[2][2];
               diffusion += grad_phi_i_e_a[2][1] * Pi[1][2];
               diffusion += grad_phi_i_e_a[2][0] * Pi[0][2];
@@ -644,15 +652,13 @@ int assemble_momentum(dbl time,       /* current time */
             if (a == goma_ctx->fem.pd->Num_Dim - 1)
               /* These data values should hold the entire
                * source term. */
-              source =
-                  goma_ctx->particles.element_info[goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem]
-                      .source_term[i];
+              source = goma_ctx->particles.element_info[ei[pg->imtrx]->ielem].source_term[i];
           }
 
           // Continuity residual
           continuity_stabilization = 0.0;
           if (goma_ctx->solver.cont_gls) {
-            for (p = 0; p < goma_ctx->problem.vim; p++) {
+            for (p = 0; p < VIM; p++) {
               continuity_stabilization += grad_phi_i_e_a[p][p];
             }
             continuity_stabilization *= cont_gls * d_area;
@@ -680,11 +686,11 @@ int assemble_momentum(dbl time,       /* current time */
    * Jacobian terms...
    */
 
-  if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (a = 0; a < goma_ctx->problem.wim; a++) {
+  if (af->Assemble_Jacobian) {
+    for (a = 0; a < WIM; a++) {
       eqn = R_MOMENTUM1 + a;
-      peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
-      bfm = goma_ctx->fem.bf[eqn];
+      peqn = upd->ep[pg->imtrx][eqn];
+      bfm = bf[eqn];
 
       mass_on = pde[eqn] & T_MASS;
       advection_on = pde[eqn] & T_ADVECTION;
@@ -692,27 +698,26 @@ int assemble_momentum(dbl time,       /* current time */
       source_on = pde[eqn] & T_SOURCE;
       porous_brinkman_on = pde[eqn] & T_POROUS_BRINK;
 
-      mass_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
-      advection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
-      diffusion_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
-      porous_brinkman_etm =
-          goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_POROUS_BRINK)];
-      source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
+      mass_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
+      advection_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+      diffusion_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
+      porous_brinkman_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_POROUS_BRINK)];
+      source_etm = goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
       phi_i_vector = bfm->phi;
 
-      for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
-        ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+      for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
+        ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
-        ledof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_ledof[eqn][i];
-        if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->active_interp_ledof[ledof]) {
+        ledof = ei[pg->imtrx]->lvdof_to_ledof[eqn][i];
+        if (ei[pg->imtrx]->active_interp_ledof[ledof]) {
           /*
            *  Here is where we figure out whether the row is to placed in
            *  the normal spot (e.g., ii = i), or whether a boundary condition
            *  require that the volumetric contribution be stuck in another
            *  ldof pertaining to the same variable type.
            */
-          ii = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
+          ii = ei[pg->imtrx]->lvdof_to_row_lvdof[eqn][i];
 
           phi_i = phi_i_vector[i];
 
@@ -723,9 +728,8 @@ int assemble_momentum(dbl time,       /* current time */
           /* this is an optimization for xfem */
           if (xfem != NULL) {
             int xfem_active, extended_dof, base_interp, base_dof;
-            xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
-                           goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
-                           &extended_dof, &base_interp, &base_dof);
+            xfem_dof_state(i, goma_ctx->fem.pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape,
+                           &xfem_active, &extended_dof, &base_interp, &base_dof);
             if (extended_dof && !xfem_active)
               continue;
           }
@@ -733,7 +737,7 @@ int assemble_momentum(dbl time,       /* current time */
           d_grad_phi_i_e_a_dmesh = bfm->d_grad_phi_e_dmesh[i][a];
 
 #ifdef DEBUG_MOMENTUM_JAC
-          if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem == 0) {
+          if (ei[pg->imtrx]->ielem == 0) {
             printf("\nASSEMBLE_MOMENTUM, a = %d, dof = %d\n", a, i);
             printf("\tphi_i = %g\n", phi_i);
           }
@@ -752,11 +756,11 @@ int assemble_momentum(dbl time,       /* current time */
            */
           if (pdv[TEMPERATURE]) {
             var = TEMPERATURE;
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-            phi_j_vector = goma_ctx->fem.bf[var]->phi;
-            J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+            pvar = upd->vp[pg->imtrx][var];
+            phi_j_vector = bf[var]->phi;
+            J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
 
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
               phi_j = phi_j_vector[j];
 
               dbl mass_supg = 0;
@@ -785,20 +789,20 @@ int assemble_momentum(dbl time,       /* current time */
 
                 if (advection_on) {
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (p = 0; p < WIM; p++) {
                     advection_supg += (v[p] - x_dot[p]) * grad_v[p][a];
                   }
 #else
                   advection_supg += (v[0] - x_dot[0]) * grad_v[0][a];
                   advection_supg += (v[1] - x_dot[1]) * grad_v[1][a];
-                  if (goma_ctx->problem.wim == 3)
+                  if (WIM == 3)
                     advection_supg += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
-                  if (goma_ctx->fem.upd->PSPG_advection_correction) {
+                  if (upd->PSPG_advection_correction) {
                     advection_supg -= pspg[0] * grad_v[0][a];
                     advection_supg -= pspg[1] * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection_supg -= pspg[2] * grad_v[2][a];
                   }
 
@@ -845,13 +849,13 @@ int assemble_momentum(dbl time,       /* current time */
               advection = 0.;
               if (advection_on) {
 #ifdef DO_NO_UNROLL
-                for (p = 0; p < goma_ctx->problem.wim; p++) {
+                for (p = 0; p < WIM; p++) {
                   advection += (v[p] - x_dot[p]) * grad_v[p][a];
                 }
 #else
                 advection += (v[0] - x_dot[0]) * grad_v[0][a];
                 advection += (v[1] - x_dot[1]) * grad_v[1][a];
-                if (goma_ctx->problem.wim == 3)
+                if (WIM == 3)
                   advection += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
@@ -879,8 +883,8 @@ int assemble_momentum(dbl time,       /* current time */
               diffusion = 0.;
               if (diffusion_on) {
 #ifdef DO_NO_UNROLL
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
-                  for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (p = 0; p < VIM; p++) {
+                  for (q = 0; q < VIM; q++) {
                     diffusion += grad_phi_i_e_a[p][q] * d_Pi->T[q][p][j];
                   }
                 }
@@ -889,7 +893,7 @@ int assemble_momentum(dbl time,       /* current time */
                 diffusion += grad_phi_i_e_a[1][1] * d_Pi->T[1][1][j];
                 diffusion += grad_phi_i_e_a[1][0] * d_Pi->T[0][1][j];
                 diffusion += grad_phi_i_e_a[0][1] * d_Pi->T[1][0][j];
-                if (goma_ctx->problem.vim == 3) {
+                if (VIM == 3) {
                   diffusion += grad_phi_i_e_a[2][0] * d_Pi->T[0][2][j];
                   diffusion += grad_phi_i_e_a[2][1] * d_Pi->T[1][2][j];
                   diffusion += grad_phi_i_e_a[2][2] * d_Pi->T[2][2][j];
@@ -924,11 +928,11 @@ int assemble_momentum(dbl time,       /* current time */
           for (b = 0; b < MAX_MOMENTS; b++) {
             var = MOMENT0 + b;
             if (pdv[var]) {
-              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              phi_j_vector = goma_ctx->fem.bf[var]->phi;
-              J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+              pvar = upd->vp[pg->imtrx][var];
+              phi_j_vector = bf[var]->phi;
+              J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
 
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                 phi_j = phi_j_vector[j];
 
                 mass = 0.;
@@ -949,13 +953,13 @@ int assemble_momentum(dbl time,       /* current time */
                 advection = 0.;
                 if (advection_on) {
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (p = 0; p < WIM; p++) {
                     advection += (v[p] - x_dot[p]) * grad_v[p][a];
                   }
 #else
                   advection += (v[0] - x_dot[0]) * grad_v[0][a];
                   advection += (v[1] - x_dot[1]) * grad_v[1][a];
-                  if (goma_ctx->problem.wim == 3)
+                  if (WIM == 3)
                     advection += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
@@ -995,9 +999,9 @@ int assemble_momentum(dbl time,       /* current time */
 
           if (pdv[BOND_EVOLUTION]) {
             var = BOND_EVOLUTION;
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-              phi_j = goma_ctx->fem.bf[var]->phi[j];
+            pvar = upd->vp[pg->imtrx][var];
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              phi_j = bf[var]->phi[j];
 
               mass = 0;
               advection = 0;
@@ -1025,20 +1029,20 @@ int assemble_momentum(dbl time,       /* current time */
 
                 if (advection_on) {
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (p = 0; p < WIM; p++) {
                     advection += (v[p] - x_dot[p]) * grad_v[p][a];
                   }
 #else
                   advection += (v[0] - x_dot[0]) * grad_v[0][a];
                   advection += (v[1] - x_dot[1]) * grad_v[1][a];
-                  if (goma_ctx->problem.wim == 3)
+                  if (WIM == 3)
                     advection += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
-                  if (goma_ctx->fem.upd->PSPG_advection_correction) {
+                  if (upd->PSPG_advection_correction) {
                     advection -= pspg[0] * grad_v[0][a];
                     advection -= pspg[1] * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection -= pspg[2] * grad_v[2][a];
                   }
 
@@ -1068,17 +1072,16 @@ int assemble_momentum(dbl time,       /* current time */
               }
               diffusion = 0.;
               if (diffusion_on) {
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
-                  for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (p = 0; p < VIM; p++) {
+                  for (q = 0; q < VIM; q++) {
                     diffusion += grad_phi_i_e_a[p][q] * d_Pi->nn[q][p][j];
                   }
                 }
                 diffusion *= -d_area;
-                diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
               }
 
-              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
-                  mass + advection + diffusion + source;
+              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += mass + advection + diffusion + source;
             }
           }
 
@@ -1088,22 +1091,22 @@ int assemble_momentum(dbl time,       /* current time */
 
           if (pdv[RESTIME]) {
             var = RESTIME;
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-              phi_j = goma_ctx->fem.bf[var]->phi[j];
+            pvar = upd->vp[pg->imtrx][var];
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              phi_j = bf[var]->phi[j];
 
               diffusion = 0.;
               if (diffusion_on) {
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
-                  for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (p = 0; p < VIM; p++) {
+                  for (q = 0; q < VIM; q++) {
                     diffusion += grad_phi_i_e_a[p][q] * d_Pi->degrade[q][p][j];
                   }
                 }
                 diffusion *= -d_area;
-                diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
               }
 
-              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
             }
           }
 
@@ -1113,9 +1116,9 @@ int assemble_momentum(dbl time,       /* current time */
 
           if (pdv[EDDY_NU]) {
             var = EDDY_NU;
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-              phi_j = goma_ctx->fem.bf[var]->phi[j];
+            pvar = upd->vp[pg->imtrx][var];
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              phi_j = bf[var]->phi[j];
 
               mass = 0.;
               advection = 0.;
@@ -1143,20 +1146,20 @@ int assemble_momentum(dbl time,       /* current time */
 
                 if (advection_on) {
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (p = 0; p < WIM; p++) {
                     advection += (v[p] - x_dot[p]) * grad_v[p][a];
                   }
 #else
                   advection += (v[0] - x_dot[0]) * grad_v[0][a];
                   advection += (v[1] - x_dot[1]) * grad_v[1][a];
-                  if (goma_ctx->problem.wim == 3)
+                  if (WIM == 3)
                     advection += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
-                  if (goma_ctx->fem.upd->PSPG_advection_correction) {
+                  if (upd->PSPG_advection_correction) {
                     advection -= pspg[0] * grad_v[0][a];
                     advection -= pspg[1] * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection -= pspg[2] * grad_v[2][a];
                   }
 
@@ -1187,25 +1190,24 @@ int assemble_momentum(dbl time,       /* current time */
 
               diffusion = 0.;
               if (diffusion_on) {
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
-                  for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (p = 0; p < VIM; p++) {
+                  for (q = 0; q < VIM; q++) {
                     diffusion += grad_phi_i_e_a[p][q] * d_Pi->eddy_nu[q][p][j];
                   }
                 }
                 diffusion *= -d_area;
-                diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
               }
 
-              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
-                  mass + advection + diffusion + source;
+              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += mass + advection + diffusion + source;
             }
           }
 
           if (pdv[TURB_K]) {
             var = TURB_K;
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-              phi_j = goma_ctx->fem.bf[var]->phi[j];
+            pvar = upd->vp[pg->imtrx][var];
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              phi_j = bf[var]->phi[j];
 
               mass = 0.;
               advection = 0.;
@@ -1233,20 +1235,20 @@ int assemble_momentum(dbl time,       /* current time */
 
                 if (advection_on) {
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (p = 0; p < WIM; p++) {
                     advection += (v[p] - x_dot[p]) * grad_v[p][a];
                   }
 #else
                   advection += (v[0] - x_dot[0]) * grad_v[0][a];
                   advection += (v[1] - x_dot[1]) * grad_v[1][a];
-                  if (goma_ctx->problem.wim == 3)
+                  if (WIM == 3)
                     advection += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
-                  if (goma_ctx->fem.upd->PSPG_advection_correction) {
+                  if (upd->PSPG_advection_correction) {
                     advection -= pspg[0] * grad_v[0][a];
                     advection -= pspg[1] * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection -= pspg[2] * grad_v[2][a];
                   }
 
@@ -1277,24 +1279,23 @@ int assemble_momentum(dbl time,       /* current time */
 
               diffusion = 0.;
               if (diffusion_on) {
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
-                  for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (p = 0; p < VIM; p++) {
+                  for (q = 0; q < VIM; q++) {
                     diffusion += grad_phi_i_e_a[p][q] * d_Pi->turb_k[q][p][j];
                   }
                 }
                 diffusion *= -d_area;
-                diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
               }
 
-              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
-                  mass + advection + diffusion + source;
+              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += mass + advection + diffusion + source;
             }
           }
           if (pdv[TURB_OMEGA]) {
             var = TURB_OMEGA;
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-              phi_j = goma_ctx->fem.bf[var]->phi[j];
+            pvar = upd->vp[pg->imtrx][var];
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              phi_j = bf[var]->phi[j];
 
               mass = 0.;
               advection = 0.;
@@ -1322,20 +1323,20 @@ int assemble_momentum(dbl time,       /* current time */
 
                 if (advection_on) {
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (p = 0; p < WIM; p++) {
                     advection += (v[p] - x_dot[p]) * grad_v[p][a];
                   }
 #else
                   advection += (v[0] - x_dot[0]) * grad_v[0][a];
                   advection += (v[1] - x_dot[1]) * grad_v[1][a];
-                  if (goma_ctx->problem.wim == 3)
+                  if (WIM == 3)
                     advection += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
-                  if (goma_ctx->fem.upd->PSPG_advection_correction) {
+                  if (upd->PSPG_advection_correction) {
                     advection -= pspg[0] * grad_v[0][a];
                     advection -= pspg[1] * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection -= pspg[2] * grad_v[2][a];
                   }
 
@@ -1366,17 +1367,16 @@ int assemble_momentum(dbl time,       /* current time */
 
               diffusion = 0.;
               if (diffusion_on) {
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
-                  for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (p = 0; p < VIM; p++) {
+                  for (q = 0; q < VIM; q++) {
                     diffusion += grad_phi_i_e_a[p][q] * d_Pi->turb_omega[q][p][j];
                   }
                 }
                 diffusion *= -d_area;
-                diffusion *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
               }
 
-              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] +=
-                  mass + advection + diffusion + source;
+              lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += mass + advection + diffusion + source;
             }
           }
 
@@ -1386,13 +1386,13 @@ int assemble_momentum(dbl time,       /* current time */
 
           if (pdv[FILL]) {
             var = FILL;
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+            pvar = upd->vp[pg->imtrx][var];
 
-            J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+            J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
 
-            phi_j_vector = goma_ctx->fem.bf[var]->phi;
+            phi_j_vector = bf[var]->phi;
 
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
               phi_j = phi_j_vector[j];
 
               dbl mass_supg = 0;
@@ -1421,20 +1421,20 @@ int assemble_momentum(dbl time,       /* current time */
 
                 if (advection_on) {
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
+                  for (p = 0; p < WIM; p++) {
                     advection_supg += (v[p] - x_dot[p]) * grad_v[p][a];
                   }
 #else
                   advection_supg += (v[0] - x_dot[0]) * grad_v[0][a];
                   advection_supg += (v[1] - x_dot[1]) * grad_v[1][a];
-                  if (goma_ctx->problem.wim == 3)
+                  if (WIM == 3)
                     advection_supg += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
 
-                  if (goma_ctx->fem.upd->PSPG_advection_correction) {
+                  if (upd->PSPG_advection_correction) {
                     advection_supg -= pspg[0] * grad_v[0][a];
                     advection_supg -= pspg[1] * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection_supg -= pspg[2] * grad_v[2][a];
                   }
 
@@ -1483,13 +1483,13 @@ int assemble_momentum(dbl time,       /* current time */
               advection = 0.;
               if (advection_on) {
 #ifdef DO_NO_UNROLL
-                for (p = 0; p < goma_ctx->problem.wim; p++) {
+                for (p = 0; p < WIM; p++) {
                   advection += (v[p] - x_dot[p]) * grad_v[p][a];
                 }
 #else
                 advection += (v[0] - x_dot[0]) * grad_v[0][a];
                 advection += (v[1] - x_dot[1]) * grad_v[1][a];
-                if (goma_ctx->problem.wim == 3)
+                if (WIM == 3)
                   advection += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
                 advection *= -wt_func * d_rho->F[j] * d_area;
@@ -1515,7 +1515,7 @@ int assemble_momentum(dbl time,       /* current time */
                 } else if (goma_ctx->fem.mp->FSIModel > 0) {
                   porous = 0.0;
                   porous -= goma_ctx->fem.lub_aux->dv_avg_df[a][j] * phi_i;
-                  porous *= wt * goma_ctx->fem.fv->sdet * h3;
+                  porous *= wt * fv->sdet * h3;
                   porous *= porous_brinkman_etm;
                 } else {
                   porous = 0.;
@@ -1525,8 +1525,8 @@ int assemble_momentum(dbl time,       /* current time */
               diffusion = 0.;
               if (diffusion_on) {
 #ifdef DO_NO_UNROLL
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
-                  for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (p = 0; p < VIM; p++) {
+                  for (q = 0; q < VIM; q++) {
                     diffusion += grad_phi_i_e_a[p][q] * d_Pi->F[q][p][j];
                   }
                 }
@@ -1536,7 +1536,7 @@ int assemble_momentum(dbl time,       /* current time */
                 diffusion += grad_phi_i_e_a[1][0] * d_Pi->F[0][1][j];
                 diffusion += grad_phi_i_e_a[0][1] * d_Pi->F[1][0][j];
 
-                if (goma_ctx->problem.vim == 3) {
+                if (VIM == 3) {
                   diffusion += grad_phi_i_e_a[2][0] * d_Pi->F[0][2][j];
                   diffusion += grad_phi_i_e_a[2][1] * d_Pi->F[1][2][j];
                   diffusion += grad_phi_i_e_a[2][2] * d_Pi->F[2][2][j];
@@ -1572,16 +1572,16 @@ int assemble_momentum(dbl time,       /* current time */
           /*
            * J_m_v
            */
-          for (b = 0; b < goma_ctx->problem.wim; b++) {
+          for (b = 0; b < WIM; b++) {
             var = VELOCITY1 + b;
             if (pdv[var]) {
-              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+              pvar = upd->vp[pg->imtrx][var];
 
-              J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+              J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
 
-              phi_j_vector = goma_ctx->fem.bf[var]->phi;
+              phi_j_vector = bf[var]->phi;
 
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
                 phi_j = phi_j_vector[j];
                 double d_wt_func = 0;
@@ -1629,7 +1629,7 @@ int assemble_momentum(dbl time,       /* current time */
                     porous *= porous_brinkman_etm;
                   } else if (goma_ctx->fem.mp->viscosity != 0) {
                     porous = delta(a, b);
-                    porous *= phi_i * phi_j * wt * goma_ctx->fem.fv->sdet * h3;
+                    porous *= phi_i * phi_j * wt * fv->sdet * h3;
                     // porous *= phi_i*phi_j* wt * h3;
                     porous *= porous_brinkman_etm;
                   } else {
@@ -1643,26 +1643,24 @@ int assemble_momentum(dbl time,       /* current time */
                   advection_a += phi_j * grad_v[b][a];
 
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
-                    advection_a +=
-                        (v[p] - x_dot[p]) * goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][a];
+                  for (p = 0; p < WIM; p++) {
+                    advection_a += (v[p] - x_dot[p]) * bf[var]->grad_phi_e[j][b][p][a];
                   }
 #else
-                  advection_a += (v[0] - x_dot[0]) * goma_ctx->fem.bf[var]->grad_phi_e[j][b][0][a];
-                  advection_a += (v[1] - x_dot[1]) * goma_ctx->fem.bf[var]->grad_phi_e[j][b][1][a];
-                  if (goma_ctx->problem.wim == 3)
-                    advection_a +=
-                        (v[2] - x_dot[2]) * goma_ctx->fem.bf[var]->grad_phi_e[j][b][2][a];
+                  advection_a += (v[0] - x_dot[0]) * bf[var]->grad_phi_e[j][b][0][a];
+                  advection_a += (v[1] - x_dot[1]) * bf[var]->grad_phi_e[j][b][1][a];
+                  if (WIM == 3)
+                    advection_a += (v[2] - x_dot[2]) * bf[var]->grad_phi_e[j][b][2][a];
 #endif
 
-                  if (goma_ctx->fem.upd->PSPG_advection_correction) {
-                    advection_a -= pspg[0] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][0][a];
-                    advection_a -= pspg[1] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][1][a];
-                    if (goma_ctx->problem.wim == 3)
-                      advection_a -= pspg[2] * goma_ctx->fem.bf[var]->grad_phi_e[j][b][2][a];
+                  if (upd->PSPG_advection_correction) {
+                    advection_a -= pspg[0] * bf[var]->grad_phi_e[j][b][0][a];
+                    advection_a -= pspg[1] * bf[var]->grad_phi_e[j][b][1][a];
+                    if (WIM == 3)
+                      advection_a -= pspg[2] * bf[var]->grad_phi_e[j][b][2][a];
                     advection_a -= d_pspg.v[0][b][j] * grad_v[0][a];
                     advection_a -= d_pspg.v[1][b][j] * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection_a -= d_pspg.v[2][b][j] * grad_v[2][a];
                   }
 
@@ -1671,12 +1669,12 @@ int assemble_momentum(dbl time,       /* current time */
                   if (supg != 0.) {
                     advection_b += (v[0] - x_dot[0]) * grad_v[0][a];
                     advection_b += (v[1] - x_dot[1]) * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection_b += (v[2] - x_dot[2]) * grad_v[2][a];
-                    if (goma_ctx->fem.upd->PSPG_advection_correction) {
+                    if (upd->PSPG_advection_correction) {
                       advection_b -= pspg[0] * grad_v[0][a];
                       advection_b -= pspg[1] * grad_v[1][a];
-                      if (goma_ctx->problem.wim == 3)
+                      if (WIM == 3)
                         advection_b -= pspg[2] * grad_v[2][a];
                     }
                     advection_b *= -d_wt_func * rho * d_area;
@@ -1700,8 +1698,8 @@ int assemble_momentum(dbl time,       /* current time */
                 diffusion = 0.;
                 if (diffusion_on) {
 #ifdef DO_NO_UNROLL
-                  for (p = 0; p < goma_ctx->problem.vim; p++) {
-                    for (q = 0; q < goma_ctx->problem.vim; q++) {
+                  for (p = 0; p < VIM; p++) {
+                    for (q = 0; q < VIM; q++) {
                       diffusion += grad_phi_i_e_a[p][q] * d_Pi->v[q][p][b][j];
                     }
                   }
@@ -1711,7 +1709,7 @@ int assemble_momentum(dbl time,       /* current time */
                   diffusion += grad_phi_i_e_a[1][0] * d_Pi->v[0][1][b][j];
                   diffusion += grad_phi_i_e_a[0][1] * d_Pi->v[1][0][b][j];
 
-                  if (goma_ctx->problem.vim == 3) {
+                  if (VIM == 3) {
                     diffusion += grad_phi_i_e_a[2][0] * d_Pi->v[0][2][b][j];
                     diffusion += grad_phi_i_e_a[2][1] * d_Pi->v[1][2][b][j];
                     diffusion += grad_phi_i_e_a[0][2] * d_Pi->v[2][0][b][j];
@@ -1733,7 +1731,7 @@ int assemble_momentum(dbl time,       /* current time */
 
                 continuity_stabilization = 0.0;
                 if (goma_ctx->solver.cont_gls) {
-                  for (p = 0; p < goma_ctx->problem.vim; p++) {
+                  for (p = 0; p < VIM; p++) {
                     continuity_stabilization += grad_phi_i_e_a[p][p];
                   }
                   continuity_stabilization *= d_cont_gls->v[b][j] * d_area;
@@ -1754,26 +1752,25 @@ int assemble_momentum(dbl time,       /* current time */
             for (b = 0; b < DIM; b++) {
               var = VORT_DIR1 + b;
               if (pdv[var]) {
-                pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                pvar = upd->vp[pg->imtrx][var];
+                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
-                  phi_j = goma_ctx->fem.bf[var]->phi[j];
+                  phi_j = bf[var]->phi[j];
 
                   diffusion = 0.;
-                  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
+                  if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
 
-                    for (p = 0; p < goma_ctx->problem.vim; p++) {
-                      for (q = 0; q < goma_ctx->problem.vim; q++) {
+                    for (p = 0; p < VIM; p++) {
+                      for (q = 0; q < VIM; q++) {
                         diffusion += grad_phi_i_e_a[p][q] * d_Pi->vd[q][p][b][j];
                       }
                     }
                     diffusion *= -det_J * wt;
                     diffusion *= h3;
-                    diffusion *=
-                        goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                    diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
                   }
 
-                  goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                  lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
                 }
               }
             }
@@ -1783,21 +1780,21 @@ int assemble_momentum(dbl time,       /* current time */
            * J_m_E (E_field from EHD source)
            */
           if (pdv[EFIELD1]) {
-            for (b = 0; b < goma_ctx->problem.wim; b++) {
+            for (b = 0; b < WIM; b++) {
               var = EFIELD1 + b;
               if (pdv[var]) {
-                pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+                pvar = upd->vp[pg->imtrx][var];
+                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
-                  phi_j = goma_ctx->fem.bf[var]->phi[j];
+                  phi_j = bf[var]->phi[j];
 
                   source = 0.;
-                  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+                  if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_SOURCE) {
                     source = phi_i * df->E[a][b][j] * det_J * h3 * wt;
-                    source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
+                    source *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
                   }
 
-                  goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
+                  lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += source;
                 }
               }
             }
@@ -1809,8 +1806,8 @@ int assemble_momentum(dbl time,       /* current time */
           if (pdv[LUBP]) {
             var = LUBP;
             if (pdv[var]) {
-              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              pvar = upd->vp[pg->imtrx][var];
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
                 porous = 0.;
                 if (porous_brinkman_on) {
@@ -1827,12 +1824,12 @@ int assemble_momentum(dbl time,       /* current time */
                     porous -= goma_ctx->fem.lub_aux->dv_dgradp[a][b] * grad_II_phi_j[b];
                   }
                   porous -= goma_ctx->fem.lub_aux->dv_avg_dp2[a] * phi_j;
-                  porous *= phi_i * goma_ctx->fem.fv->sdet * wt * h3;
+                  porous *= phi_i * fv->sdet * wt * h3;
                   // porous *= phi_i * wt * h3;
                   porous *= porous_brinkman_etm;
                 }
 
-                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
+                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
               }
             }
           }
@@ -1844,19 +1841,19 @@ int assemble_momentum(dbl time,       /* current time */
             var = SHELL_DELTAH;
             if (pdv[var]) {
 
-              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              pvar = upd->vp[pg->imtrx][var];
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
-                phi_j = goma_ctx->fem.bf[var]->phi[j];
+                phi_j = bf[var]->phi[j];
 
                 porous = 0.;
                 if (porous_brinkman_on) {
                   porous -= goma_ctx->fem.lub_aux->dv_avg_ddh[a] * phi_j;
-                  porous *= phi_i * goma_ctx->fem.fv->sdet * wt * h3;
+                  porous *= phi_i * fv->sdet * wt * h3;
                   porous *= porous_brinkman_etm;
                 }
 
-                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
+                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
               }
             }
           }
@@ -1864,22 +1861,19 @@ int assemble_momentum(dbl time,       /* current time */
           /*
            * J_m_d_rs (realsolid equation for shell)
            */
-          if (goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][SOLID_DISPLACEMENT1]) {
+          if (upd->vp[pg->imtrx][SOLID_DISPLACEMENT1]) {
             for (b = 0; b < dim; b++) {
               var = SOLID_DISPLACEMENT1 + b;
               if (pdv[var]) {
                 if (goma_ctx->fem.mp->FSIModel == FSI_REALSOLID_CONTINUUM) {
-                  for (j = 0;
-                       j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[SOLID_DISPLACEMENT1];
-                       j++) {
+                  for (j = 0; j < ei[pg->imtrx]->dof[SOLID_DISPLACEMENT1]; j++) {
                     jk = dof_map[j];
 
-                    phi_j = goma_ctx->fem.bf[var]->phi[j];
+                    phi_j = bf[var]->phi[j];
 
                     porous = 0.;
                     if (porous_brinkman_on) {
-                      porous -=
-                          goma_ctx->fem.lub_aux->dv_avg_drs[a][b][j] * goma_ctx->fem.fv->sdet * h3;
+                      porous -= goma_ctx->fem.lub_aux->dv_avg_drs[a][b][j] * fv->sdet * h3;
                     }
                     porous *= phi_i * wt;
 
@@ -1897,19 +1891,19 @@ int assemble_momentum(dbl time,       /* current time */
             var = SHELL_LUB_CURV;
             if (pdv[var]) {
 
-              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              pvar = upd->vp[pg->imtrx][var];
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
-                phi_j = goma_ctx->fem.bf[var]->phi[j];
+                phi_j = bf[var]->phi[j];
 
                 porous = 0.;
                 if (porous_brinkman_on) {
                   porous -= goma_ctx->fem.lub_aux->dv_avg_dk[a] * phi_j;
-                  porous *= phi_i * goma_ctx->fem.fv->sdet * wt * h3;
+                  porous *= phi_i * fv->sdet * wt * h3;
                   porous *= porous_brinkman_etm;
                 }
 
-                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
+                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
               }
             }
           }
@@ -1920,8 +1914,8 @@ int assemble_momentum(dbl time,       /* current time */
           if (pdv[SHELL_FILMP]) {
             var = SHELL_FILMP;
             if (pdv[var]) {
-              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              pvar = upd->vp[pg->imtrx][var];
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
                 porous = 0.;
                 if (porous_brinkman_on) {
@@ -1937,11 +1931,11 @@ int assemble_momentum(dbl time,       /* current time */
                   for (b = 0; b < DIM; b++) {
                     porous -= goma_ctx->fem.lub_aux->dv_dgradp[a][b] * grad_II_phi_j[b];
                   }
-                  porous *= phi_i * goma_ctx->fem.fv->sdet * wt * h3;
+                  porous *= phi_i * fv->sdet * wt * h3;
                   porous *= porous_brinkman_etm;
                 }
 
-                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
+                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
               }
             }
           }
@@ -1952,8 +1946,8 @@ int assemble_momentum(dbl time,       /* current time */
           if (pdv[SHELL_FILMH]) {
             var = SHELL_FILMH;
             if (pdv[var]) {
-              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              pvar = upd->vp[pg->imtrx][var];
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                 porous = 0.;
                 if (porous_brinkman_on) {
                   /*This needs no insulation as the code shouldn't get here
@@ -1966,11 +1960,11 @@ int assemble_momentum(dbl time,       /* current time */
                   /* Assemble */
                   porous -= goma_ctx->fem.lub_aux->dv_avg_dh1[a][j] * grad_II_phi_j[a];
                   porous -= goma_ctx->fem.lub_aux->dv_avg_dh2[a][j] * phi_j;
-                  porous *= phi_i * goma_ctx->fem.fv->sdet * wt * h3;
+                  porous *= phi_i * fv->sdet * wt * h3;
                   porous *= porous_brinkman_etm;
                 }
 
-                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
+                lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += porous;
               }
             }
           }
@@ -1981,13 +1975,13 @@ int assemble_momentum(dbl time,       /* current time */
 
           if (pdv[MASS_FRACTION]) {
             var = MASS_FRACTION;
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-              phi_j = goma_ctx->fem.bf[var]->phi[j];
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              phi_j = bf[var]->phi[j];
 
               for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
                 mass = 0.;
                 if (transient_run) {
-                  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_MASS) {
+                  if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_MASS) {
                     /* For particle momentum stuff, d_rho->* = 0, since the density per phase
                      * is actually constant.  However, the mass term was multiplied by (1-phi),
                      * so that we get a J_m_c entry now.
@@ -1997,10 +1991,10 @@ int assemble_momentum(dbl time,       /* current time */
                     else
                       mass += d_rho->C[w][j] * v_dot[a];
                     mass *= -phi_i * det_J * wt * h3;
-                    mass *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_MASS)];
+                    mass *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
                   }
 
-                  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] &
+                  if (goma_ctx->fem.pd->e[pg->imtrx][eqn] &
                       T_POROUS_BRINK) /* if porous flow is considered. KSC on 5/10/95 */
                   {
                     mass /= por;
@@ -2008,18 +2002,17 @@ int assemble_momentum(dbl time,       /* current time */
                 }
 
                 advection = 0.;
-                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
-                  for (p = 0; p < goma_ctx->problem.wim; p++) {
+                if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_ADVECTION) {
+                  for (p = 0; p < WIM; p++) {
                     advection += (v[p] - x_dot[p]) * grad_v[p][a];
                   }
                   if (particle_momentum_on && w == species)
                     advection *= -phi_j * (-wt_func * rho * det_J * wt * h3);
                   else
                     advection *= -wt_func * d_rho->C[w][j] * det_J * wt * h3;
-                  advection *=
-                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
+                  advection *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
 
-                  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] &
+                  if (goma_ctx->fem.pd->e[pg->imtrx][eqn] &
                       T_POROUS_BRINK) /* if porous flow is considered. KSC on 5/10/95 */
                   {
                     por2 = por * por;
@@ -2028,38 +2021,36 @@ int assemble_momentum(dbl time,       /* current time */
                 }
 
                 porous = 0.;
-                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_POROUS_BRINK) {
+                if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_POROUS_BRINK) {
                   if (vis != 0.) {
                     porous = v[a] * (d_rho->C[w][j] * sc * speed / sqrt(per) -
                                      0.5 * rho * sc * speed / (per * sqrt(per)) * d_per_dc[w][j] -
                                      vis / (per * per) * d_per_dc[w][j] + d_flow_mu->C[w][j] / per);
                     porous *= -phi_i * det_J * wt * h3;
-                    porous *=
-                        goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_POROUS_BRINK)];
+                    porous *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_POROUS_BRINK)];
                   }
                 }
 
                 diffusion = 0.;
-                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                  for (p = 0; p < goma_ctx->problem.vim; p++) {
-                    for (q = 0; q < goma_ctx->problem.vim; q++) {
+                if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+                  for (p = 0; p < VIM; p++) {
+                    for (q = 0; q < VIM; q++) {
                       diffusion += grad_phi_i_e_a[p][q] * d_Pi->C[q][p][w][j];
                     }
                   }
                   diffusion *= -det_J * wt;
                   diffusion *= h3;
-                  diffusion *=
-                      goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                  diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
                 }
 
                 source = 0.;
-                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+                if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_SOURCE) {
                   /* df->C was calculated in mm_std_models.c */
                   source = phi_i * df->C[a][w][j] * det_J * h3 * wt;
-                  source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
+                  source *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
                 }
 
-                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w, ii, j)] +=
+                lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w, ii, j)] +=
                     mass + advection + porous + diffusion + source;
               }
             }
@@ -2071,20 +2062,20 @@ int assemble_momentum(dbl time,       /* current time */
 
           if (pdv[PRESSURE]) {
             var = PRESSURE;
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+            pvar = upd->vp[pg->imtrx][var];
 
-            J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+            J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
 
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
 
               /*  phi_j = bf[var]->phi[j]; */
 
               advection = 0;
 
-              if (goma_ctx->fem.upd->PSPG_advection_correction) {
+              if (upd->PSPG_advection_correction) {
                 advection -= d_pspg.P[0][j] * grad_v[0][a];
                 advection -= d_pspg.P[1][j] * grad_v[1][a];
-                if (goma_ctx->problem.wim == 3)
+                if (WIM == 3)
                   advection -= d_pspg.P[2][j] * grad_v[2][a];
               }
               advection *= rho;
@@ -2095,13 +2086,13 @@ int assemble_momentum(dbl time,       /* current time */
 
               if (diffusion_on) {
 #ifdef DO_NO_UNROLL
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
-                  for (q = 0; q < goma_ctx->problem.vim; q++) {
+                for (p = 0; p < VIM; p++) {
+                  for (q = 0; q < VIM; q++) {
 
                     diffusion -= grad_phi_i_e_a[p][q] * d_Pi->P[q][p][j];
 
 #ifdef DEBUG_MOMENTUM_JAC
-                    if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem == 0)
+                    if (ei[pg->imtrx]->ielem == 0)
                       printf("P diffusion, %d, %d  -= %g %g\n", p, q, grad_phi_i_e_a[p][q],
                              d_Pi->P[j][q][p]);
 #endif /* DEBUG_MOMENTUM_JAC */
@@ -2113,7 +2104,7 @@ int assemble_momentum(dbl time,       /* current time */
                 diffusion -= grad_phi_i_e_a[1][0] * d_Pi->P[0][1][j];
                 diffusion -= grad_phi_i_e_a[0][1] * d_Pi->P[1][0][j];
 
-                if (goma_ctx->problem.vim == 3) {
+                if (VIM == 3) {
                   diffusion -= grad_phi_i_e_a[2][2] * d_Pi->P[2][2][j];
                   diffusion -= grad_phi_i_e_a[2][1] * d_Pi->P[1][2][j];
                   diffusion -= grad_phi_i_e_a[2][0] * d_Pi->P[0][2][j];
@@ -2126,7 +2117,7 @@ int assemble_momentum(dbl time,       /* current time */
               }
 
 #ifdef DEBUG_MOMENTUM_JAC
-              if (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem == 0)
+              if (ei[pg->imtrx]->ielem == 0)
                 fprintf(stdout, "\tJ_m_P[%d][%d][%d] += %10f %10f %10f %10f\n", a, i, j, mass,
                         advection, porous, diffusion);
 #endif /* DEBUG_MOMENTUM_JAC */
@@ -2141,33 +2132,32 @@ int assemble_momentum(dbl time,       /* current time */
            */
           if (pdv[POLYMER_STRESS11]) {
             for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-              for (b = 0; b < goma_ctx->problem.vim; b++) {
-                for (c = 0; c < goma_ctx->problem.vim; c++) {
+              for (b = 0; b < VIM; b++) {
+                for (c = 0; c < VIM; c++) {
                   var = v_s[mode][b][c];
 
                   if (pdv[var]) {
 
-                    pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                    pvar = upd->vp[pg->imtrx][var];
 
-                    for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++)
+                    for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
 
                     {
-                      phi_j = goma_ctx->fem.bf[var]->phi[j];
+                      phi_j = bf[var]->phi[j];
 
                       diffusion = 0.;
 
-                      if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                        for (p = 0; p < goma_ctx->problem.vim; p++) {
-                          for (q = 0; q < goma_ctx->problem.vim; q++) {
+                      if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+                        for (p = 0; p < VIM; p++) {
+                          for (q = 0; q < VIM; q++) {
                             diffusion -= grad_phi_i_e_a[p][q] * d_Pi->S[p][q][mode][b][c][j];
                           }
                         }
                         diffusion *= det_J * wt * h3;
-                        diffusion *=
-                            goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                        diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
                       }
 
-                      goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                      lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
                     }
                   }
                 }
@@ -2184,33 +2174,32 @@ int assemble_momentum(dbl time,       /* current time */
                 goma_ctx->fem.vn->evssModel == SQRT_CONF || goma_ctx->fem.vn->evssModel == CONF ||
                 goma_ctx->fem.vn->evssModel == EVSS_GRADV ||
                 goma_ctx->fem.vn->evssModel == LOG_CONF_GRADV))) {
-            for (b = 0; b < goma_ctx->problem.vim; b++) {
-              for (c = 0; c < goma_ctx->problem.vim; c++) {
+            for (b = 0; b < VIM; b++) {
+              for (c = 0; c < VIM; c++) {
                 var = v_g[b][c];
 
                 if (pdv[var]) {
 
-                  pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                  pvar = upd->vp[pg->imtrx][var];
 
-                  for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++)
+                  for (j = 0; j < ei[pg->imtrx]->dof[var]; j++)
 
                   {
-                    phi_j = goma_ctx->fem.bf[var]->phi[j];
+                    phi_j = bf[var]->phi[j];
 
                     diffusion = 0.;
 
-                    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_DIFFUSION) {
-                      for (p = 0; p < goma_ctx->problem.vim; p++) {
-                        for (q = 0; q < goma_ctx->problem.vim; q++) {
+                    if (goma_ctx->fem.pd->e[pg->imtrx][eqn] & T_DIFFUSION) {
+                      for (p = 0; p < VIM; p++) {
+                        for (q = 0; q < VIM; q++) {
                           diffusion += grad_phi_i_e_a[p][q] * d_Pi->g[q][p][b][c][j];
                         }
                       }
                       diffusion *= det_J * wt * h3;
-                      diffusion *=
-                          goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_DIFFUSION)];
+                      diffusion *= goma_ctx->fem.pd->etm[pg->imtrx][eqn][(LOG2_DIFFUSION)];
                     }
 
-                    goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
+                    lec->J[LEC_J_INDEX(peqn, pvar, ii, j)] += diffusion;
                   }
                 }
               }
@@ -2224,16 +2213,16 @@ int assemble_momentum(dbl time,       /* current time */
             for (b = 0; b < dim; b++) {
               var = MESH_DISPLACEMENT1 + b;
               if (pdv[var]) {
-                pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+                pvar = upd->vp[pg->imtrx][var];
 
-                J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
+                J = &(lec->J[LEC_J_INDEX(peqn, pvar, ii, 0)]);
 
-                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-                  phi_j = goma_ctx->fem.bf[var]->phi[j];
+                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                  phi_j = bf[var]->phi[j];
 
                   d_det_J_dmesh_bj = bfm->d_det_J_dm[b][j];
 
-                  dh3dmesh_bj = goma_ctx->fem.fv->dh3dq[b] * phi_j;
+                  dh3dmesh_bj = fv->dh3dq[b] * phi_j;
 
                   mass = 0.;
 
@@ -2261,12 +2250,10 @@ int assemble_momentum(dbl time,       /* current time */
                     /* Case for sheet-only  */
                     else if (goma_ctx->fem.mp->FSIModel == FSI_SHELL_ONLY) {
                       jk = dof_map[j];
-                      porous += (v[a] - goma_ctx->fem.lub_aux->v_avg[a]) *
-                                goma_ctx->fem.fv->dsurfdet_dx[b][jk] * h3;
-                      porous += (v[a] - goma_ctx->fem.lub_aux->v_avg[a]) * goma_ctx->fem.fv->sdet *
-                                dh3dmesh_bj;
-                      porous -=
-                          goma_ctx->fem.lub_aux->dv_avg_dx[a][b][j] * goma_ctx->fem.fv->sdet * h3;
+                      porous +=
+                          (v[a] - goma_ctx->fem.lub_aux->v_avg[a]) * fv->dsurfdet_dx[b][jk] * h3;
+                      porous += (v[a] - goma_ctx->fem.lub_aux->v_avg[a]) * fv->sdet * dh3dmesh_bj;
+                      porous -= goma_ctx->fem.lub_aux->dv_avg_dx[a][b][j] * fv->sdet * h3;
                       porous *= phi_i * wt;
                     }
 
@@ -2297,30 +2284,28 @@ int assemble_momentum(dbl time,       /* current time */
                      */
 #ifdef DO_NO_UNROLL
                     advection_a = 0.;
-                    for (p = 0; p < goma_ctx->problem.wim; p++) {
-                      advection_a +=
-                          (v[p] - x_dot[p]) * goma_ctx->fem.fv->d_grad_v_dmesh[p][a][b][j];
+                    for (p = 0; p < WIM; p++) {
+                      advection_a += (v[p] - x_dot[p]) * fv->d_grad_v_dmesh[p][a][b][j];
                     }
                     advection_a *= -wt_func * rho * d_area;
 
                     advection_b = 0.;
-                    for (p = 0; p < goma_ctx->problem.wim; p++) {
+                    for (p = 0; p < WIM; p++) {
                       advection_b += (v[p] - x_dot[p]) * grad_v[p][a];
                     }
 #else
                     advection_a = 0.;
-                    advection_a += (v[0] - x_dot[0]) * goma_ctx->fem.fv->d_grad_v_dmesh[0][a][b][j];
-                    advection_a += (v[1] - x_dot[1]) * goma_ctx->fem.fv->d_grad_v_dmesh[1][a][b][j];
-                    if (goma_ctx->problem.wim == 3)
-                      advection_a +=
-                          (v[2] - x_dot[2]) * goma_ctx->fem.fv->d_grad_v_dmesh[2][a][b][j];
+                    advection_a += (v[0] - x_dot[0]) * fv->d_grad_v_dmesh[0][a][b][j];
+                    advection_a += (v[1] - x_dot[1]) * fv->d_grad_v_dmesh[1][a][b][j];
+                    if (WIM == 3)
+                      advection_a += (v[2] - x_dot[2]) * fv->d_grad_v_dmesh[2][a][b][j];
 
                     advection_a *= -wt_func * rho * d_area;
 
                     advection_b = 0.;
                     advection_b += (v[0] - x_dot[0]) * grad_v[0][a];
                     advection_b += (v[1] - x_dot[1]) * grad_v[1][a];
-                    if (goma_ctx->problem.wim == 3)
+                    if (WIM == 3)
                       advection_b += (v[2] - x_dot[2]) * grad_v[2][a];
 #endif
                     advection_b *=
@@ -2330,7 +2315,7 @@ int assemble_momentum(dbl time,       /* current time */
                     if (transient_run) {
                       if (mass_on) {
 #ifdef DO_NO_UNROLL
-                        for (p = 0; p < goma_ctx->problem.wim; p++) {
+                        for (p = 0; p < WIM; p++) {
                           advection_c +=
                               (-(1. + 2. * tt) * phi_j / dt * (double)delta(p, b)) * grad_v[p][a];
                         }
@@ -2339,7 +2324,7 @@ int assemble_momentum(dbl time,       /* current time */
                             (-(1. + 2. * tt) * phi_j / dt * (double)delta(0, b)) * grad_v[0][a];
                         advection_c +=
                             (-(1. + 2. * tt) * phi_j / dt * (double)delta(1, b)) * grad_v[1][a];
-                        if (goma_ctx->problem.wim == 3)
+                        if (WIM == 3)
                           advection_c +=
                               (-(1. + 2. * tt) * phi_j / dt * (double)delta(2, b)) * grad_v[2][a];
 #endif
@@ -2380,8 +2365,8 @@ int assemble_momentum(dbl time,       /* current time */
                     diff_b = 0.;
                     diff_c = 0.;
 #ifdef DO_NO_UNROLL
-                    for (p = 0; p < goma_ctx->problem.vim; p++) {
-                      for (q = 0; q < goma_ctx->problem.vim; q++) {
+                    for (p = 0; p < VIM; p++) {
+                      for (q = 0; q < VIM; q++) {
                         diff_a += d_grad_phi_i_e_a_dmesh[p][q][b][j] * Pi[q][p];
 
                         diff_b += grad_phi_i_e_a[p][q] * d_Pi->X[q][p][b][j];
@@ -2405,7 +2390,7 @@ int assemble_momentum(dbl time,       /* current time */
                     diff_c += grad_phi_i_e_a[0][1] * Pi[1][0];
                     diff_c += grad_phi_i_e_a[1][0] * Pi[0][1];
 
-                    if (goma_ctx->problem.vim == 3) {
+                    if (VIM == 3) {
                       diff_a += d_grad_phi_i_e_a_dmesh[2][2][b][j] * Pi[2][2];
                       diff_a += d_grad_phi_i_e_a_dmesh[2][1][b][j] * Pi[1][2];
                       diff_a += d_grad_phi_i_e_a_dmesh[2][0][b][j] * Pi[0][2];
@@ -2455,7 +2440,7 @@ int assemble_momentum(dbl time,       /* current time */
 
                   continuity_stabilization = 0.0;
                   if (goma_ctx->solver.cont_gls) {
-                    for (p = 0; p < goma_ctx->problem.vim; p++) {
+                    for (p = 0; p < VIM; p++) {
                       continuity_stabilization +=
                           d_grad_phi_i_e_a_dmesh[p][p][b][j] * cont_gls * d_area;
                       continuity_stabilization +=
@@ -2473,22 +2458,18 @@ int assemble_momentum(dbl time,       /* current time */
                  * j-loop is over bulk element */
                 if (goma_ctx->fem.mp->FSIModel == FSI_MESH_CONTINUUM ||
                     goma_ctx->fem.mp->FSIModel == FSI_REALSOLID_CONTINUUM) {
-                  for (j = 0;
-                       j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
-                       j++) {
+                  for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
                     jk = dof_map[j];
 
-                    phi_j = goma_ctx->fem.bf[var]->phi[j];
-                    dh3dmesh_bj = goma_ctx->fem.fv->dh3dq[b] * phi_j;
+                    phi_j = bf[var]->phi[j];
+                    dh3dmesh_bj = fv->dh3dq[b] * phi_j;
 
                     porous = 0.;
                     if (porous_brinkman_on) {
-                      porous += (v[a] - goma_ctx->fem.lub_aux->v_avg[a]) *
-                                goma_ctx->fem.fv->dsurfdet_dx[b][jk] * h3;
-                      porous += (v[a] - goma_ctx->fem.lub_aux->v_avg[a]) * goma_ctx->fem.fv->sdet *
-                                dh3dmesh_bj;
-                      porous -=
-                          goma_ctx->fem.lub_aux->dv_avg_dx[a][b][j] * goma_ctx->fem.fv->sdet * h3;
+                      porous +=
+                          (v[a] - goma_ctx->fem.lub_aux->v_avg[a]) * fv->dsurfdet_dx[b][jk] * h3;
+                      porous += (v[a] - goma_ctx->fem.lub_aux->v_avg[a]) * fv->sdet * dh3dmesh_bj;
+                      porous -= goma_ctx->fem.lub_aux->dv_avg_dx[a][b][j] * fv->sdet * h3;
                     }
                     porous *= phi_i * wt;
 
@@ -2870,6 +2851,15 @@ void ve_polymer_stress(double gamma[DIM][DIM],
  *  d_Pi = dependence of the stress tensor on the independent variables
  */
 void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  struct Material_Properties *const mp = goma_ctx->fem.mp;
+  const int VIM = goma_ctx->problem.vim;
+  const int WIM = goma_ctx->problem.wim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
 
   /*
    * Variables for vicosity and derivative
@@ -2939,18 +2929,18 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
 
   int eqn = R_MOMENTUM1;
 
-  if (goma_ctx->fem.pd->gv[TEMPERATURE]) {
-    temp = goma_ctx->fem.fv->T;
+  if (pd->gv[TEMPERATURE]) {
+    temp = fv->T;
   } else {
-    temp = goma_ctx->fem.upd->Process_Temperature;
+    temp = upd->Process_Temperature;
   }
 
-  dim = goma_ctx->fem.pd->Num_Dim;
+  dim = pd->Num_Dim;
 
-  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
+  if (pd->gv[POLYMER_STRESS11]) {
     (void)stress_eqn_pointer(v_s);
   }
-  if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
+  if (pd->gv[VELOCITY_GRADIENT11]) {
     v_g[0][0] = VELOCITY_GRADIENT11;
     v_g[0][1] = VELOCITY_GRADIENT12;
     v_g[1][0] = VELOCITY_GRADIENT21;
@@ -2966,7 +2956,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
    * Field variables...
    */
 
-  P = goma_ctx->fem.fv->P;
+  P = fv->P;
 
   /* if d_Pi == NULL, then the dependencies aren't needed,
      so we won't need the viscosity dependencies, either
@@ -3003,7 +2993,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   evss_f = 0;
-  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11] && is_evss_f_model(goma_ctx->fem.vn->evssModel)) {
+  if (pd->gv[POLYMER_STRESS11] && is_evss_f_model(goma_ctx->fem.vn->evssModel)) {
     evss_f = 1.0;
   }
 
@@ -3027,9 +3017,9 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   if (evss_f) {
-    for (a = 0; a < goma_ctx->problem.vim; a++) {
-      for (b = 0; b < goma_ctx->problem.vim; b++) {
-        gamma_cont[a][b] = goma_ctx->fem.fv->G[a][b] + goma_ctx->fem.fv->G[b][a];
+    for (a = 0; a < VIM; a++) {
+      for (b = 0; b < VIM; b++) {
+        gamma_cont[a][b] = fv->G[a][b] + fv->G[b][a];
       }
     }
   } else {
@@ -3037,9 +3027,9 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   /* load up shear rate tensor based on velocity */
-  for (a = 0; a < goma_ctx->problem.vim; a++) {
-    for (b = 0; b < goma_ctx->problem.vim; b++) {
-      gamma[a][b] = goma_ctx->fem.fv->grad_v[a][b] + goma_ctx->fem.fv->grad_v[b][a];
+  for (a = 0; a < VIM; a++) {
+    for (b = 0; b < VIM; b++) {
+      gamma[a][b] = fv->grad_v[a][b] + fv->grad_v[b][a];
     }
   }
   if (do_dilational_visc) {
@@ -3047,7 +3037,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   mu = viscosity(goma_ctx->fem.gn, gamma, d_mu);
-  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
+  if (pd->gv[POLYMER_STRESS11]) {
     mus = viscosity(goma_ctx->fem.gn, gamma, d_mus);
 
     /* initialize the derivative wrt to stress and velocity gradient */
@@ -3065,9 +3055,9 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     mu_num = 1;
     if (DOUBLE_NONZERO(goma_ctx->fem.vn->eps)) {
       for (int mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-        for (a = 0; a < goma_ctx->problem.vim; a++) {
-          for (b = 0; b < goma_ctx->problem.vim; b++) {
-            s[a][b] += goma_ctx->fem.fv->S[mode][a][b];
+        for (a = 0; a < VIM; a++) {
+          for (b = 0; b < VIM; b++) {
+            s[a][b] += fv->S[mode][a][b];
           }
         }
       }
@@ -3082,56 +3072,56 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
      * including all the derivatives.
      */
     var = VELOCITY1;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (a = 0; a < goma_ctx->problem.wim; a++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (a = 0; a < WIM; a++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->v[a][j] = mu_num * d_mus->v[a][j];
         }
       }
     }
 
     var = MESH_DISPLACEMENT1;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
       for (a = 0; a < dim; a++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->X[a][j] = mu_num * d_mus->X[a][j];
         }
       }
     }
 
     var = TEMPERATURE;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         d_mu->T[j] = mu_num * d_mus->T[j];
       }
     }
 
     var = BOND_EVOLUTION;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         d_mu->nn[j] = mu_num * d_mus->nn[j];
       }
     }
 
     var = RESTIME;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         d_mu->degrade[j] = mu_num * d_mus->degrade[j];
       }
     }
 
     var = FILL;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         d_mu->F[j] = mu_num * d_mus->F[j];
       }
     }
 
     var = EDDY_NU;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_mu->eddy_nu[j] = mu_num * d_mu->eddy_nu[j];
           }
         }
@@ -3139,10 +3129,10 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
 
     var = TURB_K;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_mu->turb_k[j] = mu_num * d_mu->turb_k[j];
           }
         }
@@ -3150,10 +3140,10 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
 
     var = TURB_OMEGA;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_mu->turb_omega[j] = mu_num * d_mu->turb_omega[j];
           }
         }
@@ -3161,41 +3151,40 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
 
     var = PRESSURE;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         d_mu->P[j] = mu_num * d_mus->P[j];
       }
     }
 
     var = MASS_FRACTION;
-    if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-      for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+      for (w = 0; w < pd->Num_Species_Eqn; w++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->C[w][j] = mu_num * d_mus->C[w][j];
         }
       }
     }
 
     /*  shift factor  */
-    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][TEMPERATURE]) {
+    if (pd->e[pg->imtrx][TEMPERATURE]) {
       if (goma_ctx->fem.vn->shiftModel == CONSTANT) {
         at = goma_ctx->fem.vn->shift[0];
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; j++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
           d_at_dT[j] = 0.;
         }
       } else if (goma_ctx->fem.vn->shiftModel == MODIFIED_WLF) {
-        wlf_denom = goma_ctx->fem.vn->shift[1] + temp - goma_ctx->fem.mp->reference[TEMPERATURE];
+        wlf_denom = goma_ctx->fem.vn->shift[1] + temp - mp->reference[TEMPERATURE];
         if (wlf_denom != 0.) {
-          at = exp(goma_ctx->fem.vn->shift[0] * (goma_ctx->fem.mp->reference[TEMPERATURE] - temp) /
-                   wlf_denom);
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; j++) {
+          at = exp(goma_ctx->fem.vn->shift[0] * (mp->reference[TEMPERATURE] - temp) / wlf_denom);
+          for (j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
             d_at_dT[j] = -at * goma_ctx->fem.vn->shift[0] * goma_ctx->fem.vn->shift[1] /
-                         (wlf_denom * wlf_denom) * goma_ctx->fem.bf[TEMPERATURE]->phi[j];
+                         (wlf_denom * wlf_denom) * bf[TEMPERATURE]->phi[j];
           }
         } else {
           at = 1.;
         }
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[TEMPERATURE]; j++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[TEMPERATURE]; j++) {
           d_at_dT[j] = 0.;
         }
       }
@@ -3211,62 +3200,62 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
       mu += Heaviside * mu_num * at * mup;
 
       var = VELOCITY1;
-      if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (a = 0; a < goma_ctx->problem.wim; a++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+        for (a = 0; a < WIM; a++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_mu->v[a][j] += mu_num * at * d_mup->v[a][j];
           }
         }
       }
 
       var = MESH_DISPLACEMENT1;
-      if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
+      if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
         for (a = 0; a < dim; a++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_mu->X[a][j] += mu_num * at * d_mup->X[a][j];
           }
         }
       }
 
       var = TEMPERATURE;
-      if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->T[j] += mu_num * (at * d_mup->T[j] + mup * d_at_dT[j]);
         }
       }
 
       var = BOND_EVOLUTION;
-      if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->nn[j] += mu_num * at * d_mup->nn[j];
         }
       }
 
       var = RESTIME;
-      if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->degrade[j] += mu_num * at * d_mup->degrade[j];
         }
       }
 
       var = FILL;
-      if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->F[j] += mu_num * at * d_mup->F[j];
         }
       }
 
       var = PRESSURE;
-      if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->P[j] += mu_num * at * d_mup->P[j];
         }
       }
 
       var = MASS_FRACTION;
-      if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_mu->C[w][j] += mu_num * at * d_mup->C[w][j];
           }
         }
@@ -3277,9 +3266,9 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   /*
    * Calculate the dilational viscosity, if necessary
    */
-  if (goma_ctx->fem.mp->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
+  if (mp->DilationalViscosityModel != DILVISCM_KAPPAWIPESMU) {
     kappa = dil_viscosity(goma_ctx->fem.gn, mu, d_mu, d_dilMu);
-    dilmuMult = goma_ctx->fem.mp->dilationalViscosityMultiplier;
+    dilmuMult = mp->dilationalViscosityMultiplier;
     // kappa = 0.0;
     kappaWipesMu = 0;
   }
@@ -3290,7 +3279,7 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   dbl polymer_stress[DIM][DIM];
   STRESS_DEPENDENCE_STRUCT d_polymer_stress_struct;
   STRESS_DEPENDENCE_STRUCT *d_polymer_stress = NULL;
-  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
+  if (pd->gv[POLYMER_STRESS11]) {
     if (d_Pi != NULL) {
       d_polymer_stress = &d_polymer_stress_struct;
       memset(d_polymer_stress, 0, sizeof(STRESS_DEPENDENCE_STRUCT));
@@ -3305,8 +3294,8 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
    *  gamma[a][b] is the usual gradV + gradV_t term
    *  delta(a,b) is a delta function
    */
-  for (a = 0; a < goma_ctx->problem.vim; a++) {
-    for (b = 0; b < goma_ctx->problem.vim; b++) {
+  for (a = 0; a < VIM; a++) {
+    for (b = 0; b < VIM; b++) {
       Pi[a][b] = -P * (double)delta(a, b) + mu * gamma[a][b] - tau_p[a][b];
     }
 
@@ -3316,9 +3305,9 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
   }
 
-  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-    for (a = 0; a < goma_ctx->problem.vim; a++) {
-      for (b = 0; b < goma_ctx->problem.vim; b++) {
+  if (pd->gv[POLYMER_STRESS11]) {
+    for (a = 0; a < VIM; a++) {
+      for (b = 0; b < VIM; b++) {
         // TODO : derivative may be missing here...
         Pi[a][b] += -evss_f * (mu - mus) * gamma_cont[a][b] + Heaviside * polymer_stress[a][b];
       }
@@ -3326,10 +3315,10 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
   if (goma_ctx->fem.gn->ConstitutiveEquation == BINGHAM_MIXED) {
     dbl tau_y = goma_ctx->fem.gn->tau_y;
-    if (goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11]) {
-      for (a = 0; a < goma_ctx->problem.vim; a++) {
-        for (b = 0; b < goma_ctx->problem.vim; b++) {
-          Pi[a][b] += tau_y * goma_ctx->fem.fv->G[a][b];
+    if (pd->gv[VELOCITY_GRADIENT11]) {
+      for (a = 0; a < VIM; a++) {
+        for (b = 0; b < VIM; b++) {
+          Pi[a][b] += tau_y * fv->G[a][b];
         }
       }
     } else {
@@ -3341,25 +3330,25 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
    * OK, FIND THE JACOBIAN
    */
   var = TEMPERATURE;
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->T[p][q][j] = d_mu->T[j] * gamma[p][q];
         }
       }
     }
     if (!kappaWipesMu) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      for (p = 0; p < VIM; p++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->T[p][p][j] -= dilmuMult * (d_mu->T[j] / 3.0 - 0.5 * d_dilMu->T[j]) * gamma[p][p];
         }
       }
     }
-    if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (pd->gv[POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->T[p][q][j] -= evss_f * (d_mu->T[j] - d_mus->T[j]) * gamma_cont[p][q];
           }
         }
@@ -3368,25 +3357,25 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   var = BOND_EVOLUTION;
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->nn[p][q][j] = d_mu->nn[j] * gamma[p][q];
         }
       }
     }
     if (!kappaWipesMu) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      for (p = 0; p < VIM; p++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->nn[p][p][j] -= dilmuMult * (d_mu->nn[j] / 3.0 - 0.5 * d_dilMu->nn[j]) * gamma[p][p];
         }
       }
     }
-    if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (pd->gv[POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->nn[p][q][j] -= evss_f * (d_mu->nn[j] - d_mus->nn[j]) * gamma_cont[p][q];
           }
         }
@@ -3395,26 +3384,26 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   var = RESTIME;
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->degrade[p][q][j] = d_mu->degrade[j] * gamma[p][q];
         }
       }
     }
     if (!kappaWipesMu) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      for (p = 0; p < VIM; p++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->degrade[p][p][j] -=
               (d_mu->degrade[j] / 3.0 - 0.5 * d_dilMu->degrade[j]) * gamma[p][p];
         }
       }
     }
-    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->degrade[p][q][j] -=
                 evss_f * (d_mu->degrade[j] - d_mus->degrade[j]) * gamma_cont[p][q];
           }
@@ -3424,25 +3413,25 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   var = FILL;
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->F[p][q][j] = d_mu->F[j] * gamma[p][q];
         }
       }
     }
     if (!kappaWipesMu) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+      for (p = 0; p < VIM; p++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->F[p][p][j] -= dilmuMult * (d_mu->F[j] / 3.0 - 0.5 * d_dilMu->F[j]) * gamma[p][p];
         }
       }
     }
-    if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (pd->gv[POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->F[p][q][j] -= evss_f * (d_mu->F[j] - d_mus->F[j]) * gamma_cont[p][q];
           }
         }
@@ -3450,34 +3439,34 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
   }
 
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][PHASE1]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][PHASE1]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         for (a = 0; a < goma_ctx->fem.pfd->num_phase_funcs; a++) {
           var = PHASE1 + a;
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->pf[p][q][a][j] = d_mu->pf[a][j] * gamma[p][q];
           }
         }
       }
     }
     if (!kappaWipesMu) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
+      for (p = 0; p < VIM; p++) {
         for (a = 0; a < goma_ctx->fem.pfd->num_phase_funcs; a++) {
           var = PHASE1 + a;
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->pf[p][p][a][j] -=
                 dilmuMult * (d_mu->pf[a][j] / 3.0 - 0.5 * d_dilMu->pf[a][j]) * gamma[p][p];
           }
         }
       }
     }
-    if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
+    if (pd->gv[POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
           for (a = 0; a < goma_ctx->fem.pfd->num_phase_funcs; a++) {
             var = PHASE1 + a;
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
               d_Pi->pf[p][q][a][j] -=
                   evss_f * (d_mu->pf[a][j] - d_mus->pf[a][j]) * gamma_cont[p][q];
             }
@@ -3487,36 +3476,36 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
   }
 
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY1]) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][VELOCITY1]) {
     /* Damn... It is unfortunate that grad_phi_e is 1) assumed to be
      * the same for all velocity components (this is bad for 3d
      * stability of a 2d flow), and 2) there is no bf[] structure
      * for the theta-velocity in cylindrical coordinates (I believe
      * there is for swirling).  That's why this needed to be
      * split... */
-    if (goma_ctx->fem.pd->CoordinateSystem != CYLINDRICAL) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (b = 0; b < goma_ctx->problem.wim; b++) {
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; j++) {
+    if (pd->CoordinateSystem != CYLINDRICAL) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (b = 0; b < WIM; b++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
               /* grad_phi_e cannot be the same for all
                * velocities for 3d stab of 2d flow!!
                * Compare with the old way in the CYLINDRICAL
                * chunk below... */
-              d_Pi->v[p][q][b][j] = mu * (goma_ctx->fem.bf[VELOCITY1 + q]->grad_phi_e[j][b][p][q] +
-                                          goma_ctx->fem.bf[VELOCITY1 + p]->grad_phi_e[j][b][q][p]) +
+              d_Pi->v[p][q][b][j] = mu * (bf[VELOCITY1 + q]->grad_phi_e[j][b][p][q] +
+                                          bf[VELOCITY1 + p]->grad_phi_e[j][b][q][p]) +
                                     d_mu->v[b][j] * gamma[p][q] - d_tau_p_dv[p][q][b][j];
             }
           }
         }
 
         if (!kappaWipesMu) {
-          for (b = 0; b < goma_ctx->problem.wim; b++) {
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; j++) {
+          for (b = 0; b < WIM; b++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
               d_Pi->v[p][p][b][j] -=
-                  dilmuMult * ((2.0 * mu / 3.0 - kappa) *
-                                   (goma_ctx->fem.bf[VELOCITY1 + p]->grad_phi_e[j][b][p][p]) +
-                               (d_mu->v[b][j] / 3.0 - 0.5 * d_dilMu->v[b][j]) * gamma[p][p]);
+                  dilmuMult *
+                  ((2.0 * mu / 3.0 - kappa) * (bf[VELOCITY1 + p]->grad_phi_e[j][b][p][p]) +
+                   (d_mu->v[b][j] / 3.0 - 0.5 * d_dilMu->v[b][j]) * gamma[p][p]);
             }
           }
         }
@@ -3530,19 +3519,19 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
        * behavior above is "more" correct than this, so I
        * defaulted everyrthing else to it.
        */
-      grad_phi_e = goma_ctx->fem.bf[eqn]->grad_phi_e;
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (b = 0; b < goma_ctx->problem.wim; b++) {
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; j++) {
+      grad_phi_e = bf[eqn]->grad_phi_e;
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (b = 0; b < WIM; b++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
               d_Pi->v[p][q][b][j] = mu * (grad_phi_e[j][b][p][q] + grad_phi_e[j][b][q][p]) +
                                     d_mu->v[b][j] * gamma[p][q] - d_tau_p_dv[p][q][b][j];
             }
           }
         }
         if (!kappaWipesMu) {
-          for (b = 0; b < goma_ctx->problem.wim; b++) {
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; j++) {
+          for (b = 0; b < WIM; b++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
               d_Pi->v[p][p][b][j] -=
                   dilmuMult * ((2.0 * mu / 3.0 - kappa) * (grad_phi_e[j][b][p][p]) +
                                (d_mu->v[b][j] / 3.0 - 0.5 * d_dilMu->v[b][j]) * gamma[p][p]);
@@ -3551,11 +3540,11 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
         }
       }
     }
-    if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (b = 0; b < goma_ctx->problem.wim; b++) {
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VELOCITY1]; j++) {
+    if (pd->v[pg->imtrx][POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (b = 0; b < WIM; b++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[VELOCITY1]; j++) {
               d_Pi->v[p][q][b][j] -= evss_f * (d_mu->v[b][j] - d_mus->v[b][j]) * gamma_cont[p][q];
             }
           }
@@ -3565,12 +3554,12 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   // Vorticity direction dependence for qtensor
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VORT_DIR1]) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][VORT_DIR1]) {
     memset(d_Pi->vd, 0, DIM * DIM * DIM * MDE * sizeof(double));
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         for (b = 0; b < dim; b++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[VORT_DIR1]; j++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[VORT_DIR1]; j++) {
             d_Pi->vd[p][q][b][j] = -d_tau_p_dvd[p][q][b][j];
           }
         }
@@ -3579,34 +3568,32 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   // Mesh Dependence
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][MESH_DISPLACEMENT1]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][MESH_DISPLACEMENT1]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         for (b = 0; b < dim; b++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
-            d_Pi->X[p][q][b][j] = mu * (goma_ctx->fem.fv->d_grad_v_dmesh[p][q][b][j] +
-                                        goma_ctx->fem.fv->d_grad_v_dmesh[q][p][b][j]) +
-                                  +d_mu->X[b][j] * gamma[p][q] - d_tau_p_dmesh[p][q][b][j];
+          for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+            d_Pi->X[p][q][b][j] =
+                mu * (fv->d_grad_v_dmesh[p][q][b][j] + fv->d_grad_v_dmesh[q][p][b][j]) +
+                +d_mu->X[b][j] * gamma[p][q] - d_tau_p_dmesh[p][q][b][j];
           }
         }
       }
       if (!kappaWipesMu) {
         for (b = 0; b < dim; b++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
             d_Pi->X[p][p][b][j] -=
-                dilmuMult *
-                ((2.0 * mu / 3.0 - kappa) * (goma_ctx->fem.fv->d_grad_v_dmesh[p][p][b][j]) +
-                 (d_mu->X[b][j] / 3.0 - 0.5 * d_dilMu->X[b][j]) * gamma[p][p]);
+                dilmuMult * ((2.0 * mu / 3.0 - kappa) * (fv->d_grad_v_dmesh[p][p][b][j]) +
+                             (d_mu->X[b][j] / 3.0 - 0.5 * d_dilMu->X[b][j]) * gamma[p][p]);
           }
         }
       }
     }
-    if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
+    if (pd->gv[POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
           for (b = 0; b < dim; b++) {
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MESH_DISPLACEMENT1];
-                 j++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[MESH_DISPLACEMENT1]; j++) {
               d_Pi->X[p][q][b][j] -= evss_f * (d_mu->X[b][j] - d_mus->X[b][j]) * gamma_cont[p][q];
             }
           }
@@ -3615,14 +3602,14 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
   }
 
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][POLYMER_STRESS11]) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][POLYMER_STRESS11]) {
     for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (b = 0; b < goma_ctx->problem.vim; b++) {
-            for (c = 0; c < goma_ctx->problem.vim; c++) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (b = 0; b < VIM; b++) {
+            for (c = 0; c < VIM; c++) {
               var = v_s[mode][b][c];
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                 d_Pi->S[p][q][mode][b][c][j] = d_polymer_stress->S[p][q][mode][b][c][j] +
                                                mu_over_mu_num * d_mun_dS[mode][b][c][j] *
                                                    (gamma[p][q] - evss_f * gamma_cont[p][q]);
@@ -3634,17 +3621,16 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
     }
   }
 
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][VELOCITY_GRADIENT11] &&
-      goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (b = 0; b < goma_ctx->problem.vim; b++) {
-          for (c = 0; c < goma_ctx->problem.vim; c++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][VELOCITY_GRADIENT11] && pd->gv[POLYMER_STRESS11]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (b = 0; b < VIM; b++) {
+          for (c = 0; c < VIM; c++) {
             var = v_g[b][c];
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
               d_Pi->g[p][q][b][c][j] =
                   mu_over_mu_num * d_mun_dG[b][c][j] * (gamma[p][q] - evss_f * gamma_cont[p][q]) +
-                  evss_f * ((mu - mus) * goma_ctx->fem.bf[var]->phi[j] *
+                  evss_f * ((mu - mus) * bf[var]->phi[j] *
                             ((double)delta(c, p) * (double)delta(b, q) +
                              (double)delta(b, p) * (double)delta(c, q)));
             }
@@ -3653,21 +3639,19 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
       }
     }
   }
-  if (d_Pi != NULL && goma_ctx->fem.pd->gv[VELOCITY_GRADIENT11] &&
+  if (d_Pi != NULL && pd->gv[VELOCITY_GRADIENT11] &&
       goma_ctx->fem.gn->ConstitutiveEquation == BINGHAM_MIXED) {
     dbl tau_y = goma_ctx->fem.gn->tau_y;
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
         if (p <= q) {
-          for (b = 0; b < goma_ctx->problem.vim; b++) {
-            for (c = 0; c < goma_ctx->problem.vim; c++) {
+          for (b = 0; b < VIM; b++) {
+            for (c = 0; c < VIM; c++) {
               var = v_g[b][c];
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-                d_Pi->g[p][q][b][c][j] =
-                    tau_y * goma_ctx->fem.bf[var]->phi[j] * (delta(p, b) * delta(q, c));
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                d_Pi->g[p][q][b][c][j] = tau_y * bf[var]->phi[j] * (delta(p, b) * delta(q, c));
                 if (q > p) {
-                  d_Pi->g[q][p][b][c][j] =
-                      tau_y * goma_ctx->fem.bf[var]->phi[j] * (delta(p, b) * delta(q, c));
+                  d_Pi->g[q][p][b][c][j] = tau_y * bf[var]->phi[j] * (delta(p, b) * delta(q, c));
                 }
               }
             }
@@ -3678,18 +3662,18 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   var = MASS_FRACTION;
-  if (d_mu != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+  if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->C[p][q][w][j] = d_mu->C[w][j] * gamma[p][q] - d_tau_p_dy[p][q][w][j];
           }
         }
       }
       if (!kappaWipesMu) {
-        for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->C[p][p][w][j] -=
                 dilmuMult * (d_mu->C[w][j] / 3.0 - 0.5 * d_dilMu->C[w][j]) * gamma[p][p];
           }
@@ -3697,11 +3681,11 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
       }
     }
 
-    if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (pd->gv[POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (w = 0; w < pd->Num_Species_Eqn; w++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
               d_Pi->C[p][q][w][j] -= evss_f * (d_mu->C[w][j] - d_mus->C[w][j]) * gamma_cont[p][q];
             }
           }
@@ -3711,10 +3695,10 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   var = EDDY_NU;
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->eddy_nu[p][q][j] = d_mu->eddy_nu[j] * gamma[p][q];
         }
       }
@@ -3722,20 +3706,20 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   var = TURB_K;
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->turb_k[p][q][j] = d_mu->turb_k[j] * gamma[p][q];
         }
       }
     }
   }
   var = TURB_OMEGA;
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+  if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->turb_omega[p][q][j] = d_mu->turb_omega[j] * gamma[p][q];
         }
       }
@@ -3743,24 +3727,24 @@ void fluid_stress(double Pi[DIM][DIM], STRESS_DEPENDENCE_STRUCT *d_Pi) {
   }
 
   var = PRESSURE;
-  if (d_Pi != NULL && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      for (q = 0; q < goma_ctx->problem.vim; q++) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          d_Pi->P[p][q][j] = -(double)delta(p, q) * goma_ctx->fem.bf[var]->phi[j] +
-                             d_mu->P[j] * gamma[p][q] - d_tau_p_dp[p][q][j];
+  if (d_Pi != NULL && pd->v[pg->imtrx][var]) {
+    for (p = 0; p < VIM; p++) {
+      for (q = 0; q < VIM; q++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          d_Pi->P[p][q][j] = -(double)delta(p, q) * bf[var]->phi[j] + d_mu->P[j] * gamma[p][q] -
+                             d_tau_p_dp[p][q][j];
         }
       }
       if (!kappaWipesMu) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_Pi->P[p][p][j] -= dilmuMult * (d_mu->P[j] / 3.0 - 0.5 * d_dilMu->P[j]) * gamma[p][p];
         }
       }
     }
-    if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
-      for (p = 0; p < goma_ctx->problem.vim; p++) {
-        for (q = 0; q < goma_ctx->problem.vim; q++) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+    if (pd->gv[POLYMER_STRESS11]) {
+      for (p = 0; p < VIM; p++) {
+        for (q = 0; q < VIM; q++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             d_Pi->P[p][q][j] -= evss_f * (d_mu->P[j] - d_mus->P[j]) * gamma_cont[p][q];
           }
         }

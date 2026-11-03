@@ -121,6 +121,17 @@ int assemble_continuity(dbl time_value, /* current time */
                                            explicit (tt = 1) to implicit (tt = 0)    */
                         dbl dt,         /* current time step size                    */
                         const PG_DATA *pg_data) {
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  struct Material_Properties *const mp = goma_ctx->fem.mp;
+  const int VIM = goma_ctx->problem.vim;
+  const int WIM = goma_ctx->problem.wim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Local_Element_Contributions *const lec = goma_ctx->fem.lec;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
+  struct Action_Flags *const af = goma_ctx->fem.af;
   int dim;
   int p, q, a, b;
 
@@ -133,8 +144,8 @@ int assemble_continuity(dbl time_value, /* current time */
 
   dbl time = 0.0; /*  RSL 6/6/02  */
 
-  dbl *v = goma_ctx->fem.fv->v;        /* Velocity field. */
-  dbl div_v = goma_ctx->fem.fv->div_v; /* Divergence of v. */
+  dbl *v = fv->v;        /* Velocity field. */
+  dbl div_v = fv->div_v; /* Divergence of v. */
 
   dbl epsilon = 0.0, derivative, sum; /*  RSL 7/24/00  */
   dbl sum1, sum2;                     /*  RSL 8/15/00  */
@@ -175,7 +186,7 @@ int assemble_continuity(dbl time_value, /* current time */
   int v_s[MAX_MODES][DIM][DIM], v_g[DIM][DIM];
   int mode;
 
-  int *pdv = goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx];
+  int *pdv = pd->v[pg->imtrx];
 
   dbl pspg[DIM];
   PSPG_DEPENDENCE_STRUCT d_pspg_struct;
@@ -209,7 +220,7 @@ int assemble_continuity(dbl time_value, /* current time */
   double dFVS_drho[MDE];
   double dFVS_dMOM[MAX_MOMENTS][MDE];
 
-  int transient_run = goma_ctx->fem.pd->TimeIntegration != STEADY;
+  int transient_run = pd->TimeIntegration != STEADY;
   int advection_on = 0;
   int source_on = 0;
   int ion_reactions_on = 0, electrode_kinetics_on = 0;
@@ -229,19 +240,19 @@ int assemble_continuity(dbl time_value, /* current time */
    */
 
   eqn = R_PRESSURE;
-  peqn = goma_ctx->fem.upd->ep[goma_ctx->fem.pg->imtrx][eqn];
+  peqn = upd->ep[pg->imtrx][eqn];
 
   /*
    * Bail out fast if there's nothing to do...
    */
 
-  if (!goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn]) {
+  if (!pd->e[pg->imtrx][eqn]) {
     return (status);
   }
 
-  dim = goma_ctx->fem.pd->Num_Dim;
+  dim = pd->Num_Dim;
 
-  if (goma_ctx->fem.pd->gv[POLYMER_STRESS11]) {
+  if (pd->gv[POLYMER_STRESS11]) {
     err = stress_eqn_pointer(v_s);
 
     v_g[0][0] = VELOCITY_GRADIENT11;
@@ -255,13 +266,13 @@ int assemble_continuity(dbl time_value, /* current time */
     v_g[2][2] = VELOCITY_GRADIENT33;
   }
 
-  wt = goma_ctx->fem.fv->wt;
-  det_J = goma_ctx->fem.bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
-  h3 = goma_ctx->fem.fv->h3;           /* Differential volume element (scales). */
+  wt = fv->wt;
+  det_J = bf[eqn]->detJ; /* Really, ought to be mesh eqn. */
+  h3 = fv->h3;           /* Differential volume element (scales). */
 
   d_area = wt * det_J * h3;
 
-  grad_phi = goma_ctx->fem.bf[eqn]->grad_phi;
+  grad_phi = bf[eqn]->grad_phi;
 
   /*
    * Get the deformation gradients and tensors if needed
@@ -269,24 +280,24 @@ int assemble_continuity(dbl time_value, /* current time */
 
   lagrangian_mesh_motion = (goma_ctx->fem.cr->MeshMotion == LAGRANGIAN ||
                             goma_ctx->fem.cr->MeshMotion == DYNAMIC_LAGRANGIAN);
-  electrode_kinetics_on = (goma_ctx->fem.mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS);
-  ion_reactions_on = (goma_ctx->fem.mp->SpeciesSourceModel[0] == ION_REACTIONS);
+  electrode_kinetics_on = (mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS);
+  ion_reactions_on = (mp->SpeciesSourceModel[0] == ION_REACTIONS);
   total_ale_on = (goma_ctx->fem.cr->MeshMotion == TOTAL_ALE);
   hydromassflux_on = (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC);
-  suspensionsource_on = (goma_ctx->fem.mp->MomentumSourceModel == SUSPENSION);
+  suspensionsource_on = (mp->MomentumSourceModel == SUSPENSION);
 
-  if (lagrangian_mesh_motion && goma_ctx->fem.pd->gv[R_MESH1]) {
+  if (lagrangian_mesh_motion && pd->gv[R_MESH1]) {
     err = belly_flop(goma_ctx->fem.elc->lame_mu);
     GOMA_EH(err, "error in belly flop");
     if (err == 2)
       return (err);
   }
 
-  if (total_ale_on && !goma_ctx->fem.pd->gv[VELOCITY1]) {
+  if (total_ale_on && !pd->gv[VELOCITY1]) {
     total_ale_and_velo_off = 1;
   }
 
-  if (total_ale_and_velo_off && goma_ctx->fem.pd->gv[R_SOLID1]) {
+  if (total_ale_and_velo_off && pd->gv[R_SOLID1]) {
     err = belly_flop_rs(goma_ctx->fem.elc_rs->lame_mu);
     GOMA_EH(err, "error in belly flop for real solid");
     if (err == 2)
@@ -297,38 +308,36 @@ int assemble_continuity(dbl time_value, /* current time */
   species = -1;
   ompvf = 1.0;
 
-  if (goma_ctx->fem.pd->gv[R_PMOMENTUM1]) {
+  if (pd->gv[R_PMOMENTUM1]) {
     particle_momentum_on = 1;
-    species = (int)goma_ctx->fem.mp->u_density[0];
-    ompvf = 1.0 - goma_ctx->fem.fv->c[species];
+    species = (int)mp->u_density[0];
+    ompvf = 1.0 - fv->c[species];
   }
 
   if (goma_ctx->solver.pspg) {
     calc_pspg(pspg, d_pspg, time_value, tt, dt, pg_data);
   }
 
-  if ((lagrangian_mesh_motion || total_ale_and_velo_off) &&
-      (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS)) {
+  if ((lagrangian_mesh_motion || total_ale_and_velo_off) && (mp->PorousMediaType == CONTINUOUS)) {
     initial_volsolvent = goma_ctx->fem.elc->Strss_fr_sol_vol_frac;
     volsolvent = 0.;
-    for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++)
-      volsolvent += goma_ctx->fem.fv->c[w];
+    for (w = 0; w < pd->Num_Species_Eqn; w++)
+      volsolvent += fv->c[w];
     if (particle_momentum_on)
-      volsolvent -= goma_ctx->fem.fv->c[species];
+      volsolvent -= fv->c[species];
   }
 
   if (electrode_kinetics_on || ion_reactions_on) {
-    if (goma_ctx->fem.mp->PorosityModel == CONSTANT) {
-      epsilon = goma_ctx->fem.mp->porosity;
-    } else if (goma_ctx->fem.mp->PorosityModel == THERMAL_BATTERY) {
-      epsilon = goma_ctx->fem.mp->u_porosity[0];
+    if (mp->PorosityModel == CONSTANT) {
+      epsilon = mp->porosity;
+    } else if (mp->PorosityModel == THERMAL_BATTERY) {
+      epsilon = mp->u_porosity[0];
     } else {
       GOMA_EH(GOMA_ERROR, "invalid porosity model");
     }
   }
 
-  if (goma_ctx->fem.mp->MomentumSourceModel == SUSPENSION_PM ||
-      electrode_kinetics_on) /*  RSL 7/25/00  */
+  if (mp->MomentumSourceModel == SUSPENSION_PM || electrode_kinetics_on) /*  RSL 7/25/00  */
   {
     err = get_continuous_species_terms(&s_terms, 0.0, tt, dt, pg_data->hsquared);
     GOMA_EH(err, "problem in getting the species terms");
@@ -341,35 +350,34 @@ int assemble_continuity(dbl time_value, /* current time */
     GOMA_EH(err, "problem in getting the species terms");
   }
 
-  if ((hydromassflux_on) && (goma_ctx->fem.mp->DensityModel == SUSPENSION) &&
-      (suspensionsource_on)) {
+  if ((hydromassflux_on) && (mp->DensityModel == SUSPENSION) && (suspensionsource_on)) {
     /*
      * Compute hydrodynamic/sedimentation flux and sensitivities.
      */
 
-    w0 = (int)goma_ctx->fem.mp
-             ->u_density[0]; /* This is the species number that is transported HYDRODYNAMICally */
+    w0 =
+        (int)mp->u_density[0]; /* This is the species number that is transported HYDRODYNAMICally */
 
     hydro_flux(&s_terms, w0, tt, dt, pg_data->hsquared);
 
-    rhof = goma_ctx->fem.mp->u_density[1];
-    rhos = goma_ctx->fem.mp->u_density[2];
+    rhof = mp->u_density[1];
+    rhos = mp->u_density[2];
   }
   rho = density(d_rho, time_value);
 
-  advection_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION;
-  source_on = goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE;
+  advection_on = pd->e[pg->imtrx][eqn] & T_ADVECTION;
+  source_on = pd->e[pg->imtrx][eqn] & T_SOURCE;
 
-  advection_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
-  source_etm = goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
+  advection_etm = pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
+  source_etm = pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
 
   dbl ls_disable_pspg = 1;
   //  if (ls != NULL && (fabs(fv->F) < ls->Length_Scale)) {
   //    ls_disable_pspg = 0;
   //  }
 
-  if (goma_ctx->fem.af->Assemble_Residual) {
-    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+  if (af->Assemble_Residual) {
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
 
 #if 1
       /* this is an optimization for xfem */
@@ -377,8 +385,7 @@ int assemble_continuity(dbl time_value, /* current time */
       if (xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
 
-        xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
-                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
+        xfem_dof_state(i, pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape, &xfem_active,
                        &extended_dof, &base_interp, &base_dof);
 
         if (extended_dof && !xfem_active)
@@ -386,7 +393,7 @@ int assemble_continuity(dbl time_value, /* current time */
       }
 #endif
 
-      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
+      phi_i = bf[eqn]->phi[i];
 
       /*
        *  Mass Terms: drhodt terms (usually though problem dependent)
@@ -403,14 +410,14 @@ int assemble_continuity(dbl time_value, /* current time */
         mass = 0.0;
         if (transient_run) {
           var = MASS_FRACTION;
-          if (goma_ctx->fem.pd->gv[var]) {
-            for (w = 0; w < goma_ctx->fem.pd->Num_Species - 1; w++) {
+          if (pd->gv[var]) {
+            for (w = 0; w < pd->Num_Species - 1; w++) {
               derivative = 0.0;
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-                if (goma_ctx->fem.bf[var]->phi[j] > 0.0)
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (bf[var]->phi[j] > 0.0)
                   break;
               }
-              derivative = d_rho->C[w][j] / goma_ctx->fem.bf[var]->phi[j];
+              derivative = d_rho->C[w][j] / bf[var]->phi[j];
               mass += derivative * s_terms.Y_dot[w];
             }
           }
@@ -429,8 +436,7 @@ int assemble_continuity(dbl time_value, /* current time */
        */
       advection = 0.0;
       if (advection_on) {
-        if (goma_ctx->fem.pd
-                ->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
+        if (pd->gv[VELOCITY1]) /* then must be solving fluid mechanics in this material */
         {
 
           /*
@@ -451,7 +457,7 @@ int assemble_continuity(dbl time_value, /* current time */
         } else if (lagrangian_mesh_motion || total_ale_on)
         /* use divergence of displacement for linear elasticity */
         {
-          advection = goma_ctx->fem.fv->volume_change;
+          advection = fv->volume_change;
 
           if (particle_momentum_on)
             advection *= ompvf;
@@ -463,14 +469,14 @@ int assemble_continuity(dbl time_value, /* current time */
         if (electrode_kinetics_on || ion_reactions_on) {
           advection = div_v;
           var = MASS_FRACTION;
-          if (goma_ctx->fem.pd->gv[var]) {
-            for (w = 0; w < goma_ctx->fem.pd->Num_Species - 1; w++) {
+          if (pd->gv[var]) {
+            for (w = 0; w < pd->Num_Species - 1; w++) {
               derivative = 0.0;
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-                if (goma_ctx->fem.bf[var]->phi[j] > 0.0)
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                if (bf[var]->phi[j] > 0.0)
                   break;
               }
-              derivative = d_rho->C[w][j] / goma_ctx->fem.bf[var]->phi[j];
+              derivative = d_rho->C[w][j] / bf[var]->phi[j];
 
               sum = 0.;
               for (p = 0; p < dim; p++) {
@@ -487,7 +493,7 @@ int assemble_continuity(dbl time_value, /* current time */
       source = 0.0;
       sourceBase = 0.0;
       if (source_on) {
-        if (goma_ctx->fem.pd->gv[VELOCITY1]) {
+        if (pd->gv[VELOCITY1]) {
           /* DRN (07/13/05):
              This was previously:
              source     =  P;
@@ -499,13 +505,11 @@ int assemble_continuity(dbl time_value, /* current time */
 
              source     =  0.;
              }*/
-          if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM ||
-              goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_CONC ||
-              goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_TIME ||
-              goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_TIME_TEMP ||
-              goma_ctx->fem.mp->DensityModel == DENSITY_MOMENT_BASED ||
-              goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PMDI_10 ||
-              goma_ctx->fem.mp->DensityModel == DENSITY_CURE_SHRINKAGE) {
+          if (mp->DensityModel == DENSITY_FOAM || mp->DensityModel == DENSITY_FOAM_CONC ||
+              mp->DensityModel == DENSITY_FOAM_TIME || mp->DensityModel == DENSITY_FOAM_TIME_TEMP ||
+              mp->DensityModel == DENSITY_MOMENT_BASED ||
+              mp->DensityModel == DENSITY_FOAM_PMDI_10 ||
+              mp->DensityModel == DENSITY_CURE_SHRINKAGE) {
             /* These density models locally permit a time and spatially varying
                density.  Consequently, the Lagrangian derivative of the density
                terms in the continuity equation are not zero and are
@@ -515,7 +519,7 @@ int assemble_continuity(dbl time_value, /* current time */
                 FoamVolumeSource(time_value, dt, tt, dFVS_dv, dFVS_dT, dFVS_dx, dFVS_dC, dFVS_dF);
             sourceBase = source;
             foam_volume_source_on = 1;
-          } else if (goma_ctx->fem.mp->DensityModel == REACTIVE_FOAM) {
+          } else if (mp->DensityModel == REACTIVE_FOAM) {
             /* These density models locally permit a time and spatially varying
                density.  Consequently, the Lagrangian derivative of the density
                terms in the continuity equation are not zero and are
@@ -524,7 +528,7 @@ int assemble_continuity(dbl time_value, /* current time */
             source = REFVolumeSource(time_value, dt, tt, dFVS_dv, dFVS_dT, dFVS_dx, dFVS_dC);
             sourceBase = source;
             foam_volume_source_on = 1;
-          } else if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PBE) {
+          } else if (mp->DensityModel == DENSITY_FOAM_PBE) {
             memset(dFVS_dv, 0, sizeof(double) * DIM * MDE);
             memset(dFVS_dT, 0, sizeof(double) * MDE);
             memset(dFVS_dx, 0, sizeof(double) * DIM * MDE);
@@ -535,7 +539,7 @@ int assemble_continuity(dbl time_value, /* current time */
             source =
                 PBEVolumeSource(time_value, dt, tt, dFVS_dv, dFVS_dT, dFVS_dx, dFVS_dC, dFVS_dMOM);
             foam_volume_source_on = 1;
-          } else if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PBE_EQN) {
+          } else if (mp->DensityModel == DENSITY_FOAM_PBE_EQN) {
             memset(dFVS_dv, 0, sizeof(double) * DIM * MDE);
             memset(dFVS_dT, 0, sizeof(double) * MDE);
             memset(dFVS_dx, 0, sizeof(double) * DIM * MDE);
@@ -571,12 +575,12 @@ int assemble_continuity(dbl time_value, /* current time */
            */
           if (particle_momentum_on) {
             source = 0.0;
-            for (a = 0; a < goma_ctx->problem.wim; a++) {
+            for (a = 0; a < WIM; a++) {
               /* Cannot use s_terms.conv_flux[a] here because that
                * is defined in terms of the particle phase
                * velocities.
                */
-              source -= goma_ctx->fem.fv->grad_c[species][a] * v[a];
+              source -= fv->grad_c[species][a] * v[a];
             }
             sourceBase = source;
           }
@@ -587,7 +591,7 @@ int assemble_continuity(dbl time_value, /* current time */
         if ((lagrangian_mesh_motion || total_ale_and_velo_off))
         /* add swelling as a source of volume */
         {
-          if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) {
+          if (mp->PorousMediaType == CONTINUOUS) {
             source = -(1. - initial_volsolvent) / (1. - volsolvent);
             sourceBase = source;
             source *= phi_i * d_area;
@@ -596,8 +600,8 @@ int assemble_continuity(dbl time_value, /* current time */
         }
         if (electrode_kinetics_on || ion_reactions_on) {
           source = 0.0;
-          for (j = 0; j < goma_ctx->fem.pd->Num_Species; j++) {
-            source -= s_terms.MassSource[j] * goma_ctx->fem.mp->molecular_weight[j];
+          for (j = 0; j < pd->Num_Species; j++) {
+            source -= s_terms.MassSource[j] * mp->molecular_weight[j];
           }
           source /= rho;
           sourceBase = source;
@@ -611,9 +615,9 @@ int assemble_continuity(dbl time_value, /* current time */
 
       pressure_stabilization = 0.0;
       if (goma_ctx->solver.pspg) {
-        for (a = 0; a < goma_ctx->problem.wim; a++) {
+        for (a = 0; a < WIM; a++) {
           meqn = R_MOMENTUM1 + a;
-          if (goma_ctx->fem.pd->gv[meqn]) {
+          if (pd->gv[meqn]) {
             pressure_stabilization += grad_phi[i][a] * pspg[a];
           }
         }
@@ -636,7 +640,7 @@ int assemble_continuity(dbl time_value, /* current time */
 
         h_flux *= (rhos - rhof) / rhof;
         h_flux *= h3 * det_J * wt;
-        h_flux *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
+        h_flux *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
         /*  h_flux = 0.0; */
       }
 
@@ -648,39 +652,37 @@ int assemble_continuity(dbl time_value, /* current time */
        *  Add up the individual contributions and sum them into the local element
        *  contribution for the total continuity equation for the ith local unknown
        */
-      goma_ctx->fem.lec->R[LEC_R_INDEX(peqn, i)] +=
-          mass + advection + source + pressure_stabilization + h_flux;
+      lec->R[LEC_R_INDEX(peqn, i)] += mass + advection + source + pressure_stabilization + h_flux;
     }
   }
 
-  if (goma_ctx->fem.af->Assemble_Jacobian) {
-    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[eqn]; i++) {
+  if (af->Assemble_Jacobian) {
+    for (i = 0; i < ei[pg->imtrx]->dof[eqn]; i++) {
 #if 1
       /* this is an optimization for xfem */
       if (xfem != NULL) {
         int xfem_active, extended_dof, base_interp, base_dof;
-        xfem_dof_state(i, goma_ctx->fem.pd->i[goma_ctx->fem.pg->imtrx][eqn],
-                       goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape, &xfem_active,
+        xfem_dof_state(i, pd->i[pg->imtrx][eqn], ei[pg->imtrx]->ielem_shape, &xfem_active,
                        &extended_dof, &base_interp, &base_dof);
         if (extended_dof && !xfem_active)
           continue;
       }
 #endif
 
-      phi_i = goma_ctx->fem.bf[eqn]->phi[i];
+      phi_i = bf[eqn]->phi[i];
 
       /*
        * J_c_v NOTE that this is applied whenever velocity is a variable
        */
-      for (b = 0; b < goma_ctx->problem.wim; b++) {
+      for (b = 0; b < WIM; b++) {
         var = VELOCITY1 + b;
         if (pdv[var]) {
-          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          pvar = upd->vp[pg->imtrx][var];
 
-          J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
+          J = &(lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
 
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            phi_j = goma_ctx->fem.bf[var]->phi[j];
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            phi_j = bf[var]->phi[j];
 
             h_flux = 0.;
             if ((hydromassflux_on) && (suspensionsource_on)) {
@@ -695,26 +697,24 @@ int assemble_continuity(dbl time_value, /* current time */
             if (advection_on) {
               div_phi_j_e_b = 0.;
 #ifdef DO_NO_UNROLL
-              for (p = 0; p < goma_ctx->problem.vim; p++) {
-                div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][p][p];
+              for (p = 0; p < VIM; p++) {
+                div_phi_j_e_b += bf[var]->grad_phi_e[j][b][p][p];
               }
 #else
-              div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][0][0] +
-                               goma_ctx->fem.bf[var]->grad_phi_e[j][b][1][1];
-              if (goma_ctx->problem.vim == 3)
-                div_phi_j_e_b += goma_ctx->fem.bf[var]->grad_phi_e[j][b][2][2];
+              div_phi_j_e_b += bf[var]->grad_phi_e[j][b][0][0] + bf[var]->grad_phi_e[j][b][1][1];
+              if (VIM == 3)
+                div_phi_j_e_b += bf[var]->grad_phi_e[j][b][2][2];
 #endif
 
               if (electrode_kinetics_on || ion_reactions_on) {
                 sum = 0.;
-                for (jj = 0; jj < goma_ctx->fem.pd->Num_Species - 1; jj++) {
+                for (jj = 0; jj < pd->Num_Species - 1; jj++) {
                   derivative = 0.0;
-                  for (q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION];
-                       q++) {
-                    if (goma_ctx->fem.bf[MASS_FRACTION]->phi[q] > 0.0)
+                  for (q = 0; q < ei[pg->imtrx]->dof[MASS_FRACTION]; q++) {
+                    if (bf[MASS_FRACTION]->phi[q] > 0.0)
                       break;
                   }
-                  derivative = d_rho->C[jj][q] / goma_ctx->fem.bf[MASS_FRACTION]->phi[q];
+                  derivative = d_rho->C[jj][q] / bf[MASS_FRACTION]->phi[q];
                   sum += derivative * s_terms.d_conv_flux_dv[jj][b][b][j];
                 }
                 div_phi_j_e_b += sum / rho;
@@ -752,9 +752,9 @@ int assemble_continuity(dbl time_value, /* current time */
              */
             pressure_stabilization = 0.;
             if (goma_ctx->solver.pspg) {
-              for (a = 0; a < goma_ctx->problem.wim; a++) {
+              for (a = 0; a < WIM; a++) {
                 meqn = R_MOMENTUM1 + a;
-                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
+                if (pd->e[pg->imtrx][meqn]) {
                   pressure_stabilization += grad_phi[i][a] * d_pspg->v[a][b][j];
                 }
               }
@@ -773,26 +773,26 @@ int assemble_continuity(dbl time_value, /* current time */
       }
 
       var = EDDY_NU;
-      if (goma_ctx->solver.pspg && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+      if (goma_ctx->solver.pspg && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          pvar = upd->vp[pg->imtrx][var];
 
-          phi_j = goma_ctx->fem.bf[var]->phi[j];
+          phi_j = bf[var]->phi[j];
 
           /* add Pressure-Stabilized Petrov-Galerkin term
            * if desired.
            */
           pressure_stabilization = 0.;
 
-          for (a = 0; a < goma_ctx->problem.wim; a++) {
+          for (a = 0; a < WIM; a++) {
             meqn = R_MOMENTUM1 + a;
-            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
+            if (pd->e[pg->imtrx][meqn]) {
               pressure_stabilization += grad_phi[i][a] * d_pspg->eddy_nu[a][j];
             }
           }
           pressure_stabilization *= d_area * ls_disable_pspg;
 
-          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += pressure_stabilization;
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += pressure_stabilization;
         }
       }
 
@@ -801,45 +801,44 @@ int assemble_continuity(dbl time_value, /* current time */
        * which comes from the Pressure-Stabilized Petrov-Galerkin term
        */
       var = TEMPERATURE;
-      if (goma_ctx->solver.pspg && goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+      if (goma_ctx->solver.pspg && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          pvar = upd->vp[pg->imtrx][var];
 
-          phi_j = goma_ctx->fem.bf[var]->phi[j];
+          phi_j = bf[var]->phi[j];
 
           /* add Pressure-Stabilized Petrov-Galerkin term
            * if desired.
            */
           pressure_stabilization = 0.;
 
-          for (a = 0; a < goma_ctx->problem.wim; a++) {
+          for (a = 0; a < WIM; a++) {
             meqn = R_MOMENTUM1 + a;
-            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
+            if (pd->e[pg->imtrx][meqn]) {
               pressure_stabilization += grad_phi[i][a] * d_pspg->T[a][j];
             }
           }
           pressure_stabilization *= d_area * ls_disable_pspg;
 
-          goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += pressure_stabilization;
+          lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += pressure_stabilization;
         }
       }
 
       if (source_on) {
         if (foam_volume_source_on) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            pvar = upd->vp[pg->imtrx][var];
 
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] +=
-                d_area * phi_i * dFVS_dT[j] * source_etm;
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += d_area * phi_i * dFVS_dT[j] * source_etm;
           }
         }
       }
 
       if ((hydromassflux_on) && pdv[var]) {
         if (suspensionsource_on) {
-          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          pvar = upd->vp[pg->imtrx][var];
 
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             h_flux = 0.;
 
             for (p = 0; p < dim; p++) {
@@ -850,7 +849,7 @@ int assemble_continuity(dbl time_value, /* current time */
 
             /*  h_flux = 0.0; */
 
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += h_flux;
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += h_flux;
           }
         }
       }
@@ -861,11 +860,11 @@ int assemble_continuity(dbl time_value, /* current time */
 
       var = FILL;
       if (source_on && pdv[var] && goma_ctx->fem.ls != NULL) {
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        pvar = upd->vp[pg->imtrx][var];
 
-        J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
+        J = &(lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
 
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           source = 0.0;
 
           if (foam_volume_source_on) {
@@ -884,18 +883,18 @@ int assemble_continuity(dbl time_value, /* current time */
        */
       var = PRESSURE;
       if (pdv[var]) {
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        pvar = upd->vp[pg->imtrx][var];
 
-        J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
+        J = &(lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
 
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          phi_j = goma_ctx->fem.bf[var]->phi[j];
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          phi_j = bf[var]->phi[j];
 
           advection = 0.;
 
           if (advection_on && (lagrangian_mesh_motion || total_ale_and_velo_off)) {
             /*Need to compute this for total ALE.  Not done yet */
-            advection = goma_ctx->fem.fv->d_volume_change_dp[j];
+            advection = fv->d_volume_change_dp[j];
 
             advection *= phi_i * d_area;
 
@@ -909,9 +908,9 @@ int assemble_continuity(dbl time_value, /* current time */
            */
           pressure_stabilization = 0.;
           if (goma_ctx->solver.pspg) {
-            for (a = 0; a < goma_ctx->problem.wim; a++) {
+            for (a = 0; a < WIM; a++) {
               meqn = R_MOMENTUM1 + a;
-              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn] & T_DIFFUSION) {
+              if (pd->e[pg->imtrx][meqn] & T_DIFFUSION) {
                 pressure_stabilization += grad_phi[i][a] * d_pspg->P[a][j];
               }
             }
@@ -932,24 +931,24 @@ int assemble_continuity(dbl time_value, /* current time */
       var = POLYMER_STRESS11;
       if (goma_ctx->solver.pspg && pdv[var]) {
         for (mode = 0; mode < goma_ctx->fem.vn->modes; mode++) {
-          for (p = 0; p < goma_ctx->problem.vim; p++) {
-            for (q = 0; q < goma_ctx->problem.vim; q++) {
+          for (p = 0; p < VIM; p++) {
+            for (q = 0; q < VIM; q++) {
               var = v_s[mode][p][q];
-              pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-              if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-                for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              pvar = upd->vp[pg->imtrx][var];
+              if (pd->v[pg->imtrx][var]) {
+                for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                   pressure_stabilization = 0.;
 
-                  for (a = 0; a < goma_ctx->problem.wim; a++) {
+                  for (a = 0; a < WIM; a++) {
                     meqn = R_MOMENTUM1 + a;
-                    if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
+                    if (pd->e[pg->imtrx][meqn]) {
                       pressure_stabilization += grad_phi[i][a] * d_pspg->S[a][mode][p][q][j];
                     }
                   }
 
                   pressure_stabilization *= h3 * det_J * wt * ls_disable_pspg;
 
-                  goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += pressure_stabilization;
+                  lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += pressure_stabilization;
                 }
               }
             }
@@ -962,23 +961,23 @@ int assemble_continuity(dbl time_value, /* current time */
        */
       var = VELOCITY_GRADIENT11;
       if (goma_ctx->solver.pspg && pdv[var]) {
-        for (p = 0; p < goma_ctx->problem.vim; p++) {
-          for (q = 0; q < goma_ctx->problem.vim; q++) {
+        for (p = 0; p < VIM; p++) {
+          for (q = 0; q < VIM; q++) {
             var = v_g[p][q];
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+            pvar = upd->vp[pg->imtrx][var];
             {
-              for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
                 pressure_stabilization = 0.;
 
-                for (a = 0; a < goma_ctx->problem.wim; a++) {
+                for (a = 0; a < WIM; a++) {
                   meqn = R_MOMENTUM1 + a;
-                  if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
+                  if (pd->e[pg->imtrx][meqn]) {
                     pressure_stabilization += grad_phi[i][a] * d_pspg->g[a][p][q][j];
                   }
                 }
                 pressure_stabilization *= h3 * det_J * wt * ls_disable_pspg;
 
-                goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += pressure_stabilization;
+                lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += pressure_stabilization;
               }
             }
           }
@@ -994,10 +993,10 @@ int assemble_continuity(dbl time_value, /* current time */
 
       if (hydromassflux_on && pdv[var]) {
         if (suspensionsource_on) {
-          if (goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-            pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          if (pd->v[pg->imtrx][var]) {
+            pvar = upd->vp[pg->imtrx][var];
 
-            for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
               h_flux = 0.0;
               for (a = 0; a < dim; a++) {
                 h_flux += grad_phi[i][a] * s_terms.d_diff_flux_dSH[w0][a][j];
@@ -1007,7 +1006,7 @@ int assemble_continuity(dbl time_value, /* current time */
 
               /*  h_flux = 0.0; */
 
-              goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += h_flux;
+              lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += h_flux;
             }
           }
         }
@@ -1020,27 +1019,25 @@ int assemble_continuity(dbl time_value, /* current time */
       for (b = 0; b < dim; b++) {
         var = MESH_DISPLACEMENT1 + b;
         if (pdv[var]) {
-          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
-          J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            phi_j = goma_ctx->fem.bf[var]->phi[j];
+          pvar = upd->vp[pg->imtrx][var];
+          J = &(lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            phi_j = bf[var]->phi[j];
             /* derivative of |J| with extra term for axisymmetry e.g.
                d/dmesh [ r|J| ] */
             d_h3detJ_dmesh_bj =
-                (h3 * goma_ctx->fem.bf[eqn]->d_det_J_dm[b][j] +
-                 det_J * goma_ctx->fem.fv->dh3dq[b] * goma_ctx->fem.bf[var]->phi[j]);
+                (h3 * bf[eqn]->d_det_J_dm[b][j] + det_J * fv->dh3dq[b] * bf[var]->phi[j]);
 
             mass = 0.0;
             if (electrode_kinetics_on || ion_reactions_on) {
               if (transient_run) {
-                for (w = 0; w < goma_ctx->fem.pd->Num_Species - 1; w++) {
+                for (w = 0; w < pd->Num_Species - 1; w++) {
                   derivative = 0.0;
-                  for (q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION];
-                       q++) {
-                    if (goma_ctx->fem.bf[MASS_FRACTION]->phi[q] > 0.0)
+                  for (q = 0; q < ei[pg->imtrx]->dof[MASS_FRACTION]; q++) {
+                    if (bf[MASS_FRACTION]->phi[q] > 0.0)
                       break;
                   }
-                  derivative = d_rho->C[w][q] / goma_ctx->fem.bf[MASS_FRACTION]->phi[q];
+                  derivative = d_rho->C[w][q] / bf[MASS_FRACTION]->phi[q];
                   mass += derivative * s_terms.Y_dot[w];
                 }
                 mass *= epsilon / rho;
@@ -1056,14 +1053,13 @@ int assemble_continuity(dbl time_value, /* current time */
                   for (p = 0; p < dim; p++) {
                     h_flux += grad_phi[i][p] * s_terms.diff_flux[w0][p] * d_h3detJ_dmesh_bj +
                               grad_phi[i][p] * s_terms.d_diff_flux_dmesh[w0][p][b][j] * det_J * h3 +
-                              goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][p][b][j] *
-                                  s_terms.diff_flux[w0][p] * det_J * h3;
+                              bf[eqn]->d_grad_phi_dmesh[i][p][b][j] * s_terms.diff_flux[w0][p] *
+                                  det_J * h3;
                   }
-                  h_flux *= (rhos - rhof) / rhof * wt *
-                            goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
+                  h_flux *= (rhos - rhof) / rhof * wt * pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
                 }
 
-                div_v_dmesh = goma_ctx->fem.fv->d_div_v_dmesh[b][j];
+                div_v_dmesh = fv->d_div_v_dmesh[b][j];
 
                 advection += div_v_dmesh * det_J * h3 + div_v * (d_h3detJ_dmesh_bj);
 
@@ -1071,14 +1067,13 @@ int assemble_continuity(dbl time_value, /* current time */
                 {
                   sum_a = 0.;
                   sum_b = 0.;
-                  for (w = 0; w < goma_ctx->fem.pd->Num_Species - 1; w++) {
+                  for (w = 0; w < pd->Num_Species - 1; w++) {
                     derivative = 0.0;
-                    for (q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION];
-                         q++) {
-                      if (goma_ctx->fem.bf[MASS_FRACTION]->phi[q] > 0.0)
+                    for (q = 0; q < ei[pg->imtrx]->dof[MASS_FRACTION]; q++) {
+                      if (bf[MASS_FRACTION]->phi[q] > 0.0)
                         break;
                     }
-                    derivative = d_rho->C[w][q] / goma_ctx->fem.bf[MASS_FRACTION]->phi[q];
+                    derivative = d_rho->C[w][q] / bf[MASS_FRACTION]->phi[q];
                     sum1 = 0.;
                     sum2 = 0.;
                     for (p = 0; p < dim; p++) {
@@ -1095,9 +1090,9 @@ int assemble_continuity(dbl time_value, /* current time */
 
                 advection *= phi_i * wt;
               } else if (lagrangian_mesh_motion || total_ale_and_velo_off) {
-                advection += goma_ctx->fem.fv->volume_change * (d_h3detJ_dmesh_bj);
+                advection += fv->volume_change * (d_h3detJ_dmesh_bj);
 
-                advection += goma_ctx->fem.fv->d_volume_change_dx[b][j] * h3 * det_J;
+                advection += fv->d_volume_change_dx[b][j] * h3 * det_J;
 
                 advection *= phi_i * wt;
               }
@@ -1106,23 +1101,21 @@ int assemble_continuity(dbl time_value, /* current time */
 
             source = 0.0;
             if (source_on) {
-              if (goma_ctx->fem.mp->DensityModel == DENSITY_FOAM ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_CONC ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_TIME ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PBE ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_TIME_TEMP ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PMDI_10 ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_CURE_SHRINKAGE) {
+              if (mp->DensityModel == DENSITY_FOAM || mp->DensityModel == DENSITY_FOAM_CONC ||
+                  mp->DensityModel == DENSITY_FOAM_TIME || mp->DensityModel == DENSITY_FOAM_PBE ||
+                  mp->DensityModel == DENSITY_FOAM_TIME_TEMP ||
+                  mp->DensityModel == DENSITY_FOAM_PMDI_10 ||
+                  mp->DensityModel == DENSITY_CURE_SHRINKAGE) {
                 source = sourceBase * d_h3detJ_dmesh_bj * wt + dFVS_dx[b][j] * d_area;
                 source *= phi_i * source_etm;
-              } else if (goma_ctx->fem.mp->DensityModel == REACTIVE_FOAM) {
+              } else if (mp->DensityModel == REACTIVE_FOAM) {
                 source = sourceBase * d_h3detJ_dmesh_bj * wt + dFVS_dx[b][j] * d_area;
                 source *= phi_i * source_etm;
               }
             }
             if (lagrangian_mesh_motion || total_ale_and_velo_off) {
               /* add swelling as a source of volume */
-              if (goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) {
+              if (mp->PorousMediaType == CONTINUOUS) {
                 source = -phi_i * (d_h3detJ_dmesh_bj)*wt * (1. - initial_volsolvent) /
                          (1. - volsolvent) * source_etm;
               }
@@ -1131,15 +1124,15 @@ int assemble_continuity(dbl time_value, /* current time */
             if (electrode_kinetics_on || ion_reactions_on) {
               sum1 = 0.;
               sum2 = 0.;
-              for (q = 0; q < goma_ctx->fem.pd->Num_Species; q++) {
-                sum1 -= s_terms.MassSource[q] * goma_ctx->fem.mp->molecular_weight[q];
-                sum2 -= s_terms.d_MassSource_dmesh[q][b][j] * goma_ctx->fem.mp->molecular_weight[q];
+              for (q = 0; q < pd->Num_Species; q++) {
+                sum1 -= s_terms.MassSource[q] * mp->molecular_weight[q];
+                sum2 -= s_terms.d_MassSource_dmesh[q][b][j] * mp->molecular_weight[q];
               }
               sum1 /= rho;
               sum2 /= rho;
               source += sum2 * det_J * h3 + sum1 * d_h3detJ_dmesh_bj;
               source *= phi_i * wt;
-              source *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_SOURCE)];
+              source *= pd->etm[pg->imtrx][eqn][(LOG2_SOURCE)];
             }
 
             /* add Pressure-Stabilized Petrov-Galerkin term
@@ -1147,13 +1140,13 @@ int assemble_continuity(dbl time_value, /* current time */
              */
             pressure_stabilization = 0.0;
             if (goma_ctx->solver.pspg) {
-              for (a = 0; a < goma_ctx->problem.wim; a++) {
+              for (a = 0; a < WIM; a++) {
                 meqn = R_MOMENTUM1 + a;
-                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn]) {
-                  pressure_stabilization += grad_phi[i][a] * d_pspg->X[a][b][j] * h3 * det_J * wt +
-                                            grad_phi[i][a] * pspg[a] * wt * d_h3detJ_dmesh_bj +
-                                            goma_ctx->fem.bf[eqn]->d_grad_phi_dmesh[i][a][b][j] *
-                                                pspg[a] * wt * h3 * det_J;
+                if (pd->e[pg->imtrx][meqn]) {
+                  pressure_stabilization +=
+                      grad_phi[i][a] * d_pspg->X[a][b][j] * h3 * det_J * wt +
+                      grad_phi[i][a] * pspg[a] * wt * d_h3detJ_dmesh_bj +
+                      bf[eqn]->d_grad_phi_dmesh[i][a][b][j] * pspg[a] * wt * h3 * det_J;
                 }
               }
               pressure_stabilization *= ls_disable_pspg;
@@ -1173,26 +1166,26 @@ int assemble_continuity(dbl time_value, /* current time */
       for (b = 0; b < dim; b++) {
         var = SOLID_DISPLACEMENT1 + b;
         if (pdv[var]) {
-          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          pvar = upd->vp[pg->imtrx][var];
 
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            phi_j = goma_ctx->fem.bf[var]->phi[j];
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            phi_j = bf[var]->phi[j];
 
             advection = 0.;
 
-            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
+            if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
               if (total_ale_and_velo_off) {
-                advection += goma_ctx->fem.fv->d_volume_change_drs[b][j] * h3 * det_J;
+                advection += fv->d_volume_change_drs[b][j] * h3 * det_J;
 
                 advection *= phi_i * wt;
               }
 
-              advection *= goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][(LOG2_ADVECTION)];
+              advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
             }
 
             source = 0.;
 
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection + source;
+            lec->J[LEC_J_INDEX(peqn, pvar, i, j)] += advection + source;
           }
         }
       }
@@ -1203,31 +1196,28 @@ int assemble_continuity(dbl time_value, /* current time */
 
       var = MASS_FRACTION;
       if (pdv[var]) {
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        pvar = upd->vp[pg->imtrx][var];
 
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          phi_j = goma_ctx->fem.bf[var]->phi[j];
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          phi_j = bf[var]->phi[j];
 
-          for (w = 0; w < goma_ctx->fem.pd->Num_Species_Eqn; w++) {
+          for (w = 0; w < pd->Num_Species_Eqn; w++) {
             /* add swelling as a source of volume */
             source = 0.;
-            if ((goma_ctx->fem.mp->PorousMediaType == CONTINUOUS) &&
+            if ((mp->PorousMediaType == CONTINUOUS) &&
                 (goma_ctx->fem.cr->MeshMotion == LAGRANGIAN ||
                  goma_ctx->fem.cr->MeshMotion == DYNAMIC_LAGRANGIAN)) {
               source = -phi_j * phi_i * h3 * det_J * wt * (1. - initial_volsolvent) /
-                       (1. - volsolvent) / (1. - volsolvent) *
-                       goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][LOG2_SOURCE];
+                       (1. - volsolvent) / (1. - volsolvent) * pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
             }
-            if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+            if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
               /* Foaming volume source term */
 
-              if (goma_ctx->fem.mp->DensityModel == REACTIVE_FOAM ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_FOAM ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_FOAM_PBE ||
-                  goma_ctx->fem.mp->DensityModel == DENSITY_CURE_SHRINKAGE) {
+              if (mp->DensityModel == REACTIVE_FOAM || mp->DensityModel == DENSITY_FOAM ||
+                  mp->DensityModel == DENSITY_FOAM_PBE ||
+                  mp->DensityModel == DENSITY_CURE_SHRINKAGE) {
                 source += dFVS_dC[w][j];
-                source *= phi_i * h3 * det_J * wt *
-                          goma_ctx->fem.pd->etm[goma_ctx->fem.pg->imtrx][eqn][LOG2_SOURCE];
+                source *= phi_i * h3 * det_J * wt * pd->etm[pg->imtrx][eqn][LOG2_SOURCE];
               }
             }
 
@@ -1236,9 +1226,9 @@ int assemble_continuity(dbl time_value, /* current time */
              */
             pressure_stabilization = 0.;
             if (goma_ctx->solver.pspg) {
-              for (a = 0; a < goma_ctx->problem.wim; a++) {
+              for (a = 0; a < WIM; a++) {
                 meqn = R_MOMENTUM1 + a;
-                if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][meqn] & T_DIFFUSION) {
+                if (pd->e[pg->imtrx][meqn] & T_DIFFUSION) {
                   pressure_stabilization += grad_phi[i][a] * d_pspg->C[a][w][j];
                 }
               }
@@ -1254,14 +1244,14 @@ int assemble_continuity(dbl time_value, /* current time */
               mass_a = -(1.0 + 2.0 * tt) * phi_j / dt;
               mass_a *= phi_i * h3 * det_J * wt;
 
-              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_ADVECTION) {
+              if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
                 advection = -phi_j * div_v;
                 advection *= phi_i * det_J * h3 * wt;
               }
 
-              if (goma_ctx->fem.pd->e[goma_ctx->fem.pg->imtrx][eqn] & T_SOURCE) {
+              if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
                 source_a = 0.0;
-                for (a = 0; a < goma_ctx->problem.wim; a++)
+                for (a = 0; a < WIM; a++)
                   source_a -= grad_phi[j][a] * v[a];
                 source_a *= phi_i * det_J * h3 * wt;
 
@@ -1269,18 +1259,17 @@ int assemble_continuity(dbl time_value, /* current time */
               }
             }
 
-            if (goma_ctx->fem.mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS ||
-                goma_ctx->fem.mp->SpeciesSourceModel[0] == ION_REACTIONS) /*  RSL 3/19/01  */
+            if (mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS ||
+                mp->SpeciesSourceModel[0] == ION_REACTIONS) /*  RSL 3/19/01  */
             {
               sum = 0.;
-              for (jj = 0; jj < goma_ctx->fem.pd->Num_Species - 1; jj++) {
+              for (jj = 0; jj < pd->Num_Species - 1; jj++) {
                 derivative = 0.0;
-                for (q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION];
-                     q++) {
-                  if (goma_ctx->fem.bf[MASS_FRACTION]->phi[q] > 0.0)
+                for (q = 0; q < ei[pg->imtrx]->dof[MASS_FRACTION]; q++) {
+                  if (bf[MASS_FRACTION]->phi[q] > 0.0)
                     break;
                 }
-                derivative = d_rho->C[jj][q] / goma_ctx->fem.bf[MASS_FRACTION]->phi[q];
+                derivative = d_rho->C[jj][q] / bf[MASS_FRACTION]->phi[q];
                 sum += derivative *
                        (s_terms.d_Y_dot_dc[jj][w][j] - d_rho->C[w][j] * s_terms.Y_dot[jj] / rho);
               }
@@ -1288,21 +1277,20 @@ int assemble_continuity(dbl time_value, /* current time */
               mass_a *= phi_i * h3 * det_J * wt;
             }
 
-            if (goma_ctx->fem.mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS ||
-                goma_ctx->fem.mp->SpeciesSourceModel[0] == ION_REACTIONS) /*  RSL 3/19/01  */
+            if (mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS ||
+                mp->SpeciesSourceModel[0] == ION_REACTIONS) /*  RSL 3/19/01  */
             {
               sum = 0.;
-              for (jj = 0; jj < goma_ctx->fem.pd->Num_Species - 1; jj++) {
+              for (jj = 0; jj < pd->Num_Species - 1; jj++) {
                 derivative = 0.0;
-                for (q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[MASS_FRACTION];
-                     q++) {
-                  if (goma_ctx->fem.bf[MASS_FRACTION]->phi[q] > 0.0)
+                for (q = 0; q < ei[pg->imtrx]->dof[MASS_FRACTION]; q++) {
+                  if (bf[MASS_FRACTION]->phi[q] > 0.0)
                     break;
                 }
-                derivative = d_rho->C[jj][q] / goma_ctx->fem.bf[MASS_FRACTION]->phi[q];
+                derivative = d_rho->C[jj][q] / bf[MASS_FRACTION]->phi[q];
                 sum1 = 0.;
                 sum2 = 0.;
-                for (p = 0; p < goma_ctx->problem.vim; p++) {
+                for (p = 0; p < VIM; p++) {
                   sum1 += s_terms.d_conv_flux_dc[jj][p][w][j];
                   sum2 += s_terms.conv_flux[jj][p];
                 }
@@ -1312,15 +1300,15 @@ int assemble_continuity(dbl time_value, /* current time */
               advection *= phi_i * h3 * det_J * wt;
             }
 
-            if (goma_ctx->fem.mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS ||
-                goma_ctx->fem.mp->SpeciesSourceModel[0] == ION_REACTIONS) /*  RSL 3/19/01  */
+            if (mp->SpeciesSourceModel[0] == ELECTRODE_KINETICS ||
+                mp->SpeciesSourceModel[0] == ION_REACTIONS) /*  RSL 3/19/01  */
             {
               source_a = 0.0;
 
-              for (jj = 0; jj < goma_ctx->fem.pd->Num_Species; jj++) {
-                source_a += goma_ctx->fem.mp->molecular_weight[jj] *
-                            (s_terms.d_MassSource_dc[jj][w][j] -
-                             d_rho->C[w][j] * s_terms.MassSource[jj] / rho);
+              for (jj = 0; jj < pd->Num_Species; jj++) {
+                source_a +=
+                    mp->molecular_weight[jj] * (s_terms.d_MassSource_dc[jj][w][j] -
+                                                d_rho->C[w][j] * s_terms.MassSource[jj] / rho);
               }
               source_a /= (-rho);
               source_a *= phi_i * h3 * det_J * wt;
@@ -1328,17 +1316,16 @@ int assemble_continuity(dbl time_value, /* current time */
               source += source_a;
             }
 
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w, i, j)] +=
+            lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w, i, j)] +=
                 mass_a + advection + source + pressure_stabilization;
           }
         }
       }
 
-      if (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC &&
-          goma_ctx->fem.pd->v[goma_ctx->fem.pg->imtrx][var]) {
-        if (goma_ctx->fem.mp->MomentumSourceModel == SUSPENSION) {
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            phi_j = goma_ctx->fem.bf[var]->phi[j];
+      if (goma_ctx->fem.cr->MassFluxModel == HYDRODYNAMIC && pd->v[pg->imtrx][var]) {
+        if (mp->MomentumSourceModel == SUSPENSION) {
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            phi_j = bf[var]->phi[j];
 
             h_flux = 0.0;
 
@@ -1349,7 +1336,7 @@ int assemble_continuity(dbl time_value, /* current time */
             h_flux *= h3 * det_J * wt * (rhos - rhof) / rhof;
             /*  h_flux = 0.0; */
 
-            goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w0, i, j)] += h_flux;
+            lec->J[LEC_J_INDEX(peqn, MAX_PROB_VAR + w0, i, j)] += h_flux;
           }
         }
       }
@@ -1357,15 +1344,15 @@ int assemble_continuity(dbl time_value, /* current time */
       /*
        * J_c_MOM
        */
-      for (b = 0; b < goma_ctx->problem.wim; b++) {
+      for (b = 0; b < WIM; b++) {
         var = MOMENT0 + b;
         if (pdv[var]) {
-          pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+          pvar = upd->vp[pg->imtrx][var];
 
-          J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
+          J = &(lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
 
-          for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-            phi_j = goma_ctx->fem.bf[var]->phi[j];
+          for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+            phi_j = bf[var]->phi[j];
 
             source = 0.;
 
@@ -1386,12 +1373,12 @@ int assemble_continuity(dbl time_value, /* current time */
 
       var = DENSITY_EQN;
       if (pdv[var]) {
-        pvar = goma_ctx->fem.upd->vp[goma_ctx->fem.pg->imtrx][var];
+        pvar = upd->vp[pg->imtrx][var];
 
-        J = &(goma_ctx->fem.lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
+        J = &(lec->J[LEC_J_INDEX(peqn, pvar, i, 0)]);
 
-        for (j = 0; j < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[var]; j++) {
-          phi_j = goma_ctx->fem.bf[var]->phi[j];
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          phi_j = bf[var]->phi[j];
 
           source = 0.;
 

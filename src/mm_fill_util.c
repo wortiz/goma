@@ -138,22 +138,33 @@ static int var_if_interp_type_enabled(PROBLEM_DESCRIPTION_STRUCT *pd_ptr, int in
  *   it doesn't make a difference.
  */
 int beer_belly(void) {
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  struct Material_Properties *const mp = goma_ctx->fem.mp;
+  const int VIM = goma_ctx->problem.vim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Diet_Field_Variables *const fv_old = goma_ctx->fem.fv_old;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Element_Stiffness_Pointers *const esp = goma_ctx->fem.esp;
+  struct Element_Variable_Pointers *const esp_old = goma_ctx->fem.esp_old;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
   int status = 0, i, j, k, n, t, dim, pdim, mdof, index, node, si;
   int DeformingMesh, ShapeVar;
   struct Basis_Functions *MapBf;
   size_t v_length;
   dbl f, g, sum;
-  int imtrx = goma_ctx->fem.upd->matrix_index[goma_ctx->fem.pd->ShapeVar];
+  int imtrx = upd->matrix_index[pd->ShapeVar];
 
   static int is_initialized = FALSE;
   static int elem_blk_id_save = -123;
 
-  dim = goma_ctx->fem.ei[imtrx]->ielem_dim;
-  pdim = goma_ctx->fem.pd->Num_Dim;
-  int elem_type = goma_ctx->fem.ei[imtrx]->ielem_type;
+  dim = ei[imtrx]->ielem_dim;
+  pdim = pd->Num_Dim;
+  int elem_type = ei[imtrx]->ielem_type;
   int elem_shape = type2shape(elem_type);
 
-  ShapeVar = goma_ctx->fem.pd->ShapeVar;
+  ShapeVar = pd->ShapeVar;
 
   /* If this is a shell element, it may be a deforming mesh
    * even if there are no mesh equations on the shell block.
@@ -162,20 +173,19 @@ int beer_belly(void) {
    * any neighboring bulk block.
    */
 
-  if (goma_ctx->fem.pd->gv[MESH_DISPLACEMENT1]) {
-    DeformingMesh =
-        goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[MESH_DISPLACEMENT1]]->deforming_mesh;
+  if (pd->gv[MESH_DISPLACEMENT1]) {
+    DeformingMesh = ei[upd->matrix_index[MESH_DISPLACEMENT1]]->deforming_mesh;
   } else {
-    DeformingMesh = goma_ctx->fem.ei[imtrx]->deforming_mesh;
+    DeformingMesh = ei[imtrx]->deforming_mesh;
   }
 
-  if ((si = in_list(goma_ctx->fem.pd->IntegrationMap, 0, goma_ctx->problem.num_interpolations,
+  if ((si = in_list(pd->IntegrationMap, 0, goma_ctx->problem.num_interpolations,
                     goma_ctx->problem.unique_interpolations)) == -1) {
     GOMA_EH(GOMA_ERROR, "Seems to be a problem finding the IntegrationMap interpolation.");
   }
   MapBf = goma_ctx->fem.bfd[si];
 
-  mdof = goma_ctx->fem.ei[imtrx]->dof[ShapeVar];
+  mdof = ei[imtrx]->dof[ShapeVar];
 
   if (MapBf->interpolation == I_N1) {
     mdof = MapBf->shape_dof;
@@ -186,7 +196,7 @@ int beer_belly(void) {
    * initialize appropriate arrays...
    */
 
-  if (goma_ctx->fem.ei[imtrx]->elem_blk_id != elem_blk_id_save) {
+  if (ei[imtrx]->elem_blk_id != elem_blk_id_save) {
     is_initialized = FALSE;
   }
 
@@ -208,7 +218,7 @@ int beer_belly(void) {
 
   if (!is_initialized) {
     is_initialized = TRUE;
-    elem_blk_id_save = goma_ctx->fem.ei[imtrx]->elem_blk_id;
+    elem_blk_id_save = ei[imtrx]->elem_blk_id;
   }
 
   /*
@@ -219,9 +229,9 @@ int beer_belly(void) {
    * for position, depending on whether the shapes are mapped sub/iso/super
    * parametrically...
    */
-  for (i = 0; i < goma_ctx->problem.vim; i++) {
-    goma_ctx->fem.fv->x[i] = 0.;
-    goma_ctx->fem.fv_old->x[i] = 0.;
+  for (i = 0; i < VIM; i++) {
+    fv->x[i] = 0.;
+    fv_old->x[i] = 0.;
   }
 
   /*
@@ -230,34 +240,26 @@ int beer_belly(void) {
    */
   for (i = 0; i < pdim; i++) {
     if (DeformingMesh) {
-      for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-           k++) {
-        node = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
+      for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
+        node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
 
         index = goma_ctx->mesh.proc_elem_connect
-                    [goma_ctx->mesh.proc_connect_ptr
-                         [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->ielem] +
-                     node];
+                    [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
 
-        goma_ctx->fem.fv->x[i] += (goma_ctx->mesh.coor[i][index] + *goma_ctx->fem.esp->d[i][k]) *
-                                  goma_ctx->fem.bf[R_MESH1]->phi[k];
+        fv->x[i] += (goma_ctx->mesh.coor[i][index] + *esp->d[i][k]) * bf[R_MESH1]->phi[k];
 
-        goma_ctx->fem.fv_old->x[i] +=
-            (goma_ctx->mesh.coor[i][index] + *goma_ctx->fem.esp_old->d[i][k]) *
-            goma_ctx->fem.bf[R_MESH1]->phi[k];
+        fv_old->x[i] += (goma_ctx->mesh.coor[i][index] + *esp_old->d[i][k]) * bf[R_MESH1]->phi[k];
       }
     } else {
       for (k = 0; k < mdof; k++) {
-        node = MapBf->interpolation == I_N1 ? k : goma_ctx->fem.ei[imtrx]->dof_list[ShapeVar][k];
+        node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
 
-        index =
-            goma_ctx->mesh
-                .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[goma_ctx->fem.ei[imtrx]->ielem] +
-                                   node];
+        index = goma_ctx->mesh
+                    .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[imtrx]->ielem] + node];
 
-        goma_ctx->fem.fv->x[i] += goma_ctx->mesh.coor[i][index] * MapBf->phi[k];
+        fv->x[i] += goma_ctx->mesh.coor[i][index] * MapBf->phi[k];
 
-        goma_ctx->fem.fv_old->x[i] = goma_ctx->fem.fv->x[i];
+        fv_old->x[i] = fv->x[i];
       }
     }
   }
@@ -270,25 +272,22 @@ int beer_belly(void) {
   for (i = 0; i < dim; i++) {
     for (j = 0; j < pdim; j++) {
       if (DeformingMesh) {
-        for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-             k++) {
-          node = goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
+        for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
+          node = ei[upd->matrix_index[R_MESH1]]->dof_list[R_MESH1][k];
 
-          index = goma_ctx->mesh.proc_elem_connect
-                      [goma_ctx->mesh.proc_connect_ptr
-                           [goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->ielem] +
-                       node];
+          index =
+              goma_ctx->mesh.proc_elem_connect
+                  [goma_ctx->mesh.proc_connect_ptr[ei[upd->matrix_index[R_MESH1]]->ielem] + node];
 
-          MapBf->J[i][j] += (goma_ctx->mesh.coor[j][index] + *goma_ctx->fem.esp->d[j][k]) *
-                            goma_ctx->fem.bf[R_MESH1]->dphidxi[k][i];
+          MapBf->J[i][j] +=
+              (goma_ctx->mesh.coor[j][index] + *esp->d[j][k]) * bf[R_MESH1]->dphidxi[k][i];
         }
       } else {
         for (k = 0; k < mdof; k++) {
-          node = MapBf->interpolation == I_N1 ? k : goma_ctx->fem.ei[imtrx]->dof_list[ShapeVar][k];
-          index = goma_ctx->mesh.proc_elem_connect
-                      [goma_ctx->mesh.proc_connect_ptr[goma_ctx->fem.ei[imtrx]->ielem] + node];
-          MapBf->J[i][j] +=
-              goma_ctx->mesh.coor[j][index] * goma_ctx->fem.bf[ShapeVar]->dphidxi[k][i];
+          node = MapBf->interpolation == I_N1 ? k : ei[imtrx]->dof_list[ShapeVar][k];
+          index = goma_ctx->mesh
+                      .proc_elem_connect[goma_ctx->mesh.proc_connect_ptr[ei[imtrx]->ielem] + node];
+          MapBf->J[i][j] += goma_ctx->mesh.coor[j][index] * bf[ShapeVar]->dphidxi[k][i];
         }
       }
     }
@@ -329,13 +328,11 @@ int beer_belly(void) {
    * There are problems that depend on the rightmost column being the values
    * computed above, so use this block with caution.
    */
-  if (elem_shape == SHELL || elem_shape == TRISHELL ||
-      (goma_ctx->fem.mp->ehl_integration_kind == SIK_S)) {
+  if (elem_shape == SHELL || elem_shape == TRISHELL || (mp->ehl_integration_kind == SIK_S)) {
     dim++;
     for (t = 0; t < goma_ctx->problem.num_basis_functions; t++) {
       for (j = 0; j < pdim; j++) {
-        goma_ctx->fem.bfd[t]->J[goma_ctx->fem.pd->Num_Dim - 1][j] =
-            MapBf->J[goma_ctx->fem.pd->Num_Dim - 1][j] = (j + 1) * 1.0;
+        goma_ctx->fem.bfd[t]->J[pd->Num_Dim - 1][j] = MapBf->J[pd->Num_Dim - 1][j] = (j + 1) * 1.0;
       }
     }
 
@@ -343,13 +340,13 @@ int beer_belly(void) {
      *didn't screw things up. Note that the detJ in the shell case can be
      *negative, but it is important to point out that we are not using it for
      *for integration, but only as a crutch for inversion of J */
-    if (goma_ctx->fem.pd->Num_Dim == 3) {
+    if (pd->Num_Dim == 3) {
       MapBf->detJ =
           MapBf->J[0][0] * (MapBf->J[1][1] * MapBf->J[2][2] - MapBf->J[1][2] * MapBf->J[2][1]) -
           MapBf->J[0][1] * (MapBf->J[1][0] * MapBf->J[2][2] - MapBf->J[2][0] * MapBf->J[1][2]) +
           MapBf->J[0][2] * (MapBf->J[1][0] * MapBf->J[2][1] - MapBf->J[2][0] * MapBf->J[1][1]);
     }
-    if (goma_ctx->fem.pd->Num_Dim == 2) {
+    if (pd->Num_Dim == 2) {
       MapBf->detJ = MapBf->J[0][0] * MapBf->J[1][1] - MapBf->J[0][1] * MapBf->J[1][0];
     }
 
@@ -389,14 +386,11 @@ int beer_belly(void) {
 
     if (DeformingMesh) {
       for (j = 0; j < pdim; j++) {
-        for (k = 0; k < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-             k++) {
-          MapBf->dJ[0][j][j][k] = goma_ctx->fem.bf[R_MESH1]->dphidxi[k][0];
-          MapBf->d_det_J_dm[j][k] =
-              goma_ctx->fem.bf[R_MESH1]->dphidxi[k][0] * MapBf->J[0][j] / MapBf->detJ;
+        for (k = 0; k < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; k++) {
+          MapBf->dJ[0][j][j][k] = bf[R_MESH1]->dphidxi[k][0];
+          MapBf->d_det_J_dm[j][k] = bf[R_MESH1]->dphidxi[k][0] * MapBf->J[0][j] / MapBf->detJ;
           if (fabs(MapBf->J[0][j]) > DBL_SMALL) {
-            MapBf->dB[j][0][j][k] =
-                -goma_ctx->fem.bf[R_MESH1]->dphidxi[k][0] / (MapBf->J[0][j] * MapBf->J[0][j]);
+            MapBf->dB[j][0][j][k] = -bf[R_MESH1]->dphidxi[k][0] / (MapBf->J[0][j] * MapBf->J[0][j]);
             // MapBf->dB[0][j] [j][k] = -bf[R_MESH1]->dphidxi[k][0]
             //	/ (MapBf->J[0][j] * MapBf->J[0][j]);
           }
@@ -406,7 +400,7 @@ int beer_belly(void) {
     break;
 
   case 2:
-    dim = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim;
+    dim = ei[pg->imtrx]->ielem_dim;
     MapBf->detJ = MapBf->J[0][0] * MapBf->J[1][1] - MapBf->J[0][1] * MapBf->J[1][0];
 
     MapBf->B[0][0] = MapBf->J[1][1] / MapBf->detJ;
@@ -422,9 +416,8 @@ int beer_belly(void) {
     if (DeformingMesh) {
       for (i = 0; i < dim; i++) {
         for (j = 0; j < pdim; j++) {
-          for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-               n++) {
-            MapBf->dJ[i][j][j][n] = goma_ctx->fem.bf[R_MESH1]->dphidxi[n][i];
+          for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
+            MapBf->dJ[i][j][j][n] = bf[R_MESH1]->dphidxi[n][i];
           }
         }
       }
@@ -436,8 +429,7 @@ int beer_belly(void) {
        */
 
       for (k = 0; k < pdim; k++) {
-        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-             n++) {
+        for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
           MapBf->d_det_J_dm[k][n] =
               MapBf->dJ[0][0][k][n] * MapBf->J[1][1] + MapBf->J[0][0] * MapBf->dJ[1][1][k][n] -
               MapBf->dJ[0][1][k][n] * MapBf->J[1][0] - MapBf->J[0][1] * MapBf->dJ[1][0][k][n];
@@ -453,8 +445,7 @@ int beer_belly(void) {
       f = 1. / (MapBf->detJ);
 
       for (k = 0; k < pdim; k++) {
-        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-             n++) {
+        for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
           g = -(f * f) * MapBf->d_det_J_dm[k][n];
           MapBf->dB[0][0][k][n] = MapBf->dJ[1][1][k][n] * f + MapBf->J[1][1] * g;
 
@@ -472,7 +463,7 @@ int beer_belly(void) {
   case 3:
 
     /* Now that we are here, reset dim for the shell case */
-    dim = goma_ctx->fem.ei[imtrx]->ielem_dim;
+    dim = ei[imtrx]->ielem_dim;
 
     MapBf->detJ =
         MapBf->J[0][0] * (MapBf->J[1][1] * MapBf->J[2][2] - MapBf->J[1][2] * MapBf->J[2][1]) -
@@ -514,9 +505,8 @@ int beer_belly(void) {
 
       for (i = 0; i < dim; i++) {
         for (j = 0; j < pdim; j++) {
-          for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-               n++) {
-            MapBf->dJ[i][j][j][n] = goma_ctx->fem.bf[R_MESH1]->dphidxi[n][i];
+          for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
+            MapBf->dJ[i][j][j][n] = bf[R_MESH1]->dphidxi[n][i];
           }
         }
       }
@@ -564,8 +554,7 @@ int beer_belly(void) {
       f = 1. / (MapBf->detJ);
 
       for (k = 0; k < pdim; k++) {
-        for (n = 0; n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-             n++) {
+        for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
           g = -(f * f) * MapBf->d_det_J_dm[k][n];
 
           MapBf->dB[0][0][k][n] =
@@ -642,9 +631,7 @@ int beer_belly(void) {
 
           if (DeformingMesh) {
             for (k = 0; k < pdim; k++) {
-              for (n = 0;
-                   n < goma_ctx->fem.ei[goma_ctx->fem.upd->matrix_index[R_MESH1]]->dof[R_MESH1];
-                   n++) {
+              for (n = 0; n < ei[upd->matrix_index[R_MESH1]]->dof[R_MESH1]; n++) {
                 goma_ctx->fem.bfd[t]->d_det_J_dm[k][n] = MapBf->d_det_J_dm[k][n];
 
                 goma_ctx->fem.bfd[t]->dJ[i][j][k][n] = MapBf->dJ[i][j][k][n];
@@ -1752,17 +1739,23 @@ int load_bf_grad(void)
  * Note: Axisymmetric convention (z,r,theta) are coordinates.
  ********************************************************************************/
 {
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  const int VIM = goma_ctx->problem.vim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
   int i, k, a, b, p, dofs = 0, v, vi, status, siz;
   struct Basis_Functions *bfv;
 
 #ifdef DO_NOT_UNROLL
   int WIM;
 
-  if ((goma_ctx->fem.pd->CoordinateSystem == CARTESIAN) ||
-      (goma_ctx->fem.pd->CoordinateSystem == CYLINDRICAL)) {
-    WIM = goma_ctx->fem.pd->Num_Dim;
+  if ((pd->CoordinateSystem == CARTESIAN) || (pd->CoordinateSystem == CYLINDRICAL)) {
+    WIM = pd->Num_Dim;
   } else {
-    WIM = goma_ctx->problem.vim;
+    WIM = VIM;
   }
 #endif
 
@@ -1781,10 +1774,10 @@ int load_bf_grad(void)
      * scheme in the material
      */
     int imtrx;
-    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
       for (vi = 0, v = -1; v == -1 && vi < MAX_VARIABLE_TYPES; vi++) {
 
-        if (goma_ctx->fem.pd->i[imtrx][vi] == goma_ctx->fem.bfd[b]->interpolation) {
+        if (pd->i[imtrx][vi] == goma_ctx->fem.bfd[b]->interpolation) {
           v = vi;
         }
       }
@@ -1794,22 +1787,21 @@ int load_bf_grad(void)
        *  correspond to a variable
        *  OR if element shape doesn't match the current element block.
        */
-      if (v != -1 && goma_ctx->fem.bfd[b]->element_shape ==
-                         goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape) {
-        bfv = goma_ctx->fem.bf[v];
-        dofs = goma_ctx->fem.ei[imtrx]->dof[v];
+      if (v != -1 && goma_ctx->fem.bfd[b]->element_shape == ei[pg->imtrx]->ielem_shape) {
+        bfv = bf[v];
+        dofs = ei[imtrx]->dof[v];
         if (bfv->interpolation == I_N1) {
           dofs = bfv->shape_dof;
         }
 
         /* initialize variables */
-        siz = goma_ctx->fem.pd->Num_Dim * MDE * sizeof(double);
+        siz = pd->Num_Dim * MDE * sizeof(double);
         /* memset(&(bfv->d_phi[0][0]),0,siz); */
 
         /*
          * First load up components of the *raw* derivative vector "d_phi"
          */
-        switch (goma_ctx->fem.pd->Num_Dim) {
+        switch (pd->Num_Dim) {
         case 1:
           for (i = 0; i < dofs; i++) {
             bfv->d_phi[i][0] =
@@ -1855,13 +1847,13 @@ int load_bf_grad(void)
         for (i = 0; i < dofs; i++) {
 #ifdef DO_NOT_UNROLL
           for (p = 0; p < WIM; p++) {
-            bfv->grad_phi[i][p] = (bfv->d_phi[i][p]) / (goma_ctx->fem.fv->h[p]);
+            bfv->grad_phi[i][p] = (bfv->d_phi[i][p]) / (fv->h[p]);
           }
 #else
-          bfv->grad_phi[i][0] = (bfv->d_phi[i][0]) / (goma_ctx->fem.fv->h[0]);
-          bfv->grad_phi[i][1] = (bfv->d_phi[i][1]) / (goma_ctx->fem.fv->h[1]);
-          if (goma_ctx->problem.vim == 3)
-            bfv->grad_phi[i][2] = (bfv->d_phi[i][2]) / (goma_ctx->fem.fv->h[2]);
+          bfv->grad_phi[i][0] = (bfv->d_phi[i][0]) / (fv->h[0]);
+          bfv->grad_phi[i][1] = (bfv->d_phi[i][1]) / (fv->h[1]);
+          if (VIM == 3)
+            bfv->grad_phi[i][2] = (bfv->d_phi[i][2]) / (fv->h[2]);
 #endif
         }
 
@@ -1889,9 +1881,9 @@ int load_bf_grad(void)
 
         for (i = 0; i < dofs; i++) {
 #ifdef DO_NOT_UNROLL
-          for (p = 0; p < goma_ctx->problem.vim; p++) {
-            for (a = 0; a < goma_ctx->problem.vim; a++) {
-              for (q = 0; q < goma_ctx->problem.vim; q++) {
+          for (p = 0; p < VIM; p++) {
+            for (a = 0; a < VIM; a++) {
+              for (q = 0; q < VIM; q++) {
                 if (q == a)
                   bfv->grad_phi_e[i][a][p][a] = bfv->grad_phi[i][p];
                 else
@@ -1910,7 +1902,7 @@ int load_bf_grad(void)
           bfv->grad_phi_e[i][1][0][0] = 0.0;
           bfv->grad_phi_e[i][1][0][1] = bfv->grad_phi[i][0];
 
-          if (goma_ctx->problem.vim == 3) {
+          if (VIM == 3) {
             bfv->grad_phi_e[i][2][0][0] = 0.0;
             bfv->grad_phi_e[i][2][0][1] = 0.0;
             bfv->grad_phi_e[i][2][0][2] = bfv->grad_phi[i][0];
@@ -1939,16 +1931,16 @@ int load_bf_grad(void)
 
           /* } */
 
-          if (goma_ctx->fem.pd->CoordinateSystem != CARTESIAN) {
+          if (pd->CoordinateSystem != CARTESIAN) {
 
             /*   for ( i=0; i<dofs; i++)
                  { */
 
 #ifdef DO_NOT_UNROLL
             for (a = 0; a < WIM; a++) {
-              for (p = 0; p < goma_ctx->problem.vim; p++) {
-                for (q = 0; q < goma_ctx->problem.vim; q++) {
-                  bfv->grad_phi_e[i][a][p][q] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[a][p][q];
+              for (p = 0; p < VIM; p++) {
+                for (q = 0; q < VIM; q++) {
+                  bfv->grad_phi_e[i][a][p][q] += bfv->phi[i] * fv->grad_e[a][p][q];
                 }
               }
             }
@@ -1969,39 +1961,39 @@ int load_bf_grad(void)
               }
             */
 
-            bfv->grad_phi_e[i][0][0][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][0][0];
-            bfv->grad_phi_e[i][0][1][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][1][1];
-            bfv->grad_phi_e[i][0][0][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][0][1];
-            bfv->grad_phi_e[i][0][1][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][1][0];
+            bfv->grad_phi_e[i][0][0][0] += bfv->phi[i] * fv->grad_e[0][0][0];
+            bfv->grad_phi_e[i][0][1][1] += bfv->phi[i] * fv->grad_e[0][1][1];
+            bfv->grad_phi_e[i][0][0][1] += bfv->phi[i] * fv->grad_e[0][0][1];
+            bfv->grad_phi_e[i][0][1][0] += bfv->phi[i] * fv->grad_e[0][1][0];
 
-            bfv->grad_phi_e[i][1][0][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][0][0];
-            bfv->grad_phi_e[i][1][1][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][1][1];
-            bfv->grad_phi_e[i][1][0][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][0][1];
-            bfv->grad_phi_e[i][1][1][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][1][0];
+            bfv->grad_phi_e[i][1][0][0] += bfv->phi[i] * fv->grad_e[1][0][0];
+            bfv->grad_phi_e[i][1][1][1] += bfv->phi[i] * fv->grad_e[1][1][1];
+            bfv->grad_phi_e[i][1][0][1] += bfv->phi[i] * fv->grad_e[1][0][1];
+            bfv->grad_phi_e[i][1][1][0] += bfv->phi[i] * fv->grad_e[1][1][0];
 
-            if (goma_ctx->problem.vim == 3) {
-              bfv->grad_phi_e[i][0][2][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][2];
-              bfv->grad_phi_e[i][0][2][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][1];
-              bfv->grad_phi_e[i][0][2][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][2][0];
-              bfv->grad_phi_e[i][0][1][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][1][2];
-              bfv->grad_phi_e[i][0][0][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[0][0][2];
+            if (VIM == 3) {
+              bfv->grad_phi_e[i][0][2][2] += bfv->phi[i] * fv->grad_e[0][2][2];
+              bfv->grad_phi_e[i][0][2][1] += bfv->phi[i] * fv->grad_e[0][2][1];
+              bfv->grad_phi_e[i][0][2][0] += bfv->phi[i] * fv->grad_e[0][2][0];
+              bfv->grad_phi_e[i][0][1][2] += bfv->phi[i] * fv->grad_e[0][1][2];
+              bfv->grad_phi_e[i][0][0][2] += bfv->phi[i] * fv->grad_e[0][0][2];
 
-              bfv->grad_phi_e[i][1][2][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][2][2];
-              bfv->grad_phi_e[i][1][2][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][2][1];
-              bfv->grad_phi_e[i][1][2][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][2][0];
-              bfv->grad_phi_e[i][1][1][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][1][2];
-              bfv->grad_phi_e[i][1][0][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[1][0][2];
+              bfv->grad_phi_e[i][1][2][2] += bfv->phi[i] * fv->grad_e[1][2][2];
+              bfv->grad_phi_e[i][1][2][1] += bfv->phi[i] * fv->grad_e[1][2][1];
+              bfv->grad_phi_e[i][1][2][0] += bfv->phi[i] * fv->grad_e[1][2][0];
+              bfv->grad_phi_e[i][1][1][2] += bfv->phi[i] * fv->grad_e[1][1][2];
+              bfv->grad_phi_e[i][1][0][2] += bfv->phi[i] * fv->grad_e[1][0][2];
 
-              bfv->grad_phi_e[i][2][0][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][0][0];
-              bfv->grad_phi_e[i][2][1][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][1][1];
-              bfv->grad_phi_e[i][2][0][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][0][1];
-              bfv->grad_phi_e[i][2][1][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][1][0];
+              bfv->grad_phi_e[i][2][0][0] += bfv->phi[i] * fv->grad_e[2][0][0];
+              bfv->grad_phi_e[i][2][1][1] += bfv->phi[i] * fv->grad_e[2][1][1];
+              bfv->grad_phi_e[i][2][0][1] += bfv->phi[i] * fv->grad_e[2][0][1];
+              bfv->grad_phi_e[i][2][1][0] += bfv->phi[i] * fv->grad_e[2][1][0];
 
-              bfv->grad_phi_e[i][2][2][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][2][2];
-              bfv->grad_phi_e[i][2][2][1] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][2][1];
-              bfv->grad_phi_e[i][2][2][0] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][2][0];
-              bfv->grad_phi_e[i][2][1][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][1][2];
-              bfv->grad_phi_e[i][2][0][2] += bfv->phi[i] * goma_ctx->fem.fv->grad_e[2][0][2];
+              bfv->grad_phi_e[i][2][2][2] += bfv->phi[i] * fv->grad_e[2][2][2];
+              bfv->grad_phi_e[i][2][2][1] += bfv->phi[i] * fv->grad_e[2][2][1];
+              bfv->grad_phi_e[i][2][2][0] += bfv->phi[i] * fv->grad_e[2][2][0];
+              bfv->grad_phi_e[i][2][1][2] += bfv->phi[i] * fv->grad_e[2][1][2];
+              bfv->grad_phi_e[i][2][0][2] += bfv->phi[i] * fv->grad_e[2][0][2];
             }
 
 #endif
@@ -2029,7 +2021,7 @@ int load_bf_grad(void)
          * variable.  I had one, but it is not presently being used.
          */
 
-        if (bfv->interpolation != I_N1 && (goma_ctx->fem.pd->gv[EM_E1_REAL] || CURL_V != -1)) {
+        if (bfv->interpolation != I_N1 && (pd->gv[EM_E1_REAL] || CURL_V != -1)) {
           siz = DIM * DIM * MDE * sizeof(double);
           memset(&(bfv->curl_phi_e[0][0][0]), 0, siz);
 
@@ -2043,18 +2035,18 @@ int load_bf_grad(void)
                 for (k = 0; k < DIM; k++) { /* VIM */
                   bfv->curl_phi_e[i][a][p] += permute(p, k, a) * bfv->grad_phi[i][k];
                 }
-                bfv->curl_phi_e[i][a][p] += bfv->phi[i] * goma_ctx->fem.fv->curl_e[a][p];
+                bfv->curl_phi_e[i][a][p] += bfv->phi[i] * fv->curl_e[a][p];
               }
             }
           }
         }
 
         if (bfv->interpolation == I_N1) {
-          int dofs = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->dof[v];
+          int dofs = ei[pg->imtrx]->dof[v];
           for (i = 0; i < dofs; i++) {
-            for (int d = 0; d < goma_ctx->fem.pd->Num_Dim; d++) {
+            for (int d = 0; d < pd->Num_Dim; d++) {
               bfv->phi_e[i][d] = 0;
-              for (int k = 0; k < goma_ctx->fem.pd->Num_Dim; k++) {
+              for (int k = 0; k < pd->Num_Dim; k++) {
                 // bfv->phi_e[i][d] += bfv->B[d][k] * bfv->ref_phi_e[i][k];
                 bfv->phi_e[i][d] += bfv->B[d][k] * bfv->ref_phi_e[i][k];
                 // bfv->phi_e[i][d] += bfv->ref_phi_e[i][k];
@@ -2063,10 +2055,10 @@ int load_bf_grad(void)
           }
 
           for (i = 0; i < dofs; i++) {
-            for (int d = 0; d < goma_ctx->fem.pd->Num_Dim; d++) {
+            for (int d = 0; d < pd->Num_Dim; d++) {
               bfv->curl_phi[i][d] = 0;
               for (int k = 0; k < DIM; k++) {
-                if (goma_ctx->fem.pd->Num_Dim < DIM) {
+                if (pd->Num_Dim < DIM) {
                   bfv->curl_phi[i][d] += (1 / bfv->detJ) * bfv->curl_e[i][k];
                 } else {
                   bfv->curl_phi[i][d] += (1 / bfv->detJ) * bfv->J[k][d] * bfv->curl_e[i][k];
@@ -2147,6 +2139,14 @@ int load_bf_grad(void)
  * Created:	Mon Feb 20 15:47 MST 1995 pasacki@sandia.gov
  */
 int load_bf_mesh_derivs(void) {
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  const int VIM = goma_ctx->problem.vim;
+  const int WIM = goma_ctx->problem.wim;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
   int a, b, p, q, i, j, bix, v, siz;
   int dim;       /* number of spatial dimensions */
   int dimNonSym; /* Number of dimensions of the curvilinear coordinate
@@ -2158,7 +2158,7 @@ int load_bf_mesh_derivs(void) {
   /* interpolated using bfl */
   int mdofs; /* degrees of freedom for mesh displacement */
   /* unknowns interpolated using bfm */
-  int mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
+  int mn = ei[pg->imtrx]->mn;
   dbl f, g[DIM], g2[DIM];     /* Temporary variables for convenience. */
   dbl phi_m[MDE], phi_l[MDE]; /* load shapefunctions into local variables */
 
@@ -2167,16 +2167,16 @@ int load_bf_mesh_derivs(void) {
   BASIS_FUNCTIONS_STRUCT *bf_ptr;
   int imtrx;
 
-  for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+  for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
     /*
      * If we aren't solving for displacements, then do a quick
      * return
      */
-    if (!goma_ctx->fem.ei[imtrx]->deforming_mesh) {
+    if (!ei[imtrx]->deforming_mesh) {
       continue;
     }
 
-    dim = goma_ctx->fem.pd->Num_Dim;
+    dim = pd->Num_Dim;
     dimNonSym = dim;
 
     /*
@@ -2184,8 +2184,8 @@ int load_bf_mesh_derivs(void) {
      * for the current element, mdofs, and the pointer to the
      * basis function structure, bfm
      */
-    mdofs = goma_ctx->fem.ei[imtrx]->dof[R_MESH1];
-    bfm = goma_ctx->fem.bf[MESH_DISPLACEMENT1];
+    mdofs = ei[imtrx]->dof[R_MESH1];
+    bfm = bf[MESH_DISPLACEMENT1];
     /*
      * preload mesh shape functions
      */
@@ -2198,8 +2198,8 @@ int load_bf_mesh_derivs(void) {
      * for the current element, mdofs, and the pointer to the
      * basis function structure, bfm
      */
-    mdofs = goma_ctx->fem.ei[imtrx]->dof[R_MESH1];
-    bfm = goma_ctx->fem.bf[MESH_DISPLACEMENT1];
+    mdofs = ei[imtrx]->dof[R_MESH1];
+    bfm = bf[MESH_DISPLACEMENT1];
     /*
      * preload mesh shape functions
      */
@@ -2207,8 +2207,8 @@ int load_bf_mesh_derivs(void) {
       phi_m[j] = bfm->phi[j];
     }
 
-    for (p = 0; p < goma_ctx->problem.vim; p++) {
-      g[p] = 1.0 / goma_ctx->fem.fv->h[p];
+    for (p = 0; p < VIM; p++) {
+      g[p] = 1.0 / fv->h[p];
       g2[p] = g[p] * g[p];
     }
 
@@ -2231,13 +2231,13 @@ int load_bf_mesh_derivs(void) {
        *  correspond to a variable
        *  OR if element shape doesn't match the current element block.
        */
-      if (v != -1 && bf_ptr->element_shape == goma_ctx->fem.ei[imtrx]->ielem_shape) {
+      if (v != -1 && bf_ptr->element_shape == ei[imtrx]->ielem_shape) {
         /*
          * Store the number of dofs in the interpolation, vdofs.
          * Store bfl
          */
-        vdofs = goma_ctx->fem.ei[imtrx]->dof[v];
-        bfl = goma_ctx->fem.bf[v];
+        vdofs = ei[imtrx]->dof[v];
+        bfl = bf[v];
 
         /* preload shape functions */
         for (i = 0; i < vdofs; i++) {
@@ -2381,7 +2381,7 @@ int load_bf_mesh_derivs(void) {
           for (p = 0; p < dimNonSym; p++) {
             for (b = 0; b < dimNonSym; b++) {
               memset(&(bfl->d_grad_phi_dmesh[i][p][b][0]), 0, mdofs * sizeof(double));
-              f = -g2[p] * (goma_ctx->fem.fv->hq[p][b]);
+              f = -g2[p] * (fv->hq[p][b]);
               for (j = 0; j < mdofs; j++) {
                 for (q = 0; q < dimNonSym; q++) {
                   bfl->d_grad_phi_dmesh[i][p][b][j] +=
@@ -2417,7 +2417,7 @@ int load_bf_mesh_derivs(void) {
 
             /* (p,b) = (0,0) */
 
-            f = -g2[0] * (goma_ctx->fem.fv->hq[0][0]);
+            f = -g2[0] * (fv->hq[0][0]);
 
             bfl->d_grad_phi_dmesh[i][0][0][j] =
                 (f * phi_m[j] * bfl->B[0][0] + g[0] * bfl->dB[0][0][0][j]) * (bfl->dphidxi[i][0]);
@@ -2426,7 +2426,7 @@ int load_bf_mesh_derivs(void) {
                 (f * phi_m[j] * bfl->B[0][1] + g[0] * bfl->dB[0][1][0][j]) * (bfl->dphidxi[i][1]);
 
             /* (p,b) = (0,1) */
-            f = -g2[0] * (goma_ctx->fem.fv->hq[0][1]);
+            f = -g2[0] * (fv->hq[0][1]);
 
             bfl->d_grad_phi_dmesh[i][0][1][j] =
                 (f * phi_m[j] * bfl->B[0][0] + g[0] * bfl->dB[0][0][1][j]) * (bfl->dphidxi[i][0]);
@@ -2435,7 +2435,7 @@ int load_bf_mesh_derivs(void) {
                 (f * phi_m[j] * bfl->B[0][1] + g[0] * bfl->dB[0][1][1][j]) * (bfl->dphidxi[i][1]);
 
             /* (p,b) = (1,0) */
-            f = -g2[1] * (goma_ctx->fem.fv->hq[1][0]);
+            f = -g2[1] * (fv->hq[1][0]);
 
             bfl->d_grad_phi_dmesh[i][1][0][j] =
                 (f * phi_m[j] * bfl->B[1][0] + g[1] * bfl->dB[1][0][0][j]) * (bfl->dphidxi[i][0]);
@@ -2445,7 +2445,7 @@ int load_bf_mesh_derivs(void) {
 
             /* (p,b) = (1,1) */
 
-            f = -g2[1] * (goma_ctx->fem.fv->hq[1][1]);
+            f = -g2[1] * (fv->hq[1][1]);
             bfl->d_grad_phi_dmesh[i][1][1][j] =
                 (f * phi_m[j] * bfl->B[1][0] + g[1] * bfl->dB[1][0][1][j]) * (bfl->dphidxi[i][0]);
 
@@ -2467,7 +2467,7 @@ int load_bf_mesh_derivs(void) {
                   (f * phi_m[j] * bfl->B[1][2] + g[1] * bfl->dB[1][2][1][j]) * (bfl->dphidxi[i][2]);
 
               /* (p,b) = (2,2) */
-              f = -g2[2] * (goma_ctx->fem.fv->hq[2][2]);
+              f = -g2[2] * (fv->hq[2][2]);
               bfl->d_grad_phi_dmesh[i][2][2][j] =
                   (f * phi_m[j] * bfl->B[2][0] + g[2] * bfl->dB[2][0][2][j]) * (bfl->dphidxi[i][0]);
 
@@ -2478,7 +2478,7 @@ int load_bf_mesh_derivs(void) {
                   (f * phi_m[j] * bfl->B[2][2] + g[2] * bfl->dB[2][2][2][j]) * (bfl->dphidxi[i][2]);
 
               /* (p,b) = (2,1) */
-              f = -g2[2] * (goma_ctx->fem.fv->hq[2][1]);
+              f = -g2[2] * (fv->hq[2][1]);
               bfl->d_grad_phi_dmesh[i][2][1][j] =
                   (f * phi_m[j] * bfl->B[2][0] + g[2] * bfl->dB[2][0][1][j]) * (bfl->dphidxi[i][0]);
 
@@ -2488,7 +2488,7 @@ int load_bf_mesh_derivs(void) {
               bfl->d_grad_phi_dmesh[i][2][1][j] +=
                   (f * phi_m[j] * bfl->B[2][2] + g[2] * bfl->dB[2][2][1][j]) * (bfl->dphidxi[i][2]);
               /* (p,b) = (2,0) */
-              f = -g2[2] * (goma_ctx->fem.fv->hq[2][0]);
+              f = -g2[2] * (fv->hq[2][0]);
               bfl->d_grad_phi_dmesh[i][2][0][j] =
                   (f * phi_m[j] * bfl->B[2][0] + g[2] * bfl->dB[2][0][0][j]) * (bfl->dphidxi[i][0]);
 
@@ -2499,7 +2499,7 @@ int load_bf_mesh_derivs(void) {
                   (f * phi_m[j] * bfl->B[2][2] + g[2] * bfl->dB[2][2][0][j]) * (bfl->dphidxi[i][2]);
 
               /* (p,b) = (1,2) */
-              f = -g2[1] * (goma_ctx->fem.fv->hq[1][2]);
+              f = -g2[1] * (fv->hq[1][2]);
               bfl->d_grad_phi_dmesh[i][1][2][j] =
                   (f * phi_m[j] * bfl->B[1][0] + g[1] * bfl->dB[1][0][2][j]) * (bfl->dphidxi[i][0]);
 
@@ -2510,7 +2510,7 @@ int load_bf_mesh_derivs(void) {
                   (f * phi_m[j] * bfl->B[1][2] + g[1] * bfl->dB[1][2][2][j]) * (bfl->dphidxi[i][2]);
 
               /* (p,b) = (0,2) */
-              f = -g2[0] * (goma_ctx->fem.fv->hq[0][2]);
+              f = -g2[0] * (fv->hq[0][2]);
               bfl->d_grad_phi_dmesh[i][0][2][j] =
                   (f * phi_m[j] * bfl->B[0][0] + g[0] * bfl->dB[0][0][2][j]) * (bfl->dphidxi[i][0]);
 
@@ -2547,7 +2547,7 @@ int load_bf_mesh_derivs(void) {
          */
 #ifdef DO_NO_UNROLL
         for (i = 0; i < vdofs; i++) {
-          for (a = 0; a < goma_ctx->problem.wim; a++) {
+          for (a = 0; a < WIM; a++) {
             for (p = 0; p < dim; p++) {
               for (b = 0; b < dim; b++) {
                 for (j = 0; j < mdofs; j++) {
@@ -2580,7 +2580,7 @@ int load_bf_mesh_derivs(void) {
             bfl->d_grad_phi_e_dmesh[i][0][1][0][0][j] = bfl->d_grad_phi_dmesh[i][1][0][j];
             bfl->d_grad_phi_e_dmesh[i][1][1][1][0][j] = bfl->d_grad_phi_dmesh[i][1][0][j];
 
-            if (goma_ctx->problem.wim == 3) {
+            if (WIM == 3) {
               /*  bfl->d_grad_phi_e_dmesh[i][2] [p][2] [b][j] = bfl->d_grad_phi_dmesh[i][p]
                * [b][j];*/
               /* (p,b) = (0,0) */
@@ -2633,9 +2633,9 @@ int load_bf_mesh_derivs(void) {
             } */
 
         for (i = 0; i < vdofs; i++) {
-          for (a = 0; a < goma_ctx->problem.wim; a++) {
-            for (p = 0; p < goma_ctx->problem.vim; p++) {
-              for (q = 0; q < goma_ctx->problem.vim; q++) {
+          for (a = 0; a < WIM; a++) {
+            for (p = 0; p < VIM; p++) {
+              for (q = 0; q < VIM; q++) {
                 for (b = 0; b < dim; b++) {
                   for (j = 0; j < mdofs; j++) {
                     if (q != a) {
@@ -2645,8 +2645,7 @@ int load_bf_mesh_derivs(void) {
                       }
                       bfl->d_grad_phi_e_dmesh[i][a][p][q][b][j] = 0.0;
                     }
-                    if (dim < goma_ctx->problem.vim &&
-                        (p == goma_ctx->problem.vim || q == goma_ctx->problem.vim)) {
+                    if (dim < VIM && (p == VIM || q == VIM)) {
                       if (bfl->d_grad_phi_e_dmesh[i][a][p][q][b][j] != 0.0) {
                         printf("we shouldn't be here\n");
                         exit(-1);
@@ -2655,7 +2654,7 @@ int load_bf_mesh_derivs(void) {
                     }
 
                     bfl->d_grad_phi_e_dmesh[i][a][p][q][b][j] +=
-                        phi_l[i] * goma_ctx->fem.fv->d_grad_e_dq[a][p][q][b] * phi_m[j];
+                        phi_l[i] * fv->d_grad_e_dq[a][p][q][b] * phi_m[j];
                   }
                 }
               }
@@ -2686,8 +2685,11 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
  *
  ************************************************************************/
 {
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Uniform_Problem_Description *const upd = goma_ctx->fem.upd;
   int b, i, v, jdof, ledof;
-  int mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
+  int mn = ei[pg->imtrx]->mn;
 
   int imtrx;
 
@@ -2697,7 +2699,7 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
    * kind of unique basis function that we have...
    */
   for (b = 0; b < goma_ctx->problem.num_basis_functions; b++) {
-    for (imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    for (imtrx = 0; imtrx < upd->Total_Num_Matrices; imtrx++) {
       bf_ptr = bfa[b];
 
       /*
@@ -2715,16 +2717,14 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
         int jdof = 0;
         switch (goma_ctx->fem.pd->Num_Dim) {
         case 2:
-          for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
-            ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
-            if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
+          for (i = 0; i < ei[imtrx]->dof[v]; i++) {
+            ledof = ei[imtrx]->lvdof_to_ledof[v][i];
+            if (ei[imtrx]->active_interp_ledof[ledof]) {
 
-              vector_shape_function(DPI_ptr, goma_ctx->fem.ei[imtrx], xi, PSI,
-                                    bf_ptr->element_shape, bf_ptr->interpolation, jdof,
-                                    bf_ptr->ref_phi_e[i], NULL);
-              vector_shape_function(DPI_ptr, goma_ctx->fem.ei[imtrx], xi, CURL_PSI,
-                                    bf_ptr->element_shape, bf_ptr->interpolation, jdof, NULL,
-                                    bf_ptr->curl_e[i]);
+              vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
+                                    bf_ptr->interpolation, jdof, bf_ptr->ref_phi_e[i], NULL);
+              vector_shape_function(DPI_ptr, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
+                                    bf_ptr->interpolation, jdof, NULL, bf_ptr->curl_e[i]);
 
               jdof++;
             }
@@ -2735,16 +2735,14 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
           break;
 
         case 3:
-          for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
-            ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
-            if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
+          for (i = 0; i < ei[imtrx]->dof[v]; i++) {
+            ledof = ei[imtrx]->lvdof_to_ledof[v][i];
+            if (ei[imtrx]->active_interp_ledof[ledof]) {
 
-              vector_shape_function(DPI_ptr, goma_ctx->fem.ei[imtrx], xi, PSI,
-                                    bf_ptr->element_shape, bf_ptr->interpolation, jdof,
-                                    bf_ptr->ref_phi_e[i], NULL);
-              vector_shape_function(DPI_ptr, goma_ctx->fem.ei[imtrx], xi, CURL_PSI,
-                                    bf_ptr->element_shape, bf_ptr->interpolation, jdof, NULL,
-                                    bf_ptr->curl_e[i]);
+              vector_shape_function(DPI_ptr, ei[imtrx], xi, PSI, bf_ptr->element_shape,
+                                    bf_ptr->interpolation, jdof, bf_ptr->ref_phi_e[i], NULL);
+              vector_shape_function(DPI_ptr, ei[imtrx], xi, CURL_PSI, bf_ptr->element_shape,
+                                    bf_ptr->interpolation, jdof, NULL, bf_ptr->curl_e[i]);
 
               jdof++;
             }
@@ -2765,26 +2763,26 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
         switch (goma_ctx->fem.pd->Num_Dim) {
         case 2:
           for (i = 0; i < q1_dof; i++) {
-            bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI, i,
-                                      bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][0] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S, i,
-                                             bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][1] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_T, i,
-                                             bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->phi[i] =
+                newshape(xi, ei[imtrx]->ielem_type, PSI, i, bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][0] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i, bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][1] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i, bf_ptr->element_shape, I_Q2, jdof);
             jdof++;
           }
           break;
 
         case 3:
           for (i = 0; i < q1_dof; i++) {
-            bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI, i,
-                                      bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][0] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S, i,
-                                             bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][1] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_T, i,
-                                             bf_ptr->element_shape, I_Q2, jdof);
-            bf_ptr->dphidxi[i][2] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_U, i,
-                                             bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->phi[i] =
+                newshape(xi, ei[imtrx]->ielem_type, PSI, i, bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][0] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_S, i, bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][1] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_T, i, bf_ptr->element_shape, I_Q2, jdof);
+            bf_ptr->dphidxi[i][2] =
+                newshape(xi, ei[imtrx]->ielem_type, DPSI_U, i, bf_ptr->element_shape, I_Q2, jdof);
             jdof++;
           }
           break;
@@ -2796,7 +2794,7 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
          *  correspond to any variable in the current material
          *  OR if element shape doesn't match the current element block.
          */
-        if (v != -1 && bf_ptr->element_shape == goma_ctx->fem.ei[imtrx]->ielem_shape) {
+        if (v != -1 && bf_ptr->element_shape == ei[imtrx]->ielem_shape) {
           /*
            * Now, case the dimensionality and look up basis functions
            * and their derivatives at the quadrature point
@@ -2805,16 +2803,14 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
           jdof = 0;
           switch (goma_ctx->fem.pd->Num_Dim) {
           case 1:
-            for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
-              ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
-              if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
-                bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI,
-                                          goma_ctx->fem.ei[imtrx]->dof_list[v][i],
+            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
+              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
+              if (ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
                                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][0] =
-                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S,
-                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
-                             bf_ptr->interpolation, jdof);
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 jdof++;
               } else {
                 bf_ptr->phi[i] = 0.0;
@@ -2824,20 +2820,17 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             break;
 
           case 2:
-            for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
-              ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
-              if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
-                bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI,
-                                          goma_ctx->fem.ei[imtrx]->dof_list[v][i],
+            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
+              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
+              if (ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
                                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][0] =
-                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S,
-                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
-                             bf_ptr->interpolation, jdof);
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][1] =
-                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_T,
-                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
-                             bf_ptr->interpolation, jdof);
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_T, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 jdof++;
               } else {
                 bf_ptr->phi[i] = 0.0;
@@ -2848,24 +2841,20 @@ int load_basis_functions(const double xi[],            /*  [DIM]               *
             break;
 
           case 3:
-            for (i = 0; i < goma_ctx->fem.ei[imtrx]->dof[v]; i++) {
-              ledof = goma_ctx->fem.ei[imtrx]->lvdof_to_ledof[v][i];
-              if (goma_ctx->fem.ei[imtrx]->active_interp_ledof[ledof]) {
-                bf_ptr->phi[i] = newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, PSI,
-                                          goma_ctx->fem.ei[imtrx]->dof_list[v][i],
+            for (i = 0; i < ei[imtrx]->dof[v]; i++) {
+              ledof = ei[imtrx]->lvdof_to_ledof[v][i];
+              if (ei[imtrx]->active_interp_ledof[ledof]) {
+                bf_ptr->phi[i] = newshape(xi, ei[imtrx]->ielem_type, PSI, ei[imtrx]->dof_list[v][i],
                                           bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][0] =
-                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_S,
-                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
-                             bf_ptr->interpolation, jdof);
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_S, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][1] =
-                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_T,
-                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
-                             bf_ptr->interpolation, jdof);
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_T, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 bf_ptr->dphidxi[i][2] =
-                    newshape(xi, goma_ctx->fem.ei[imtrx]->ielem_type, DPSI_U,
-                             goma_ctx->fem.ei[imtrx]->dof_list[v][i], bf_ptr->element_shape,
-                             bf_ptr->interpolation, jdof);
+                    newshape(xi, ei[imtrx]->ielem_type, DPSI_U, ei[imtrx]->dof_list[v][i],
+                             bf_ptr->element_shape, bf_ptr->interpolation, jdof);
                 jdof++;
               } else {
                 bf_ptr->phi[i] = 0.0;

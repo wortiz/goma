@@ -188,6 +188,8 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
  *   the end of this routine.
  ***********************************************************************/
 {
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct External_Field_Variables *const efv = goma_ctx->fem.efv;
   int mn, v, etype, nnodes, lvdof, ledof, ln, gnn, owned, enunks;
   int i, nunks, index, ivarDes, indof, good_index, gnn_Parent;
   int iLvdesc; /* Running index for the number of local variable
@@ -211,7 +213,7 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
   struct Element_Indices *ei_ptr;
 
   int mode = 0;
-  ei_ptr = goma_ctx->fem.ei[imtrx];
+  ei_ptr = ei[imtrx];
   if (ei_ptr_fill != 0) {
     mode = 1;
     ei_ptr = ei_ptr_fill;
@@ -856,8 +858,8 @@ int load_ei(const int elem, const Exo_DB *exo, struct Element_Indices *ei_ptr_fi
    * Here we'll count up the dofs for the external variables,
    * if any exist
    */
-  if (goma_ctx->fem.efv->ev) {
-    for (v = 0; v < goma_ctx->fem.efv->Num_external_field; v++) {
+  if (efv->ev) {
+    for (v = 0; v < efv->Num_external_field; v++) {
       ei_ptr->dof_ext[v] = 0;
       for (ln = 0; ln < nnodes; ln++) {
 

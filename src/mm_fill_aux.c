@@ -1258,6 +1258,12 @@ surface_determinant_and_normal(
      *                         wrt mesh displacements
      ***********************************************************************/
 {
+  struct Problem_Description *const pd = goma_ctx->fem.pd;
+  struct Field_Variables *const fv = goma_ctx->fem.fv;
+  struct Basis_Functions **const bf = goma_ctx->fem.bf;
+  struct Element_Indices **const ei = goma_ctx->fem.ei;
+  struct Problem_Graph *const pg = goma_ctx->fem.pg;
+  struct Action_Flags *const af = goma_ctx->fem.af;
   /* TAB certifies that this function conforms to the exo/patran side
      numbering convention 11/10/98. */
 
@@ -1272,32 +1278,30 @@ surface_determinant_and_normal(
   struct Basis_Functions *map_bf;
   double signID;
   double tmp;
-  int dim = goma_ctx->fem.pd->Num_Dim;
+  int dim = pd->Num_Dim;
 
-  DeformingMesh = goma_ctx->fem.pd->gv[R_MESH1];
-  ShapeVar = goma_ctx->fem.pd->ShapeVar;
+  DeformingMesh = pd->gv[R_MESH1];
+  ShapeVar = pd->ShapeVar;
 
   siz = MAX_PDIM * MDE * sizeof(double);
-  memset(goma_ctx->fem.fv->dsurfdet_dx, 0, siz);
+  memset(fv->dsurfdet_dx, 0, siz);
   siz = MAX_PDIM * MDE * MAX_PDIM * sizeof(double);
-  memset(goma_ctx->fem.fv->dsnormal_dx, 0, siz);
+  memset(fv->dsnormal_dx, 0, siz);
 
   /*
   si = in_list(pd->IntegrationMap, 0, Num_Interpolations, Unique_Interpolations);
   map_bf = bfd[si];
   */
 
-  map_bf = goma_ctx->fem.bf[ShapeVar];
+  map_bf = bf[ShapeVar];
 
   if (ielem_surf_dim == 0) {
     /*
      *  This code should be considered to be untested. It worked for two cases.
      */
     // ok we fill up snormal
-    shell_determinant_and_normal(goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem,
-                                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->iconnect_ptr,
-                                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes,
-                                 goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim, 1);
+    shell_determinant_and_normal(ei[pg->imtrx]->ielem, ei[pg->imtrx]->iconnect_ptr,
+                                 ei[pg->imtrx]->num_local_nodes, ei[pg->imtrx]->ielem_dim, 1);
     if (id_side == 1) {
       signID = -1.0;
     } else if (id_side == 2) {
@@ -1313,26 +1317,25 @@ surface_determinant_and_normal(
      *  In 2D n x t = k, these vectors satisfy the rh rule.
      */
 
-    tmp = goma_ctx->fem.fv->snormal[0];
-    goma_ctx->fem.fv->snormal[0] = -signID * goma_ctx->fem.fv->snormal[1];
-    goma_ctx->fem.fv->snormal[1] = signID * tmp;
+    tmp = fv->snormal[0];
+    fv->snormal[0] = -signID * fv->snormal[1];
+    fv->snormal[1] = signID * tmp;
 
-    for (i = 0; i < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->num_local_nodes; i++) {
+    for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
       inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + i];
-      ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][i];
+      ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][i];
       if (ldof >= 0) {
-        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        if (goma_ctx->problem.dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           for (a = 0; a < dim; a++) {
-            tmp = goma_ctx->fem.fv->dsnormal_dx[0][a][ldof];
-            goma_ctx->fem.fv->dsnormal_dx[0][a][ldof] =
-                -signID * goma_ctx->fem.fv->dsnormal_dx[1][a][ldof];
-            goma_ctx->fem.fv->dsnormal_dx[1][a][ldof] = signID * tmp;
+            tmp = fv->dsnormal_dx[0][a][ldof];
+            fv->dsnormal_dx[0][a][ldof] = -signID * fv->dsnormal_dx[1][a][ldof];
+            fv->dsnormal_dx[1][a][ldof] = signID * tmp;
           }
         }
       }
     }
-    goma_ctx->fem.fv->sdet = 1.0;
-    memset(goma_ctx->fem.fv->dsurfdet_dx, 0.0, sizeof(double) * DIM * MDE);
+    fv->sdet = 1.0;
+    memset(fv->dsurfdet_dx, 0.0, sizeof(double) * DIM * MDE);
     return;
   }
 
@@ -1343,7 +1346,7 @@ surface_determinant_and_normal(
   /*  since T & t are zeroed, only need to set nonzero elements */
   switch (ielem_surf_dim) {
   case 1:
-    switch (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape) {
+    switch (ei[pg->imtrx]->ielem_shape) {
     case TRIANGLE:
     case TRISHELL:
       if (id_side == 1) {
@@ -1396,7 +1399,7 @@ surface_determinant_and_normal(
     break;
 
   case 2:
-    switch (goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_shape) {
+    switch (ei[pg->imtrx]->ielem_shape) {
     case HEXAHEDRON:
       /*
        * In trying to figure out how these T matrices work, I think that
@@ -1466,27 +1469,26 @@ surface_determinant_and_normal(
     for (a = 0; a < dim; a++) {
       t[p][a] = 0.;
       for (b = 0; b < dim; b++) {
-        t[p][a] += map_bf->J[b][a] * T[p][b] * goma_ctx->fem.fv->h[b];
+        t[p][a] += map_bf->J[b][a] * T[p][b] * fv->h[b];
       }
     }
   }
 
-  if (goma_ctx->fem.af->Assemble_Jacobian && DeformingMesh) {
+  if (af->Assemble_Jacobian && DeformingMesh) {
     for (p = 0; p < ielem_surf_dim; p++) {
       for (a = 0; a < dim; a++) {
         for (i = 0; i < num_nodes_on_side; i++) {
           id = local_elem_node_id[i];
           inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-          ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-          if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+          ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
+          if (goma_ctx->problem.dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
             phi_i = map_bf->phi[ldof];
 
-            for (q = 0; q < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; q++) {
+            for (q = 0; q < ei[pg->imtrx]->ielem_dim; q++) {
               dt_x[p][a][q][ldof] = 0.0;
               for (b = 0; b < dim; b++) {
-                dt_x[p][a][q][ldof] +=
-                    T[p][b] * (map_bf->dJ[b][a][q][ldof] * goma_ctx->fem.fv->h[b] +
-                               map_bf->J[b][a] * phi_i * goma_ctx->fem.fv->hq[b][q]);
+                dt_x[p][a][q][ldof] += T[p][b] * (map_bf->dJ[b][a][q][ldof] * fv->h[b] +
+                                                  map_bf->J[b][a] * phi_i * fv->hq[b][q]);
               }
             }
           }
@@ -1514,25 +1516,25 @@ surface_determinant_and_normal(
 
     r_det_h01 = 1. / det_h01;
 
-    goma_ctx->fem.fv->sdet = goma_ctx->fem.fv->h[2] * det_h01;
-    r_det = 1. / goma_ctx->fem.fv->sdet;
+    fv->sdet = fv->h[2] * det_h01;
+    r_det = 1. / fv->sdet;
 
     /* calculate surface normal using the coordinate scale factors
      * for orthogonal curvilinear coordinates */
-    goma_ctx->fem.fv->snormal[0] = t[0][1] * r_det_h01;
-    goma_ctx->fem.fv->snormal[1] = -t[0][0] * r_det_h01;
-    goma_ctx->fem.fv->snormal[2] = 0.;
+    fv->snormal[0] = t[0][1] * r_det_h01;
+    fv->snormal[1] = -t[0][0] * r_det_h01;
+    fv->snormal[2] = 0.;
 
     /* Calculate sensitivity w.r.t. mesh, if applicable */
-    if (goma_ctx->fem.af->Assemble_Jacobian && DeformingMesh) {
+    if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < num_nodes_on_side; i++) {
         id = (int)local_elem_node_id[i];
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-        ldof = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ln_to_dof[ShapeVar][id];
-        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        ldof = ei[pg->imtrx]->ln_to_dof[ShapeVar][id];
+        if (goma_ctx->problem.dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
 
-          for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
+          for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
             d_det_h01_x = 0.;
             for (b = 0; b < dim; b++) {
               d_det_h01_x += r_det_h01 * t[0][b] * dt_x[0][b][a][ldof];
@@ -1540,14 +1542,13 @@ surface_determinant_and_normal(
 
             /* calculate sensitivity of surface determinant using the coordinate scale factors
              * for orthogonal curvilinear coordinates */
-            goma_ctx->fem.fv->dsurfdet_dx[a][ldof] =
-                goma_ctx->fem.fv->hq[2][a] * phi_i * det_h01 + goma_ctx->fem.fv->h[2] * d_det_h01_x;
+            fv->dsurfdet_dx[a][ldof] = fv->hq[2][a] * phi_i * det_h01 + fv->h[2] * d_det_h01_x;
 
             /* calculate sensitivity of surface normal using the coordinate scale factors
              * for orthogonal curvilinear coordinates */
-            goma_ctx->fem.fv->dsnormal_dx[0][a][ldof] =
+            fv->dsnormal_dx[0][a][ldof] =
                 r_det_h01 * (dt_x[0][1][a][ldof] - r_det_h01 * t[0][1] * d_det_h01_x);
-            goma_ctx->fem.fv->dsnormal_dx[1][a][ldof] =
+            fv->dsnormal_dx[1][a][ldof] =
                 r_det_h01 * (-dt_x[0][0][a][ldof] + r_det_h01 * t[0][0] * d_det_h01_x);
           }
         }
@@ -1562,25 +1563,25 @@ surface_determinant_and_normal(
 
     /* calculate surface determinant using the coordinate scale factors
      * for orthogonal curvilinear coordinates */
-    goma_ctx->fem.fv->sdet = sqrt(nx * nx + ny * ny + nz * nz);
-    r_det = 1. / goma_ctx->fem.fv->sdet;
+    fv->sdet = sqrt(nx * nx + ny * ny + nz * nz);
+    r_det = 1. / fv->sdet;
 
     /* calculate surface normal using the coordinate scale factors
      * for orthogonal curvilinear coordinates */
-    goma_ctx->fem.fv->snormal[0] = r_det * nx;
-    goma_ctx->fem.fv->snormal[1] = r_det * ny;
-    goma_ctx->fem.fv->snormal[2] = r_det * nz;
+    fv->snormal[0] = r_det * nx;
+    fv->snormal[1] = r_det * ny;
+    fv->snormal[2] = r_det * nz;
 
     /* Calculate sensitivity w.r.t. mesh, if applicable */
-    if (goma_ctx->fem.af->Assemble_Jacobian && DeformingMesh) {
+    if (af->Assemble_Jacobian && DeformingMesh) {
       for (i = 0; i < num_nodes_on_side; i++) {
         id = (int)local_elem_node_id[i];
         inode = goma_ctx->mesh.proc_elem_connect[iconnect_ptr + id];
-        ldof = goma_ctx->fem.ei[goma_ctx->fem.pd->mi[MESH_DISPLACEMENT1]]->ln_to_dof[ShapeVar][id];
-        if (goma_ctx->problem.dolphin[goma_ctx->fem.pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
+        ldof = ei[pd->mi[MESH_DISPLACEMENT1]]->ln_to_dof[ShapeVar][id];
+        if (goma_ctx->problem.dolphin[pg->imtrx][inode][MESH_DISPLACEMENT1] > 0) {
           phi_i = map_bf->phi[ldof];
 
-          for (a = 0; a < goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->ielem_dim; a++) {
+          for (a = 0; a < ei[pg->imtrx]->ielem_dim; a++) {
             d_nx_x = t[0][1] * dt_x[1][2][a][ldof] + dt_x[0][1][a][ldof] * t[1][2] -
                      t[0][2] * dt_x[1][1][a][ldof] - dt_x[0][2][a][ldof] * t[1][1];
             d_ny_x = t[0][2] * dt_x[1][0][a][ldof] + dt_x[0][2][a][ldof] * t[1][0] -
@@ -1590,17 +1591,13 @@ surface_determinant_and_normal(
 
             /* calculate sensitivity of surface determinant using the coordinate scale factors
              * for orthogonal curvilinear coordinates */
-            goma_ctx->fem.fv->dsurfdet_dx[a][ldof] =
-                r_det * (nx * d_nx_x + ny * d_ny_x + nz * d_nz_x);
+            fv->dsurfdet_dx[a][ldof] = r_det * (nx * d_nx_x + ny * d_ny_x + nz * d_nz_x);
 
             /* calculate sensitivity of surface normal using the coordinate scale factors
              * for orthogonal curvilinear coordinates */
-            goma_ctx->fem.fv->dsnormal_dx[0][a][ldof] =
-                r_det * (d_nx_x - r_det * nx * goma_ctx->fem.fv->dsurfdet_dx[a][ldof]);
-            goma_ctx->fem.fv->dsnormal_dx[1][a][ldof] =
-                r_det * (d_ny_x - r_det * ny * goma_ctx->fem.fv->dsurfdet_dx[a][ldof]);
-            goma_ctx->fem.fv->dsnormal_dx[2][a][ldof] =
-                r_det * (d_nz_x - r_det * nz * goma_ctx->fem.fv->dsurfdet_dx[a][ldof]);
+            fv->dsnormal_dx[0][a][ldof] = r_det * (d_nx_x - r_det * nx * fv->dsurfdet_dx[a][ldof]);
+            fv->dsnormal_dx[1][a][ldof] = r_det * (d_ny_x - r_det * ny * fv->dsurfdet_dx[a][ldof]);
+            fv->dsnormal_dx[2][a][ldof] = r_det * (d_nz_x - r_det * nz * fv->dsurfdet_dx[a][ldof]);
           }
         }
       }
