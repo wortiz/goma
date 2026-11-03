@@ -11458,14 +11458,20 @@ int Stefan_Maxwell_diff_flux(struct Species_Conservation_Terms *st, double time,
   mn = goma_ctx->fem.ei[goma_ctx->fem.pg->imtrx]->mn;
 
   if (!A_allocated) {
-    A = (double **)smalloc(MAX_CONC * DIM * sizeof(double *));
-    A_inv = (double **)smalloc(MAX_CONC * DIM * sizeof(double *));
-    bbb = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
-    B = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
-    indx = (int *)smalloc(MAX_CONC * DIM * sizeof(int));
+    /* fixed-size work space, kept in static storage rather than on the heap */
+    static double A_rows[MAX_CONC * DIM][MAX_CONC * DIM];
+    static double A_inv_rows[MAX_CONC * DIM][MAX_CONC * DIM];
+    static double *A_ptrs[MAX_CONC * DIM], *A_inv_ptrs[MAX_CONC * DIM];
+    static double bbb_store[MAX_CONC * DIM], B_store[MAX_CONC * DIM];
+    static int indx_store[MAX_CONC * DIM];
+    A = A_ptrs;
+    A_inv = A_inv_ptrs;
+    bbb = bbb_store;
+    B = B_store;
+    indx = indx_store;
     for (i = 0; i < MAX_CONC * DIM; i++) {
-      A[i] = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
-      A_inv[i] = (double *)smalloc(MAX_CONC * DIM * sizeof(double));
+      A[i] = A_rows[i];
+      A_inv[i] = A_inv_rows[i];
     }
     A_allocated = TRUE;
   }

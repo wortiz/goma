@@ -33,6 +33,9 @@ lu_decomp_backsub_driver(double **, /* coeff_matrix[0..sys_size-1][0..sys_size-1
                          int);      /* lu_dcmp_flag (1 = perform
                                        lu decomposition, 0 simply back_sub) */
 
+/* Free the row scaling work space lu_decomp() keeps between calls. */
+extern void lu_decomp_release(void);
+
 extern int lu_decomp(double **, /* coeff_matrix[0..sys_size-1][0..sys_size-1]*/
                      const int, /* sys_size (the dimension size of the       *
                                  * coeff_matrix, rhs_vector)                 */

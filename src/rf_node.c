@@ -301,6 +301,9 @@ void free_nodes(void)
   NODE_INFO_STRUCT *node_ptr;
   for (i = 0; i < goma_ctx->mesh.num_node; i++) {
     node_ptr = goma_ctx->fem.nodes[i];
+    if (node_ptr->Resid_Wksp != NULL) {
+      nodal_resid_wksp_destroy(&(node_ptr->Resid_Wksp));
+    }
     free_umi_list(&(node_ptr->Mat_List));
     for (k = 0; k < goma_ctx->fem.upd->Total_Num_Matrices; k++) {
       safer_free((void **)&(node_ptr->DBC[k]));

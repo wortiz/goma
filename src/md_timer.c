@@ -82,19 +82,18 @@
 dbl ut(void) {
   clock_t err;
   dbl u;
-  static struct tms *tm = NULL;
+  struct tms tm;
   static long tickPerSecond;
   static dbl secondsPerTick;
-  if (!tm) {
-    tm = (struct tms *)calloc(1, sizeof(struct tms));
+  if (tickPerSecond == 0) {
     tickPerSecond = sysconf(_SC_CLK_TCK);
     secondsPerTick = 1.0 / ((double)tickPerSecond);
   }
-  if ((err = times(tm)) == -1) {
+  if ((err = times(&tm)) == -1) {
     fprintf(stderr, "error from times().\n");
     exit(-1);
   }
-  u = ((dbl)(tm->tms_utime)) * secondsPerTick;
+  u = ((dbl)(tm.tms_utime)) * secondsPerTick;
   return (u);
 } /* END of routine ut */
 /*****************************************************************************/

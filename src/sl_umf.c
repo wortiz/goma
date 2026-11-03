@@ -64,6 +64,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef GOMA_ENABLE_UMFPACK
 #include <umfpack.h>
@@ -73,6 +74,7 @@
 #include "mm_eh.h"
 #include "sl_auxutil.h"
 #include "sl_umf.h"
+#include "util/goma_context.h"
 
 /* how many different linear systems might UMF be used for? */
 #ifndef UMF_MAX_SYSTEMS
@@ -95,6 +97,45 @@
  * Note that we don't do this very intelligently.  We simply use
  * indices sequentially.  There is no mechanism to allow re-use.
  */
+static void umf_system_free(struct UMF_Linear_Solver_System *ums) {
+  if (ums->symbolic != NULL) {
+    umfpack_di_free_symbolic(&ums->symbolic);
+  }
+  ums->symbolic = NULL;
+  if (ums->numeric != NULL) {
+    umfpack_di_free_numeric(&ums->numeric);
+  }
+  ums->numeric = NULL;
+  if (ums->ap != NULL) {
+    Ivector_death(ums->ap, ums->n + 1);
+    Ivector_death(ums->ai, ums->nnz);
+    Dvector_death(ums->ax, ums->nnz);
+  }
+  if (ums->atp != NULL) {
+    Ivector_death(ums->atp, ums->n + 1);
+    Ivector_death(ums->ati, ums->nnz);
+    Dvector_death(ums->atx, ums->nnz);
+  }
+  ums->ap = ums->ai = ums->atp = ums->ati = NULL;
+  ums->ax = ums->atx = NULL;
+
+  /* MMH: The fix that changed the world... */
+  ums->n = 0;
+  ums->nnz = 0;
+}
+
+void sl_umf_release(void) {
+  struct UMF_Linear_Solver_System *ums_a = goma_ctx->solver.umf_systems;
+  if (ums_a != NULL) {
+    for (int i = 0; i < goma_ctx->solver.umf_num_systems; i++) {
+      umf_system_free(&ums_a[i]);
+    }
+  }
+  free(ums_a);
+  goma_ctx->solver.umf_systems = NULL;
+  goma_ctx->solver.umf_num_systems = 0;
+}
+
 int SL_UMF(int system_id,
            int *first,
            int *fact_optn,
@@ -106,10 +147,12 @@ int SL_UMF(int system_id,
            double *a,
            double *b,
            double *x) {
-  /* Static struct holds all linear systems also keep track of number
-   * of systems we have set up */
-  static struct UMF_Linear_Solver_System ums_a[UMF_MAX_SYSTEMS];
-  static int number_systems = 0;
+  /* The context holds all linear systems and the number set up so far */
+  if (goma_ctx->solver.umf_systems == NULL) {
+    goma_ctx->solver.umf_systems = calloc(UMF_MAX_SYSTEMS, sizeof(struct UMF_Linear_Solver_System));
+    goma_ctx->solver.umf_num_systems = 0;
+  }
+  struct UMF_Linear_Solver_System *ums_a = goma_ctx->solver.umf_systems;
 
   double Control[UMFPACK_CONTROL], Info[UMFPACK_INFO];
 
@@ -140,11 +183,11 @@ int SL_UMF(int system_id,
     if (system_id != -1)
       GOMA_EH(GOMA_ERROR, "Entered SL_UMF with *first == 1, but system_id != -1");
     /* If we've already gone through all of our slots, get out. */
-    if (number_systems == UMF_MAX_SYSTEMS)
+    if (goma_ctx->solver.umf_num_systems == UMF_MAX_SYSTEMS)
       GOMA_EH(GOMA_ERROR, "Already created UMF_MAX_SYSTEMS systems");
 
-    system_id = number_systems;
-    ums = &ums_a[number_systems++];
+    system_id = goma_ctx->solver.umf_num_systems++;
+    ums = &ums_a[system_id];
     ums->n = *nj;
     ums->nnz = *nnz_j;
 
@@ -199,23 +242,7 @@ int SL_UMF(int system_id,
     if (ums->n != *nj || ums->nnz != *nnz_j)
       GOMA_EH(GOMA_ERROR, "Tried to free a bad system");
 
-    umfpack_di_free_symbolic(&ums->symbolic);
-    ums->symbolic = NULL;
-    umfpack_di_free_numeric(&ums->numeric);
-    ums->numeric = NULL;
-    Ivector_death(ums->ap, ums->n + 1);
-    Ivector_death(ums->ai, ums->nnz);
-    Dvector_death(ums->ax, ums->nnz);
-
-    if (ums->atp != NULL) {
-      Ivector_death(ums->atp, ums->n + 1);
-      Ivector_death(ums->ati, ums->nnz);
-      Dvector_death(ums->atx, ums->nnz);
-    }
-
-    /* MMH: The fix that changed the world... */
-    ums->n = 0;
-    ums->nnz = 0;
+    umf_system_free(ums);
 
     /* So things break later in case we actually use the return value
      * after deallocating space. */
@@ -368,5 +395,7 @@ int SL_UMF(int system_id,
   GOMA_EH(GOMA_ERROR, "Goma not compiled with UMFPACK support");
   return -1;
 }
+
+void sl_umf_release(void) {}
 
 #endif

@@ -27,7 +27,8 @@ extern "C" {
 #endif
 
 /*
- * Free everything a run allocated through ctx: post-processing requests,
+ * Free everything a run allocated through ctx: direct solver factorizations
+ * (UMFPACK systems, the SPARSE lu() matrix), post-processing requests,
  * boundary conditions and their element lists, data tables, unknown and
  * communication maps, nodes, element blocks, material file data, level set,
  * continuation and augmenting conditions, the Exodus and decomposition

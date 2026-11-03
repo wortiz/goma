@@ -45,6 +45,11 @@
 #include "rf_element_storage_const.h"
 #include "rf_node_const.h"
 #include "rf_vars_const.h"
+#include "sl_amesos_interface.h"
+#include "sl_aux.h"
+#include "sl_lu.h"
+#include "sl_petsc.h"
+#include "sl_umf.h"
 #include "util/goma_context.h"
 
 #define FREE_NULL(p) \
@@ -680,6 +685,25 @@ void fem_input_release(GomaContext *ctx) {
 /****************************************************************************/
 
 void goma_problem_release(GomaContext *ctx) {
+  /* factorizations the direct solvers keep between calls */
+  sl_umf_release();
+  lu_release();
+  lu_decomp_release();
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
+  amesos_release();
+#endif
+#if defined(GOMA_ENABLE_PETSC) && !(PETSC_USE_COMPLEX)
+  if (ctx->fem.upd != NULL) {
+    goma_petsc_free_post_proc();
+  }
+#endif
+
+  /* subgrid integration points kept from the last Courant time step estimate */
+  FREE_NULL(Subgrid_Int.s);
+  FREE_NULL(Subgrid_Int.wt);
+  FREE_NULL(Subgrid_Int.ip_sign);
+  Subgrid_Int.ip_total = 0;
+
   post_processing_release(&ctx->post);
   boundary_conditions_release(ctx);
   problem_setup_release(ctx);

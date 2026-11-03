@@ -65,6 +65,30 @@
 #include "sl_util_structs.h"
 
 static void GomaMsr2EpetraCsr(struct GomaLinearSolverData *ams, Epetra_CrsMatrix *A, int newmatrix);
+
+/*
+ * Matrices and factorizations kept between amesos_solve() calls. A[imtrx] is
+ * owned (built here from MSR data) unless it was borrowed from a
+ * GomaSparseMatrix.
+ */
+static std::string Pkg_Name;
+static Epetra_CrsMatrix *A[MAX_NUM_MATRICES]{nullptr};
+static bool A_owned[MAX_NUM_MATRICES]{false};
+static Epetra_LinearProblem Problem[MAX_NUM_MATRICES];
+static Amesos_BaseSolver *A_Base[MAX_NUM_MATRICES] = {nullptr};
+
+void amesos_release(void) {
+  for (int imtrx = 0; imtrx < MAX_NUM_MATRICES; imtrx++) {
+    delete A_Base[imtrx];
+    A_Base[imtrx] = nullptr;
+    if (A_owned[imtrx]) {
+      delete A[imtrx];
+    }
+    A[imtrx] = nullptr;
+    A_owned[imtrx] = false;
+  }
+}
+
 void amesos_solve(char *choice,
                   struct GomaLinearSolverData *ams,
                   double *x_,
@@ -78,25 +102,24 @@ void amesos_solve(char *choice,
 #else
   Epetra_SerialComm comm;
 #endif
-  /* Define internal variables */
-  static std::string Pkg_Name;
-  static Epetra_CrsMatrix *A[MAX_NUM_MATRICES]{nullptr};
-  static Epetra_LinearProblem Problem[MAX_NUM_MATRICES];
-  static Amesos_BaseSolver *A_Base[MAX_NUM_MATRICES] = {nullptr};
   Amesos A_Factory;
 
   /* Convert to Epetra format */
   if (ams->GomaMatrixData == NULL) {
     if (!ams->solveSetup) {
-      if (A[imtrx] != nullptr)
+      if (A_owned[imtrx])
         delete A[imtrx];
       A[imtrx] = (Epetra_CrsMatrix *)construct_Epetra_CrsMatrix(ams);
+      A_owned[imtrx] = true;
     }
     GomaMsr2EpetraCsr(ams, A[imtrx], !ams->solveSetup);
   } else {
     GomaSparseMatrix matrix = (GomaSparseMatrix)ams->GomaMatrixData;
     EpetraSparseMatrix *epetra_matrix = static_cast<EpetraSparseMatrix *>(matrix->data);
+    if (A_owned[imtrx])
+      delete A[imtrx];
     A[imtrx] = dynamic_cast<Epetra_CrsMatrix *>(epetra_matrix->matrix.get());
+    A_owned[imtrx] = false;
   }
   const Epetra_Map &map = A[imtrx]->RowMatrixRowMap();
   Epetra_Vector x(Copy, map, x_);

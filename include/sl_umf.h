@@ -30,6 +30,9 @@
 extern int
 SL_UMF(int, int *, int *, int *, int *, int *, int *, int *, double *, double *, double *);
 
+/* Free every UMFPACK system SL_UMF() created through goma_ctx. */
+extern void sl_umf_release(void);
+
 struct UMF_Linear_Solver_System {
   int n, nnz;
   int *ap, *ai, *atp, *ati;

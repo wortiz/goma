@@ -30,6 +30,9 @@
 /* Use this version when Amesos is linked in through Trilinos */
 #ifdef TRILINOS
 EXTERN void amesos_solve(char *, struct GomaLinearSolverData *, double *, double *, int, int);
+
+/* Free the matrices and factorizations amesos_solve() keeps between calls. */
+EXTERN void amesos_release(void);
 EXTERN int amesos_solve_epetra(
     char *choice, struct GomaLinearSolverData *ams, double *x_, double *resid_vector, int imtrx);
 

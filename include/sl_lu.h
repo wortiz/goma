@@ -37,4 +37,7 @@ EXTERN void lu(const int,  /* N                                         */
                double[],   /* x                                         */
                const int); /* factor_flag                               */
 
+/* Free the matrix lu() keeps factored between calls. */
+EXTERN void lu_release(void);
+
 #endif /* GOMA_SL_LU_H */

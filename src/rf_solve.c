@@ -80,6 +80,7 @@
 #include "rf_solve_segregated.h"
 #include "rf_solver.h"
 #include "rf_util.h"
+#include "sl_amesos_interface.h"
 #include "sl_auxutil.h"
 #include "sl_matrix_util.h"
 #include "sl_petsc.h"
@@ -2794,6 +2795,9 @@ free_and_clear:
   }
 
   if (last_call) {
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
+    amesos_release(); /* Amesos solvers may reference the matrix */
+#endif
     GomaSparseMatrix goma_matrix = ams[JAC]->GomaMatrixData;
     GomaSparseMatrix_Destroy(&goma_matrix);
 #ifdef GOMA_ENABLE_PETSC
@@ -2839,6 +2843,14 @@ free_and_clear:
   }
 
   free_shape_fcn_tree(goma_ctx->fem.subgrid_tree);
+  goma_ctx->fem.subgrid_tree = NULL;
+
+  /* made at the first time step of each call */
+  if (goma_ctx->fem.xfem != NULL) {
+    free(goma_ctx->fem.xfem->tot_vol);
+    free(goma_ctx->fem.xfem->active_vol);
+    safer_free((void **)&goma_ctx->fem.xfem);
+  }
 
   if (file != NULL)
     fclose(file);

@@ -38,6 +38,22 @@ int first_time = TRUE;
 
 static int call = 0;
 
+/* The factored matrix and its element table, kept between calls */
+static char *matrix = NULL;
+static spREAL **element = NULL;
+static int prev_matrix = 0;
+
+void lu_release(void) {
+  if (first_time == FALSE && matrix != NULL) {
+    spDestroy(matrix);
+  }
+  matrix = NULL;
+  free(element);
+  element = NULL;
+  first_time = TRUE;
+  prev_matrix = 0;
+}
+
 void lu(const int N,
         const int NExt,
         const int M,
@@ -45,21 +61,17 @@ void lu(const int N,
         int ija[],
         double x[],
         const int factor_flag) {
-  static char *matrix;
-  static int prev_matrix = 0;
   int error, type;
   int j, i, n, k, nzeros, ija_col;
-  static spREAL **element, *b;
+  spREAL *b;
 #ifdef MATRIX_STATISTICS
   spREAL norm;
 #endif
 
   if (goma_ctx->fem.pg->imtrx != prev_matrix) {
-    if (first_time == FALSE) {
-      spDestroy(matrix);
-    }
-    first_time = TRUE;
-    prev_matrix = goma_ctx->fem.pg->imtrx;
+    int imtrx = goma_ctx->fem.pg->imtrx;
+    lu_release();
+    prev_matrix = imtrx;
   }
 
   call++;
@@ -77,8 +89,12 @@ void lu(const int N,
     if (first_time == TRUE && factor_flag == 1) {
       /* N = order of real matrix */
       type = 0;
+      if (matrix != NULL) { /* a matrix created but never factored */
+        spDestroy(matrix);
+      }
       matrix = spCreate(N + NExt, type, &error);
 
+      free(element);
       element = (spREAL **)malloc((M + NExt + 2) * sizeof(spREAL *));
     }
 
@@ -171,6 +187,8 @@ void lu(const int N,
         const int factor_flag) {
   GOMA_EH(GOMA_ERROR, "Goma not configured with sparse support");
 }
+
+void lu_release(void) {}
 #endif // GOMA_ENABLE_SPARSE
 /*****************************************************************************/
 /* END of file sl_lu.c */

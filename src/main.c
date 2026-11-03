@@ -531,9 +531,10 @@ int main(int argc, char **argv)
    */
 
 #ifdef PARALLEL
-  MPI_Type_free(&(Noahs_Raven->new_type));
-  MPI_Type_free(&(Noahs_Ark->new_type));
-  MPI_Type_free(&(Noahs_Dove->new_type));
+  ddd_free(Noahs_Raven);
+  ddd_free(Noahs_Ark);
+  ddd_free(Noahs_Dove);
+  Noahs_Raven = Noahs_Ark = Noahs_Dove = NULL;
 #endif
 
   /*
@@ -800,9 +801,7 @@ int main(int argc, char **argv)
    *       FREE MEMORY ALLOCATED BY THE PROGRAM
    */
   /*
-   * Free command line stuff. Everything reached through goma_ctx (input deck,
-   * problem setup, nodes, element blocks, exo, dpi) is freed by
-   * goma_context_reset() below.
+   * Free command line stuff.
    */
   if (goma_ctx->proc_id == 0) {
     if (argc > 1) {
@@ -821,6 +820,12 @@ int main(int argc, char **argv)
     unlerr = unlink(goma_ctx->front_scratch_directory);
     GOMA_WH(unlerr, "Unlink problem with front scratch file");
   }
+
+  /*
+   * Free everything reached through goma_ctx. Solver packages (Epetra,
+   * Amesos, PETSc) may need MPI to tear down, so do it before finalizing.
+   */
+  goma_context_release(goma_ctx);
 
 #ifdef PARALLEL
   total_time = (MPI_Wtime() - time_start) / 60.;
@@ -842,7 +847,6 @@ int main(int argc, char **argv)
   fflush(stdout);
   fflush(stderr);
   log_msg("GOMA ends normally.");
-  goma_context_reset(goma_ctx);
   return (0);
 }
 /***********************************************************************/

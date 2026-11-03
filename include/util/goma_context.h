@@ -120,6 +120,8 @@ typedef struct GomaParticles {
   int num_element_info;
 } GomaParticles;
 
+struct UMF_Linear_Solver_System;
+
 #ifndef String_line_is_defined
 #define String_line_is_defined
 typedef char String_line[MAX_CHAR_IN_INPUT];
@@ -226,6 +228,10 @@ typedef struct GomaSolver {
   int include_visc_sens; /* include viscosity sensitivities in the jacobian */
   int visc_sens_copy;
   int visc_sens_factor;
+
+  /* UMFPACK systems created by SL_UMF() (sl_umf.c), UMF_MAX_SYSTEMS long once allocated */
+  struct UMF_Linear_Solver_System *umf_systems;
+  int umf_num_systems; /* slots handed out so far; ids are not reused */
 } GomaSolver;
 
 /* FEM data structures referenced from GomaFem; defined in mm_as_structs.h / mm_mp_structs.h */

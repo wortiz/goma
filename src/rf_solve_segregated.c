@@ -65,6 +65,7 @@
 #include "sl_petsc_complex.h"
 #endif
 #endif
+#include "sl_amesos_interface.h"
 #include "sl_util.h"
 #include "sl_util_structs.h"
 #include "std.h"
@@ -596,7 +597,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
   /* Allocate sparse matrix */
 
   ija = malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int *));
-  ija_attic = malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(int *));
+  ija_attic = calloc((size_t)goma_ctx->fem.upd->Total_Num_Matrices, sizeof(int *));
   a = malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(double *));
   a_old = malloc(goma_ctx->fem.upd->Total_Num_Matrices * sizeof(double *));
 
@@ -3004,6 +3005,49 @@ free_and_clear:
   free(x_AC_dot_older);
   free(x_AC_pred);
   free(gv);
+
+  if (matrix_xfem != NULL) {
+    for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+      if (matrix_xfem[imtrx] != NULL) {
+        free(matrix_xfem[imtrx]->tot_vol);
+        free(matrix_xfem[imtrx]->active_vol);
+        free(matrix_xfem[imtrx]);
+      }
+    }
+    free(matrix_xfem);
+    goma_ctx->fem.xfem = NULL;
+  }
+
+  /*
+   * Linear solver data. For MSR, val, bindx and val_old are a[], ija[] and
+   * a_old[], freed by free_ams(); belfry is ija_attic[]. Amesos solvers may
+   * reference the matrices, so they go first.
+   */
+#if defined(GOMA_ENABLE_AMESOS) && defined(TRILINOS)
+  amesos_release();
+#endif
+  for (int imtrx = 0; imtrx < goma_ctx->fem.upd->Total_Num_Matrices; imtrx++) {
+    struct GomaLinearSolverData *ams_m = ams[imtrx];
+    free(x_prev[imtrx]);
+    GomaSparseMatrix goma_matrix = ams_m->GomaMatrixData;
+    GomaSparseMatrix_Destroy(&goma_matrix);
+    ams_m->GomaMatrixData = NULL;
+#ifdef GOMA_ENABLE_PETSC
+#if !(PETSC_USE_COMPLEX)
+    if (strcmp(goma_ctx->solver.matrix_format, "petsc") == 0) {
+      err = goma_petsc_free_matrix(ams_m);
+      GOMA_EH(err, "free petsc matrix");
+    }
+#endif
+#endif
+    if (strcmp(goma_ctx->solver.matrix_format, "msr") == 0) {
+      free(ams_m->belfry);
+    }
+    free_ams(ams_m);
+    free(ams_m);
+  }
+  free(x_prev);
+  safer_free((void **)&ams);
 
   return;
 }
